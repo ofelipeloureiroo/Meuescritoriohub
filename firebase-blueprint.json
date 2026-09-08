@@ -1,0 +1,37 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role, subscription status and email",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "status": { "type": "string", "enum": ["active", "pending", "inactive"] },
+        "createdAt": { "type": "string" },
+        "subscriptionDueDate": { "type": "string" }
+      },
+      "required": ["uid", "email", "role", "status"]
+    },
+    "UserWorkspaceSection": {
+      "title": "UserWorkspaceSection",
+      "description": "Modular workspace section data (profile, projects, clients, contracts, finance)",
+      "type": "object",
+      "properties": {
+        "updatedAt": { "type": "string" },
+        "version": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User role and subscription document"
+    },
+    "/users/{userId}/data/{sectionId}": {
+      "schema": "UserWorkspaceSection",
+      "description": "User workspace section documents (profile, projects, clients, contracts, finance)"
+    }
+  }
+}

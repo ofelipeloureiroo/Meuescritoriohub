@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+:root {
+  --theme-primary: #c58a4b;
+  --theme-primary-hover: #d49454;
+  --theme-accent: #d48b8e;
+  --theme-primary-rgb: 197, 138, 75;
+  --theme-accent-rgb: 212, 139, 142;
+  --theme-gradient-from: #d48b8e;
+  --theme-gradient-to: #c58a4b;
+  --theme-badge-bg: rgba(197, 138, 75, 0.18);
+  --theme-badge-text: #d49454;
+  --theme-badge-border: rgba(197, 138, 75, 0.35);
+  --theme-button-bg: #c58a4b;
+  --theme-button-hover: #d49454;
+}
+
+@layer base {
+  body {
+    background-color: #12100e;
+    color: #fcf8f5;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+}
+
+/* Dynamic theme helper classes */
+.theme-primary-text {
+  color: var(--theme-primary) !important;
+}
+
+.theme-primary-bg {
+  background-color: var(--theme-primary) !important;
+}
+
+.theme-primary-border {
+  border-color: var(--theme-primary) !important;
+}
+
+.theme-primary-ring {
+  --tw-ring-color: var(--theme-primary) !important;
+}
+
+.theme-gradient-bg {
+  background: linear-gradient(135deg, var(--theme-gradient-from), var(--theme-gradient-to)) !important;
+}
+
+.theme-badge {
+  background-color: var(--theme-badge-bg) !important;
+  color: var(--theme-badge-text) !important;
+  border: 1px solid var(--theme-badge-border) !important;
+}
+
+/* Custom smooth scrollbar in dynamic palette */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #14110f;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #3d342f;
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-primary);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

@@ -1,0 +1,691 @@
+import { NicheType, ThemeColorId } from '../types';
+import { NICHE_FORM_CONFIGS, NicheFormConfig } from './nicheFormConfigs';
+
+export type { NicheFormConfig };
+
+export interface ThemeConfig {
+  id: ThemeColorId;
+  name: string;
+  subtitle: string;
+  primary: string;
+  primaryHover: string;
+  accent: string;
+  primaryRgb: string;
+  accentRgb: string;
+  gradientFrom: string;
+  gradientTo: string;
+  badgeBg: string;
+  badgeText: string;
+  badgeBorder: string;
+  buttonBg: string;
+  buttonHover: string;
+  previewClass: string;
+}
+
+export const THEMES: Record<ThemeColorId, ThemeConfig> = {
+  gold: {
+    id: 'gold',
+    name: 'Ouro & Cobre',
+    subtitle: 'Luxuoso • Padrão Warm',
+    primary: '#c58a4b',
+    primaryHover: '#d49454',
+    accent: '#d48b8e',
+    primaryRgb: '197, 138, 75',
+    accentRgb: '212, 139, 142',
+    gradientFrom: '#d48b8e',
+    gradientTo: '#c58a4b',
+    badgeBg: 'rgba(197, 138, 75, 0.18)',
+    badgeText: '#d49454',
+    badgeBorder: 'rgba(197, 138, 75, 0.35)',
+    buttonBg: '#c58a4b',
+    buttonHover: '#d49454',
+    previewClass: 'from-[#d48b8e] to-[#c58a4b]',
+  },
+  emerald: {
+    id: 'emerald',
+    name: 'Esmeralda & Floresta',
+    subtitle: 'Moderno • Engenharia & Sustentabilidade',
+    primary: '#10b981',
+    primaryHover: '#34d399',
+    accent: '#059669',
+    primaryRgb: '16, 185, 129',
+    accentRgb: '5, 150, 105',
+    gradientFrom: '#34d399',
+    gradientTo: '#059669',
+    badgeBg: 'rgba(16, 185, 129, 0.18)',
+    badgeText: '#34d399',
+    badgeBorder: 'rgba(16, 185, 129, 0.35)',
+    buttonBg: '#10b981',
+    buttonHover: '#34d399',
+    previewClass: 'from-[#34d399] to-[#059669]',
+  },
+  sapphire: {
+    id: 'sapphire',
+    name: 'Safira & Oceano',
+    subtitle: 'Executivo • Advocacia, TI & Finanças',
+    primary: '#3b82f6',
+    primaryHover: '#60a5fa',
+    accent: '#2563eb',
+    primaryRgb: '59, 130, 246',
+    accentRgb: '37, 99, 235',
+    gradientFrom: '#60a5fa',
+    gradientTo: '#2563eb',
+    badgeBg: 'rgba(59, 130, 246, 0.18)',
+    badgeText: '#60a5fa',
+    badgeBorder: 'rgba(59, 130, 246, 0.35)',
+    buttonBg: '#3b82f6',
+    buttonHover: '#60a5fa',
+    previewClass: 'from-[#60a5fa] to-[#2563eb]',
+  },
+  amethyst: {
+    id: 'amethyst',
+    name: 'Ametista & Violeta',
+    subtitle: 'Criativo • Design, UI/UX & Agências',
+    primary: '#8b5cf6',
+    primaryHover: '#a78bfa',
+    accent: '#7c3aed',
+    primaryRgb: '139, 92, 246',
+    accentRgb: '124, 58, 237',
+    gradientFrom: '#a78bfa',
+    gradientTo: '#7c3aed',
+    badgeBg: 'rgba(139, 92, 246, 0.18)',
+    badgeText: '#a78bfa',
+    badgeBorder: 'rgba(139, 92, 246, 0.35)',
+    buttonBg: '#8b5cf6',
+    buttonHover: '#a78bfa',
+    previewClass: 'from-[#a78bfa] to-[#7c3aed]',
+  },
+  ruby: {
+    id: 'ruby',
+    name: 'Rubi & Rosé',
+    subtitle: 'Vibrante • Fotografia, Moda & Eventos',
+    primary: '#f43f5e',
+    primaryHover: '#fb7185',
+    accent: '#e11d48',
+    primaryRgb: '244, 63, 94',
+    accentRgb: '225, 29, 72',
+    gradientFrom: '#fb7185',
+    gradientTo: '#e11d48',
+    badgeBg: 'rgba(244, 63, 94, 0.18)',
+    badgeText: '#fb7185',
+    badgeBorder: 'rgba(244, 63, 94, 0.35)',
+    buttonBg: '#f43f5e',
+    buttonHover: '#fb7185',
+    previewClass: 'from-[#fb7185] to-[#e11d48]',
+  },
+  amber: {
+    id: 'amber',
+    name: 'Âmbar & Sunset',
+    subtitle: 'Envolvente • Consultoria, Gastronomia & Artes',
+    primary: '#f59e0b',
+    primaryHover: '#fbbf24',
+    accent: '#d97706',
+    primaryRgb: '245, 158, 11',
+    accentRgb: '217, 119, 6',
+    gradientFrom: '#fbbf24',
+    gradientTo: '#d97706',
+    badgeBg: 'rgba(245, 158, 11, 0.18)',
+    badgeText: '#fbbf24',
+    badgeBorder: 'rgba(245, 158, 11, 0.35)',
+    buttonBg: '#f59e0b',
+    buttonHover: '#fbbf24',
+    previewClass: 'from-[#fbbf24] to-[#d97706]',
+  },
+  cyan: {
+    id: 'cyan',
+    name: 'Ciano & Tech',
+    subtitle: 'Futurista • Desenvolvimento & Inovação',
+    primary: '#06b6d4',
+    primaryHover: '#22d3ee',
+    accent: '#0891b2',
+    primaryRgb: '6, 182, 212',
+    accentRgb: '8, 145, 178',
+    gradientFrom: '#22d3ee',
+    gradientTo: '#0891b2',
+    badgeBg: 'rgba(6, 182, 212, 0.18)',
+    badgeText: '#22d3ee',
+    badgeBorder: 'rgba(6, 182, 212, 0.35)',
+    buttonBg: '#06b6d4',
+    buttonHover: '#22d3ee',
+    previewClass: 'from-[#22d3ee] to-[#0891b2]',
+  },
+  slate: {
+    id: 'slate',
+    name: 'Prata & Titânio',
+    subtitle: 'Monocromático • Minimalismo & Precisão',
+    primary: '#94a3b8',
+    primaryHover: '#cbd5e1',
+    accent: '#64748b',
+    primaryRgb: '148, 163, 184',
+    accentRgb: '100, 116, 139',
+    gradientFrom: '#cbd5e1',
+    gradientTo: '#64748b',
+    badgeBg: 'rgba(148, 163, 184, 0.18)',
+    badgeText: '#cbd5e1',
+    badgeBorder: 'rgba(148, 163, 184, 0.35)',
+    buttonBg: '#94a3b8',
+    buttonHover: '#cbd5e1',
+    previewClass: 'from-[#cbd5e1] to-[#64748b]',
+  },
+};
+
+export interface NicheConfig {
+  id: NicheType;
+  label: string;
+  iconName: string;
+  icon?: string;
+  defaultTitle: string;
+  defaultSpecialty: string;
+  projectSectionTitle: string;
+  projectSectionSubtitle: string;
+  description?: string;
+  hasPortfolio: boolean;
+  categories: { id: string; label: string }[];
+  statusOptions: { value: string; label: string }[];
+  formConfig: NicheFormConfig;
+}
+
+const RAW_NICHES: Record<NicheType, Omit<NicheConfig, 'formConfig'>> = {
+  vendas: {
+    id: 'vendas',
+    label: 'Vendas, Comércio & Representação',
+    iconName: 'ShoppingBag',
+    defaultTitle: 'Gestão Comercial & Vendas',
+    defaultSpecialty: 'Representação comercial, vendas B2B/B2C, produtos e catálogo',
+    projectSectionTitle: 'Catálogo de Produtos & Vendas',
+    projectSectionSubtitle: 'Fotos de produtos, catálogo comercial, pedidos em rota e entregas realizadas.',
+    hasPortfolio: true,
+    categories: [
+      { id: 'all', label: 'Todas as Vendas' },
+      { id: 'pedidos_atacado', label: 'Vendas Atacado / B2B' },
+      { id: 'pedidos_varejo', label: 'Vendas Varejo / B2C' },
+      { id: 'representacao', label: 'Representação Comercial' },
+      { id: 'catalogo', label: 'Produtos do Catálogo' },
+      { id: 'servicos_agregados', label: 'Serviços & Instalação' },
+      { id: 'recorrente', label: 'Pedidos Recorrentes' },
+      { id: 'antes_depois', label: '✨ Metas Batidas' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Proposta / Orçamento Aberto' },
+      { value: 'anteprojeto', label: 'Pedido Confirmado' },
+      { value: 'executivo', label: 'Em Separação / Faturamento' },
+      { value: 'obra', label: 'Em Transporte / Rota de Entrega' },
+      { value: 'entregue', label: 'Entregue & Recebido' },
+    ],
+  },
+  advocacia: {
+    id: 'advocacia',
+    label: 'Advocacia & Serviços Jurídicos',
+    iconName: 'ShieldCheck',
+    defaultTitle: 'Advocacia & Assessoria Jurídica',
+    defaultSpecialty: 'Assessoria jurídica contenciosa, consultiva e contratual',
+    projectSectionTitle: 'Casos, Processos & Contratos Jurídicos',
+    projectSectionSubtitle: 'Processos judiciais, consultoria preventiva, minutas, pareceres e honorários.',
+    hasPortfolio: false,
+    categories: [
+      { id: 'all', label: 'Todos os Casos' },
+      { id: 'civel', label: 'Direito Civil & Família' },
+      { id: 'trabalhista', label: 'Direito do Trabalho' },
+      { id: 'tributario', label: 'Tributário & Fiscal' },
+      { id: 'imobiliario', label: 'Direito Imobiliário' },
+      { id: 'empresarial', label: 'Societário & Contratos' },
+      { id: 'consultoria', label: 'Pareceres & Consultivo' },
+      { id: 'antes_depois', label: '✨ Acordos & Sentenças Favoráveis' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Análise de Viabilidade / Consulta' },
+      { value: 'anteprojeto', label: 'Minuta & Estratégia Jurídica' },
+      { value: 'executivo', label: 'Peticionamento / Protocolo' },
+      { value: 'obra', label: 'Em Andamento / Instrução Processual' },
+      { value: 'entregue', label: 'Sentença / Acordo Finalizado' },
+    ],
+  },
+  arquitetura: {
+    id: 'arquitetura',
+    label: 'Arquitetura & Interiores',
+    iconName: 'Compass',
+    defaultTitle: 'Projetos, Espaços & Ambientes',
+    defaultSpecialty: 'Projetos residenciais, comerciais, reformas e ambientações',
+    projectSectionTitle: 'Portfólio de Projetos & Ambientes',
+    projectSectionSubtitle: 'Galeria de projetos desenvolvidos, imagens de interiores e histórico de entregas.',
+    hasPortfolio: true,
+    categories: [
+      { id: 'all', label: 'Todos os Projetos' },
+      { id: 'residencial', label: 'Residencial' },
+      { id: 'interiores', label: 'Interiores' },
+      { id: 'cozinha_gourmet', label: 'Cozinhas & Gourmet' },
+      { id: 'suite_master', label: 'Suítes Master' },
+      { id: 'living', label: 'Living & Salas' },
+      { id: 'comercial', label: 'Comercial' },
+      { id: 'consultoria', label: 'Consultoria' },
+      { id: 'antes_depois', label: '✨ Antes & Depois' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Estudo Preliminar' },
+      { value: 'anteprojeto', label: 'Anteprojeto 3D' },
+      { value: 'executivo', label: 'Projeto Executivo' },
+      { value: 'obra', label: 'Em Obra / Acompanhamento' },
+      { value: 'entregue', label: 'Fotografado & Entregue' },
+    ],
+  },
+  engenharia: {
+    id: 'engenharia',
+    label: 'Engenharia Civil & Construção',
+    iconName: 'Building2',
+    defaultTitle: 'Engenharia Civil & Gestão de Obras',
+    defaultSpecialty: 'Cálculo estrutural, instalações e gerenciamento de obras',
+    projectSectionTitle: 'Obras, Laudos & Projetos Técnicos',
+    projectSectionSubtitle: 'Projetos estruturais, elétricos, hidrossanitários, laudos e medições de obra.',
+    hasPortfolio: false,
+    categories: [
+      { id: 'all', label: 'Todos os Projetos' },
+      { id: 'estrutural', label: 'Cálculo Estrutural' },
+      { id: 'eletrico_hidro', label: 'Instalações & Hidro' },
+      { id: 'obra', label: 'Execução de Obra' },
+      { id: 'laudos', label: 'Laudos & Perícias' },
+      { id: 'reformas', label: 'Reformas Estruturais' },
+      { id: 'comercial', label: 'Obras Comerciais' },
+      { id: 'antes_depois', label: '✨ Evolução da Obra' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Estudo & Dimensionamento' },
+      { value: 'anteprojeto', label: 'Projeto Básico' },
+      { value: 'executivo', label: 'Projeto Executivo Aprovado' },
+      { value: 'obra', label: 'Em Execução / Canteiro' },
+      { value: 'entregue', label: 'Concluído & Vistoriado' },
+    ],
+  },
+  design: {
+    id: 'design',
+    label: 'Design Gráfico, Web & Branding',
+    iconName: 'Sparkles',
+    defaultTitle: 'Design Studio & Identidade Visual',
+    defaultSpecialty: 'Branding, UI/UX, Web Design e Criação Digital',
+    projectSectionTitle: 'Portfólio de Design & Criação',
+    projectSectionSubtitle: 'Identidades visuais, interfaces digitais, materiais editoriais e peças gráficas.',
+    hasPortfolio: true,
+    categories: [
+      { id: 'all', label: 'Todos os Projetos' },
+      { id: 'branding', label: 'Identidade & Branding' },
+      { id: 'ui_ux', label: 'UI/UX & Web Design' },
+      { id: 'editorial', label: 'Editorial & Embalagem' },
+      { id: 'social_media', label: 'Social Media & Criativos' },
+      { id: 'motion', label: 'Motion Design & Vídeo' },
+      { id: 'antes_depois', label: '✨ Redesign / Antes & Depois' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Briefing & Moodboard' },
+      { value: 'anteprojeto', label: 'Conceito & Wireframes' },
+      { value: 'executivo', label: 'Ajustes & Finalização' },
+      { value: 'obra', label: 'Em Desenvolvimento / Produção' },
+      { value: 'entregue', label: 'Aprovado & Entregue' },
+    ],
+  },
+  criador_conteudo: {
+    id: 'criador_conteudo',
+    label: 'Criador de Conteúdo & Mídia Digital',
+    iconName: 'Video',
+    defaultTitle: 'Criador de Conteúdo & Digital Influencer',
+    defaultSpecialty: 'Parcerias com marcas, publis, vídeos, fotos e criação de conteúdo',
+    projectSectionTitle: 'Portfólio de Conteúdos, Campanhas & Publis',
+    projectSectionSubtitle: 'Galeria de publis, posts, vídeos produzidos e campanhas para marcas parceiras.',
+    hasPortfolio: true,
+    categories: [
+      { id: 'all', label: 'Todas as Campanhas' },
+      { id: 'publis', label: 'Publis & Patrocínios' },
+      { id: 'reels_tiktok', label: 'Reels & TikTok' },
+      { id: 'youtube', label: 'YouTube & Vídeos Longos' },
+      { id: 'stories', label: 'Stories & Carrosséis' },
+      { id: 'eventos_vip', label: 'Eventos & Presença VIP' },
+      { id: 'especiais', label: 'Projetos Especiais' },
+      { id: 'antes_depois', label: '✨ Melhores Engajamentos' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Proposta / Negociação' },
+      { value: 'anteprojeto', label: 'Briefing Aprovado' },
+      { value: 'executivo', label: 'Gravado / Em Edição' },
+      { value: 'obra', label: 'Publicado no Ar' },
+      { value: 'entregue', label: 'Relatório Entregue & Pago' },
+    ],
+  },
+  arte_decoracao: {
+    id: 'arte_decoracao',
+    label: 'Arte, Quadros Decorativos & Molduraria',
+    iconName: 'Palette',
+    defaultTitle: 'Studio de Arte & Quadros Decorativos',
+    defaultSpecialty: 'Quadros sob medida, impressões fine art, telas canvas e composições de parede',
+    projectSectionTitle: 'Catálogo de Quadros & Obras Decorativas',
+    projectSectionSubtitle: 'Galeria de quadros desenvolvidos, ambientações reais e mostruário de molduras.',
+    hasPortfolio: true,
+    categories: [
+      { id: 'all', label: 'Todos os Quadros & Obras' },
+      { id: 'canvas', label: 'Quadros Canvas / Telas' },
+      { id: 'fine_art', label: 'Impressões Fine Art' },
+      { id: 'galerias', label: 'Composições de Galerias' },
+      { id: 'personalizados', label: 'Quadros Personalizados' },
+      { id: 'molduras', label: 'Molduras Especiais' },
+      { id: 'antes_depois', label: '✨ Ambientes Reais' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Orçamento / Prévia' },
+      { value: 'anteprojeto', label: 'Em Produção / Impressão' },
+      { value: 'executivo', label: 'Emoldurando' },
+      { value: 'obra', label: 'Enviado / Em Transporte' },
+      { value: 'entregue', label: 'Entregue & Instalado' },
+    ],
+  },
+  consultoria: {
+    id: 'consultoria',
+    label: 'Consultoria, Gestão & Negócios',
+    iconName: 'TrendingUp',
+    defaultTitle: 'Consultoria Empresarial & Estratégica',
+    defaultSpecialty: 'Diagnósticos, otimização de processos e planejamento',
+    projectSectionTitle: 'Projetos de Consultoria & Mentorias',
+    projectSectionSubtitle: 'Diagnósticos empresariais, planos de ação, mentorias e relatórios de desempenho.',
+    hasPortfolio: false,
+    categories: [
+      { id: 'all', label: 'Todos os Projetos' },
+      { id: 'gestao', label: 'Gestão Financeira & Custos' },
+      { id: 'estrategia', label: 'Planejamento Estratégico' },
+      { id: 'processos', label: 'Mapeamento de Processos' },
+      { id: 'mentoria', label: 'Mentorias Executivas' },
+      { id: 'comercial', label: 'Vendas & Expansão' },
+      { id: 'antes_depois', label: '✨ Resultados Antes & Depois' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Diagnóstico & Imersão' },
+      { value: 'anteprojeto', label: 'Plano de Ação' },
+      { value: 'executivo', label: 'Implementação' },
+      { value: 'obra', label: 'Acompanhamento de Resultados' },
+      { value: 'entregue', label: 'Ciclo Concluído' },
+    ],
+  },
+  saude_estetica: {
+    id: 'saude_estetica',
+    label: 'Saúde, Clínicas, Estética & Nutrição',
+    iconName: 'Activity',
+    defaultTitle: 'Consultório & Atendimento Clínico',
+    defaultSpecialty: 'Procedimentos, consultas, tratamentos e protocolos personalizados',
+    projectSectionTitle: 'Protocolos, Procedimentos & Pacotes',
+    projectSectionSubtitle: 'Acompanhamento de tratamentos, pacotes de sessões, avaliações e evolução de pacientes.',
+    hasPortfolio: false,
+    categories: [
+      { id: 'all', label: 'Todos os Atendimentos' },
+      { id: 'consultas', label: 'Consultas & Avaliações' },
+      { id: 'procedimentos', label: 'Procedimentos & Sessões' },
+      { id: 'pacotes', label: 'Planos & Pacotes Fechados' },
+      { id: 'estetica_facial', label: 'Estética Facial / Corporal' },
+      { id: 'acompanhamento', label: 'Acompanhamento Nutricional / Clínico' },
+      { id: 'antes_depois', label: '✨ Evolução do Paciente' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Avaliação Inicial / Anamnese' },
+      { value: 'anteprojeto', label: 'Protocolo Aprovado' },
+      { value: 'executivo', label: 'Em Tratamento / Sessões' },
+      { value: 'obra', label: 'Reavaliação de Resultados' },
+      { value: 'entregue', label: 'Alta / Ciclo Concluído' },
+    ],
+  },
+  imobiliario: {
+    id: 'imobiliario',
+    label: 'Imobiliária, Corretores & Locação',
+    iconName: 'Home',
+    defaultTitle: 'Consultoria Imobiliária & Negócios',
+    defaultSpecialty: 'Intermediação de compra, venda, locação e captação de imóveis',
+    projectSectionTitle: 'Catálogo & Portfólio de Imóveis',
+    projectSectionSubtitle: 'Imóveis anunciados, contratos de locação, captações exclusivas e fotos.',
+    hasPortfolio: true,
+    categories: [
+      { id: 'all', label: 'Todos os Imóveis' },
+      { id: 'venda', label: 'Imóveis para Venda' },
+      { id: 'locacao', label: 'Contratos de Locação' },
+      { id: 'captacao', label: 'Captações Exclusivas' },
+      { id: 'lancamentos', label: 'Lançamentos & Na Planta' },
+      { id: 'comercial', label: 'Imóveis Comerciais' },
+      { id: 'antes_depois', label: '✨ Venda Concluída' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Captação / Avaliação' },
+      { value: 'anteprojeto', label: 'Em Divulgação / Visitas' },
+      { value: 'executivo', label: 'Proposta em Análise' },
+      { value: 'obra', label: 'Documentação / Cartório' },
+      { value: 'entregue', label: 'Escriturado / Chaves Entregues' },
+    ],
+  },
+  fotografia: {
+    id: 'fotografia',
+    label: 'Fotografia & Produção Audiovisual',
+    iconName: 'Camera',
+    defaultTitle: 'Fotografia & Direção Visual',
+    defaultSpecialty: 'Ensaios, cobertura de eventos e produção audiovisual',
+    projectSectionTitle: 'Galeria & Portfólio de Ensaios',
+    projectSectionSubtitle: 'Sessões fotográficas, filmagens comerciais, casamentos e pós-produção.',
+    hasPortfolio: true,
+    categories: [
+      { id: 'all', label: 'Todos os Ensaios' },
+      { id: 'ensaios', label: 'Ensaios & Retratos' },
+      { id: 'eventos', label: 'Eventos & Casamentos' },
+      { id: 'comercial', label: 'Comercial & Produtos' },
+      { id: 'espacos', label: 'Espaços & Ambientes' },
+      { id: 'video', label: 'Vídeos & Reels' },
+      { id: 'antes_depois', label: '✨ Edição Antes & Depois' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Briefing & Agendamento' },
+      { value: 'anteprojeto', label: 'Captação Realizada' },
+      { value: 'executivo', label: 'Seleção do Cliente' },
+      { value: 'obra', label: 'Em Tratamento / Edição' },
+      { value: 'entregue', label: 'Galeria Entregue' },
+    ],
+  },
+  tecnologia: {
+    id: 'tecnologia',
+    label: 'Tecnologia, Dev & Software',
+    iconName: 'Code',
+    defaultTitle: 'Desenvolvimento de Software & Soluções Digitais',
+    defaultSpecialty: 'Aplicações web, apps mobile, APIs e automações',
+    projectSectionTitle: 'Projetos de Software & Sistemas',
+    projectSectionSubtitle: 'Aplicações desenvolvidas, integrações, APIs e entregas de software.',
+    hasPortfolio: false,
+    categories: [
+      { id: 'all', label: 'Todos os Projetos' },
+      { id: 'web_apps', label: 'Web Apps & SaaS' },
+      { id: 'mobile', label: 'Aplicativos Mobile' },
+      { id: 'apis', label: 'APIs & Backend' },
+      { id: 'automacoes', label: 'Automações & Scripts' },
+      { id: 'consultoria_tech', label: 'Consultoria Técnica & Cloud' },
+      { id: 'antes_depois', label: '✨ Nova Versão / Refatoração' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Descoberta & Especificação' },
+      { value: 'anteprojeto', label: 'Prototipação & MVP' },
+      { value: 'executivo', label: 'Em Desenvolvimento / Sprints' },
+      { value: 'obra', label: 'Em Testes / Homologação' },
+      { value: 'entregue', label: 'Em Produção / Deploy' },
+    ],
+  },
+  marketing: {
+    id: 'marketing',
+    label: 'Marketing & Tráfego / Social Media',
+    iconName: 'Megaphone',
+    defaultTitle: 'Marketing Digital & Gestão de Tráfego',
+    defaultSpecialty: 'Campanhas de tráfego pago, social media e conversão',
+    projectSectionTitle: 'Campanhas & Contratos de Marketing',
+    projectSectionSubtitle: 'Gestão de tráfego, campanhas de vendas, redes sociais e relatórios de ROI.',
+    hasPortfolio: false,
+    categories: [
+      { id: 'all', label: 'Todas as Campanhas' },
+      { id: 'trafego_pago', label: 'Tráfego Pago (Meta/Google)' },
+      { id: 'social_media', label: 'Gestão de Redes Sociais' },
+      { id: 'lancamentos', label: 'Lançamentos & Infoprodutos' },
+      { id: 'inbound', label: 'Inbound & Conteúdo' },
+      { id: 'copywriting', label: 'Copywriting & Páginas' },
+      { id: 'antes_depois', label: '✨ ROI / Crescimento' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Planejamento de Campanha' },
+      { value: 'anteprojeto', label: 'Criação de Criativos & Copy' },
+      { value: 'executivo', label: 'Campanha no Ar / Teste' },
+      { value: 'obra', label: 'Otimização & Escala' },
+      { value: 'entregue', label: 'Relatório Final & ROI' },
+    ],
+  },
+  educacao: {
+    id: 'educacao',
+    label: 'Educação, Cursos & Mentorias',
+    iconName: 'GraduationCap',
+    defaultTitle: 'Educação, Treinamentos & Mentorias',
+    defaultSpecialty: 'Aulas, cursos presenciais/online, mentorias e workshops',
+    projectSectionTitle: 'Turmas, Mentorias & Conteúdos',
+    projectSectionSubtitle: 'Gestão de turmas, alunos matriculados, mentorias e materiais didáticos.',
+    hasPortfolio: false,
+    categories: [
+      { id: 'all', label: 'Todos os Programas' },
+      { id: 'mentorias', label: 'Mentorias Individuais' },
+      { id: 'turmas', label: 'Turmas & Workshops' },
+      { id: 'cursos_online', label: 'Cursos Online' },
+      { id: 'aulas_particulares', label: 'Aulas Particulares' },
+      { id: 'materiais', label: 'Materiais & Apostilas' },
+      { id: 'antes_depois', label: '✨ Conclusão & Certificados' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Inscrições / Matrícula' },
+      { value: 'anteprojeto', label: 'Planejamento de Aulas' },
+      { value: 'executivo', label: 'Turma em Andamento' },
+      { value: 'obra', label: 'Avaliação / Entrega de Trabalhos' },
+      { value: 'entregue', label: 'Concluído & Certificado' },
+    ],
+  },
+  eventos: {
+    id: 'eventos',
+    label: 'Eventos, Casamentos & Cerimonial',
+    iconName: 'PartyPopper',
+    defaultTitle: 'Organização de Eventos & Cerimonial',
+    defaultSpecialty: 'Produção de casamentos, festas corporativas e celebrações',
+    projectSectionTitle: 'Galeria & Portfólio de Eventos',
+    projectSectionSubtitle: 'Planejamento de datas, contratação de fornecedores, roteiros e registros de eventos.',
+    hasPortfolio: true,
+    categories: [
+      { id: 'all', label: 'Todos os Eventos' },
+      { id: 'casamentos', label: 'Casamentos & Noivados' },
+      { id: 'corporativo', label: 'Eventos Corporativos' },
+      { id: 'aniversarios', label: '15 Anos & Aniversários' },
+      { id: 'formaturas', label: 'Formaturas' },
+      { id: 'consultoria_evento', label: 'Assessoria do Dia' },
+      { id: 'antes_depois', label: '✨ Fotos do Grande Dia' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Briefing & Orçamento de Fornecedores' },
+      { value: 'anteprojeto', label: 'Cronograma & Contratos Fechados' },
+      { value: 'executivo', label: 'Alinhamento Final / Checklist' },
+      { value: 'obra', label: 'Montagem & Dia do Evento' },
+      { value: 'entregue', label: 'Pós-Evento & Fechamento' },
+    ],
+  },
+  autonomo: {
+    id: 'autonomo',
+    label: 'Prestador de Serviços & Autônomo',
+    iconName: 'Briefcase',
+    defaultTitle: 'Prestação de Serviços Profissionais',
+    defaultSpecialty: 'Atendimentos especializados, projetos e serviços pontuais',
+    projectSectionTitle: 'Serviços & Contratos Realizados',
+    projectSectionSubtitle: 'Ordens de serviço, contratos de atendimento e histórico de entregas.',
+    hasPortfolio: false,
+    categories: [
+      { id: 'all', label: 'Todos os Serviços' },
+      { id: 'presencial', label: 'Atendimento Presencial' },
+      { id: 'remoto', label: 'Serviço Online / Remoto' },
+      { id: 'recorrente', label: 'Contrato Recorrente' },
+      { id: 'avulso', label: 'Serviço Avulso' },
+      { id: 'consultoria', label: 'Consultoria & Parecer' },
+      { id: 'antes_depois', label: '✨ Antes & Depois' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Orçamento Enviado' },
+      { value: 'anteprojeto', label: 'Contrato Aprovado' },
+      { value: 'executivo', label: 'Em Preparação' },
+      { value: 'obra', label: 'Em Execução' },
+      { value: 'entregue', label: 'Concluído & Faturado' },
+    ],
+  },
+  outro: {
+    id: 'outro',
+    label: 'Outro Nicho / Personalizado',
+    iconName: 'Layers',
+    defaultTitle: 'Meu Escritório / Negócio Profissional',
+    defaultSpecialty: 'Projetos, atendimentos, vendas e serviços especializados',
+    projectSectionTitle: 'Meus Projetos & Atividades',
+    projectSectionSubtitle: 'Organize suas entregas, contratos, finanças e atendimentos em um único painel.',
+    hasPortfolio: false,
+    categories: [
+      { id: 'all', label: 'Todos os Projetos' },
+      { id: 'categoria_1', label: 'Projetos Principais' },
+      { id: 'categoria_2', label: 'Consultorias & Serviços' },
+      { id: 'categoria_3', label: 'Contratos Especiais' },
+      { id: 'antes_depois', label: '✨ Antes & Depois' },
+    ],
+    statusOptions: [
+      { value: 'estudo_preliminar', label: 'Em Negociação / Estudo' },
+      { value: 'anteprojeto', label: 'Aprovado / Planejamento' },
+      { value: 'executivo', label: 'Em Execução' },
+      { value: 'obra', label: 'Em Revisão' },
+      { value: 'entregue', label: 'Finalizado' },
+    ],
+  },
+};
+
+const NICHE_ICONS: Record<NicheType, string> = {
+  vendas: '🛍️',
+  advocacia: '⚖️',
+  arquitetura: '🏛️',
+  engenharia: '🏗️',
+  design: '🎨',
+  criador_conteudo: '📹',
+  arte_decoracao: '🖼️',
+  consultoria: '💼',
+  saude_estetica: '🩺',
+  imobiliario: '🏢',
+  fotografia: '📷',
+  tecnologia: '💻',
+  marketing: '🚀',
+  educacao: '📚',
+  eventos: '🎉',
+  autonomo: '⚡',
+  outro: '⭐',
+};
+
+export const NICHES: Record<NicheType, NicheConfig> = Object.fromEntries(
+  Object.entries(RAW_NICHES).map(([key, config]) => [
+    key,
+    {
+      ...config,
+      icon: NICHE_ICONS[key as NicheType] || '💼',
+      description: config.projectSectionSubtitle,
+      formConfig: NICHE_FORM_CONFIGS[key as NicheType] || NICHE_FORM_CONFIGS.outro,
+    },
+  ])
+) as Record<NicheType, NicheConfig>;
+
+export const applyThemeToDocument = (themeId: ThemeColorId = 'gold') => {
+  const theme = THEMES[themeId] || THEMES.gold;
+  const root = document.documentElement;
+  const body = document.body;
+
+  const setProps = (el: HTMLElement) => {
+    el.style.setProperty('--theme-primary', theme.primary);
+    el.style.setProperty('--theme-primary-hover', theme.primaryHover);
+    el.style.setProperty('--theme-accent', theme.accent);
+    el.style.setProperty('--theme-primary-rgb', theme.primaryRgb);
+    el.style.setProperty('--theme-accent-rgb', theme.accentRgb);
+    el.style.setProperty('--theme-gradient-from', theme.gradientFrom);
+    el.style.setProperty('--theme-gradient-to', theme.gradientTo);
+    el.style.setProperty('--theme-badge-bg', theme.badgeBg);
+    el.style.setProperty('--theme-badge-text', theme.badgeText);
+    el.style.setProperty('--theme-badge-border', theme.badgeBorder);
+    el.style.setProperty('--theme-button-bg', theme.buttonBg);
+    el.style.setProperty('--theme-button-hover', theme.buttonHover);
+  };
+
+  if (root) setProps(root);
+  if (body) setProps(body);
+};
