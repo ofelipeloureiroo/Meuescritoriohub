@@ -400,6 +400,12 @@ export const TeamTab: React.FC = () => {
   };
 
   const handleOpenAddModal = () => {
+    const nonOwnerCount = members.filter((m) => m.role !== 'admin' && !m.isCurrentUser).length;
+    if (nonOwnerCount >= 4) {
+      alert('Seu plano inclui até 4 colaboradores por escritório. Para adicionar outro membro, remova um colaborador existente.');
+      return;
+    }
+
     setFormName('');
     setFormEmail('');
     setFormRoleTitle('Projetista');
@@ -681,6 +687,9 @@ export const TeamTab: React.FC = () => {
             <Users className="w-4 h-4 text-zinc-500" />
             <span className="text-sm font-bold text-zinc-800">
               {members.length} membros
+            </span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-800 font-semibold border border-amber-500/20">
+              {members.filter((m) => m.role !== 'admin' && !m.isCurrentUser).length}/4 vagas de colaboradores
             </span>
           </div>
 
