@@ -37,11 +37,13 @@ import {
   FileText,
   Camera,
   Image as ImageIcon,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { compressImage } from '../../utils/imageCompressor';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
-import { signOut } from 'firebase/auth';
+import { signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { NicheType, ThemeColorId, BgThemeId, OfficeSettings, CollaboratorPermissions } from '../../types';
 import { NICHES, THEMES, BG_THEMES } from '../../utils/theme';
@@ -96,7 +98,62 @@ export const SettingsTab: React.FC = () => {
   } = useAuth();
 
   // Top level horizontal tabs
-  const [activeSubTab, setActiveSubTab] = useState<'sistema' | 'operacao' | 'financeiro' | 'inteligencia'>('operacao');
+  const [activeSubTab, setActiveSubTab] = useState<'minha-conta' | 'sistema' | 'operacao' | 'financeiro' | 'inteligencia'>('minha-conta');
+
+  // Password change states
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [isUpdatingPass, setIsUpdatingPass] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Preencha todos os campos de senha.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError('A nova senha deve ter no mínimo 8 caracteres.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('As senhas não coincidem.');
+      return;
+    }
+
+    if (!user || !user.email) {
+      setPasswordError('Usuário não autenticado.');
+      return;
+    }
+
+    setIsUpdatingPass(true);
+    try {
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(auth.currentUser!, credential);
+      await updatePassword(auth.currentUser!, newPassword);
+      setPasswordSuccess('Senha alterada com sucesso!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setPasswordError('Senha atual incorreta.');
+      } else {
+        setPasswordError(`Erro ao alterar senha: ${err.message}`);
+      }
+    } finally {
+      setIsUpdatingPass(false);
+    }
+  };
 
   // Operation specific views
   const [actionAreaFilter, setActionAreaFilter] = useState<'Comercial' | 'Operação' | 'Financeiro'>('Comercial');
@@ -464,6 +521,17 @@ export const SettingsTab: React.FC = () => {
       {/* Main Sections Horizontal Tabs */}
       <div className="flex border-b border-[#2d2621] overflow-x-auto no-scrollbar gap-1 pt-1 bg-[#181412] p-1.5 rounded-2xl">
         <button
+          onClick={() => setActiveSubTab('minha-conta')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+            activeSubTab === 'minha-conta'
+              ? 'bg-[#28221e] text-[var(--theme-primary)] border border-[#3d342f] font-extrabold shadow-sm'
+              : 'text-[#a89c93] hover:text-[#fcf8f5]'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Minha Conta</span>
+        </button>
+        <button
           onClick={() => setActiveSubTab('sistema')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
             activeSubTab === 'sistema'
@@ -511,6 +579,128 @@ export const SettingsTab: React.FC = () => {
 
       {/* Tab Contents */}
       <div className="space-y-6">
+
+        {/* MINHA CONTA TAB */}
+        {activeSubTab === 'minha-conta' && (
+          <div className="max-w-2xl mx-auto space-y-6">
+            {/* Perfil card */}
+            <div className="bg-[#1c1815] border border-[#302722] rounded-2xl p-6 space-y-4 shadow-xl">
+              <div className="flex items-center gap-2.5 border-b border-[#302722] pb-3">
+                <Users className="w-4 h-4 text-[var(--theme-primary)]" />
+                <h3 className="font-serif font-bold text-[#fcf8f5] text-sm uppercase tracking-wider">Perfil</h3>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-[#a89c93] mb-1">Nome</label>
+                  <div className="w-full px-3.5 py-2.5 rounded-xl bg-[#0e0c0b] border border-[#3d342f] text-[#fcf8f5] text-xs font-medium">
+                    {profile?.name || architectProfile.name || user?.displayName || 'Usuário'}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-[#a89c93] mb-1">E-mail</label>
+                  <div className="w-full px-3.5 py-2.5 rounded-xl bg-[#0e0c0b] border border-[#3d342f] text-[#fcf8f5] text-xs font-medium">
+                    {user?.email || profile?.email || 'N/A'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Alterar Senha card */}
+            <div className="bg-[#1c1815] border border-[#302722] rounded-2xl p-6 space-y-4 shadow-xl">
+              <div className="flex items-center gap-2.5 border-b border-[#302722] pb-3">
+                <Lock className="w-4 h-4 text-[var(--theme-primary)]" />
+                <h3 className="font-serif font-bold text-[#fcf8f5] text-sm uppercase tracking-wider">Alterar Senha</h3>
+              </div>
+
+              <form onSubmit={handlePasswordChange} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-[#a89c93] mb-1">Senha Atual</label>
+                  <div className="relative">
+                    <input
+                      type={showCurrentPass ? 'text' : 'password'}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Sua senha atual"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#0e0c0b] border border-[#3d342f] text-[#fcf8f5] text-xs focus:outline-none focus:border-[var(--theme-primary)] pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPass(!showCurrentPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a89c93] hover:text-[#fcf8f5]"
+                    >
+                      {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-[#a89c93] mb-1">Nova Senha</label>
+                  <div className="relative">
+                    <input
+                      type={showNewPass ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Mínimo 8 caracteres"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#0e0c0b] border border-[#3d342f] text-[#fcf8f5] text-xs focus:outline-none focus:border-[var(--theme-primary)] pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPass(!showNewPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a89c93] hover:text-[#fcf8f5]"
+                    >
+                      {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-[#a89c93] mb-1">Confirmar Nova Senha</label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPass ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repita a nova senha"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#0e0c0b] border border-[#3d342f] text-[#fcf8f5] text-xs focus:outline-none focus:border-[var(--theme-primary)] pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPass(!showConfirmPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a89c93] hover:text-[#fcf8f5]"
+                    >
+                      {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {passwordError && (
+                  <p className="text-xs text-rose-500 font-medium">{passwordError}</p>
+                )}
+                {passwordSuccess && (
+                  <p className="text-xs text-emerald-500 font-medium">{passwordSuccess}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isUpdatingPass}
+                  className="w-full py-3 bg-[var(--theme-primary)] hover:opacity-90 text-[#14110f] font-bold text-xs rounded-xl transition-all cursor-pointer shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isUpdatingPass ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Alterando senha...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4" />
+                      <span>Alterar senha</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* 1. SISTEMA TAB */}
         {activeSubTab === 'sistema' && (
