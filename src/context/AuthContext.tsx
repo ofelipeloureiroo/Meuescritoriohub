@@ -136,11 +136,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   const ownerData = ownerSnap.data() as UserProfile;
                   setProfile({
                     ...ownerData,
+                    ...updatedData, // Keep collaborator's own identity (name, avatarUrl, email, uid, role, status)
                     joinedOwnerUid: updatedData.joinedOwnerUid,
-                    uid: firebaseUser.uid, // keep own uid
-                    email: firebaseUser.email || updatedData.email, // keep own email
-                    role: updatedData.role, // keep own role
-                    status: updatedData.status, // keep own status
                   });
                 } else {
                   setProfile(updatedData);
@@ -388,7 +385,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }, { merge: true });
       }
 
-      await updateProfile({ joinedOwnerUid: undefined });
+      const docRef = doc(db, 'users', user.uid);
+      await setDoc(docRef, { joinedOwnerUid: null }, { merge: true });
+      setProfile(prev => prev ? { ...prev, joinedOwnerUid: undefined } : null);
     } catch (e) {
       console.error("Error leaving collaborated office:", e);
     }
