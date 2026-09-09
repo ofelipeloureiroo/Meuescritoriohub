@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { collection, query, where, onSnapshot, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import {
   Users,
   Shield,
@@ -106,7 +108,10 @@ export const TeamTab: React.FC = () => {
   const [copiedCode, setCopiedCode] = useState(false);
   const [joinMessage, setJoinMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  const [members, setMembers] = useState<TeamMember[]>(() => {
+  const [members, setMembers] = useState<TeamMember[]>([]);
+
+  // Sync profile.collaborators and joined users from Firestore into members state in real-time
+  useEffect(() => {
     const defaultOwner: TeamMember = {
       id: user?.uid || 'member_owner',
       name: architectProfile?.name || profile?.companyName || user?.displayName || 'LF Quadros & Decoração',
@@ -135,66 +140,23 @@ export const TeamTab: React.FC = () => {
       joinedAt: new Date().toISOString().split('T')[0],
     };
 
-    try {
-      const saved = localStorage.getItem('meu_escritorio_equipe_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (
-          Array.isArray(parsed) &&
-          parsed.some(
-            (m: any) =>
-              m.id === 'member_1' ||
-              m.id === 'member_2' ||
-              m.name?.includes('Laíne') ||
-              m.name?.includes('Maria Laura')
-          )
-        ) {
-          localStorage.setItem('meu_escritorio_equipe_v1', JSON.stringify([defaultOwner]));
-          return [defaultOwner];
-        }
-        return parsed;
-      }
-    } catch {
-      // fallback
-    }
-    return [defaultOwner];
-  });
+    const currentList: TeamMember[] = [defaultOwner];
 
-  // Sync profile.collaborators into members state in real-time
-  useEffect(() => {
-    if (!profile?.collaborators || !Array.isArray(profile.collaborators)) return;
-
-    setMembers((prev) => {
-      let updated = [...prev];
-      let hasChanges = false;
-
+    // Add collaborators from profile.collaborators
+    if (profile?.collaborators && Array.isArray(profile.collaborators)) {
       profile.collaborators.forEach((collab) => {
-        const existingIdx = updated.findIndex(
-          (m) =>
-            m.id === collab.uid ||
-            (m.email && collab.email && m.email.toLowerCase() === collab.email.toLowerCase())
+        if (!collab.email) return;
+        const exists = currentList.some(
+          m => m.id === collab.uid || (m.email && m.email.toLowerCase() === collab.email.toLowerCase())
         );
-
-        if (existingIdx >= 0) {
-          const existing = updated[existingIdx];
-          const mergedPerms = { ...existing.permissions, ...collab.permissions };
-          if (JSON.stringify(existing.permissions) !== JSON.stringify(mergedPerms)) {
-            updated[existingIdx] = {
-              ...existing,
-              permissions: mergedPerms,
-              accessibleModulesCount: Object.values(mergedPerms).filter(Boolean).length,
-            };
-            hasChanges = true;
-          }
-        } else {
-          // Add collaborator automatically when they joined by invite code
+        if (!exists) {
           const newMember: TeamMember = {
             id: collab.uid || `collab_${Date.now()}`,
-            name: collab.email ? collab.email.split('@')[0] : 'Membro Colaborador',
+            name: collab.email.split('@')[0],
             email: collab.email,
             roleTitle: 'Membro Colaborador',
             role: 'member',
-            initials: (collab.email || 'MC').substring(0, 2).toUpperCase(),
+            initials: collab.email.substring(0, 2).toUpperCase(),
             color: '#c58a4b',
             isCurrentUser: collab.uid === user?.uid,
             status: 'active',
@@ -216,14 +178,75 @@ export const TeamTab: React.FC = () => {
             },
             joinedAt: collab.joinedAt || new Date().toISOString().split('T')[0],
           };
-          updated.push(newMember);
-          hasChanges = true;
+          currentList.push(newMember);
         }
       });
+    }
 
-      return hasChanges ? updated : prev;
+    setMembers(currentList);
+
+    // Also listen to users collection where joinedOwnerUid equals owner
+    const ownerUid = user?.uid;
+    if (!ownerUid) return;
+
+    const q = query(collection(db, 'users'), where('joinedOwnerUid', '==', ownerUid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setMembers((prev) => {
+        const list = [...prev];
+        snapshot.docs.forEach((docSnap) => {
+          const uData = docSnap.data();
+          const email = uData.email;
+          if (!email) return;
+
+          const existingIdx = list.findIndex(
+            m => m.id === docSnap.id || (m.email && m.email.toLowerCase() === email.toLowerCase())
+          );
+
+          if (existingIdx >= 0) {
+            list[existingIdx] = {
+              ...list[existingIdx],
+              id: docSnap.id,
+              email: email,
+              name: uData.name || email.split('@')[0],
+            };
+          } else {
+            list.push({
+              id: docSnap.id,
+              name: uData.name || email.split('@')[0],
+              email: email,
+              roleTitle: 'Membro Colaborador',
+              role: 'member',
+              initials: email.substring(0, 2).toUpperCase(),
+              color: '#c58a4b',
+              isCurrentUser: false,
+              status: 'active',
+              accessibleModulesCount: 8,
+              permissions: {
+                today: true,
+                actions: true,
+                leads: true,
+                projects: true,
+                suppliers: true,
+                team: true,
+                clients: true,
+                deadlines: true,
+                finance: false,
+                health: false,
+                goals: true,
+                budget: false,
+              },
+              joinedAt: uData.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+            });
+          }
+        });
+        return list;
+      });
+    }, (err) => {
+      console.warn("Notice listening to joined collaborators:", err);
     });
-  }, [profile?.collaborators, user?.uid]);
+
+    return () => unsubscribe();
+  }, [profile?.collaborators, user?.uid, user?.email, architectProfile?.name, profile?.companyName]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);

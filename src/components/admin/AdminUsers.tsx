@@ -293,6 +293,22 @@ export const AdminUsers: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const handleManualRefresh = async () => {
+    setLoading(true);
+    try {
+      const snap = await getDocs(collection(db, 'users'));
+      const usersList: UserProfile[] = snap.docs.map((docSnap) => ({
+        ...(docSnap.data() as UserProfile),
+        uid: docSnap.id,
+      }));
+      setUsers(usersList);
+    } catch (e) {
+      console.warn("Manual refresh notice:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -309,6 +325,13 @@ export const AdminUsers: React.FC = () => {
           <h2 className="text-2xl font-serif font-bold text-[#fcf8f5]">Painel Financeiro & Assinantes</h2>
           <p className="text-[#a89c93] text-sm">Acompanhe seus assinantes, gerencie liberação após pagamento e permissões do sistema.</p>
         </div>
+        <button
+          onClick={handleManualRefresh}
+          className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer shrink-0"
+        >
+          <RefreshCw className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+          <span>Atualizar Lista</span>
+        </button>
       </div>
 
       {errorMessage && (
@@ -388,8 +411,19 @@ export const AdminUsers: React.FC = () => {
                         </div>
                         <div className="min-w-0">
                           <div className="text-sm font-bold text-[#fcf8f5] truncate">{u.email}</div>
-                          <div className="text-[10px] text-[#a89c93] font-mono">
-                            ID: {u.uid.slice(0, 12)}...
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-[#a89c93] font-mono">
+                              ID: {u.uid.slice(0, 10)}...
+                            </span>
+                            {u.joinedOwnerUid ? (
+                              <span className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] font-bold">
+                                👥 Equipe
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold">
+                                🌱 Assinante
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
