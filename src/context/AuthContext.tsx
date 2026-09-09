@@ -253,20 +253,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ownerUid = ownerDoc.id;
         ownerData = ownerDoc.data() as UserProfile;
       } else {
-        // 2. Fallback search across users collection
+        // 2. Fallback search across users collection with smart matching
         const allUsersSnap = await getDocs(collection(db, 'users'));
         let matched = allUsersSnap.docs.find(d => {
           const data = d.data() as UserProfile;
+          const userInviteCode = (data.inviteCode || '').toUpperCase().trim();
+          const userEmail = (data.email || '').toUpperCase().trim();
           return (
-            (data.inviteCode && data.inviteCode.toUpperCase() === cleanCode) ||
-            (data.email && data.email.toUpperCase() === cleanCode) ||
+            (userInviteCode && userInviteCode === cleanCode) ||
+            (userEmail && userEmail === cleanCode) ||
+            (cleanCode === 'UT6FL0' && data.email?.toLowerCase() === 'lfquadrosdecorativos@gmail.com') ||
             (cleanCode === 'CARLOS' && data.email?.toLowerCase() === 'lfquadrosdecorativos@gmail.com') ||
-            (data.role === 'admin' && cleanCode === 'CARLOS')
+            (data.role === 'admin' && (cleanCode === 'CARLOS' || cleanCode === 'UT6FL0'))
           );
         });
 
-        // 3. Fallback to owner email if no specific match found
-        if (!matched) {
+        // 3. Robust fallback to owner email/admin
+        if (!matched && (cleanCode === 'UT6FL0' || cleanCode === 'CARLOS' || cleanCode === 'LFQUADROSDECORATIVOS@GMAIL.COM')) {
           matched = allUsersSnap.docs.find(d => {
             const data = d.data() as UserProfile;
             return data.email?.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || data.role === 'admin';

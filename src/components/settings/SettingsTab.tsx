@@ -845,12 +845,24 @@ export const SettingsTab: React.FC = () => {
                 </div>
 
                 {profile?.joinedOwnerUid ? (
-                  <div className="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/20 text-xs text-amber-300 space-y-2">
-                    <p className="font-bold flex items-center gap-1.5">
-                      <Lock className="w-3.5 h-3.5" />
-                      Você faz parte de outro escritório!
-                    </p>
-                    <p className="text-[10px] text-[#a89c93]">Suas configurações de sistema estão sob a administração do proprietário principal do escritório.</p>
+                  <div className="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/20 text-xs text-amber-300 space-y-3">
+                    <div>
+                      <p className="font-bold flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5" />
+                        Você faz parte de outro escritório!
+                      </p>
+                      <p className="text-[10px] text-[#a89c93] mt-1">Suas configurações de sistema estão sob a administração do proprietário principal do escritório.</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (confirm("Deseja realmente sair deste escritório e retornar para o seu próprio?")) {
+                          await leaveCollaboratedOffice();
+                        }
+                      }}
+                      className="w-full py-2 bg-rose-600/90 hover:bg-rose-600 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                    >
+                      Desvincular e Sair do Escritório
+                    </button>
                   </div>
                 ) : (
                   <div className="space-y-3">

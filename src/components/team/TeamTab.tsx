@@ -27,6 +27,7 @@ import {
   Building2,
   Link as LinkIcon,
   Loader2,
+  LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useFinance } from '../../context/FinanceContext';
@@ -99,7 +100,7 @@ const MODULE_OPTIONS = [
 ];
 
 export const TeamTab: React.FC = () => {
-  const { user, profile, updateCollaboratorPermissions, joinWithInviteCode } = useAuth();
+  const { user, profile, updateCollaboratorPermissions, joinWithInviteCode, leaveCollaboratedOffice } = useAuth();
   const { architectProfile } = useFinance();
 
   // Invite Code State
@@ -597,87 +598,116 @@ export const TeamTab: React.FC = () => {
       </div>
 
       {/* Invite Code & Office Connection Box */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Box 1: Owner Share Office Code */}
-        <div className="bg-white rounded-2xl border border-zinc-200/90 p-5 shadow-xs flex flex-col justify-between space-y-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Key className="w-4 h-4 text-[#8c7456]" />
-              <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">
-                Código do Escritório
+      {profile?.joinedOwnerUid ? (
+        <div className="bg-amber-50/70 rounded-2xl border border-amber-200/80 p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-start gap-3 w-full">
+            <div className="p-2.5 rounded-xl bg-amber-100 text-amber-700 shrink-0">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-zinc-950">
+                Você está conectado a outro Escritório!
               </h3>
+              <p className="text-xs text-zinc-600 mt-1">
+                Sua conta está vinculada como colaborador(a). Você compartilha e visualiza todos os dados e ferramentas deste escritório de forma sincronizada.
+              </p>
             </div>
-            <p className="text-xs text-zinc-500">
-              Forneça este código aos membros da sua equipe para eles entrarem no seu escritório.
-            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="bg-zinc-100 border border-zinc-200 px-4 py-2 rounded-xl font-mono text-sm font-bold text-zinc-900 tracking-widest flex-1 text-center select-all">
-              {profile?.inviteCode || 'CARLOS'}
-            </div>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(profile?.inviteCode || '');
-                setCopiedCode(true);
-                setTimeout(() => setCopiedCode(false), 2000);
-              }}
-              className="px-3.5 py-2 bg-[#8c7456] hover:bg-[#786247] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-            >
-              <Copy className="w-3.5 h-3.5" />
-              <span>{copiedCode ? 'Copiado!' : 'Copiar'}</span>
-            </button>
-          </div>
+          <button
+            onClick={async () => {
+              if (confirm("Deseja realmente sair deste escritório e retornar para o seu próprio?")) {
+                await leaveCollaboratedOffice();
+              }
+            }}
+            className="w-full sm:w-auto px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2 shrink-0"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sair do Escritório</span>
+          </button>
         </div>
-
-        {/* Box 2: Join Another Office By Code */}
-        <div className="bg-white rounded-2xl border border-zinc-200/90 p-5 shadow-xs flex flex-col justify-between space-y-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Building2 className="w-4 h-4 text-emerald-600" />
-              <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">
-                Entrar em Escritório por Código
-              </h3>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Box 1: Owner Share Office Code */}
+          <div className="bg-white rounded-2xl border border-zinc-200/90 p-5 shadow-xs flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Key className="w-4 h-4 text-[#8c7456]" />
+                <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">
+                  Código do Escritório
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-500">
+                Forneça este código aos membros da sua equipe para eles entrarem no seu escritório.
+              </p>
             </div>
-            <p className="text-xs text-zinc-500">
-              Caso você seja colaborador, cole o código do escritório abaixo para vincular sua conta.
-            </p>
-          </div>
-
-          <form onSubmit={handleJoinOfficeByCode} className="space-y-2">
             <div className="flex items-center gap-2">
-              <input
-                type="text"
-                placeholder="Ex: ABC123"
-                maxLength={8}
-                value={inputInviteCode}
-                onChange={(e) => setInputInviteCode(e.target.value.toUpperCase())}
-                className="bg-zinc-50 border border-zinc-200 px-3.5 py-2 rounded-xl text-xs text-zinc-800 font-mono tracking-widest uppercase focus:outline-none focus:border-[#8c7456] flex-1"
-              />
+              <div className="bg-zinc-100 border border-zinc-200 px-4 py-2 rounded-xl font-mono text-sm font-bold text-zinc-900 tracking-widest flex-1 text-center select-all">
+                {profile?.inviteCode || 'CARLOS'}
+              </div>
               <button
-                type="submit"
-                disabled={isJoiningByCode || !inputInviteCode.trim()}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                onClick={() => {
+                  navigator.clipboard.writeText(profile?.inviteCode || '');
+                  setCopiedCode(true);
+                  setTimeout(() => setCopiedCode(false), 2000);
+                }}
+                className="px-3.5 py-2 bg-[#8c7456] hover:bg-[#786247] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
               >
-                {isJoiningByCode ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <LinkIcon className="w-3.5 h-3.5" />
-                )}
-                <span>Acessar</span>
+                <Copy className="w-3.5 h-3.5" />
+                <span>{copiedCode ? 'Copiado!' : 'Copiar'}</span>
               </button>
             </div>
-            {joinMessage && (
-              <p
-                className={`text-[11px] font-medium ${
-                  joinMessage.type === 'success' ? 'text-emerald-600' : 'text-red-500'
-                }`}
-              >
-                {joinMessage.text}
+          </div>
+
+          {/* Box 2: Join Another Office By Code */}
+          <div className="bg-white rounded-2xl border border-zinc-200/90 p-5 shadow-xs flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Building2 className="w-4 h-4 text-emerald-600" />
+                <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">
+                  Entrar em Escritório por Código
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-500">
+                Caso você seja colaborador, cole o código do escritório abaixo para vincular sua conta.
               </p>
-            )}
-          </form>
+            </div>
+
+            <form onSubmit={handleJoinOfficeByCode} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Ex: ABC123"
+                  maxLength={8}
+                  value={inputInviteCode}
+                  onChange={(e) => setInputInviteCode(e.target.value.toUpperCase())}
+                  className="bg-zinc-50 border border-zinc-200 px-3.5 py-2 rounded-xl text-xs text-zinc-800 font-mono tracking-widest uppercase focus:outline-none focus:border-[#8c7456] flex-1"
+                />
+                <button
+                  type="submit"
+                  disabled={isJoiningByCode || !inputInviteCode.trim()}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                >
+                  {isJoiningByCode ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <LinkIcon className="w-3.5 h-3.5" />
+                  )}
+                  <span>Acessar</span>
+                </button>
+              </div>
+              {joinMessage && (
+                <p
+                  className={`text-[11px] font-medium ${
+                    joinMessage.type === 'success' ? 'text-emerald-600' : 'text-red-500'
+                  }`}
+                >
+                  {joinMessage.text}
+                </p>
+              )}
+            </form>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Members Card (matching Image 2) */}
       <div className="bg-white rounded-3xl border border-zinc-200/90 shadow-xs overflow-hidden">
