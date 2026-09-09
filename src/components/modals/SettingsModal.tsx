@@ -26,7 +26,10 @@ import {
   Users,
   Lock,
   Copy,
+  Camera,
+  User,
 } from 'lucide-react';
+import { compressImage } from '../../utils/imageCompressor';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { signOut } from 'firebase/auth';
@@ -34,6 +37,24 @@ import { auth } from '../../lib/firebase';
 import { useNavigate } from 'react-router-dom';
 import { NicheType, ThemeColorId, OfficeSettings, CollaboratorPermissions } from '../../types';
 import { NICHES, THEMES } from '../../utils/theme';
+
+const PRESET_AVATARS = [
+  {
+    id: 'preset-1',
+    label: 'Clássico Executivo',
+    url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'preset-2',
+    label: 'Studio Criativo',
+    url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'preset-3',
+    label: 'Minimalista & Moderno',
+    url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+  },
+];
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -88,6 +109,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [photoUrl, setPhotoUrl] = useState('');
   const [selectedNiche, setSelectedNiche] = useState<NicheType>('arquitetura');
   const [selectedTheme, setSelectedTheme] = useState<ThemeColorId>('gold');
+  const [isCompressingPhoto, setIsCompressingPhoto] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [tempUrlInput, setTempUrlInput] = useState('');
+  const photoFileInputRef = useRef<HTMLInputElement>(null);
   
   // Confirms
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -121,9 +146,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   if (!isOpen) return null;
 
+  const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem válido (JPG, PNG, WebP).');
+      return;
+    }
+    try {
+      setIsCompressingPhoto(true);
+      const compressed = await compressImage(file, 500, 500, 0.78);
+      if (compressed) {
+        setPhotoUrl(compressed);
+        updateProfilePhoto(compressed);
+      }
+    } catch (err) {
+      console.error('Erro ao processar foto:', err);
+    } finally {
+      setIsCompressingPhoto(false);
+      if (photoFileInputRef.current) {
+        photoFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoUrl('');
+    updateProfilePhoto('');
+  };
+
   // Actions Profile
   const handleSaveProfile = () => {
-    updateArchitectProfile({ name, title, niche: selectedNiche, themeColor: selectedTheme });
+    updateArchitectProfile({ name, title, niche: selectedNiche, themeColor: selectedTheme, photoUrl });
     updateProfilePhoto(photoUrl);
     changeTheme(selectedTheme);
     changeNiche(selectedNiche);
@@ -403,6 +457,139 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <Palette className="w-4 h-4" /> Estilo & Nicho de Atuação
                 </h3>
 
+                {/* Foto de Perfil / Logotipo */}
+                <div className="p-3.5 rounded-2xl bg-[#09090b] border border-[#3d342f] flex flex-col sm:flex-row items-center gap-4">
+                  <div className="relative group shrink-0">
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[var(--theme-primary)] bg-[#1a1614] flex items-center justify-center shadow-lg shadow-black/40">
+                      {photoUrl ? (
+                        <img
+                          src={photoUrl}
+                          alt="Foto de Perfil"
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-[var(--theme-primary)]">
+                          <Building className="w-7 h-7 opacity-80" />
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => photoFileInputRef.current?.click()}
+                      title="Alterar Foto"
+                      className="absolute -bottom-1 -right-1 p-1.5 rounded-xl bg-[var(--theme-primary)] text-black font-bold shadow-md hover:scale-110 transition-transform cursor-pointer"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 w-full text-center sm:text-left space-y-1.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div>
+                        <h4 className="text-xs font-bold text-[#fcf8f5] flex items-center justify-center sm:justify-start gap-1.5">
+                          <span>Foto de Perfil ou Logotipo</span>
+                          {photoUrl && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                              Personalizada
+                            </span>
+                          )}
+                        </h4>
+                        <p className="text-[10px] text-[#a89c93]">
+                          Escolha sua foto profissional ou a logomarca do seu escritório.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-center sm:justify-end gap-2">
+                        <input
+                          type="file"
+                          ref={photoFileInputRef}
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handlePhotoFileChange}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => photoFileInputRef.current?.click()}
+                          disabled={isCompressingPhoto}
+                          className="px-3 py-1.5 rounded-xl bg-[var(--theme-primary)] text-black font-bold text-[11px] hover:bg-[var(--theme-primary-hover)] transition-all flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>{isCompressingPhoto ? 'Processando...' : 'Carregar Foto'}</span>
+                        </button>
+                        {photoUrl && (
+                          <button
+                            type="button"
+                            onClick={handleRemovePhoto}
+                            title="Remover foto"
+                            className="p-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Presets and URL link */}
+                    <div className="pt-2 border-t border-[#231d19] flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] text-[#786b62]">Avatares de exemplo:</span>
+                      {PRESET_AVATARS.map((av) => (
+                        <button
+                          key={av.id}
+                          type="button"
+                          onClick={() => {
+                            setPhotoUrl(av.url);
+                            updateProfilePhoto(av.url);
+                          }}
+                          className={`w-6 h-6 rounded-lg overflow-hidden border transition-all cursor-pointer ${
+                            photoUrl === av.url
+                              ? 'border-[var(--theme-primary)] ring-2 ring-[var(--theme-primary)]/40 scale-105'
+                              : 'border-[#3d342f] opacity-60 hover:opacity-100 hover:border-white/40'
+                          }`}
+                          title={av.label}
+                        >
+                          <img src={av.url} alt={av.label} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        </button>
+                      ))}
+                      <span className="text-[10px] text-[#554a43] mx-1">•</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowUrlInput(!showUrlInput)}
+                        className="text-[10px] text-[var(--theme-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <ImageIcon className="w-3 h-3" />
+                        <span>Colar Link de Imagem</span>
+                      </button>
+                    </div>
+
+                    {showUrlInput && (
+                      <div className="pt-2 flex items-center gap-2">
+                        <input
+                          type="url"
+                          value={tempUrlInput}
+                          onChange={(e) => setTempUrlInput(e.target.value)}
+                          placeholder="https://exemplo.com/foto.jpg"
+                          className="flex-1 px-3 py-1.5 rounded-xl bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs focus:outline-none focus:border-[var(--theme-primary)]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (tempUrlInput.trim()) {
+                              setPhotoUrl(tempUrlInput.trim());
+                              updateProfilePhoto(tempUrlInput.trim());
+                              setTempUrlInput('');
+                              setShowUrlInput(false);
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-[#28221e] hover:bg-[#352d28] text-[#fcf8f5] text-xs font-bold border border-[#3d342f] cursor-pointer"
+                        >
+                          Aplicar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Nicho Selector */}
                   <div>
@@ -429,6 +616,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
+                      onBlur={() => {
+                        if (name.trim()) {
+                          updateArchitectProfile({ name: name.trim() });
+                        }
+                      }}
                       className="w-full px-3 py-2 rounded-xl bg-[#09090b] border border-[#3d342f] text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
                       placeholder="Ex: Studio Alvorada"
                     />

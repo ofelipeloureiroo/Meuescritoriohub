@@ -41,6 +41,7 @@ const MONTH_NAMES = [
 
 export const TodayTab: React.FC = () => {
   const {
+    architectProfile,
     actions,
     addAppAction,
     updateAppAction,
@@ -53,6 +54,12 @@ export const TodayTab: React.FC = () => {
 
   const { user, profile } = useAuth();
   const { teamMembers } = useTeamMembers();
+
+  const greetingName =
+    architectProfile?.name?.trim() ||
+    profile?.companyName?.trim() ||
+    user?.displayName?.trim() ||
+    'Carlos Felipe';
 
   // View modes: 'today' (Visão Diária) | 'calendar' (Calendário Mensal) | '7days' (Próximos 7 Dias)
   const [viewMode, setViewMode] = useState<'today' | 'calendar' | '7days'>('today');
@@ -361,7 +368,7 @@ export const TodayTab: React.FC = () => {
                   <span className="text-[10px] uppercase font-bold tracking-wider">Painel pessoal de produtividade</span>
                 </div>
                 <h1 className="text-xl md:text-2xl font-serif font-bold text-[#fcf8f5] tracking-tight">
-                  Olá, {user?.displayName || 'Carlos Felipe'}
+                  Olá, {greetingName}
                 </h1>
                 <p className="text-xs text-[#a89c93] capitalize">
                   {todayFormatted}
