@@ -68,6 +68,31 @@ export const LeadsTab: React.FC = () => {
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
 
+  // Click-and-drag scroll for Kanban
+  const kanbanScrollRef = React.useRef<HTMLDivElement>(null);
+  const [isMouseDown, setIsMouseDown] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input') || (e.target as HTMLElement).closest('[draggable="true"]')) return;
+    setIsMouseDown(true);
+    setStartX(e.pageX - (kanbanScrollRef.current?.offsetLeft || 0));
+    setScrollLeft(kanbanScrollRef.current?.scrollLeft || 0);
+  };
+
+  const handleMouseLeaveOrUp = () => {
+    setIsMouseDown(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isMouseDown || !kanbanScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - kanbanScrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    kanbanScrollRef.current.scrollLeft = scrollLeft - walk;
+  };
+
   // Search & Score filter
   const [searchTerm, setSearchTerm] = useState('');
   const [scoreFilter, setScoreFilter] = useState<'todos' | 'frio' | 'morno' | 'quente'>('todos');
@@ -974,7 +999,14 @@ export const LeadsTab: React.FC = () => {
 
           {/* 5. Kanban View Mode */}
           {layoutMode === 'kanban' ? (
-            <div className="flex gap-3 overflow-x-auto pb-6 pt-2 items-start w-full no-scrollbar">
+            <div
+              ref={kanbanScrollRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeaveOrUp}
+              onMouseUp={handleMouseLeaveOrUp}
+              onMouseMove={handleMouseMove}
+              className="flex gap-3 overflow-x-auto pb-6 pt-2 items-start w-full no-scrollbar cursor-grab active:cursor-grabbing select-none"
+            >
               {STAGES.map((stage) => {
                 const columnLeads = filteredLeads.filter(
                   (l) => (l.pipelineStage || 'novo') === stage.id
