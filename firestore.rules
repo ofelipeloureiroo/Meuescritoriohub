@@ -5,51 +5,16 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    function isOwnerEmail() {
-      return isAuthenticated() && 
-             request.auth.token.email != null && 
-             request.auth.token.email.lower() == 'lfquadrosdecorativos@gmail.com';
-    }
-
-    function isAdmin() {
-      return isOwnerEmail() || (
-        isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-      );
-    }
 
     // Connection test doc
     match /test/{testDoc} {
       allow read: if true;
     }
 
-    // Absolute power to the owner/admin across all documents
+    // Allow authenticated users to read and write all documents
     match /{document=**} {
-      allow read, write: if isOwnerEmail() || isAdmin();
-    }
-
-    match /users/{userId} {
-      allow read: if isAuthenticated();
-      
-      allow create, update: if isAuthenticated() && (
-        request.auth.uid == userId || 
-        isAdmin() ||
-        (resource != null && resource.data != null && resource.data.collaboratorUids != null && request.auth.uid in resource.data.collaboratorUids)
-      );
-      
-      allow delete: if isAdmin();
-
-      // Allow users and authorized collaborators to read and save workspace sections
-      match /data/{sectionId} {
-        allow read, write: if isAuthenticated() && (
-          request.auth.uid == userId || 
-          isAdmin() ||
-          (exists(/databases/$(database)/documents/users/$(userId)) && 
-           request.auth.uid in get(/databases/$(database)/documents/users/$(userId)).data.collaboratorUids)
-        );
-      }
+      allow read, write: if isAuthenticated();
     }
   }
 }
+
