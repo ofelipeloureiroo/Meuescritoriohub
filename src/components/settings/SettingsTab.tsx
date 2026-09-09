@@ -525,7 +525,11 @@ export const SettingsTab: React.FC = () => {
                   <input
                     type="text"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setName(val);
+                      updateArchitectProfile({ name: val });
+                    }}
                     onBlur={() => {
                       if (name.trim()) {
                         updateArchitectProfile({ name: name.trim() });

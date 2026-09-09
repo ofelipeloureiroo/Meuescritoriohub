@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  AlertCircle,
   ArrowDownRight,
   ArrowUpRight,
   Building2,
@@ -31,13 +32,39 @@ interface NewTransactionModalProps {
   onClose: () => void;
   initialType?: 'income' | 'expense';
   initialCategoryOrSource?: string;
+  initialStructure?: TransactionStructure;
 }
+
+export const parseAmountInput = (val: string): number => {
+  if (!val) return 0;
+  const cleaned = val.replace(/[^\d.,]/g, '').trim();
+  if (!cleaned) return 0;
+
+  if (cleaned.includes('.') && cleaned.includes(',')) {
+    const lastDot = cleaned.lastIndexOf('.');
+    const lastComma = cleaned.lastIndexOf(',');
+    if (lastComma > lastDot) {
+      // Brazilian format: 1.250,50 -> 1250.50
+      return parseFloat(cleaned.replace(/\./g, '').replace(',', '.')) || 0;
+    } else {
+      // US format: 1,250.50 -> 1250.50
+      return parseFloat(cleaned.replace(/,/g, '')) || 0;
+    }
+  }
+
+  if (cleaned.includes(',')) {
+    return parseFloat(cleaned.replace(',', '.')) || 0;
+  }
+
+  return parseFloat(cleaned) || 0;
+};
 
 export const NewTransactionModal: React.FC<NewTransactionModalProps> = ({
   isOpen,
   onClose,
   initialType = 'income',
   initialCategoryOrSource,
+  initialStructure,
 }) => {
   const {
     bankAccounts,
@@ -51,7 +78,7 @@ export const NewTransactionModal: React.FC<NewTransactionModalProps> = ({
   const [type, setType] = useState<'income' | 'expense'>(initialType);
 
   // Structure: 'avulso' | 'contrato' | 'recorrente'
-  const [structure, setStructure] = useState<TransactionStructure>('avulso');
+  const [structure, setStructure] = useState<TransactionStructure>(initialStructure || 'avulso');
 
   // Fields
   const [description, setDescription] = useState('');
@@ -65,6 +92,9 @@ export const NewTransactionModal: React.FC<NewTransactionModalProps> = ({
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   });
+
+  // Validation feedback
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Origin & Linking
   const [origin, setOrigin] = useState<TransactionOrigin>('avulso');
@@ -89,16 +119,27 @@ export const NewTransactionModal: React.FC<NewTransactionModalProps> = ({
   const [installmentsCount, setInstallmentsCount] = useState<number>(3);
 
   useEffect(() => {
-    if (initialType) {
-      setType(initialType);
+    if (isOpen) {
+      setValidationError(null);
+      if (initialType) setType(initialType);
+      if (initialStructure) setStructure(initialStructure);
+      else setStructure('avulso');
+      if (initialCategoryOrSource) setCategory(initialCategoryOrSource);
+      else setCategory('');
+      setDescription('');
+      setAmount('');
+      setStatus('pending');
+      setOrigin('avulso');
+      setSelectedProjectId('');
+      setSelectedClientId('');
     }
-    if (initialCategoryOrSource) {
-      setCategory(initialCategoryOrSource);
-    }
+  }, [isOpen, initialType, initialCategoryOrSource, initialStructure]);
+
+  useEffect(() => {
     if (bankAccounts.length > 0 && !bankAccountId) {
       setBankAccountId(bankAccounts[0].id);
     }
-  }, [initialType, initialCategoryOrSource, isOpen, bankAccounts]);
+  }, [bankAccounts, bankAccountId]);
 
   if (!isOpen) return null;
 

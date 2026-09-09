@@ -270,17 +270,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md bg-[#c58a4b] text-[#12100e] shrink-0 group-hover:bg-[#d49454] transition-colors">
             <Building2 className="w-5 h-5 text-[#12100e]" />
           </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <span className="font-serif font-bold text-sm tracking-wider text-[#fcf8f5] uppercase leading-none">
-                MEU ESCRITÓRIO
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span
+                className="font-serif font-bold text-sm tracking-wider text-[#fcf8f5] uppercase leading-none truncate max-w-[150px]"
+                title={architectProfile?.name || profile?.companyName || 'Meu Negócio'}
+              >
+                {architectProfile?.name || profile?.companyName || 'MEU ESCRITÓRIO'}
               </span>
-              <span className="text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.2 rounded-md bg-[#c58a4b]/20 text-[#e6b37e] border border-[#c58a4b]/40">
+              <span className="text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.2 rounded-md bg-[#c58a4b]/20 text-[#e6b37e] border border-[#c58a4b]/40 shrink-0">
                 ONLINE
               </span>
             </div>
-            <span className="text-[10px] text-[#a89c93] tracking-wide mt-0.5 truncate max-w-[130px]">
-              {architectProfile?.name || profile?.companyName || 'Ateliê & Escritório'}
+            <span className="text-[10px] text-[#a89c93] tracking-wide mt-0.5 truncate max-w-[160px]">
+              {architectProfile?.title || 'Gestão & Negócios'}
             </span>
           </div>
         </button>

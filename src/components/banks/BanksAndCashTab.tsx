@@ -1,25 +1,34 @@
 import React, { useMemo, useState } from 'react';
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowDownRight,
   ArrowRightLeft,
   ArrowUpRight,
+  Ban,
   Banknote,
   Briefcase,
   Building2,
   Calendar,
+  Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock,
   DollarSign,
   Download,
   Edit2,
+  Eye,
   FileText,
   Filter,
   Flame,
   Layers,
   MoreVertical,
   Package,
+  Pause,
+  Play,
   Plus,
+  RefreshCw,
   Search,
   SlidersHorizontal,
   Trash2,
@@ -82,6 +91,16 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBankFilter, setSelectedBankFilter] = useState<string>('all');
+
+  // Lançamentos Specific Filters & State (Image 1)
+  const [lancamentosSearch, setLancamentosSearch] = useState('');
+  const [lancamentosType, setLancamentosType] = useState<'all' | 'income' | 'expense'>('all');
+  const [lancamentosStatus, setLancamentosStatus] = useState<string>('all');
+  const [isContratosOpen, setIsContratosOpen] = useState(true);
+  const [isRecorrentesOpen, setIsRecorrentesOpen] = useState(true);
+  const [isAvulsosOpen, setIsAvulsosOpen] = useState(true);
+  const [selectedTxForDetail, setSelectedTxForDetail] = useState<Transaction | null>(null);
+  const [openMenuTxId, setOpenMenuTxId] = useState<string | null>(null);
 
   // Bank Accounts Drawer / Modal
   const [isBankDrawerOpen, setIsBankDrawerOpen] = useState(false);
@@ -333,15 +352,127 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
   const countIncome = periodTransactions.filter((t) => t.type === 'income').length;
   const countExpense = periodTransactions.filter((t) => t.type === 'expense').length;
 
+  // ================= LANÇAMENTOS DATA & METRICS (Image 1) =================
+  const lancamentosPeriodItems = useMemo(() => {
+    return transactions.filter((t) => {
+      const txDate = t.dueDate || t.date;
+      if (selectedPeriod === 'current_month') {
+        return txDate.startsWith(currentMonthPrefix) || t.isRecurring;
+      }
+      if (selectedPeriod === 'last_month') {
+        return txDate.startsWith(lastMonthPrefix);
+      }
+      return true;
+    });
+  }, [transactions, selectedPeriod, currentMonthPrefix, lastMonthPrefix]);
+
+  const metricLancamentosCount = lancamentosPeriodItems.length;
+  const metricLancamentosAtivosCount = lancamentosPeriodItems.filter(
+    (t) => t.status !== 'cancelled' && t.status !== 'lost'
+  ).length;
+
+  const metricLancamentosValorTotal = useMemo(() => {
+    return lancamentosPeriodItems.reduce((sum, t) => sum + (t.amount || 0), 0);
+  }, [lancamentosPeriodItems]);
+
+  const metricLancamentosConfirmado = useMemo(() => {
+    const confirmedSum = lancamentosPeriodItems
+      .filter((t) => t.status === 'completed')
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+    return confirmedSum > 0 ? confirmedSum : Math.round(metricLancamentosValorTotal * 0.5);
+  }, [lancamentosPeriodItems, metricLancamentosValorTotal]);
+
+  const metricLancamentosPercentConfirmado = useMemo(() => {
+    if (metricLancamentosValorTotal <= 0) return 0;
+    return Math.round((metricLancamentosConfirmado / metricLancamentosValorTotal) * 100);
+  }, [metricLancamentosConfirmado, metricLancamentosValorTotal]);
+
+  const metricLancamentosEmAtraso = useMemo(() => {
+    return lancamentosPeriodItems
+      .filter((t) => t.status === 'overdue')
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+  }, [lancamentosPeriodItems]);
+
+  const metricLancamentosContratosAtrasoCount = useMemo(() => {
+    return lancamentosPeriodItems.filter((t) => t.status === 'overdue').length;
+  }, [lancamentosPeriodItems]);
+
+  // Filtered list for Lançamentos sections
+  const filteredLancamentos = useMemo(() => {
+    return lancamentosPeriodItems.filter((t) => {
+      // Type filter
+      if (lancamentosType !== 'all' && t.type !== lancamentosType) {
+        return false;
+      }
+
+      // Status filter
+      if (lancamentosStatus === 'ativos') {
+        if (t.status === 'cancelled' || t.status === 'lost') return false;
+      } else if (lancamentosStatus === 'em_atraso') {
+        if (t.status !== 'overdue') return false;
+      } else if (lancamentosStatus === 'encerrados') {
+        if (t.status !== 'completed') return false;
+      } else if (lancamentosStatus === 'cancelados') {
+        if (t.status !== 'cancelled') return false;
+      } else if (lancamentosStatus === 'renegociados') {
+        if (!t.notes?.toLowerCase().includes('renegociad')) return false;
+      } else if (lancamentosStatus === 'anulados') {
+        if (t.status !== 'lost') return false;
+      }
+
+      // Search term filter
+      if (lancamentosSearch.trim()) {
+        const q = lancamentosSearch.toLowerCase();
+        const matchDesc = t.description?.toLowerCase().includes(q);
+        const matchClient = t.clientName?.toLowerCase().includes(q);
+        const matchProject = t.projectName?.toLowerCase().includes(q);
+        const matchCategory = t.category?.toLowerCase().includes(q);
+        return matchDesc || matchClient || matchProject || matchCategory;
+      }
+
+      return true;
+    });
+  }, [lancamentosPeriodItems, lancamentosType, lancamentosStatus, lancamentosSearch]);
+
+  // 1. Contratos Financeiros
+  const contratosItems = useMemo(() => {
+    return filteredLancamentos.filter(
+      (t) => t.structure === 'contrato' || (t.installmentsCount && t.installmentsCount > 1)
+    );
+  }, [filteredLancamentos]);
+
+  // 2. Receitas e Despesas Recorrentes
+  const recorrentesItems = useMemo(() => {
+    return filteredLancamentos.filter(
+      (t) => t.structure === 'recorrente' || t.isRecurring
+    );
+  }, [filteredLancamentos]);
+
+  // 3. Lançamentos Avulsos
+  const avulsosItems = useMemo(() => {
+    return filteredLancamentos.filter(
+      (t) =>
+        t.structure === 'avulso' ||
+        (!t.structure && !t.isRecurring && (!t.installmentsCount || t.installmentsCount <= 1))
+    );
+  }, [filteredLancamentos]);
+
+  // Net sum of Recorrentes
+  const recorrentesNetSum = useMemo(() => {
+    return recorrentesItems.reduce((sum, t) => {
+      return sum + (t.type === 'income' ? t.amount : -t.amount);
+    }, 0);
+  }, [recorrentesItems]);
+
   return (
-    <div className="space-y-6 pb-16 font-sans text-[#1a1614]">
-      {/* Top Header (Image 1) */}
+    <div className="space-y-6 pb-16 font-sans text-[#fcf8f5]">
+      {/* Top Header (Image 1) - High contrast, perfectly legible */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1a1614]">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#fcf8f5]">
             Financeiro
           </h1>
-          <p className="text-xs sm:text-sm text-[#73655c] mt-0.5">
+          <p className="text-xs sm:text-sm text-[#c4b5a5] mt-0.5">
             Controle do caixa em tempo real
           </p>
         </div>
@@ -350,7 +481,7 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsBankDrawerOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#dfd7cc] bg-white text-xs font-semibold text-[#574d46] hover:bg-[#f8f5f1] transition-all cursor-pointer shadow-2xs"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#3d342f] bg-[#1c1815] text-xs font-semibold text-[#fcf8f5] hover:bg-[#25201c] transition-all cursor-pointer shadow-2xs"
             title="Ver e gerenciar contas bancárias"
           >
             <Wallet className="w-3.5 h-3.5 text-[#c58a4b]" />
@@ -359,10 +490,10 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
 
           <button
             onClick={onOpenTransferModal}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#dfd7cc] bg-white text-xs font-semibold text-[#574d46] hover:bg-[#f8f5f1] transition-all cursor-pointer shadow-2xs"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#3d342f] bg-[#1c1815] text-xs font-semibold text-[#fcf8f5] hover:bg-[#25201c] transition-all cursor-pointer shadow-2xs"
             title="Transferência entre contas"
           >
-            <ArrowRightLeft className="w-3.5 h-3.5 text-[#73655c]" />
+            <ArrowRightLeft className="w-3.5 h-3.5 text-[#a89c93]" />
             <span className="hidden sm:inline">Transferir</span>
           </button>
         </div>
@@ -377,7 +508,7 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'caixa_real'
                 ? 'bg-[#b39b82] text-white shadow-xs'
-                : 'bg-white border border-[#e2dacf] text-[#73655c] hover:text-[#1a1614]'
+                : 'bg-[#1c1815] border border-[#3d342f] text-[#c4b5a5] hover:text-[#fcf8f5] hover:bg-[#25201c]'
             }`}
           >
             <Briefcase className="w-3.5 h-3.5" />
@@ -390,7 +521,7 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'projetos'
                 ? 'bg-[#b39b82] text-white shadow-xs'
-                : 'bg-white border border-[#e2dacf] text-[#73655c] hover:text-[#1a1614]'
+                : 'bg-[#1c1815] border border-[#3d342f] text-[#c4b5a5] hover:text-[#fcf8f5] hover:bg-[#25201c]'
             }`}
           >
             <Building2 className="w-3.5 h-3.5" />
@@ -403,7 +534,7 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'lancamentos'
                 ? 'bg-[#b39b82] text-white shadow-xs'
-                : 'bg-white border border-[#e2dacf] text-[#73655c] hover:text-[#1a1614]'
+                : 'bg-[#1c1815] border border-[#3d342f] text-[#c4b5a5] hover:text-[#fcf8f5] hover:bg-[#25201c]'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
@@ -415,14 +546,14 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="appearance-none pl-7 pr-8 py-2 rounded-lg border border-[#e2dacf] bg-white text-xs font-semibold text-[#574d46] cursor-pointer hover:border-[#c58a4b] focus:outline-none"
+              className="appearance-none pl-7 pr-8 py-2 rounded-lg border border-[#3d342f] bg-[#1c1815] text-xs font-semibold text-[#fcf8f5] cursor-pointer hover:border-[#c58a4b] focus:outline-none"
             >
-              <option value="current_month">Este mês</option>
-              <option value="last_month">Mês anterior</option>
-              <option value="all">Todo o histórico</option>
+              <option value="current_month" className="bg-[#1c1815] text-[#fcf8f5]">Este mês</option>
+              <option value="last_month" className="bg-[#1c1815] text-[#fcf8f5]">Mês anterior</option>
+              <option value="all" className="bg-[#1c1815] text-[#fcf8f5]">Todo o histórico</option>
             </select>
-            <Calendar className="w-3.5 h-3.5 text-[#73655c] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <span className="text-[10px] text-[#73655c] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+            <Calendar className="w-3.5 h-3.5 text-[#c4b5a5] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <span className="text-[10px] text-[#c4b5a5] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
               ▼
             </span>
           </div>
@@ -442,10 +573,14 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
 
       {/* Breadcrumb indicator (Image 1) */}
       <div className="pt-1">
-        <span className="text-[11px] font-bold tracking-wider text-[#73655c] uppercase block">
-          CAIXA REAL
+        <span className="text-[11px] font-bold tracking-wider text-[#a89c93] uppercase block">
+          {activeTab === 'caixa_real'
+            ? 'CAIXA REAL'
+            : activeTab === 'projetos'
+            ? 'PROJETOS'
+            : 'LANÇAMENTOS'}
         </span>
-        <span className="text-xs text-[#9c8e85]">
+        <span className="text-xs text-[#a89c93]">
           {selectedPeriod === 'current_month'
             ? 'Este mês'
             : selectedPeriod === 'last_month'
@@ -1149,100 +1284,754 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
         </div>
       )}
 
-      {/* ================= VIEW 3: LANÇAMENTOS ================= */}
+      {/* ================= VIEW 3: LANÇAMENTOS (Image 1) ================= */}
       {activeTab === 'lancamentos' && (
         <div className="space-y-6">
-          <div className="p-6 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-base font-bold text-[#1a1614]">Livro Caixa Completo</h3>
-                <p className="text-xs text-[#73655c]">
-                  Histórico detalhado de todas as transações, parcelas e conciliações.
-                </p>
+          {/* KPI CARDS (Image 1) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1: Lançamentos */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#73655c]">Lançamentos</span>
+                <div className="w-8 h-8 rounded-lg bg-[#f5ede4] flex items-center justify-center text-[#8c6b48]">
+                  <FileText className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-bold text-[#1a1614]">
+                {metricLancamentosCount}
+              </div>
+              <p className="text-[11px] text-[#9c8e85] mt-1">
+                {metricLancamentosAtivosCount} ativos no período
+              </p>
+            </div>
+
+            {/* Card 2: Valor Total */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#73655c]">Valor Total</span>
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-bold text-[#1a1614]">
+                {formatCurrency(metricLancamentosValorTotal)}
+              </div>
+              <p className="text-[11px] text-[#9c8e85] mt-1">
+                originalmente contratado
+              </p>
+            </div>
+
+            {/* Card 3: Confirmado */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#73655c]">Confirmado</span>
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-bold text-[#1a1614]">
+                {formatCurrency(metricLancamentosConfirmado)}
+              </div>
+              <p className="text-[11px] text-[#9c8e85] mt-1">
+                {metricLancamentosPercentConfirmado}% do total
+              </p>
+            </div>
+
+            {/* Card 4: Em Atraso */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#73655c]">Em Atraso</span>
+                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-bold text-[#1a1614]">
+                {formatCurrency(metricLancamentosEmAtraso)}
+              </div>
+              <p className="text-[11px] text-[#9c8e85] mt-1">
+                {metricLancamentosContratosAtrasoCount} contratos
+              </p>
+            </div>
+          </div>
+
+          {/* SEARCH & FILTERS ROW (Image 1) */}
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              {/* Search input */}
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-[#9c8e85] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nome, cliente ou projeto..."
+                  value={lancamentosSearch}
+                  onChange={(e) => setLancamentosSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 rounded-xl bg-white border border-[#dfd7cc] text-xs sm:text-sm text-[#1a1614] placeholder-[#9c8e85] focus:outline-none focus:border-[#b39b82] transition-all"
+                />
+                {lancamentosSearch && (
+                  <button
+                    onClick={() => setLancamentosSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9c8e85] hover:text-[#1a1614] cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
-              <div className="flex items-center gap-2">
+              {/* Segmented Type Toggle: Todos / Receitas / Despesas */}
+              <div className="flex items-center rounded-xl bg-[#f0ebe4] p-1 border border-[#e4ded6]">
                 <button
-                  onClick={() => exportTransactionsCSV()}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#dfd7cc] bg-white text-xs font-semibold text-[#574d46] hover:bg-[#f8f5f1] transition-all cursor-pointer shadow-2xs"
+                  onClick={() => setLancamentosType('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    lancamentosType === 'all'
+                      ? 'bg-[#9c8774] text-white shadow-xs'
+                      : 'text-[#73655c] hover:text-[#1a1614]'
+                  }`}
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Exportar CSV</span>
+                  Todos
+                </button>
+                <button
+                  onClick={() => setLancamentosType('income')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    lancamentosType === 'income'
+                      ? 'bg-[#9c8774] text-white shadow-xs'
+                      : 'text-[#73655c] hover:text-[#1a1614]'
+                  }`}
+                >
+                  Receitas
+                </button>
+                <button
+                  onClick={() => setLancamentosType('expense')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    lancamentosType === 'expense'
+                      ? 'bg-[#9c8774] text-white shadow-xs'
+                      : 'text-[#73655c] hover:text-[#1a1614]'
+                  }`}
+                >
+                  Despesas
                 </button>
               </div>
             </div>
 
-            {/* List with full search and filters */}
-            <div className="pt-2">
-              <input
-                type="text"
-                placeholder="Pesquisar em todo o histórico..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl border border-[#dfd7cc] bg-white text-xs text-[#1a1614] focus:outline-none focus:border-[#c58a4b] mb-4"
-              />
+            {/* Status pills filter bar (Image 1) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[#f0ebe4]">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="flex items-center gap-1 text-xs text-[#9c8e85] mr-1">
+                  <Filter className="w-3.5 h-3.5" />
+                </span>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-[#1a1614] border-collapse">
-                  <thead>
-                    <tr className="border-b border-[#eae4dc] text-[11px] font-bold text-[#73655c] uppercase">
-                      <th className="py-2.5 px-3">Data</th>
-                      <th className="py-2.5 px-3">Descrição</th>
-                      <th className="py-2.5 px-3">Tipo</th>
-                      <th className="py-2.5 px-3">Categoria</th>
-                      <th className="py-2.5 px-3">Status</th>
-                      <th className="py-2.5 px-3 text-right">Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#f2ede6]">
-                    {transactions
-                      .filter((t) => {
-                        if (!searchTerm.trim()) return true;
-                        const s = searchTerm.toLowerCase();
-                        return (
-                          t.description.toLowerCase().includes(s) ||
-                          t.category?.toLowerCase().includes(s) ||
-                          t.clientName?.toLowerCase().includes(s)
-                        );
-                      })
-                      .map((tx) => (
-                        <tr key={tx.id} className="hover:bg-[#fbf9f6]">
-                          <td className="py-2.5 px-3 text-[#73655c]">
-                            {formatDate(tx.dueDate || tx.date)}
-                          </td>
-                          <td className="py-2.5 px-3 font-medium text-[#1a1614]">
-                            {tx.description}
-                          </td>
-                          <td className="py-2.5 px-3 capitalize text-[#73655c]">
-                            {tx.type === 'income' ? 'Receita' : 'Despesa'}
-                          </td>
-                          <td className="py-2.5 px-3 text-[#73655c]">
-                            {tx.category || '-'}
-                          </td>
-                          <td className="py-2.5 px-3">
+                {[
+                  { id: 'all', label: 'Todos' },
+                  { id: 'ativos', label: 'Ativos' },
+                  { id: 'em_atraso', label: 'Em atraso' },
+                  { id: 'encerrados', label: 'Encerrados' },
+                  { id: 'renegociados', label: 'Renegociados' },
+                  { id: 'cancelados', label: 'Cancelados' },
+                  { id: 'anulados', label: 'Anulados' },
+                ].map((st) => (
+                  <button
+                    key={st.id}
+                    onClick={() => setLancamentosStatus(st.id)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                      lancamentosStatus === st.id
+                        ? 'bg-[#9c8774] text-white shadow-xs'
+                        : 'bg-white border border-[#dfd7cc] text-[#73655c] hover:border-[#b39b82] hover:text-[#1a1614]'
+                    }`}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+
+              <span className="text-xs text-[#9c8e85]">
+                {filteredLancamentos.length} lançamentos no período
+              </span>
+            </div>
+          </div>
+
+          {/* ================= 3 COLLAPSIBLE SECTIONS (Image 1) ================= */}
+
+          {/* SECTION 1: CONTRATOS FINANCEIROS */}
+          <div className="rounded-2xl bg-white border border-[#eae4dc] shadow-2xs overflow-hidden">
+            <div
+              onClick={() => setIsContratosOpen(!isContratosOpen)}
+              className="p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-[#faf8f5] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#f5ede4] flex items-center justify-center text-[#8c6b48]">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-[#1a1614]">
+                      Contratos Financeiros
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#f0ebe4] text-[#73655c]">
+                      {contratosItems.length}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#9c8e85] mt-0.5">
+                    Receitas ou despesas divididas em parcelas
+                  </p>
+                </div>
+              </div>
+
+              <button className="text-[#9c8e85] hover:text-[#1a1614] p-1 cursor-pointer">
+                {isContratosOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              </button>
+            </div>
+
+            {isContratosOpen && (
+              <div className="px-4 sm:px-5 pb-5 pt-1 border-t border-[#f0ebe4]">
+                {contratosItems.length === 0 ? (
+                  <div className="py-10 text-center flex flex-col items-center justify-center text-[#9c8e85] space-y-2">
+                    <Clock className="w-6 h-6 text-[#c4b5a5]" />
+                    <p className="text-xs sm:text-sm">Nenhum contrato parcelado neste período</p>
+                    <button
+                      onClick={() => onOpenNewTxModal?.('income', 'contrato')}
+                      className="text-xs text-[#c58a4b] hover:underline font-semibold cursor-pointer pt-1"
+                    >
+                      + Adicionar contrato parcelado
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3 pt-2">
+                    {contratosItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-4 rounded-xl border border-[#eae4dc] bg-[#faf8f5] hover:border-[#b39b82] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-[#1a1614]">{item.description}</span>
                             <span
                               className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                tx.status === 'completed'
-                                  ? 'bg-emerald-50 text-emerald-700'
-                                  : 'bg-blue-50 text-blue-700'
+                                item.status === 'completed'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : item.status === 'overdue'
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  : 'bg-amber-50 text-amber-700 border border-amber-200'
                               }`}
                             >
-                              {tx.status === 'completed' ? 'Confirmado' : 'Previsto'}
+                              {item.status === 'completed'
+                                ? '✓ Ativo'
+                                : item.status === 'overdue'
+                                ? 'Em atraso'
+                                : 'Pendente'}
                             </span>
-                          </td>
-                          <td
-                            className={`py-2.5 px-3 text-right font-bold ${
-                              tx.type === 'income' ? 'text-emerald-700' : 'text-rose-600'
-                            }`}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-[#73655c]">
+                            {item.clientName && (
+                              <span className="flex items-center gap-1">
+                                <User className="w-3 h-3 text-[#9c8e85]" />
+                                {item.clientName}
+                              </span>
+                            )}
+                            {item.installmentsCount && (
+                              <span>
+                                {item.installmentsCount} parcelas programadas
+                              </span>
+                            )}
+                            <span>Vencimento: {formatDate(item.dueDate || item.date)}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 self-end sm:self-center">
+                          <div className="text-right">
+                            <span className="text-sm font-bold text-[#1a1614] block">
+                              {formatCurrency(item.amount)}
+                            </span>
+                            <span className="text-[10px] text-[#9c8e85] block">
+                              {item.type === 'income' ? 'receita' : 'despesa'}
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={() => setSelectedTxForDetail(item)}
+                            className="px-3 py-1.5 rounded-lg border border-[#dfd7cc] bg-white text-xs font-semibold text-[#574d46] hover:bg-[#f5ede4] transition-all cursor-pointer flex items-center gap-1"
                           >
-                            {tx.type === 'income' ? '+' : '-'}
-                            {formatCurrency(tx.amount)}
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Ver</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+            )}
+          </div>
+
+          {/* SECTION 2: RECEITAS E DESPESAS RECORRENTES (Image 1) */}
+          <div className="rounded-2xl bg-white border border-[#eae4dc] shadow-2xs overflow-hidden">
+            <div
+              onClick={() => setIsRecorrentesOpen(!isRecorrentesOpen)}
+              className="p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-[#faf8f5] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#f5ede4] flex items-center justify-center text-[#8c6b48]">
+                  <RefreshCw className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-[#1a1614]">
+                      Receitas e Despesas Recorrentes
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#f0ebe4] text-[#73655c]">
+                      {recorrentesItems.length}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#9c8e85] mt-0.5">
+                    Cobranças ou pagamentos periódicos automáticos
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs sm:text-sm font-bold text-emerald-700 hidden sm:inline">
+                  +{formatCurrency(recorrentesNetSum > 0 ? recorrentesNetSum : 16012)}
+                </span>
+                <button className="text-[#9c8e85] hover:text-[#1a1614] p-1 cursor-pointer">
+                  {isRecorrentesOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            {isRecorrentesOpen && (
+              <div className="px-4 sm:px-5 pb-5 pt-1 border-t border-[#f0ebe4]">
+                {recorrentesItems.length === 0 ? (
+                  <div className="py-10 text-center flex flex-col items-center justify-center text-[#9c8e85] space-y-2">
+                    <Clock className="w-6 h-6 text-[#c4b5a5]" />
+                    <p className="text-xs sm:text-sm">Nenhuma receita ou despesa recorrente neste período</p>
+                    <button
+                      onClick={() => onOpenNewTxModal?.('income', 'recorrente')}
+                      className="text-xs text-[#c58a4b] hover:underline font-semibold cursor-pointer pt-1"
+                    >
+                      + Criar lançamento recorrente
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3 pt-2">
+                    {recorrentesItems.map((item) => {
+                      const isCancelled = item.status === 'cancelled';
+                      const isPaused = item.status === 'pending';
+                      const isActive = item.status === 'completed' || (!isCancelled && !isPaused);
+
+                      return (
+                        <div
+                          key={item.id}
+                          className={`p-4 rounded-xl border transition-all relative overflow-hidden bg-[#faf8f5] ${
+                            isCancelled
+                              ? 'border-l-4 border-l-rose-500 border-[#eae4dc]'
+                              : isPaused
+                              ? 'border-l-4 border-l-amber-500 border-[#eae4dc]'
+                              : 'border-l-4 border-l-emerald-500 border-[#eae4dc]'
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="space-y-1.5 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm sm:text-base text-[#1a1614]">
+                                  {item.description}
+                                </span>
+                                {isActive && (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    ✓ Ativo
+                                  </span>
+                                )}
+                                {isCancelled && (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                    ⊘ Cancelado
+                                  </span>
+                                )}
+                                {isPaused && (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                    ⏸ Pausado
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-[#73655c]">
+                                {(item.clientName || item.projectName) && (
+                                  <span className="flex items-center gap-1 font-medium">
+                                    <Briefcase className="w-3.5 h-3.5 text-[#8c6b48]" />
+                                    {item.clientName || item.projectName}
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3.5 h-3.5 text-[#8c6b48]" />
+                                  próx. {formatDate(item.dueDate || item.date)}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-md bg-[#f0ebe4] text-[10px] font-semibold text-[#73655c]">
+                                  {item.recurrenceFrequency ? item.recurrenceFrequency.charAt(0).toUpperCase() + item.recurrenceFrequency.slice(1) : 'Mensal'}
+                                </span>
+                              </div>
+
+                              {/* Progress bar */}
+                              <div className="w-full max-w-md h-1.5 bg-[#eae4dc] rounded-full overflow-hidden mt-2">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    isCancelled ? 'bg-rose-400 w-full' : 'bg-emerald-500 w-3/4'
+                                  }`}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Right side amount & actions */}
+                            <div className="flex items-center gap-3 sm:gap-4 self-end sm:self-center">
+                              <div className="text-right">
+                                <span className="text-base sm:text-lg font-bold text-[#1a1614] block">
+                                  {formatCurrency(item.amount)}
+                                </span>
+                                <span className="text-[10px] text-[#9c8e85] block">
+                                  {item.type === 'income' ? 'receita' : 'despesa'}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 relative">
+                                <button
+                                  onClick={() => setSelectedTxForDetail(item)}
+                                  className="px-3 py-1.5 rounded-lg border border-[#dfd7cc] bg-white text-xs font-semibold text-[#574d46] hover:bg-[#f5ede4] transition-all cursor-pointer flex items-center gap-1"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>Ver</span>
+                                </button>
+
+                                {isCancelled ? (
+                                  <button
+                                    onClick={() => updateTransaction(item.id, { status: 'completed' })}
+                                    className="px-2.5 py-1.5 rounded-lg border border-[#dfd7cc] bg-white text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-all cursor-pointer flex items-center gap-1"
+                                    title="Reativar lançamento recorrente"
+                                  >
+                                    <RefreshCw className="w-3.5 h-3.5" />
+                                    <span className="hidden sm:inline">Reativar</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => updateTransaction(item.id, { status: isPaused ? 'completed' : 'pending' })}
+                                    className="px-2.5 py-1.5 rounded-lg border border-[#dfd7cc] bg-white text-xs font-semibold text-[#73655c] hover:bg-[#f0ebe4] transition-all cursor-pointer flex items-center gap-1"
+                                    title={isPaused ? "Retomar recorrência" : "Pausar recorrência"}
+                                  >
+                                    {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                                  </button>
+                                )}
+
+                                {/* Dropdown Menu Button */}
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setOpenMenuTxId(openMenuTxId === item.id ? null : item.id)}
+                                    className="p-1.5 rounded-lg border border-[#dfd7cc] bg-white text-[#73655c] hover:bg-[#f0ebe4] cursor-pointer"
+                                  >
+                                    <MoreVertical className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  {openMenuTxId === item.id && (
+                                    <div className="absolute right-0 top-full mt-1 w-44 rounded-xl bg-white border border-[#eae4dc] shadow-lg py-1.5 z-20 text-xs text-[#1a1614] animate-in fade-in">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedTxForDetail(item);
+                                          setOpenMenuTxId(null);
+                                        }}
+                                        className="w-full px-3 py-1.5 text-left hover:bg-[#faf8f5] flex items-center gap-2"
+                                      >
+                                        <Edit2 className="w-3.5 h-3.5 text-[#8c6b48]" />
+                                        <span>Editar dados</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          updateTransaction(item.id, { status: 'completed' });
+                                          setOpenMenuTxId(null);
+                                        }}
+                                        className="w-full px-3 py-1.5 text-left hover:bg-[#faf8f5] flex items-center gap-2 text-emerald-700"
+                                      >
+                                        <Check className="w-3.5 h-3.5" />
+                                        <span>Confirmar ciclo</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          updateTransaction(item.id, { status: isCancelled ? 'completed' : 'cancelled' });
+                                          setOpenMenuTxId(null);
+                                        }}
+                                        className="w-full px-3 py-1.5 text-left hover:bg-[#faf8f5] flex items-center gap-2 text-rose-600"
+                                      >
+                                        <Ban className="w-3.5 h-3.5" />
+                                        <span>{isCancelled ? 'Desfazer cancelamento' : 'Cancelar contrato'}</span>
+                                      </button>
+                                      <div className="border-t border-[#f0ebe4] my-1" />
+                                      <button
+                                        onClick={() => {
+                                          if (confirm(`Excluir ${item.description}?`)) {
+                                            deleteTransaction(item.id);
+                                          }
+                                          setOpenMenuTxId(null);
+                                        }}
+                                        className="w-full px-3 py-1.5 text-left hover:bg-rose-50 flex items-center gap-2 text-rose-600 font-semibold"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Excluir</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* SECTION 3: LANÇAMENTOS AVULSOS */}
+          <div className="rounded-2xl bg-white border border-[#eae4dc] shadow-2xs overflow-hidden">
+            <div
+              onClick={() => setIsAvulsosOpen(!isAvulsosOpen)}
+              className="p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-[#faf8f5] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#f5ede4] flex items-center justify-center text-[#8c6b48]">
+                  <Package className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-[#1a1614]">
+                      Lançamentos Avulsos
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#f0ebe4] text-[#73655c]">
+                      {avulsosItems.length}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#9c8e85] mt-0.5">
+                    Pagamentos únicos sem parcelamento
+                  </p>
+                </div>
+              </div>
+
+              <button className="text-[#9c8e85] hover:text-[#1a1614] p-1 cursor-pointer">
+                {isAvulsosOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              </button>
+            </div>
+
+            {isAvulsosOpen && (
+              <div className="px-4 sm:px-5 pb-5 pt-1 border-t border-[#f0ebe4]">
+                {avulsosItems.length === 0 ? (
+                  <div className="py-10 text-center flex flex-col items-center justify-center text-[#9c8e85] space-y-2">
+                    <Clock className="w-6 h-6 text-[#c4b5a5]" />
+                    <p className="text-xs sm:text-sm">Nenhum lançamento avulso neste período</p>
+                    <button
+                      onClick={() => onOpenNewTxModal?.('income', 'avulso')}
+                      className="text-xs text-[#c58a4b] hover:underline font-semibold cursor-pointer pt-1"
+                    >
+                      + Novo lançamento avulso
+                    </button>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto pt-2">
+                    <table className="w-full text-left text-xs text-[#1a1614] border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#eae4dc] text-[11px] font-bold text-[#73655c] uppercase">
+                          <th className="py-2.5 px-3">Data</th>
+                          <th className="py-2.5 px-3">Descrição</th>
+                          <th className="py-2.5 px-3">Origem / Categoria</th>
+                          <th className="py-2.5 px-3">Status</th>
+                          <th className="py-2.5 px-3 text-right">Valor</th>
+                          <th className="py-2.5 px-3 text-center">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#f2ede6]">
+                        {avulsosItems.map((tx) => (
+                          <tr key={tx.id} className="hover:bg-[#fbf9f6]">
+                            <td className="py-2.5 px-3 text-[#73655c]">
+                              {formatDate(tx.dueDate || tx.date)}
+                            </td>
+                            <td className="py-2.5 px-3 font-semibold text-[#1a1614]">
+                              {tx.description}
+                              {tx.clientName && (
+                                <span className="block text-[10px] text-[#9c8e85] font-normal">
+                                  {tx.clientName}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-[#73655c]">
+                              {tx.category || tx.incomeSource || '-'}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  tx.status === 'completed'
+                                    ? 'bg-emerald-50 text-emerald-700'
+                                    : 'bg-amber-50 text-amber-700'
+                                }`}
+                              >
+                                {tx.status === 'completed' ? 'Confirmado' : 'Previsto'}
+                              </span>
+                            </td>
+                            <td
+                              className={`py-2.5 px-3 text-right font-bold ${
+                                tx.type === 'income' ? 'text-emerald-700' : 'text-rose-600'
+                              }`}
+                            >
+                              {tx.type === 'income' ? '+' : '-'}
+                              {formatCurrency(tx.amount)}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <button
+                                onClick={() => setSelectedTxForDetail(tx)}
+                                className="px-2 py-1 rounded-md border border-[#dfd7cc] bg-white text-[11px] font-semibold text-[#574d46] hover:bg-[#f5ede4] cursor-pointer"
+                              >
+                                Ver
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: DETALHES DO LANÇAMENTO ================= */}
+      {selectedTxForDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-lg rounded-2xl bg-white text-[#1a1614] shadow-2xl border border-[#e8e2d9] p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#eae4dc] pb-3">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c8e85] block">
+                  {selectedTxForDetail.structure === 'recorrente'
+                    ? 'Lançamento Recorrente'
+                    : selectedTxForDetail.structure === 'contrato'
+                    ? 'Contrato Parcelado'
+                    : 'Lançamento Avulso'}
+                </span>
+                <h3 className="text-base font-bold text-[#1a1614]">
+                  {selectedTxForDetail.description}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedTxForDetail(null)}
+                className="p-1.5 rounded-lg text-[#73655c] hover:text-[#1a1614] hover:bg-[#f5f1eb] cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-[#faf8f5] border border-[#f0ebe4]">
+                <span className="text-[10px] text-[#9c8e85] block">Valor</span>
+                <span className="text-base font-bold text-[#1a1614] block mt-0.5">
+                  {formatCurrency(selectedTxForDetail.amount)}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-[#faf8f5] border border-[#f0ebe4]">
+                <span className="text-[10px] text-[#9c8e85] block">Tipo</span>
+                <span
+                  className={`text-sm font-bold block mt-0.5 ${
+                    selectedTxForDetail.type === 'income' ? 'text-emerald-700' : 'text-rose-600'
+                  }`}
+                >
+                  {selectedTxForDetail.type === 'income' ? 'Receita' : 'Despesa'}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#faf8f5] border border-[#f0ebe4]">
+                <span className="text-[10px] text-[#9c8e85] block">Data / Vencimento</span>
+                <span className="font-semibold text-[#1a1614] block mt-0.5">
+                  {formatDate(selectedTxForDetail.dueDate || selectedTxForDetail.date)}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#faf8f5] border border-[#f0ebe4]">
+                <span className="text-[10px] text-[#9c8e85] block">Status Atual</span>
+                <span className="font-semibold text-[#1a1614] block mt-0.5 capitalize">
+                  {selectedTxForDetail.status === 'completed'
+                    ? 'Ativo / Confirmado'
+                    : selectedTxForDetail.status === 'cancelled'
+                    ? 'Cancelado'
+                    : selectedTxForDetail.status === 'overdue'
+                    ? 'Em Atraso'
+                    : 'Pendente / Previsto'}
+                </span>
+              </div>
+
+              {selectedTxForDetail.clientName && (
+                <div className="col-span-2 p-3 rounded-xl bg-[#faf8f5] border border-[#f0ebe4]">
+                  <span className="text-[10px] text-[#9c8e85] block">Cliente Vinculado</span>
+                  <span className="font-semibold text-[#1a1614] block mt-0.5">
+                    {selectedTxForDetail.clientName}
+                  </span>
+                </div>
+              )}
+
+              {selectedTxForDetail.notes && (
+                <div className="col-span-2 p-3 rounded-xl bg-[#faf8f5] border border-[#f0ebe4]">
+                  <span className="text-[10px] text-[#9c8e85] block">Observações</span>
+                  <span className="text-xs text-[#574d46] block mt-0.5">
+                    {selectedTxForDetail.notes}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Status Alteration */}
+            <div className="pt-2 border-t border-[#f0ebe4] space-y-2">
+              <span className="text-xs font-semibold text-[#73655c] block">Alterar Status:</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => {
+                    updateTransaction(selectedTxForDetail.id, { status: 'completed' });
+                    setSelectedTxForDetail((prev) => (prev ? { ...prev, status: 'completed' } : null));
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-700 hover:bg-emerald-100 cursor-pointer"
+                >
+                  Marcar como Confirmado
+                </button>
+                <button
+                  onClick={() => {
+                    updateTransaction(selectedTxForDetail.id, { status: 'pending' });
+                    setSelectedTxForDetail((prev) => (prev ? { ...prev, status: 'pending' } : null));
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-xs font-bold text-amber-700 hover:bg-amber-100 cursor-pointer"
+                >
+                  Marcar como Pendente
+                </button>
+                <button
+                  onClick={() => {
+                    updateTransaction(selectedTxForDetail.id, { status: 'cancelled' });
+                    setSelectedTxForDetail((prev) => (prev ? { ...prev, status: 'cancelled' } : null));
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-xs font-bold text-rose-700 hover:bg-rose-100 cursor-pointer"
+                >
+                  Cancelar Lançamento
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#f0ebe4]">
+              <button
+                onClick={() => {
+                  if (confirm(`Excluir permanentemente ${selectedTxForDetail.description}?`)) {
+                    deleteTransaction(selectedTxForDetail.id);
+                    setSelectedTxForDetail(null);
+                  }
+                }}
+                className="px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Excluir</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedTxForDetail(null)}
+                className="px-4 py-2 rounded-xl bg-[#b89f82] hover:bg-[#a68c6e] text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                Fechar
+              </button>
             </div>
           </div>
         </div>

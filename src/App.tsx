@@ -27,6 +27,7 @@ import { TeamTab } from './components/team/TeamTab';
 import { SuppliersTab } from './components/suppliers/SuppliersTab';
 import { SettingsTab } from './components/settings/SettingsTab';
 import { NewTransactionModal } from './components/modals/NewTransactionModal';
+import { TransactionStructure } from './types';
 import { AmortizationModal } from './components/modals/AmortizationModal';
 import { TransferModal } from './components/modals/TransferModal';
 import { CashActionModal } from './components/modals/CashActionModal';
@@ -39,23 +40,34 @@ import { auth } from './lib/firebase';
 import { SubscriptionGuard } from './components/auth/SubscriptionGuard';
 
 const AppContent: React.FC = () => {
-  // Default to projects management
-  const [activeTab, setActiveTab] = useState<string>('projects');
+  // Default to 'Meu Dia & Agenda'
+  const [activeTab, setActiveTab] = useState<string>('today');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Modals state
   const [isNewTxModalOpen, setIsNewTxModalOpen] = useState(false);
   const [newTxInitialType, setNewTxInitialType] = useState<'income' | 'expense'>('expense');
   const [newTxInitialCategoryOrSource, setNewTxInitialCategoryOrSource] = useState<string | undefined>();
+  const [newTxInitialStructure, setNewTxInitialStructure] = useState<TransactionStructure | undefined>();
 
   const [isAmortizationModalOpen, setIsAmortizationModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isCashModalOpen, setIsCashModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const handleOpenNewTx = (initialType: 'income' | 'expense' = 'expense', catOrSource?: string) => {
+  const handleOpenNewTx = (
+    initialType: 'income' | 'expense' = 'expense',
+    catOrSource?: string,
+    structure?: TransactionStructure
+  ) => {
     setNewTxInitialType(initialType);
-    setNewTxInitialCategoryOrSource(catOrSource);
+    if (catOrSource === 'contrato' || catOrSource === 'recorrente' || catOrSource === 'avulso') {
+      setNewTxInitialStructure(catOrSource as TransactionStructure);
+      setNewTxInitialCategoryOrSource(undefined);
+    } else {
+      setNewTxInitialStructure(structure);
+      setNewTxInitialCategoryOrSource(catOrSource);
+    }
     setIsNewTxModalOpen(true);
   };
 
@@ -121,6 +133,7 @@ const AppContent: React.FC = () => {
         onClose={() => setIsNewTxModalOpen(false)}
         initialType={newTxInitialType}
         initialCategoryOrSource={newTxInitialCategoryOrSource}
+        initialStructure={newTxInitialStructure}
       />
       <AmortizationModal isOpen={isAmortizationModalOpen} onClose={() => setIsAmortizationModalOpen(false)} />
       <TransferModal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} />

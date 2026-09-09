@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { ArchitectureProject, ProjectInstallment, ProjectMilestone } from '../../types';
+import { DEFAULT_PROJECT_STAGES } from '../../data/defaultProjectStages';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { NICHES } from '../../utils/theme';
 import { AddProjectModal } from '../modals/AddProjectModal';
@@ -333,10 +334,20 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
             const projectMils = projectMilestones.filter(m => m.projectId === p.id);
             const projectInsts = projectInstallments.filter(i => i.projectId === p.id);
             
-            // Calculate progress percentage
-            const completedCount = projectMils.filter(m => m.completed).length;
-            const progressPercent = projectMils.length > 0 
-              ? Math.round((completedCount / projectMils.length) * 100) 
+            // Calculate progress percentage based on schedule/cronograma tasks + milestones
+            const pStages = (p.stages && p.stages.length > 0) ? p.stages : DEFAULT_PROJECT_STAGES;
+            const stageTasks = pStages.flatMap(s => s.tasks || []);
+            const stageTasksTotal = stageTasks.length;
+            const stageTasksCompleted = stageTasks.filter(t => t.status === 'completed').length;
+
+            const milsTotal = projectMils.length;
+            const milsCompleted = projectMils.filter(m => m.completed).length;
+
+            const totalItems = stageTasksTotal + milsTotal;
+            const completedCount = stageTasksCompleted + milsCompleted;
+
+            const progressPercent = totalItems > 0 
+              ? Math.round((completedCount / totalItems) * 100) 
               : 0;
 
             const stageLabel = statusOptions.find(o => o.value === p.status)?.label || p.status;
@@ -397,9 +408,9 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                 {/* Progress bar and milestone stats */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#a89c93] font-medium">Progresso das Entregas (Marcos)</span>
+                    <span className="text-[#a89c93] font-medium">Progresso das Entregas (Cronograma & Marcos)</span>
                     <span className="font-bold text-[#fcf8f5] flex items-center gap-1">
-                      {progressPercent}% <span className="text-[10px] text-[#a89c93]">({completedCount}/{projectMils.length})</span>
+                      {progressPercent}% <span className="text-[10px] text-[#a89c93]">({completedCount}/{totalItems})</span>
                     </span>
                   </div>
                   <div className="w-full bg-[#14110f] h-2 rounded-full overflow-hidden border border-[#3d342f]">
@@ -496,7 +507,16 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                     )}
 
                     {projectMils.length === 0 ? (
-                      <p className="text-[10px] text-[#a89c93] italic">Nenhum prazo cadastrado.</p>
+                      stageTasksCompleted > 0 ? (
+                        <div className="flex items-center justify-between p-2 bg-[#14110f]/60 border border-emerald-500/20 rounded-xl text-[11px]">
+                          <span className="text-emerald-400 font-medium flex items-center gap-1.5">
+                            <CheckSquare className="w-3.5 h-3.5" />
+                            Cronograma: {stageTasksCompleted}/{stageTasksTotal} tarefas concluídas
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-[#a89c93] italic">Nenhum prazo cadastrado.</p>
+                      )
                     ) : (
                       <div className="space-y-1.5 max-h-[140px] overflow-y-auto no-scrollbar">
                         {projectMils.map((m) => (

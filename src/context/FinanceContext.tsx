@@ -388,17 +388,58 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    const defaultDemoTransactions: Transaction[] = [
+      {
+        id: 'tx-rec-jjc',
+        description: 'Projeto JJC',
+        amount: 2012,
+        type: 'income',
+        structure: 'recorrente',
+        status: 'completed',
+        category: 'Honorários de Projeto',
+        bankAccountId: 'bank-principal',
+        date: '2026-09-01',
+        dueDate: '2026-10-01',
+        isRecurring: true,
+        recurrenceFrequency: 'mensal',
+        recurrenceStartDate: '2026-09-01',
+        clientName: 'JJC',
+        projectName: 'Projeto JJC',
+        notes: 'Recorrência mensal de honorários',
+      },
+      {
+        id: 'tx-rec-bfe',
+        description: 'Projeto BFE',
+        amount: 14000,
+        type: 'income',
+        structure: 'recorrente',
+        status: 'cancelled',
+        category: 'Honorários de Projeto',
+        bankAccountId: 'bank-principal',
+        date: '2026-09-15',
+        dueDate: '2026-09-15',
+        isRecurring: true,
+        recurrenceFrequency: 'mensal',
+        recurrenceStartDate: '2026-08-01',
+        clientName: 'BFE',
+        projectName: 'Projeto BFE',
+        notes: 'Contrato cancelado pelo cliente',
+      },
+    ];
+
     const saved = localStorage.getItem(getStorageKey('transactions'));
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.some((t: any) => t.id === 'tx-1' || t.id === 'tx-freela-1')) {
-          return [];
+          return defaultDemoTransactions;
         }
-        return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       } catch {}
     }
-    return [];
+    return defaultDemoTransactions;
   });
 
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(() => {
