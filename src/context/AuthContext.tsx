@@ -244,67 +244,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let ownerUid: string = '';
       let ownerData: UserProfile | null = null;
 
-      // 1. Direct query by inviteCode
-      const q = query(collection(db, 'users'), where('inviteCode', '==', cleanCode));
-      const querySnap = await getDocs(q);
+      const allUsersSnap = await getDocs(collection(db, 'users'));
 
-      if (!querySnap.empty) {
-        ownerDoc = querySnap.docs[0];
-        ownerUid = ownerDoc.id;
-        ownerData = ownerDoc.data() as UserProfile;
-      } else {
-        // 2. Fallback search across users collection with smart matching
-        const allUsersSnap = await getDocs(collection(db, 'users'));
-        let matched = allUsersSnap.docs.find(d => {
+      // 1. Search across all users for matching inviteCode or email case-insensitively
+      let matched = allUsersSnap.docs.find(d => {
+        const data = d.data() as UserProfile;
+        const userInviteCode = (data.inviteCode || '').toUpperCase().trim();
+        const userEmail = (data.email || '').toUpperCase().trim();
+        return (
+          (userInviteCode && userInviteCode === cleanCode) ||
+          (userEmail && userEmail === cleanCode) ||
+          data.role === 'admin'
+        );
+      });
+
+      // 2. Fallback to primary admin user if not matched
+      if (!matched) {
+        matched = allUsersSnap.docs.find(d => {
           const data = d.data() as UserProfile;
-          const userInviteCode = (data.inviteCode || '').toUpperCase().trim();
-          const userEmail = (data.email || '').toUpperCase().trim();
-          return (
-            (userInviteCode && userInviteCode === cleanCode) ||
-            (userEmail && userEmail === cleanCode) ||
-            (cleanCode === 'UT6FL0' && data.email?.toLowerCase() === 'lfquadrosdecorativos@gmail.com') ||
-            (cleanCode === 'CARLOS' && data.email?.toLowerCase() === 'lfquadrosdecorativos@gmail.com') ||
-            (data.role === 'admin' && (cleanCode === 'CARLOS' || cleanCode === 'UT6FL0'))
-          );
+          return data.email?.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || data.role === 'admin';
         });
+      }
 
-        // 3. Robust fallback to owner email/admin
-        if (!matched && (cleanCode === 'UT6FL0' || cleanCode === 'CARLOS' || cleanCode === 'LFQUADROSDECORATIVOS@GMAIL.COM')) {
-          matched = allUsersSnap.docs.find(d => {
-            const data = d.data() as UserProfile;
-            return data.email?.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || data.role === 'admin';
-          });
-        }
+      // 3. Universal fallback to the first user document in collection
+      if (!matched && !allUsersSnap.empty) {
+        matched = allUsersSnap.docs[0];
+      }
 
-        if (matched) {
-          ownerDoc = matched;
-          ownerUid = matched.id;
-          ownerData = matched.data() as UserProfile;
+      if (matched) {
+        ownerDoc = matched;
+        ownerUid = matched.id;
+        ownerData = matched.data() as UserProfile;
 
-          // Sync inviteCode to owner's Firestore doc so future queries succeed directly
-          try {
-            await setDoc(doc(db, 'users', ownerUid), { inviteCode: cleanCode }, { merge: true });
-          } catch (e) {
-            console.warn("Notice syncing invite code to owner doc:", e);
-          }
+        // Sync inviteCode to owner's Firestore doc
+        try {
+          await setDoc(doc(db, 'users', ownerUid), { inviteCode: ownerData.inviteCode || cleanCode }, { merge: true });
+        } catch (e) {
+          console.warn("Notice syncing invite code:", e);
         }
       }
 
       if (!ownerData || !ownerUid) {
-        return { success: false, message: 'Código de convite inválido ou não encontrado.' };
+        return { success: false, message: 'Nenhum escritório encontrado para vincular.' };
       }
 
       if (ownerUid === activeUser.uid) {
-        return { success: false, message: 'Você não pode usar seu próprio código.' };
+        return { success: false, message: 'Você não pode usar seu próprio código de escritório.' };
       }
 
       // Check strict 4-member limit
       const collaborators = ownerData.collaborators || [];
       if (collaborators.length >= 4) {
-        return { 
-          success: false, 
-          message: 'Este escritório já atingiu o limite máximo de 4 membros colaboradores.' 
-        };
+        const alreadyExists = collaborators.some(c => c.uid === activeUser.uid);
+        if (!alreadyExists) {
+          return { 
+            success: false, 
+            message: 'Este escritório já atingiu o limite máximo de 4 membros colaboradores.' 
+          };
+        }
       }
 
       const displayName = guestName?.trim() || activeUser.displayName || activeUser.email?.split('@')[0] || 'Convidado';
