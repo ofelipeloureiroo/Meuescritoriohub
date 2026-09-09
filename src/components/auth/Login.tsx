@@ -273,6 +273,8 @@ export const Login: React.FC = () => {
         setIsRegisterMode(false);
       } else if (err.code === 'auth/weak-password') {
         setError('A senha deve conter no mínimo 6 caracteres.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('O provedor de E-mail/Senha está desativado no projeto Firebase padrão. Para ter controle total do banco e ativar logins ou domínios próprios, conecte seu próprio projeto Firebase.');
       } else {
         setError(err.message || 'Erro ao autenticar com e-mail.');
       }

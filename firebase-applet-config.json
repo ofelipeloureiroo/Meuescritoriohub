@@ -1,12 +1,12 @@
 {
-  "projectId": "angular-principle-j78pp",
-  "appId": "1:1072709461943:web:7980ff292e506398a7aa32",
-  "apiKey": "AIzaSyCph1r0B95j8eP8xyTnbTt5B7qyZ4t6B90",
-  "authDomain": "angular-principle-j78pp.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-meuescritrioonli-016879d0-3dcb-4378-be21-f17459d693f8",
-  "storageBucket": "angular-principle-j78pp.firebasestorage.app",
-  "messagingSenderId": "1072709461943",
-  "measurementId": "",
-  "oAuthClientId": "1072709461943-lst7qs1m30ojbfrqgflebi9pv8bu4kb3.apps.googleusercontent.com",
+  "projectId": "meuescritoriohub",
+  "appId": "1:96842951839:web:1e0d0545efb55819b5c6aa",
+  "apiKey": "AIzaSyD_JGWKeSgjB0mf3SHUcIGp46wwR1fdbJY",
+  "authDomain": "meuescritoriohub.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "meuescritoriohub.firebasestorage.app",
+  "messagingSenderId": "96842951839",
+  "measurementId": "G-JVJ1F8C714",
+  "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }

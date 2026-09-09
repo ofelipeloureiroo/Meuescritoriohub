@@ -16,7 +16,9 @@ const activeConfig = {
 
 const app = initializeApp(activeConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app, activeConfig.firestoreDatabaseId);
+export const db = (activeConfig.firestoreDatabaseId && activeConfig.firestoreDatabaseId !== '(default)')
+  ? getFirestore(app, activeConfig.firestoreDatabaseId)
+  : getFirestore(app);
 
 export enum OperationType {
   CREATE = 'create',
