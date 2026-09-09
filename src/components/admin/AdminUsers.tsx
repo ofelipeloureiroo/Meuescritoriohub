@@ -20,9 +20,12 @@ import {
   AlertCircle,
   Sparkles,
   X,
-  Mail
+  Mail,
+  ArrowLeft
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { FinancialControlTab } from './FinancialControlTab';
+
 
 const DashboardSubscriptions: React.FC<{ users: UserProfile[] }> = ({ users }) => {
   const subscribers = users.filter(u => u.role !== 'admin');
@@ -112,6 +115,7 @@ export const AdminUsers: React.FC = () => {
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all');
+  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'finance'>('users');
 
   // Custom Date Modal & Manual Approval State
   const [selectedUserForModal, setSelectedUserForModal] = useState<UserProfile | null>(null);
@@ -358,147 +362,169 @@ export const AdminUsers: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <div>
-          <h2 className="text-2xl font-serif font-bold text-[#fcf8f5]">Painel Financeiro & Assinantes</h2>
-          <p className="text-[#a89c93] text-sm">Acompanhe seus assinantes, gerencie liberação após pagamento e permissões do sistema.</p>
+      {activeAdminTab === 'finance' ? (
+        <div className="space-y-6">
+          <div className="flex items-center gap-2 mb-4">
+            <button 
+              onClick={() => setActiveAdminTab('users')}
+              className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Voltar para Assinantes</span>
+            </button>
+          </div>
+          <FinancialControlTab />
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={handleManualRefresh}
-            className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-            <span>Atualizar Lista</span>
-          </button>
-        </div>
-      </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+            <div>
+              <h2 className="text-2xl font-serif font-bold text-[#fcf8f5]">Painel Financeiro & Assinantes</h2>
+              <p className="text-[#a89c93] text-sm">Acompanhe seus assinantes, gerencie liberação após pagamento e permissões do sistema.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setActiveAdminTab('finance')}
+                className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <span>Controle Financeiro</span>
+              </button>
+              <button
+                onClick={handleManualRefresh}
+                className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+                <span>Atualizar Lista</span>
+              </button>
+            </div>
+          </div>
+          
+          {/* Prominent Pending Access Requests Alert Box */}
+          {pendingRequests.length > 0 && (
+            <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-5 space-y-4 shadow-lg animate-in fade-in duration-200">
+              <div className="flex items-center justify-between border-b border-amber-500/20 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                  </span>
+                  <h3 className="font-serif font-bold text-base text-amber-300">
+                    🔔 {pendingRequests.length} Solicitação(ões) de Acesso Aguardando Sua Liberação
+                  </h3>
+                </div>
+                <span className="text-[11px] font-bold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg">
+                  Aguardando Conferência de Pagamento
+                </span>
+              </div>
+    
+              <p className="text-xs text-[#d1c7bd]">
+                Os usuários abaixo fizeram cadastro ou login e estão aguardando você confirmar o pagamento. Escolha a duração para liberar o acesso:
+              </p>
+    
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {pendingRequests.map((pUser) => (
+                  <div key={pUser.uid} className="bg-[#12100e] border border-[#3d342f] rounded-xl p-4 flex flex-col justify-between gap-3 shadow-md">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-[#fcf8f5]">{pUser.name || 'Novo Usuário'}</span>
+                        <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          Pendente
+                        </span>
+                      </div>
+                      <div className="text-xs font-mono text-[var(--theme-primary)] font-bold truncate">
+                        {pUser.email}
+                      </div>
+                      <div className="text-[10px] text-[#a89c93]">
+                        Cadastrado em: {pUser.createdAt ? new Date(pUser.createdAt).toLocaleDateString('pt-BR') : 'Hoje'}
+                      </div>
+                    </div>
+    
+                    <div className="space-y-2 pt-2 border-t border-[#2a2420]">
+                      <div className="text-[10px] font-bold text-[#a89c93] uppercase tracking-wider">Selecione o Tempo da Assinatura:</div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <button
+                          onClick={() => approveWithDuration(pUser.uid, '1month')}
+                          className="py-2 px-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
+                          title="Liberar Acesso por 1 Mês (30 Dias)"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>1 Mês</span>
+                        </button>
+    
+                        <button
+                          onClick={() => approveWithDuration(pUser.uid, '1year')}
+                          className="py-2 px-2 bg-emerald-400 hover:bg-emerald-300 text-black font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
+                          title="Liberar Acesso por 1 Ano (365 Dias)"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>1 Ano</span>
+                        </button>
+    
+                        <button
+                          onClick={() => {
+                            setSelectedUserForModal(pUser);
+                            const defaultDate = new Date();
+                            defaultDate.setMonth(defaultDate.getMonth() + 1);
+                            setCustomDateInput(defaultDate.toISOString().split('T')[0]);
+                          }}
+                          className="py-2 px-2 bg-[#2a2420] hover:bg-[#382f2a] text-[#fcf8f5] border border-[#3d342f] font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer"
+                          title="Definir Data Personalizada"
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+                          <span>Data</span>
+                        </button>
+                      </div>
+    
+                      <button
+                        onClick={() => updateStatus(pUser.uid, 'inactive')}
+                        className="w-full py-1.5 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all border border-red-500/20 cursor-pointer"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>Recusar / Bloquear Acesso</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-      {/* Prominent Pending Access Requests Alert Box */}
-      {pendingRequests.length > 0 && (
-        <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-5 space-y-4 shadow-lg animate-in fade-in duration-200">
-          <div className="flex items-center justify-between border-b border-amber-500/20 pb-3">
-            <div className="flex items-center gap-2.5">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-              </span>
-              <h3 className="font-serif font-bold text-base text-amber-300">
-                🔔 {pendingRequests.length} Solicitação(ões) de Acesso Aguardando Sua Liberação
+          {/* Bar for Manual Approval by Email */}
+          <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-[var(--theme-primary)]" />
+              <h3 className="text-xs font-bold text-[#fcf8f5] uppercase tracking-wider">
+                Liberar Assinatura Manualmente por E-mail
               </h3>
             </div>
-            <span className="text-[11px] font-bold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg">
-              Aguardando Conferência de Pagamento
-            </span>
-          </div>
-
-          <p className="text-xs text-[#d1c7bd]">
-            Os usuários abaixo fizeram cadastro ou login e estão aguardando você confirmar o pagamento. Escolha a duração para liberar o acesso:
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {pendingRequests.map((pUser) => (
-              <div key={pUser.uid} className="bg-[#12100e] border border-[#3d342f] rounded-xl p-4 flex flex-col justify-between gap-3 shadow-md">
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-[#fcf8f5]">{pUser.name || 'Novo Usuário'}</span>
-                    <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                      Pendente
-                    </span>
-                  </div>
-                  <div className="text-xs font-mono text-[var(--theme-primary)] font-bold truncate">
-                    {pUser.email}
-                  </div>
-                  <div className="text-[10px] text-[#a89c93]">
-                    Cadastrado em: {pUser.createdAt ? new Date(pUser.createdAt).toLocaleDateString('pt-BR') : 'Hoje'}
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2 border-t border-[#2a2420]">
-                  <div className="text-[10px] font-bold text-[#a89c93] uppercase tracking-wider">Selecione o Tempo da Assinatura:</div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <button
-                      onClick={() => approveWithDuration(pUser.uid, '1month')}
-                      className="py-2 px-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
-                      title="Liberar Acesso por 1 Mês (30 Dias)"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>1 Mês</span>
-                    </button>
-
-                    <button
-                      onClick={() => approveWithDuration(pUser.uid, '1year')}
-                      className="py-2 px-2 bg-emerald-400 hover:bg-emerald-300 text-black font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
-                      title="Liberar Acesso por 1 Ano (365 Dias)"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>1 Ano</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setSelectedUserForModal(pUser);
-                        const defaultDate = new Date();
-                        defaultDate.setMonth(defaultDate.getMonth() + 1);
-                        setCustomDateInput(defaultDate.toISOString().split('T')[0]);
-                      }}
-                      className="py-2 px-2 bg-[#2a2420] hover:bg-[#382f2a] text-[#fcf8f5] border border-[#3d342f] font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer"
-                      title="Definir Data Personalizada"
-                    >
-                      <Calendar className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                      <span>Data</span>
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={() => updateStatus(pUser.uid, 'inactive')}
-                    className="w-full py-1.5 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all border border-red-500/20 cursor-pointer"
-                  >
-                    <XCircle className="w-3.5 h-3.5" />
-                    <span>Recusar / Bloquear Acesso</span>
-                  </button>
-                </div>
-              </div>
-            ))}
+            <form onSubmit={handleManualApproveByEmail} className="flex flex-col sm:flex-row items-center gap-2">
+              <input
+                type="email"
+                value={manualEmailInput}
+                onChange={(e) => setManualEmailInput(e.target.value)}
+                placeholder="Digite o e-mail do assinante (ex: cliente@email.com)"
+                required
+                className="flex-1 w-full bg-[#12100e] border border-[#3d342f] rounded-xl px-3.5 py-2 text-xs text-[#fcf8f5] placeholder-[#8c827a] focus:outline-none focus:border-[var(--theme-primary)]"
+              />
+              <select
+                value={manualDuration}
+                onChange={(e) => setManualDuration(e.target.value as '1month' | '1year')}
+                className="bg-[#12100e] border border-[#3d342f] rounded-xl px-3 py-2 text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
+              >
+                <option value="1month">Duração: 1 Mês (30 dias)</option>
+                <option value="1year">Duração: 1 Ano (365 dias)</option>
+              </select>
+              <button
+                type="submit"
+                className="w-full sm:w-auto px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Liberar Acesso Agora</span>
+              </button>
+            </form>
           </div>
         </div>
       )}
-
-      {/* Bar for Manual Approval by Email */}
-      <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Mail className="w-4 h-4 text-[var(--theme-primary)]" />
-          <h3 className="text-xs font-bold text-[#fcf8f5] uppercase tracking-wider">
-            Liberar Assinatura Manualmente por E-mail
-          </h3>
-        </div>
-        <form onSubmit={handleManualApproveByEmail} className="flex flex-col sm:flex-row items-center gap-2">
-          <input
-            type="email"
-            value={manualEmailInput}
-            onChange={(e) => setManualEmailInput(e.target.value)}
-            placeholder="Digite o e-mail do assinante (ex: cliente@email.com)"
-            required
-            className="flex-1 w-full bg-[#12100e] border border-[#3d342f] rounded-xl px-3.5 py-2 text-xs text-[#fcf8f5] placeholder-[#8c827a] focus:outline-none focus:border-[var(--theme-primary)]"
-          />
-          <select
-            value={manualDuration}
-            onChange={(e) => setManualDuration(e.target.value as '1month' | '1year')}
-            className="bg-[#12100e] border border-[#3d342f] rounded-xl px-3 py-2 text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
-          >
-            <option value="1month">Duração: 1 Mês (30 dias)</option>
-            <option value="1year">Duração: 1 Ano (365 dias)</option>
-          </select>
-          <button
-            type="submit"
-            className="w-full sm:w-auto px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Liberar Acesso Agora</span>
-          </button>
-        </form>
-      </div>
-
       {errorMessage && (
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -515,6 +541,10 @@ export const AdminUsers: React.FC = () => {
       )}
 
       <DashboardSubscriptions users={users} />
+      {/* ... */}
+    </div>
+  );
+};
 
       {/* Filter and Search Bar */}
       <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
