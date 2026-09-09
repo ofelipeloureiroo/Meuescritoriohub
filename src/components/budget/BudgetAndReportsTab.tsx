@@ -5,16 +5,21 @@ import {
   Database,
   Download,
   FileSpreadsheet,
-  HeartHandshake,
-  Home,
   PieChart as PieIcon,
   RefreshCw,
   RotateCcw,
   Save,
-  ShieldAlert,
-  Sparkles,
-  TrendingDown,
-  TrendingUp,
+  Plus,
+  Trash2,
+  Building2,
+  Laptop,
+  FileText,
+  Target,
+  Package,
+  Wifi,
+  Wrench,
+  Layers,
+  X,
   Upload,
 } from 'lucide-react';
 import {
@@ -31,15 +36,17 @@ import {
   YAxis,
 } from 'recharts';
 import { useFinance } from '../../context/FinanceContext';
-import { BudgetLimits } from '../../types';
+import { CategoryBudget } from '../../types';
 import { formatCurrency, formatPercent } from '../../utils/formatters';
 
 export const BudgetAndReportsTab: React.FC = () => {
   const {
     monthlyIncomeSummary,
     monthlyExpenseSummary,
-    budgetLimits,
-    updateBudgetLimits,
+    categoryBudgets,
+    addCategoryBudget,
+    deleteCategoryBudget,
+    updateCategoryBudget,
     exportDataJSON,
     importDataJSON,
     exportTransactionsCSV,
@@ -47,15 +54,61 @@ export const BudgetAndReportsTab: React.FC = () => {
     selectedMonth,
   } = useFinance();
 
-  const [limits, setLimits] = useState<BudgetLimits>(budgetLimits);
   const [isEditingLimits, setIsEditingLimits] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
-  const handleSaveLimits = (e: React.FormEvent) => {
+  // New item form state
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemBudget, setNewItemBudget] = useState(500);
+  const [newItemColor, setNewItemColor] = useState('#6366f1');
+
+  // Local state for editing limits
+  const [editableBudgets, setEditableBudgets] = useState<Record<string, number>>(() => {
+    const map: Record<string, number> = {};
+    categoryBudgets.forEach((b) => {
+      map[b.category] = b.monthlyBudget;
+    });
+    return map;
+  });
+
+  // Sync editable budgets when categoryBudgets change
+  React.useEffect(() => {
+    const map: Record<string, number> = {};
+    categoryBudgets.forEach((b) => {
+      map[b.category] = b.monthlyBudget;
+    });
+    setEditableBudgets(map);
+  }, [categoryBudgets]);
+
+  const handleSaveAllLimits = (e: React.FormEvent) => {
     e.preventDefault();
-    updateBudgetLimits(limits);
+    Object.entries(editableBudgets).forEach(([cat, val]) => {
+      updateCategoryBudget(cat, val);
+    });
     setIsEditingLimits(false);
+    setSaveSuccessMsg(true);
+    setTimeout(() => setSaveSuccessMsg(false), 3000);
+  };
+
+  const handleAddCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newItemName.trim()) return;
+
+    const catKey = 'escritorio_' + Date.now();
+    const newBudget: CategoryBudget = {
+      category: catKey as any,
+      name: newItemName.trim(),
+      monthlyBudget: Number(newItemBudget) || 0,
+      color: newItemColor,
+      iconName: 'Layers',
+    };
+
+    addCategoryBudget(newBudget);
+    setNewItemName('');
+    setNewItemBudget(500);
+    setIsAddModalOpen(false);
     setSaveSuccessMsg(true);
     setTimeout(() => setSaveSuccessMsg(false), 3000);
   };
@@ -80,38 +133,11 @@ export const BudgetAndReportsTab: React.FC = () => {
   };
 
   // Prepare data for Budget vs Actual chart
-  const budgetVsActualData = [
-    {
-      category: 'Casa & Moradia',
-      Orcado: limits.casa,
-      Gasto: monthlyExpenseSummary.byCategory.casa,
-    },
-    {
-      category: 'Carro & Transporte',
-      Orcado: limits.carro,
-      Gasto: monthlyExpenseSummary.byCategory.carro,
-    },
-    {
-      category: 'Lazer & Estilo',
-      Orcado: limits.lazer,
-      Gasto: monthlyExpenseSummary.byCategory.lazer,
-    },
-    {
-      category: 'Alimentação',
-      Orcado: limits.alimentacao,
-      Gasto: monthlyExpenseSummary.byCategory.alimentacao,
-    },
-    {
-      category: 'Saúde & Outros',
-      Orcado: limits.saude,
-      Gasto: monthlyExpenseSummary.byCategory.saude,
-    },
-    {
-      category: 'Freela Tools/MEI',
-      Orcado: limits.freela_tools,
-      Gasto: monthlyExpenseSummary.byCategory.freela_tools,
-    },
-  ];
+  const budgetVsActualData = categoryBudgets.map((b) => ({
+    category: b.name.split(' (')[0],
+    Orcado: b.monthlyBudget,
+    Gasto: monthlyExpenseSummary.byCategory[b.category] || 0,
+  }));
 
   // Income Breakdown CLT vs Freelancer
   const totalIncome = monthlyIncomeSummary.total;
@@ -134,21 +160,28 @@ export const BudgetAndReportsTab: React.FC = () => {
               <BarChart3 className="w-4 h-4" />
             </span>
             <h2 className="text-lg font-bold text-[#fafafa] tracking-tight">
-              Orçamento de Gastos & Relatórios Financeiros
+              Gestão de Escritório & Tetos de Gastos Mensais
             </h2>
           </div>
           <p className="text-xs text-[#a1a1aa] mt-1 max-w-2xl">
-            Defina tetos de gastos mensais para Casa, Carro e Lazer, compare o previsto versus realizado e gerencie seus backups.
+            Adicione e configure qualquer item ou despesa para a gestão do seu escritório de arquitetura ou design, compare o previsto versus realizado e gerencie seus backups.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-colors cursor-pointer shadow-md"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Adicionar Novo Item</span>
+          </button>
+          <button
             onClick={() => setIsEditingLimits(!isEditingLimits)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#27272a] hover:bg-[#3f3f46] text-[#fafafa] text-xs font-semibold transition-colors cursor-pointer"
           >
             <Save className="w-3.5 h-3.5" />
-            <span>{isEditingLimits ? 'Fechar Edição' : 'Ajustar Tetos de Gastos'}</span>
+            <span>{isEditingLimits ? 'Fechar Edição' : 'Ajustar Tetos'}</span>
           </button>
         </div>
       </div>
@@ -156,82 +189,51 @@ export const BudgetAndReportsTab: React.FC = () => {
       {saveSuccessMsg && (
         <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="w-4 h-4" />
-          <span>Tetos de orçamento atualizados com sucesso!</span>
+          <span>Itens e tetos de orçamento atualizados com sucesso!</span>
         </div>
       )}
 
       {/* EDIT BUDGET LIMITS PANEL */}
       {isEditingLimits && (
         <form
-          onSubmit={handleSaveLimits}
+          onSubmit={handleSaveAllLimits}
           className="p-5 rounded-2xl bg-[#18181b] border border-indigo-500/30 space-y-4 animate-in fade-in"
         >
           <div className="flex items-center justify-between border-b border-[#27272a] pb-2">
-            <h3 className="text-sm font-bold text-[#fafafa]">Configurar Limite Mensal por Categoria</h3>
+            <h3 className="text-sm font-bold text-[#fafafa]">Configurar Limite Mensal por Categoria de Escritório</h3>
             <span className="text-[11px] text-[#a1a1aa]">Valores em R$</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <div>
-              <label className="block text-[#a1a1aa] font-medium mb-1">🏠 Casa & Moradia (R$)</label>
-              <input
-                type="number"
-                step="50"
-                value={limits.casa}
-                onChange={(e) => setLimits({ ...limits, casa: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090b] border border-[#27272a] text-[#fafafa] focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[#a1a1aa] font-medium mb-1">🚗 Carro & Transporte (R$)</label>
-              <input
-                type="number"
-                step="50"
-                value={limits.carro}
-                onChange={(e) => setLimits({ ...limits, carro: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090b] border border-[#27272a] text-[#fafafa] focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[#a1a1aa] font-medium mb-1">🌴 Lazer & Estilo (R$)</label>
-              <input
-                type="number"
-                step="50"
-                value={limits.lazer}
-                onChange={(e) => setLimits({ ...limits, lazer: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090b] border border-[#27272a] text-[#fafafa] focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[#a1a1aa] font-medium mb-1">🛒 Alimentação (R$)</label>
-              <input
-                type="number"
-                step="50"
-                value={limits.alimentacao}
-                onChange={(e) => setLimits({ ...limits, alimentacao: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090b] border border-[#27272a] text-[#fafafa] focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[#a1a1aa] font-medium mb-1">❤️ Saúde (R$)</label>
-              <input
-                type="number"
-                step="50"
-                value={limits.saude}
-                onChange={(e) => setLimits({ ...limits, saude: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090b] border border-[#27272a] text-[#fafafa] focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[#a1a1aa] font-medium mb-1">💻 Freela Ferramentas/MEI (R$)</label>
-              <input
-                type="number"
-                step="50"
-                value={limits.freela_tools}
-                onChange={(e) => setLimits({ ...limits, freela_tools: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090b] border border-[#27272a] text-[#fafafa] focus:outline-none focus:border-emerald-500"
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+            {categoryBudgets.map((b) => (
+              <div key={b.category} className="p-3 rounded-xl bg-[#09090b] border border-[#27272a] space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[#fafafa] font-medium truncate" title={b.name}>
+                    {b.name}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => deleteCategoryBudget(b.category)}
+                    className="text-zinc-500 hover:text-rose-400 p-1 transition-colors cursor-pointer"
+                    title="Excluir categoria"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <input
+                  type="number"
+                  step="50"
+                  value={editableBudgets[b.category] ?? b.monthlyBudget}
+                  onChange={(e) =>
+                    setEditableBudgets({
+                      ...editableBudgets,
+                      [b.category]: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-[#18181b] border border-[#27272a] text-[#fafafa] focus:outline-none focus:border-emerald-500 text-xs font-bold"
+                />
+              </div>
+            ))}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
@@ -246,10 +248,89 @@ export const BudgetAndReportsTab: React.FC = () => {
               type="submit"
               className="px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-colors cursor-pointer"
             >
-              Salvar Tetos
+              Salvar Todos os Tetos
             </button>
           </div>
         </form>
+      )}
+
+      {/* ADD NEW CATEGORY MODAL */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#18181b] border border-[#27272a] rounded-2xl p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-[#27272a] pb-3">
+              <h3 className="text-sm font-bold text-[#fafafa] flex items-center gap-2">
+                <Plus className="w-4 h-4 text-emerald-400" />
+                Adicionar Novo Item de Gestão
+              </h3>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddCategory} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-[#a1a1aa] font-medium mb-1">Nome do Item / Categoria</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Assinatura de Renderizador, Café & Copa..."
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090b] border border-[#27272a] text-[#fafafa] focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[#a1a1aa] font-medium mb-1">Teto de Gasto Mensal (R$)</label>
+                <input
+                  type="number"
+                  step="50"
+                  required
+                  value={newItemBudget}
+                  onChange={(e) => setNewItemBudget(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090b] border border-[#27272a] text-[#fafafa] focus:outline-none focus:border-emerald-500 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[#a1a1aa] font-medium mb-1">Cor de Destaque</label>
+                <div className="flex items-center gap-2 pt-1">
+                  {['#6366f1', '#3b82f6', '#10b981', '#ec4899', '#f97316', '#06b6d4', '#8b5cf6', '#eab308'].map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setNewItemColor(c)}
+                      className={`w-7 h-7 rounded-full transition-transform cursor-pointer ${
+                        newItemColor === c ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'
+                      }`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-[#27272a]">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 rounded-full bg-[#27272a] text-[#fafafa] hover:bg-[#3f3f46] text-xs transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Adicionar Item
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* CHARTS & COMPARISONS */}
@@ -389,7 +470,7 @@ export const BudgetAndReportsTab: React.FC = () => {
               <span>Exportar Backup (JSON)</span>
             </div>
             <p className="text-[11px] text-[#a1a1aa]">
-              Salva todos os bancos, clientes, financiamento da casa e lançamentos.
+              Salva todos os tetos, clientes, finanças e lançamentos.
             </p>
           </button>
 

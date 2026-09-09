@@ -142,6 +142,8 @@ interface FinanceContextType {
   updateSavingsGoal: (id: string, goal: Partial<SavingsGoal>) => void;
   deleteSavingsGoal: (id: string) => void;
   contributeToGoal: (goalId: string, amount: number, fromAccountId: string) => void;
+  addCategoryBudget: (item: CategoryBudget) => void;
+  deleteCategoryBudget: (category: string) => void;
   updateCategoryBudget: (category: string, monthlyBudget: number) => void;
 
   // Actions - App Actions & Tasks
@@ -1869,9 +1871,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateCategoryBudget = (category: string, monthlyBudget: number) => {
+    recordLocalMutation();
     setCategoryBudgets((prev) =>
       prev.map((b) => (b.category === category ? { ...b, monthlyBudget } : b))
     );
+  };
+
+  const addCategoryBudget = (item: CategoryBudget) => {
+    recordLocalMutation();
+    setCategoryBudgets((prev) => [...prev, item]);
+  };
+
+  const deleteCategoryBudget = (category: string) => {
+    recordLocalMutation();
+    setCategoryBudgets((prev) => prev.filter((b) => b.category !== category));
   };
 
   const addAppAction = (actionData: Omit<AppAction, 'id' | 'createdAt'>) => {
@@ -2117,29 +2130,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [clientsByState]);
 
   const budgetLimits = useMemo(() => {
-    const limits = {
-      casa: 0,
-      carro: 0,
-      lazer: 0,
-      alimentacao: 0,
-      saude: 0,
-      freela_tools: 0,
-    };
+    const limits: Record<string, number> = {};
     categoryBudgets.forEach((b) => {
-      const cat = b.category as keyof typeof limits;
-      if (cat in limits) {
-        limits[cat] = b.monthlyBudget;
-      }
+      limits[b.category] = b.monthlyBudget;
     });
-    return limits;
+    return limits as unknown as BudgetLimits;
   }, [categoryBudgets]);
 
   const updateBudgetLimits = (newLimits: BudgetLimits) => {
+    recordLocalMutation();
     setCategoryBudgets((prev) =>
       prev.map((b) => {
-        const cat = b.category as keyof BudgetLimits;
-        if (cat in newLimits) {
-          return { ...b, monthlyBudget: newLimits[cat] };
+        if (b.category in newLimits) {
+          return { ...b, monthlyBudget: newLimits[b.category as keyof BudgetLimits] };
         }
         return b;
       })
@@ -2553,6 +2556,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteSavingsGoal,
         contributeToGoal,
         updateCategoryBudget,
+        addCategoryBudget,
+        deleteCategoryBudget,
         totalNetWorth,
         totalBankBalance,
         totalPhysicalCash,
