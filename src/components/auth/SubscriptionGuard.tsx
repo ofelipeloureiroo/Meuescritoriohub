@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { signOut } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../../lib/firebase';
 import { Loader2, CreditCard, Lock, Building2, CheckCircle2, PieChart, FolderKanban, Users, LogOut } from 'lucide-react';
 
 export const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -17,6 +18,20 @@ export const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ chi
   const isPending = profile.status === 'pending';
   const isInactive = profile.status === 'inactive';
   const isOverdue = profile.subscriptionDueDate ? new Date(profile.subscriptionDueDate) < new Date() : false;
+
+  // Sync user doc to Firestore so admin always sees pending users
+  React.useEffect(() => {
+    if (user?.uid && isPending) {
+      const userRef = doc(db, 'users', user.uid);
+      setDoc(userRef, {
+        uid: user.uid,
+        email: user.email || '',
+        role: 'user',
+        status: 'pending',
+        createdAt: profile.createdAt || new Date().toISOString(),
+      }, { merge: true }).catch((err) => console.warn("Sync pending user doc error:", err));
+    }
+  }, [user?.uid, isPending, user?.email, profile?.createdAt]);
 
   const handleLogout = () => {
     signOut(auth).catch(console.error);

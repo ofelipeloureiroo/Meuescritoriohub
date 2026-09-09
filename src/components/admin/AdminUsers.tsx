@@ -18,7 +18,9 @@ import {
   Trash2,
   Calendar,
   AlertCircle,
-  X
+  Sparkles,
+  X,
+  Mail
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
@@ -111,6 +113,12 @@ export const AdminUsers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all');
 
+  // Custom Date Modal & Manual Approval State
+  const [selectedUserForModal, setSelectedUserForModal] = useState<UserProfile | null>(null);
+  const [customDateInput, setCustomDateInput] = useState<string>('');
+  const [manualEmailInput, setManualEmailInput] = useState<string>('');
+  const [manualDuration, setManualDuration] = useState<'1month' | '1year'>('1month');
+
   useEffect(() => {
     setLoading(true);
     setErrorMessage(null);
@@ -178,6 +186,81 @@ export const AdminUsers: React.FC = () => {
 
     return () => unsubscribe();
   }, [profile?.email, profile?.uid]);
+
+  const approveWithDuration = async (uid: string, durationType: '1month' | '1year' | 'custom', customDateVal?: string) => {
+    let dueDate = new Date();
+    if (durationType === '1month') {
+      dueDate.setDate(dueDate.getDate() + 30);
+    } else if (durationType === '1year') {
+      dueDate.setDate(dueDate.getDate() + 365);
+    } else if (durationType === 'custom' && customDateVal) {
+      dueDate = new Date(customDateVal);
+    }
+
+    const newDueDateISO = dueDate.toISOString();
+
+    try {
+      await updateDoc(doc(db, 'users', uid), {
+        status: 'active',
+        subscriptionDueDate: newDueDateISO,
+      });
+
+      setUsers(users.map(u => u.uid === uid ? {
+        ...u,
+        status: 'active',
+        subscriptionDueDate: newDueDateISO,
+      } : u));
+
+      alert(`Acesso liberado com sucesso! Vencimento definido para ${dueDate.toLocaleDateString('pt-BR')}.`);
+      setSelectedUserForModal(null);
+    } catch (error: any) {
+      console.error("Error approving user:", error);
+      alert(`Erro ao liberar acesso: ${error.message}`);
+    }
+  };
+
+  const handleManualApproveByEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = manualEmailInput.trim().toLowerCase();
+    if (!cleanEmail) return;
+
+    try {
+      const existing = users.find(u => u.email?.toLowerCase() === cleanEmail);
+      let dueDate = new Date();
+      if (manualDuration === '1month') {
+        dueDate.setDate(dueDate.getDate() + 30);
+      } else {
+        dueDate.setDate(dueDate.getDate() + 365);
+      }
+      const dueDateISO = dueDate.toISOString();
+
+      if (existing) {
+        await updateDoc(doc(db, 'users', existing.uid), {
+          status: 'active',
+          subscriptionDueDate: dueDateISO,
+        });
+        setUsers(users.map(u => u.uid === existing.uid ? { ...u, status: 'active', subscriptionDueDate: dueDateISO } : u));
+      } else {
+        const newRef = doc(collection(db, 'users'));
+        const newProfile: UserProfile = {
+          uid: newRef.id,
+          email: cleanEmail,
+          role: 'user',
+          status: 'active',
+          subscriptionDueDate: dueDateISO,
+          createdAt: new Date().toISOString()
+        };
+        await setDoc(newRef, newProfile);
+        setUsers([...users, newProfile]);
+      }
+
+      setManualEmailInput('');
+      alert(`Assinante ${cleanEmail} liberado com sucesso por ${manualDuration === '1month' ? '1 Mês' : '1 Ano'} (Vencimento: ${dueDate.toLocaleDateString('pt-BR')})!`);
+    } catch (err: any) {
+      console.error("Manual approve error:", err);
+      alert(`Erro ao liberar por e-mail: ${err.message}`);
+    }
+  };
 
   const updateStatus = async (uid: string, newStatusVal: 'active' | 'pending' | 'inactive') => {
     try {
@@ -310,7 +393,7 @@ export const AdminUsers: React.FC = () => {
           </div>
 
           <p className="text-xs text-[#d1c7bd]">
-            Os usuários abaixo fizeram cadastro ou login e estão aguardando você confirmar o pagamento para liberar o acesso ao sistema:
+            Os usuários abaixo fizeram cadastro ou login e estão aguardando você confirmar o pagamento. Escolha a duração para liberar o acesso:
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -331,20 +414,48 @@ export const AdminUsers: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-2 border-t border-[#2a2420]">
-                  <button
-                    onClick={() => updateStatus(pUser.uid, 'active')}
-                    className="flex-1 py-2 px-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Liberar Acesso (Ativar)</span>
-                  </button>
+                <div className="space-y-2 pt-2 border-t border-[#2a2420]">
+                  <div className="text-[10px] font-bold text-[#a89c93] uppercase tracking-wider">Selecione o Tempo da Assinatura:</div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      onClick={() => approveWithDuration(pUser.uid, '1month')}
+                      className="py-2 px-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
+                      title="Liberar Acesso por 1 Mês (30 Dias)"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>1 Mês</span>
+                    </button>
+
+                    <button
+                      onClick={() => approveWithDuration(pUser.uid, '1year')}
+                      className="py-2 px-2 bg-emerald-400 hover:bg-emerald-300 text-black font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
+                      title="Liberar Acesso por 1 Ano (365 Dias)"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>1 Ano</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedUserForModal(pUser);
+                        const defaultDate = new Date();
+                        defaultDate.setMonth(defaultDate.getMonth() + 1);
+                        setCustomDateInput(defaultDate.toISOString().split('T')[0]);
+                      }}
+                      className="py-2 px-2 bg-[#2a2420] hover:bg-[#382f2a] text-[#fcf8f5] border border-[#3d342f] font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer"
+                      title="Definir Data Personalizada"
+                    >
+                      <Calendar className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+                      <span>Data</span>
+                    </button>
+                  </div>
+
                   <button
                     onClick={() => updateStatus(pUser.uid, 'inactive')}
-                    className="py-2 px-3 bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-xs rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer"
+                    className="w-full py-1.5 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all border border-red-500/20 cursor-pointer"
                   >
-                    <XCircle className="w-4 h-4" />
-                    <span>Bloquear</span>
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>Recusar / Bloquear Acesso</span>
                   </button>
                 </div>
               </div>
@@ -352,6 +463,41 @@ export const AdminUsers: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Bar for Manual Approval by Email */}
+      <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Mail className="w-4 h-4 text-[var(--theme-primary)]" />
+          <h3 className="text-xs font-bold text-[#fcf8f5] uppercase tracking-wider">
+            Liberar Assinatura Manualmente por E-mail
+          </h3>
+        </div>
+        <form onSubmit={handleManualApproveByEmail} className="flex flex-col sm:flex-row items-center gap-2">
+          <input
+            type="email"
+            value={manualEmailInput}
+            onChange={(e) => setManualEmailInput(e.target.value)}
+            placeholder="Digite o e-mail do assinante (ex: cliente@email.com)"
+            required
+            className="flex-1 w-full bg-[#12100e] border border-[#3d342f] rounded-xl px-3.5 py-2 text-xs text-[#fcf8f5] placeholder-[#8c827a] focus:outline-none focus:border-[var(--theme-primary)]"
+          />
+          <select
+            value={manualDuration}
+            onChange={(e) => setManualDuration(e.target.value as '1month' | '1year')}
+            className="bg-[#12100e] border border-[#3d342f] rounded-xl px-3 py-2 text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
+          >
+            <option value="1month">Duração: 1 Mês (30 dias)</option>
+            <option value="1year">Duração: 1 Ano (365 dias)</option>
+          </select>
+          <button
+            type="submit"
+            className="w-full sm:w-auto px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Liberar Acesso Agora</span>
+          </button>
+        </form>
+      </div>
 
       {errorMessage && (
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center justify-between">
@@ -505,28 +651,52 @@ export const AdminUsers: React.FC = () => {
                     </td>
 
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 flex-wrap">
+                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
                         {u.role !== 'admin' && (
-                          <button
-                            onClick={() => registerPayment(u.uid, u.subscriptionDueDate)}
-                            className="px-3 py-1.5 bg-[#1c1815] border border-[var(--theme-primary)]/30 hover:bg-[var(--theme-primary)]/20 text-[var(--theme-primary)] flex items-center gap-1 text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                            title="Renovar +1 Mês de acesso"
-                          >
-                            <CreditCard className="w-3.5 h-3.5" /> +1 Mês
-                          </button>
+                          <>
+                            <button
+                              onClick={() => approveWithDuration(u.uid, '1month')}
+                              className="px-2.5 py-1.5 bg-[#1c1815] border border-[#3d342f] hover:border-[var(--theme-primary)] text-[var(--theme-primary)] text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                              title="Adicionar ou Renovar +1 Mês (30 Dias)"
+                            >
+                              +1 Mês
+                            </button>
+
+                            <button
+                              onClick={() => approveWithDuration(u.uid, '1year')}
+                              className="px-2.5 py-1.5 bg-[#1c1815] border border-[#3d342f] hover:border-emerald-500 text-emerald-400 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                              title="Adicionar ou Renovar +1 Ano (365 Dias)"
+                            >
+                              +1 Ano
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setSelectedUserForModal(u);
+                                const curDate = u.subscriptionDueDate ? new Date(u.subscriptionDueDate) : new Date();
+                                setCustomDateInput(curDate.toISOString().split('T')[0]);
+                              }}
+                              className="p-1.5 bg-[#1c1815] border border-[#3d342f] hover:bg-[#25201d] text-[#a89c93] hover:text-[#fcf8f5] rounded-lg transition-colors cursor-pointer"
+                              title="Definir Data de Vencimento Personalizada"
+                            >
+                              <Calendar className="w-3.5 h-3.5" />
+                            </button>
+                          </>
                         )}
+
                         {u.status !== 'active' && (
                           <button
-                            onClick={() => updateStatus(u.uid, 'active')}
-                            className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-black text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                            onClick={() => approveWithDuration(u.uid, '1month')}
+                            className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold rounded-lg transition-colors cursor-pointer"
                           >
                             Ativar
                           </button>
                         )}
-                        {u.status !== 'inactive' && (
+                        {u.status !== 'inactive' && u.role !== 'admin' && (
                           <button
                             onClick={() => updateStatus(u.uid, 'inactive')}
-                            className="px-3 py-1.5 bg-[#241e1b] hover:bg-red-500/20 text-[#a89c93] hover:text-red-400 border border-[#3d342f] hover:border-red-500/30 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                            className="px-2.5 py-1.5 bg-[#241e1b] hover:bg-red-500/20 text-[#a89c93] hover:text-red-400 border border-[#3d342f] hover:border-red-500/30 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                            title="Bloquear / Inativar Acesso"
                           >
                             Bloquear
                           </button>
@@ -555,6 +725,109 @@ export const AdminUsers: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Custom Date Modal */}
+      {selectedUserForModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-6 w-full max-w-md space-y-5 shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-[#3d342f] pb-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-[var(--theme-primary)]" />
+                <h3 className="font-serif font-bold text-lg text-[#fcf8f5]">Definir Vencimento do Assinante</h3>
+              </div>
+              <button
+                onClick={() => setSelectedUserForModal(null)}
+                className="p-1 text-[#a89c93] hover:text-[#fcf8f5] rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-1 bg-[#12100e] border border-[#3d342f] p-3 rounded-xl">
+              <div className="text-[10px] text-[#a89c93] font-bold uppercase tracking-wider">Assinante Selecionado:</div>
+              <div className="text-sm font-bold text-[#fcf8f5] font-mono">{selectedUserForModal.email}</div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-[#a89c93] uppercase tracking-wider">Atalhos Rápido de Duração:</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 30);
+                    setCustomDateInput(d.toISOString().split('T')[0]);
+                  }}
+                  className="py-2 px-3 bg-[#12100e] hover:bg-[#25201d] border border-[#3d342f] hover:border-[var(--theme-primary)] rounded-xl text-xs font-bold text-[#fcf8f5] transition-colors cursor-pointer"
+                >
+                  1 Mês (30 Dias)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 90);
+                    setCustomDateInput(d.toISOString().split('T')[0]);
+                  }}
+                  className="py-2 px-3 bg-[#12100e] hover:bg-[#25201d] border border-[#3d342f] hover:border-[var(--theme-primary)] rounded-xl text-xs font-bold text-[#fcf8f5] transition-colors cursor-pointer"
+                >
+                  3 Meses (90 Dias)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 180);
+                    setCustomDateInput(d.toISOString().split('T')[0]);
+                  }}
+                  className="py-2 px-3 bg-[#12100e] hover:bg-[#25201d] border border-[#3d342f] hover:border-[var(--theme-primary)] rounded-xl text-xs font-bold text-[#fcf8f5] transition-colors cursor-pointer"
+                >
+                  6 Meses (180 Dias)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 365);
+                    setCustomDateInput(d.toISOString().split('T')[0]);
+                  }}
+                  className="py-2 px-3 bg-[#12100e] hover:bg-[#25201d] border border-[#3d342f] hover:border-emerald-500 rounded-xl text-xs font-bold text-[#fcf8f5] transition-colors cursor-pointer"
+                >
+                  1 Ano (365 Dias)
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-[#a89c93] uppercase tracking-wider">Escolher Data de Vencimento Específica:</label>
+              <input
+                type="date"
+                value={customDateInput}
+                onChange={(e) => setCustomDateInput(e.target.value)}
+                className="w-full bg-[#12100e] border border-[#3d342f] rounded-xl px-4 py-2.5 text-sm text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#3d342f]">
+              <button
+                type="button"
+                onClick={() => setSelectedUserForModal(null)}
+                className="py-2 px-4 rounded-xl bg-[#241e1b] hover:bg-[#322a26] text-[#a89c93] hover:text-[#fcf8f5] text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => approveWithDuration(selectedUserForModal.uid, 'custom', customDateInput)}
+                className="py-2 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Confirmar e Salvar Acesso</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
