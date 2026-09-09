@@ -6,12 +6,13 @@ import {
   GoogleAuthProvider, 
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
   signInAnonymously
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../../lib/firebase';
-import { Building2, Lock, Loader2, ArrowLeft, Mail, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Building2, Lock, Loader2, ArrowLeft, Mail, CheckCircle2, ShieldAlert, Crown, KeyRound, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -19,15 +20,19 @@ export const Login: React.FC = () => {
   const { user, profile, loading, isOwner, joinWithInviteCode } = useAuth();
   const navigate = useNavigate();
   
+  const [authTab, setAuthTab] = useState<'email' | 'google' | 'invite'>('email');
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showEmailAuth, setShowEmailAuth] = useState(false);
-  const [showInviteAuth, setShowInviteAuth] = useState(false);
+  
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [guestNameInput, setGuestNameInput] = useState('');
   const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [showForgotPass, setShowForgotPass] = useState(false);
+
+  const isOwnerEmail = emailInput.trim().toLowerCase() === 'lfquadrosdecorativos@gmail.com';
 
   const handleInviteCodeLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,13 +42,13 @@ export const Login: React.FC = () => {
       return;
     }
     setError('');
+    setSuccessMessage('');
     setIsSubmitting(true);
 
     try {
       let activeUser = auth.currentUser;
 
       if (!activeUser) {
-        // Store pending invite code in localStorage to survive auth popups / redirects
         localStorage.setItem('pendingInviteCode', cleanCode);
         if (guestNameInput.trim()) {
           localStorage.setItem('pendingGuestName', guestNameInput.trim());
@@ -57,6 +62,21 @@ export const Login: React.FC = () => {
           activeUser = userCredential.user;
         } catch (popupErr: any) {
           if (
+            popupErr.code === 'auth/unauthorized-domain' ||
+            popupErr.code === 'auth/operation-not-supported-in-this-environment'
+          ) {
+            // Domain not authorized for Google OAuth: create guest session seamlessly
+            console.log("Google OAuth unauthorized domain, creating instant guest session...");
+            try {
+              const anonCred = await signInAnonymously(auth);
+              activeUser = anonCred.user;
+            } catch (anonErr) {
+              const randomGuestPass = `conv_${Math.random().toString(36).slice(2, 10)}_$#`;
+              const guestEmail = `convidado_${cleanCode.toLowerCase()}_${Date.now()}@meuescritorio.app`;
+              const cred = await createUserWithEmailAndPassword(auth, guestEmail, randomGuestPass);
+              activeUser = cred.user;
+            }
+          } else if (
             popupErr.code === 'auth/popup-blocked' ||
             popupErr.code === 'auth/popup-closed-by-user' ||
             popupErr.code === 'auth/cancelled-popup-request' ||
@@ -87,7 +107,7 @@ export const Login: React.FC = () => {
     } catch (err: any) {
       console.error("Invite code login error:", err);
       if (err.code === 'auth/popup-closed-by-user') {
-        setError('O login com Google foi fechado antes da conclusão. Tente novamente.');
+        setError('O login foi cancelado. Tente novamente.');
       } else {
         setError(err.message || 'Erro ao processar convite. Verifique o código e tente novamente.');
       }
@@ -167,6 +187,7 @@ export const Login: React.FC = () => {
 
   const handleGoogleLogin = async () => {
     setError('');
+    setSuccessMessage('');
     setIsSubmitting(true);
 
     try {
@@ -181,7 +202,6 @@ export const Login: React.FC = () => {
           navigate('/');
         }
       } catch (popupErr: any) {
-        // If popup was blocked or iframe restriction, try redirect as fallback
         if (
           popupErr.code === 'auth/popup-blocked' ||
           popupErr.code === 'auth/popup-closed-by-user' ||
@@ -197,7 +217,11 @@ export const Login: React.FC = () => {
     } catch (err: any) {
       console.error("Login error:", err);
       if (err.code === 'auth/unauthorized-domain') {
-        setError(`O domínio deste site (${window.location.hostname}) precisa ser liberado no Firebase Auth Console -> Domínios Autorizados.`);
+        setError(`O botão de login com o Google requer autorização prévia de domínio no Google Cloud. Acesse com seu E-mail e Senha abaixo.`);
+        setAuthTab('email');
+        if (!emailInput) {
+          setEmailInput('lfquadrosdecorativos@gmail.com');
+        }
       } else if (err.code === 'auth/network-request-failed') {
         setError('Falha de conexão com os servidores do Google. Verifique sua internet ou tente novamente.');
       } else {
@@ -210,19 +234,22 @@ export const Login: React.FC = () => {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!emailInput || !passwordInput) {
-      setError('Preencha seu e-mail e senha.');
+    const cleanEmail = emailInput.trim().toLowerCase();
+
+    if (!cleanEmail || !passwordInput) {
+      setError('Por favor, preencha seu e-mail e sua senha.');
       return;
     }
     setError('');
+    setSuccessMessage('');
     setIsSubmitting(true);
 
     try {
       let userCredential;
       if (isRegisterMode) {
-        userCredential = await createUserWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
+        userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, passwordInput);
       } else {
-        userCredential = await signInWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
+        userCredential = await signInWithEmailAndPassword(auth, cleanEmail, passwordInput);
       }
       if (userCredential.user) {
         await createOrUpdateUserProfile(userCredential.user);
@@ -230,15 +257,48 @@ export const Login: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setError('E-mail ou senha incorretos.');
+      if (
+        err.code === 'auth/user-not-found' ||
+        err.code === 'auth/wrong-password' ||
+        err.code === 'auth/invalid-credential' ||
+        err.code === 'auth/invalid-login-credentials'
+      ) {
+        if (!isRegisterMode) {
+          setError('E-mail ou senha não cadastrados. Se este é o seu primeiro acesso ou você ainda não criou uma senha, clique em "Definir Senha / Cadastrar" logo abaixo.');
+        } else {
+          setError('Não foi possível cadastrar com esses dados. Verifique o formato do e-mail ou utilize uma senha com mais de 6 caracteres.');
+        }
       } else if (err.code === 'auth/email-already-in-use') {
-        setError('Este e-mail já está cadastrado. Tente entrar em vez de criar conta.');
+        setError('Este e-mail já possui cadastro. Alterne para o modo "Entrar com Senha" para acessar.');
+        setIsRegisterMode(false);
       } else if (err.code === 'auth/weak-password') {
         setError('A senha deve conter no mínimo 6 caracteres.');
       } else {
         setError(err.message || 'Erro ao autenticar com e-mail.');
       }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = emailInput.trim().toLowerCase();
+    if (!cleanEmail) {
+      setError('Por favor, digite seu e-mail no campo acima para receber o link de redefinição.');
+      return;
+    }
+    setError('');
+    setSuccessMessage('');
+    setIsSubmitting(true);
+
+    try {
+      await sendPasswordResetEmail(auth, cleanEmail);
+      setSuccessMessage(`Enviamos um link de redefinição de senha para ${cleanEmail}. Verifique sua caixa de entrada e spam!`);
+      setShowForgotPass(false);
+    } catch (err: any) {
+      console.error(err);
+      setError('Não foi possível enviar o e-mail de recuperação. Certifique-se de que o e-mail está correto.');
     } finally {
       setIsSubmitting(false);
     }
@@ -335,30 +395,199 @@ export const Login: React.FC = () => {
 
           <div>
             <h2 className="text-3xl font-serif font-bold text-[#fcf8f5]">
-              {showInviteAuth 
-                ? 'Acessar como Convidado' 
-                : showEmailAuth 
-                  ? (isRegisterMode ? 'Criar Conta' : 'Entrar com E-mail') 
-                  : 'Acessar Plataforma'}
+              Acessar Plataforma
             </h2>
             <p className="text-[#a89c93] mt-2 text-sm">
-              {showInviteAuth
-                ? 'Digite o código de convite do escritório. A conexão será realizada com a sua conta Google.'
-                : showEmailAuth 
-                  ? 'Insira suas credenciais para acessar o sistema.' 
-                  : 'Conecte-se de forma rápida e segura com sua conta Google.'}
+              Conecte-se com segurança para gerenciar seu escritório.
             </p>
           </div>
 
+          {/* Navigation Tabs */}
+          <div className="grid grid-cols-3 gap-1 bg-[#1a1614] p-1.5 rounded-xl border border-[#3d342f]">
+            <button
+              type="button"
+              onClick={() => { setAuthTab('email'); setError(''); setSuccessMessage(''); setShowForgotPass(false); }}
+              className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                authTab === 'email'
+                  ? 'bg-[#c58a4b] text-black font-bold shadow-md shadow-[#c58a4b]/20'
+                  : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#25201d]'
+              }`}
+            >
+              <Mail className="w-3.5 h-3.5" />
+              E-mail
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setAuthTab('google'); setError(''); setSuccessMessage(''); setShowForgotPass(false); }}
+              className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                authTab === 'google'
+                  ? 'bg-[#c58a4b] text-black font-bold shadow-md shadow-[#c58a4b]/20'
+                  : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#25201d]'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                <path
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  fill="currentColor"
+                />
+              </svg>
+              Google
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setAuthTab('invite'); setError(''); setSuccessMessage(''); setShowForgotPass(false); }}
+              className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                authTab === 'invite'
+                  ? 'bg-[#c58a4b] text-black font-bold shadow-md shadow-[#c58a4b]/20'
+                  : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#25201d]'
+              }`}
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              Convite
+            </button>
+          </div>
+
           {error && (
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm flex items-start gap-2">
+            <div className="p-4 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-sm flex items-start gap-2.5">
               <ShieldAlert className="w-5 h-5 flex-shrink-0 text-red-400 mt-0.5" />
-              <span>{error}</span>
+              <span className="leading-relaxed">{error}</span>
             </div>
           )}
 
-          {!showEmailAuth && !showInviteAuth ? (
+          {successMessage && (
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-emerald-400 text-sm flex items-start gap-2.5">
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-400 mt-0.5" />
+              <span className="leading-relaxed">{successMessage}</span>
+            </div>
+          )}
+
+          {/* TAB 1: E-MAIL E SENHA */}
+          {authTab === 'email' && (
+            <div>
+              {showForgotPass ? (
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div className="p-3 bg-[#c58a4b]/10 border border-[#c58a4b]/20 rounded-xl text-xs text-[#c58a4b] leading-relaxed">
+                    Digite seu e-mail cadastrado. Enviaremos um link seguro para você redefinir sua senha diretamente na sua caixa postal.
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[#a89c93] mb-1">Seu E-mail</label>
+                    <input
+                      type="email"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      placeholder="exemplo@arquitetura.com"
+                      required
+                      className="w-full bg-[#1a1614] border border-[#3d342f] rounded-xl px-4 py-3 text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b] transition-colors"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full flex items-center justify-center gap-2 bg-[#c58a4b] hover:bg-[#d49454] text-black font-bold py-3.5 px-4 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-[#c58a4b]/20 cursor-pointer"
+                  >
+                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Enviar Link de Redefinição'}
+                  </button>
+
+                  <div className="text-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotPass(false)}
+                      className="text-xs text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer"
+                    >
+                      &larr; Voltar para a tela de login
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleEmailAuth} className="space-y-4">
+                  {isOwnerEmail && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-2.5 text-xs text-amber-400">
+                      <Crown className="w-4 h-4 flex-shrink-0 text-amber-400" />
+                      <span>Conta Master / Dono da Plataforma detectada (Acesso Total Ilimitado)</span>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-medium text-[#a89c93] mb-1">Seu E-mail</label>
+                    <input
+                      type="email"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      placeholder="exemplo@arquitetura.com"
+                      required
+                      className="w-full bg-[#1a1614] border border-[#3d342f] rounded-xl px-4 py-3 text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b] transition-colors text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-medium text-[#a89c93]">Sua Senha</label>
+                      {!isRegisterMode && (
+                        <button
+                          type="button"
+                          onClick={() => { setShowForgotPass(true); setError(''); }}
+                          className="text-xs text-[#c58a4b] hover:underline cursor-pointer"
+                        >
+                          Esqueceu a senha?
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="password"
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className="w-full bg-[#1a1614] border border-[#3d342f] rounded-xl px-4 py-3 text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b] transition-colors text-sm"
+                    />
+                    {isRegisterMode && (
+                      <p className="text-[11px] text-[#a89c93] mt-1">Mínimo de 6 caracteres.</p>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full flex items-center justify-center gap-2 bg-[#c58a4b] hover:bg-[#d49454] text-black font-bold py-3.5 px-4 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-[#c58a4b]/20 cursor-pointer"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      isRegisterMode ? 'Cadastrar Senha e Entrar' : 'Entrar no Sistema'
+                    )}
+                  </button>
+
+                  <div className="pt-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => { setIsRegisterMode(!isRegisterMode); setError(''); }}
+                      className="text-xs text-[#c58a4b] hover:text-[#d49454] transition-colors cursor-pointer font-medium"
+                    >
+                      {isRegisterMode 
+                        ? 'Já tem uma senha definida? Clique para Entrar' 
+                        : 'Primeiro acesso ou sem senha? Clique aqui para Definir Senha / Cadastrar'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: GOOGLE */}
+          {authTab === 'google' && (
             <div className="space-y-4">
+              <div className="p-3 bg-[#1a1614] border border-[#3d342f] rounded-xl text-xs text-[#a89c93] leading-relaxed">
+                Conexão direta com sua conta Google.
+              </div>
+
               <button
                 type="button"
                 onClick={handleGoogleLogin}
@@ -393,35 +622,19 @@ export const Login: React.FC = () => {
                 )}
               </button>
 
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[#3d342f]"></div>
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-[#12100e] px-2 text-[#a89c93]">Ou acesse com e-mail / convite</span>
-                </div>
+              <p className="text-center text-xs text-[#a89c93]">
+                Em domínios próprios na Hostinger, recomendamos o uso da aba <button type="button" onClick={() => setAuthTab('email')} className="text-[#c58a4b] underline">E-mail</button>.
+              </p>
+            </div>
+          )}
+
+          {/* TAB 3: CONVITE */}
+          {authTab === 'invite' && (
+            <form onSubmit={handleInviteCodeLogin} className="space-y-4">
+              <div className="p-3 bg-[#c58a4b]/10 border border-[#c58a4b]/20 rounded-xl text-xs text-[#c58a4b] leading-relaxed">
+                Digite o código de convite de 6 caracteres fornecido pelo escritório para ingressar na equipe.
               </div>
 
-              <button
-                type="button"
-                onClick={() => { setShowEmailAuth(true); setShowInviteAuth(false); setError(''); }}
-                className="w-full flex items-center justify-center gap-2 bg-[#1a1614] hover:bg-[#25201d] border border-[#3d342f] text-[#fcf8f5] font-semibold py-3 px-4 rounded-xl transition-colors text-sm cursor-pointer"
-              >
-                <Mail className="w-4 h-4 text-[#c58a4b]" />
-                Entrar com E-mail e Senha
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { setShowInviteAuth(true); setShowEmailAuth(false); setError(''); }}
-                className="w-full flex items-center justify-center gap-2 bg-[#c58a4b]/10 hover:bg-[#c58a4b]/20 border border-[#c58a4b]/30 text-[#c58a4b] font-semibold py-3 px-4 rounded-xl transition-colors text-sm cursor-pointer"
-              >
-                <Building2 className="w-4 h-4 text-[#c58a4b]" />
-                Sou Convidado do Escritório (Digitar Código)
-              </button>
-            </div>
-          ) : showInviteAuth ? (
-            <form onSubmit={handleInviteCodeLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-[#a89c93] mb-1">Seu Nome / Apelido (Opcional)</label>
                 <input
@@ -452,74 +665,9 @@ export const Login: React.FC = () => {
                 {isSubmitting ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  'Conectar com Google e Acessar'
+                  'Validar Código e Acessar Escritório'
                 )}
               </button>
-
-              <div className="flex items-center justify-center text-xs pt-2">
-                <button
-                  type="button"
-                  onClick={() => { setShowInviteAuth(false); setError(''); }}
-                  className="text-[#a89c93] hover:text-[#fcf8f5] flex items-center gap-1 cursor-pointer"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" /> Voltar para Opções
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleEmailAuth} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-[#a89c93] mb-1">Seu E-mail</label>
-                <input
-                  type="email"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="exemplo@arquitetura.com"
-                  required
-                  className="w-full bg-[#1a1614] border border-[#3d342f] rounded-xl px-4 py-3 text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b] transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-[#a89c93] mb-1">Sua Senha</label>
-                <input
-                  type="password"
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="w-full bg-[#1a1614] border border-[#3d342f] rounded-xl px-4 py-3 text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b] transition-colors"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full flex items-center justify-center gap-2 bg-[#c58a4b] hover:bg-[#d49454] text-black font-bold py-3.5 px-4 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-[#c58a4b]/20"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  isRegisterMode ? 'Criar Minha Conta' : 'Entrar no Sistema'
-                )}
-              </button>
-
-              <div className="flex items-center justify-between text-xs pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsRegisterMode(!isRegisterMode)}
-                  className="text-[#c58a4b] hover:underline"
-                >
-                  {isRegisterMode ? 'Já tem uma conta? Entrar' : 'Não tem conta? Cadastre-se'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowEmailAuth(false); setError(''); }}
-                  className="text-[#a89c93] hover:text-[#fcf8f5]"
-                >
-                  Voltar ao Google
-                </button>
-              </div>
             </form>
           )}
 
