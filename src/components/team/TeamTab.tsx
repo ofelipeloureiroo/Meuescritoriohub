@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, setDoc, updateDoc, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import {
   Users,
@@ -514,6 +514,37 @@ export const TeamTab: React.FC = () => {
 
       if (updateCollaboratorPermissions) {
         await updateCollaboratorPermissions(newMember.id || newMember.email, formPermissions);
+      }
+
+      // Persist to users collection in Firestore so member appears globally
+      try {
+        const targetEmail = formEmail.trim().toLowerCase();
+        const ownerUid = user?.uid;
+        if (ownerUid) {
+          const qUser = query(collection(db, 'users'), where('email', '==', targetEmail));
+          const snapUser = await getDocs(qUser);
+          if (!snapUser.empty) {
+            const userDocId = snapUser.docs[0].id;
+            await setDoc(doc(db, 'users', userDocId), {
+              joinedOwnerUid: ownerUid,
+              status: 'active',
+              name: formName.trim()
+            }, { merge: true });
+          } else {
+            const newDocRef = doc(collection(db, 'users'));
+            await setDoc(newDocRef, {
+              uid: newDocRef.id,
+              email: targetEmail,
+              name: formName.trim(),
+              joinedOwnerUid: ownerUid,
+              role: 'user',
+              status: 'active',
+              createdAt: new Date().toISOString()
+            }, { merge: true });
+          }
+        }
+      } catch (e) {
+        console.warn("Notice persisting member to users collection:", e);
       }
 
       // Automatically send welcome email with access link

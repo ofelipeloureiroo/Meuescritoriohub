@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { UserProfile, useAuth } from '../../context/AuthContext';
 import {
@@ -110,19 +110,6 @@ export const AdminUsers: React.FC = () => {
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all');
-
-  // Modal New User
-  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [newName, setNewName] = useState('');
-  const [newRole, setNewRole] = useState<'user' | 'admin'>('user');
-  const [newStatus, setNewStatus] = useState<'active' | 'pending' | 'inactive'>('active');
-  const [newDueDate, setNewDueDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 30);
-    return d.toISOString().split('T')[0];
-  });
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -249,41 +236,6 @@ export const AdminUsers: React.FC = () => {
     }
   };
 
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newEmail.trim()) {
-      alert("Informe um email válido.");
-      return;
-    }
-
-    setIsCreatingUser(true);
-    try {
-      // Generate unique ID based on email or random string
-      const generatedUid = 'usr_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
-      const userPayload: UserProfile = {
-        uid: generatedUid,
-        email: newEmail.trim().toLowerCase(),
-        role: newRole,
-        status: newStatus,
-        subscriptionDueDate: newRole === 'admin' ? undefined : new Date(newDueDate).toISOString(),
-        createdAt: new Date().toISOString(),
-        inviteCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
-        collaborators: [],
-        collaboratorUids: [],
-      };
-
-      await setDoc(doc(db, 'users', generatedUid), userPayload, { merge: true });
-      setIsAddUserModalOpen(false);
-      setNewEmail('');
-      setNewName('');
-    } catch (err: any) {
-      console.error("Error creating user:", err);
-      alert(`Erro ao cadastrar usuário: ${err.message}`);
-    } finally {
-      setIsCreatingUser(false);
-    }
-  };
-
   // Filtered users
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
@@ -292,6 +244,107 @@ export const AdminUsers: React.FC = () => {
     const matchesStatus = statusFilter === 'all' || u.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newUserType, setNewUserType] = useState<'team' | 'subscriber'>('team');
+  const [newStatus, setNewStatus] = useState<'active' | 'pending'>('active');
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+
+  const handleCreateUserOrMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = newEmail.trim().toLowerCase();
+    if (!cleanEmail) return;
+
+    setIsCreatingUser(true);
+    try {
+      const currentOwnerUid = auth.currentUser?.uid || profile?.uid;
+
+      // 1. Check if user already exists in Firestore
+      const qUser = query(collection(db, 'users'), where('email', '==', cleanEmail));
+      const snapUser = await getDocs(qUser);
+
+      let targetUid = '';
+      if (!snapUser.empty) {
+        targetUid = snapUser.docs[0].id;
+        await setDoc(doc(db, 'users', targetUid), {
+          status: newStatus,
+          joinedOwnerUid: newUserType === 'team' ? currentOwnerUid : null,
+          role: 'user',
+          name: newName.trim() || cleanEmail.split('@')[0],
+        }, { merge: true });
+      } else {
+        const newRef = doc(collection(db, 'users'));
+        targetUid = newRef.id;
+        await setDoc(newRef, {
+          uid: targetUid,
+          email: cleanEmail,
+          name: newName.trim() || cleanEmail.split('@')[0],
+          joinedOwnerUid: newUserType === 'team' ? currentOwnerUid : null,
+          role: 'user',
+          status: newStatus,
+          subscriptionDueDate: newUserType === 'subscriber' ? new Date(Date.now() + 30 * 86400000).toISOString() : null,
+          createdAt: new Date().toISOString(),
+        }, { merge: true });
+      }
+
+      // 2. If team member, add to current owner's collaborators array
+      if (newUserType === 'team' && currentOwnerUid) {
+        const ownerDocRef = doc(db, 'users', currentOwnerUid);
+        const ownerSnap = await getDoc(ownerDocRef);
+        const ownerData = ownerSnap.data() as UserProfile;
+        const collaborators = ownerData?.collaborators || [];
+
+        const existingIdx = collaborators.findIndex(c => c.email?.toLowerCase() === cleanEmail);
+        const newCollab = {
+          uid: targetUid,
+          email: cleanEmail,
+          invitedAt: new Date().toISOString(),
+          joinedAt: new Date().toISOString(),
+          status: 'joined' as const,
+          permissions: {
+            today: true,
+            actions: true,
+            leads: true,
+            projects: true,
+            suppliers: true,
+            team: true,
+            clients: true,
+            deadlines: true,
+            finance: false,
+            health: false,
+            goals: true,
+            budget: false,
+            portfolio: true,
+          }
+        };
+
+        let updatedCollabs = [...collaborators];
+        if (existingIdx >= 0) {
+          updatedCollabs[existingIdx] = { ...updatedCollabs[existingIdx], ...newCollab };
+        } else {
+          updatedCollabs.push(newCollab);
+        }
+
+        await setDoc(ownerDocRef, {
+          collaborators: updatedCollabs,
+          collaboratorUids: Array.from(new Set([...(ownerData?.collaboratorUids || []), targetUid]))
+        }, { merge: true });
+      }
+
+      setIsAddModalOpen(false);
+      setNewEmail('');
+      setNewName('');
+      await handleManualRefresh();
+      alert('Usuário / Membro de Equipe cadastrado com sucesso!');
+    } catch (err: any) {
+      console.error(err);
+      alert(`Erro ao cadastrar usuário: ${err.message}`);
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
 
   const handleManualRefresh = async () => {
     setLoading(true);
@@ -325,13 +378,22 @@ export const AdminUsers: React.FC = () => {
           <h2 className="text-2xl font-serif font-bold text-[#fcf8f5]">Painel Financeiro & Assinantes</h2>
           <p className="text-[#a89c93] text-sm">Acompanhe seus assinantes, gerencie liberação após pagamento e permissões do sistema.</p>
         </div>
-        <button
-          onClick={handleManualRefresh}
-          className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer shrink-0"
-        >
-          <RefreshCw className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-          <span>Atualizar Lista</span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="px-4 py-2 bg-[var(--theme-primary)] hover:bg-[#a38f78] text-black rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Cadastrar Usuário / Membro</span>
+          </button>
+          <button
+            onClick={handleManualRefresh}
+            className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+            <span>Atualizar Lista</span>
+          </button>
+        </div>
       </div>
 
       {errorMessage && (
@@ -415,9 +477,13 @@ export const AdminUsers: React.FC = () => {
                             <span className="text-[10px] text-[#a89c93] font-mono">
                               ID: {u.uid.slice(0, 10)}...
                             </span>
-                            {u.joinedOwnerUid ? (
+                            {u.role === 'admin' ? (
+                              <span className="px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[9px] font-bold">
+                                👑 Gestor / Dono
+                              </span>
+                            ) : u.joinedOwnerUid || profile?.collaborators?.some(c => c.email?.toLowerCase() === u.email?.toLowerCase()) ? (
                               <span className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] font-bold">
-                                👥 Equipe
+                                👥 Membro de Equipe
                               </span>
                             ) : (
                               <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold">
@@ -461,7 +527,13 @@ export const AdminUsers: React.FC = () => {
                     </td>
 
                     <td className="px-6 py-4">
-                      {u.role !== 'admin' ? (
+                      {u.role === 'admin' ? (
+                        <span className="text-xs text-[#a89c93] font-semibold">Acesso Vitalício</span>
+                      ) : u.joinedOwnerUid || profile?.collaborators?.some(c => c.email?.toLowerCase() === u.email?.toLowerCase()) ? (
+                        <span className="text-xs text-blue-400 font-semibold flex items-center gap-1">
+                          👥 Incluso na Equipe
+                        </span>
+                      ) : (
                         <div>
                           {u.subscriptionDueDate ? (
                             <div className={`text-xs font-semibold ${isOverdue ? 'text-red-400' : 'text-[#fcf8f5]'}`}>
@@ -472,8 +544,6 @@ export const AdminUsers: React.FC = () => {
                             <span className="text-xs text-[#a89c93]">Sem data</span>
                           )}
                         </div>
-                      ) : (
-                        <span className="text-xs text-[#a89c93] font-semibold">Acesso Vitalício</span>
                       )}
                     </td>
 
@@ -528,6 +598,116 @@ export const AdminUsers: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal: Cadastrar Usuário / Membro de Equipe */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1a1614] border border-[#3d342f] w-full max-w-md rounded-2xl p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-[#3d342f] pb-3">
+              <h3 className="text-lg font-serif font-bold text-[#fcf8f5] flex items-center gap-2">
+                <Plus className="w-5 h-5 text-[var(--theme-primary)]" /> Cadastrar Usuário / Membro
+              </h3>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-[#241e1b] text-[#a89c93] hover:text-[#fcf8f5]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUserOrMember} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#a89c93] mb-1">
+                  E-mail do Usuário *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="ex: sr.loureirodesign@gmail.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#a89c93] mb-1">
+                  Nome (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="ex: Sr. Loureiro Design"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#a89c93] mb-1">
+                  Tipo de Conta / Vínculo *
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewUserType('team')}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      newUserType === 'team'
+                        ? 'bg-blue-500/20 border-blue-500 text-blue-300'
+                        : 'bg-[#12100e] border-[#3d342f] text-[#a89c93]'
+                    }`}
+                  >
+                    👥 Membro de Equipe
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewUserType('subscriber')}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      newUserType === 'subscriber'
+                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
+                        : 'bg-[#12100e] border-[#3d342f] text-[#a89c93]'
+                    }`}
+                  >
+                    🌱 Assinante
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#a89c93] mb-1">
+                  Status do Acesso
+                </label>
+                <select
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value as 'active' | 'pending')}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+                >
+                  <option value="active">Ativo (Acesso Liberado)</option>
+                  <option value="pending">Pendente (Aguardando Liberação)</option>
+                </select>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-[#241e1b] hover:bg-[#322a26] text-[#a89c93] text-xs font-bold transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingUser}
+                  className="px-5 py-2 rounded-xl bg-[var(--theme-primary)] hover:bg-[#a38f78] text-black text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                  {isCreatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  <span>Salvar Registro</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
