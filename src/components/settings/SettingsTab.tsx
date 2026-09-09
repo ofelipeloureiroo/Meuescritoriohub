@@ -1364,6 +1364,7 @@ export const SettingsTab: React.FC = () => {
                       const list = [...officeSettings.leadStages];
                       list.push({
                         id: 'stg-' + Date.now(),
+                        label: nameInput.trim(),
                         name: nameInput.trim(),
                         status: 'Ativo',
                         subsCount: 6,

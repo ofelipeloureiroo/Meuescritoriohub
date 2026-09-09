@@ -458,7 +458,7 @@ export const LeadsTab: React.FC = () => {
     if (officeSettings?.leadStages && Array.isArray(officeSettings.leadStages) && officeSettings.leadStages.length > 0) {
       return officeSettings.leadStages.map(stg => ({
         id: stg?.id || 'novo',
-        label: (stg?.label || stg?.id || 'Novo').toUpperCase(),
+        label: (stg?.label || stg?.name || stg?.id || 'Novo').toUpperCase(),
         color: stg?.color,
       }));
     }
@@ -974,7 +974,7 @@ export const LeadsTab: React.FC = () => {
 
           {/* 5. Kanban View Mode */}
           {layoutMode === 'kanban' ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 items-start overflow-x-auto pb-6 pt-2">
+            <div className="flex gap-3 overflow-x-auto pb-6 pt-2 items-start w-full no-scrollbar">
               {STAGES.map((stage) => {
                 const columnLeads = filteredLeads.filter(
                   (l) => (l.pipelineStage || 'novo') === stage.id
@@ -1010,7 +1010,7 @@ export const LeadsTab: React.FC = () => {
                       setDraggedLeadId(null);
                       setDragOverStageId(null);
                     }}
-                    className={`rounded-2xl p-2.5 border flex flex-col min-h-[500px] transition-all duration-200 ${
+                    className={`rounded-2xl p-2.5 border flex flex-col min-h-[500px] min-w-[270px] w-[270px] shrink-0 transition-all duration-200 ${
                       isOver
                         ? 'bg-amber-500/10 border-amber-500 ring-2 ring-amber-500/30'
                         : 'bg-zinc-50/80 border-zinc-200/80 hover:border-zinc-300'
