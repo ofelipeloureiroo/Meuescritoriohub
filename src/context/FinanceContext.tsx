@@ -986,6 +986,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Actions
   const addTransaction = (txData: Omit<Transaction, 'id'>) => {
+    recordLocalMutation();
     const newTx: Transaction = {
       ...txData,
       id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -1012,12 +1013,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateTransaction = (id: string, updatedFields: Partial<Transaction>) => {
+    recordLocalMutation();
     setTransactions((prev) =>
       prev.map((tx) => (tx.id === id ? { ...tx, ...updatedFields } : tx))
     );
   };
 
   const deleteTransaction = (id: string) => {
+    recordLocalMutation();
     const tx = transactions.find((t) => t.id === id);
     if (tx && tx.status === 'completed') {
       // Revert balance change
@@ -1776,6 +1779,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const addAppAction = (actionData: Omit<AppAction, 'id' | 'createdAt'>) => {
+    recordLocalMutation();
     const newAction: AppAction = {
       ...actionData,
       id: `act-${Date.now()}`,
@@ -1785,17 +1789,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateAppAction = (id: string, updatedFields: Partial<AppAction>) => {
+    recordLocalMutation();
     setActions((prev) =>
       prev.map((a) => (a.id === id ? { ...a, ...updatedFields } : a))
     );
   };
 
   const deleteAppAction = (id: string) => {
+    recordLocalMutation();
     setActions((prev) => prev.filter((a) => a.id !== id));
   };
 
   // Actions - Project Installments & Cobranças
   const addProjectInstallment = (installmentData: Omit<ProjectInstallment, 'id' | 'createdAt'>) => {
+    recordLocalMutation();
     const newInst: ProjectInstallment = {
       ...installmentData,
       id: `inst-${Date.now()}`,
@@ -1805,12 +1812,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateProjectInstallment = (id: string, updatedFields: Partial<ProjectInstallment>) => {
+    recordLocalMutation();
     setProjectInstallments((prev) =>
       prev.map((inst) => (inst.id === id ? { ...inst, ...updatedFields } : inst))
     );
   };
 
   const deleteProjectInstallment = (id: string) => {
+    recordLocalMutation();
     setProjectInstallments((prev) => prev.filter((inst) => inst.id !== id));
   };
 
@@ -1820,6 +1829,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     paidDate?: string,
     amount?: number
   ) => {
+    recordLocalMutation();
     const inst = projectInstallments.find((i) => i.id === installmentId);
     if (!inst) return;
 
@@ -1882,6 +1892,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Actions - Project Milestones & Prazos
   const addProjectMilestone = (milestoneData: Omit<ProjectMilestone, 'id' | 'createdAt'>) => {
+    recordLocalMutation();
     const newMs: ProjectMilestone = {
       ...milestoneData,
       id: `ms-${Date.now()}`,
@@ -1891,16 +1902,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateProjectMilestone = (id: string, updatedFields: Partial<ProjectMilestone>) => {
+    recordLocalMutation();
     setProjectMilestones((prev) =>
       prev.map((ms) => (ms.id === id ? { ...ms, ...updatedFields } : ms))
     );
   };
 
   const deleteProjectMilestone = (id: string) => {
+    recordLocalMutation();
     setProjectMilestones((prev) => prev.filter((ms) => ms.id !== id));
   };
 
   const toggleProjectMilestone = (id: string) => {
+    recordLocalMutation();
     setProjectMilestones((prev) =>
       prev.map((ms) => {
         if (ms.id === id) {

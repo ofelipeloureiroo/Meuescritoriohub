@@ -67,8 +67,14 @@ export const TodayTab: React.FC = () => {
   // Calendar Navigation Date
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // Selected date for day preview (default to today)
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  // Selected date for day preview (default to today in local timezone)
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string>(todayStr);
 
   // Filters for calendar
@@ -98,7 +104,17 @@ export const TodayTab: React.FC = () => {
   // Today's actions sorted by time
   const todayActions = useMemo(() => {
     return actions
-      .filter((a) => a.date === todayStr)
+      .filter((a) => {
+        if (!a.date) return false;
+        if (a.date === todayStr) return true;
+        if (a.date.includes('/')) {
+          const [d, m, y] = a.date.split('/');
+          if (d && m && y) {
+            return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}` === todayStr;
+          }
+        }
+        return false;
+      })
       .sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
   }, [actions, todayStr]);
 
@@ -123,21 +139,32 @@ export const TodayTab: React.FC = () => {
 
   // Quick Task input form
   const [quickTaskText, setQuickTaskText] = useState('');
-  const handleAddQuickTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickTaskText.trim()) return;
+  const [quickTaskFeedback, setQuickTaskFeedback] = useState<string | null>(null);
+
+  const handleAddQuickTask = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const text = quickTaskText.trim();
+    if (!text) {
+      // If user clicked "+ Adicionar" without typing, open the full task modal for today
+      handleOpenCreateAction(todayStr);
+      return;
+    }
 
     addAppAction({
       type: 'Tarefa rápida',
       area: 'Operação',
       origin: 'Interna',
-      description: quickTaskText.trim(),
+      description: text,
       date: todayStr,
       time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       status: 'pending',
     });
 
     setQuickTaskText('');
+    setQuickTaskFeedback(`"${text.length > 30 ? text.slice(0, 30) + '...' : text}" adicionada com sucesso!`);
+    setTimeout(() => {
+      setQuickTaskFeedback(null);
+    }, 3500);
   };
 
   // Calendar Helpers
@@ -413,21 +440,53 @@ export const TodayTab: React.FC = () => {
             <div className="lg:col-span-8 space-y-6">
               {/* Quick Task input form */}
               <div className="p-4 rounded-xl bg-[#1a1614] border border-[#2d2520]">
-                <form onSubmit={handleAddQuickTask} className="flex gap-2">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleAddQuickTask(e);
+                  }}
+                  className="flex flex-col sm:flex-row gap-2"
+                >
                   <input
                     type="text"
                     value={quickTaskText}
                     onChange={(e) => setQuickTaskText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddQuickTask();
+                      }
+                    }}
                     placeholder="Adicionar tarefa rápida para fazer hoje..."
-                    className="flex-1 bg-[#221c18] border border-[#3d342f] rounded-xl px-3.5 py-2 text-xs text-[#fcf8f5] placeholder-[#73655c] focus:outline-none focus:border-[#c58a4b]/50"
+                    className="flex-1 bg-[#221c18] border border-[#3d342f] rounded-xl px-3.5 py-2 text-xs text-[#fcf8f5] placeholder-[#73655c] focus:outline-none focus:border-[#c58a4b]/70"
                   />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl bg-[#c58a4b] hover:bg-[#b0783d] text-[#12100e] text-xs font-bold transition-all shadow flex items-center gap-1 shrink-0 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Adicionar
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleAddQuickTask()}
+                      className="px-4 py-2 rounded-xl bg-[#c58a4b] hover:bg-[#b0783d] active:scale-95 text-[#12100e] text-xs font-bold transition-all shadow flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Adicionar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenCreateAction(todayStr)}
+                      title="Abrir formulário com mais opções (horário, responsável, área)"
+                      className="px-3 py-2 rounded-xl bg-[#221c18] hover:bg-[#2c241f] border border-[#3d342f] hover:border-[#c58a4b]/50 text-[#a89c93] hover:text-[#fcf8f5] text-xs font-medium transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      <CalendarIcon className="w-3.5 h-3.5 text-[#c58a4b]" />
+                      <span className="hidden sm:inline">Mais opções</span>
+                    </button>
+                  </div>
                 </form>
+
+                {/* Instant Feedback Toast */}
+                {quickTaskFeedback && (
+                  <div className="mt-2.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span>{quickTaskFeedback}</span>
+                  </div>
+                )}
               </div>
 
               {/* Today's Schedule Card */}
