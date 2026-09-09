@@ -245,107 +245,6 @@ export const AdminUsers: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [newName, setNewName] = useState('');
-  const [newUserType, setNewUserType] = useState<'team' | 'subscriber'>('team');
-  const [newStatus, setNewStatus] = useState<'active' | 'pending'>('active');
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
-
-  const handleCreateUserOrMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanEmail = newEmail.trim().toLowerCase();
-    if (!cleanEmail) return;
-
-    setIsCreatingUser(true);
-    try {
-      const currentOwnerUid = auth.currentUser?.uid || profile?.uid;
-
-      // 1. Check if user already exists in Firestore
-      const qUser = query(collection(db, 'users'), where('email', '==', cleanEmail));
-      const snapUser = await getDocs(qUser);
-
-      let targetUid = '';
-      if (!snapUser.empty) {
-        targetUid = snapUser.docs[0].id;
-        await setDoc(doc(db, 'users', targetUid), {
-          status: newStatus,
-          joinedOwnerUid: newUserType === 'team' ? currentOwnerUid : null,
-          role: 'user',
-          name: newName.trim() || cleanEmail.split('@')[0],
-        }, { merge: true });
-      } else {
-        const newRef = doc(collection(db, 'users'));
-        targetUid = newRef.id;
-        await setDoc(newRef, {
-          uid: targetUid,
-          email: cleanEmail,
-          name: newName.trim() || cleanEmail.split('@')[0],
-          joinedOwnerUid: newUserType === 'team' ? currentOwnerUid : null,
-          role: 'user',
-          status: newStatus,
-          subscriptionDueDate: newUserType === 'subscriber' ? new Date(Date.now() + 30 * 86400000).toISOString() : null,
-          createdAt: new Date().toISOString(),
-        }, { merge: true });
-      }
-
-      // 2. If team member, add to current owner's collaborators array
-      if (newUserType === 'team' && currentOwnerUid) {
-        const ownerDocRef = doc(db, 'users', currentOwnerUid);
-        const ownerSnap = await getDoc(ownerDocRef);
-        const ownerData = ownerSnap.data() as UserProfile;
-        const collaborators = ownerData?.collaborators || [];
-
-        const existingIdx = collaborators.findIndex(c => c.email?.toLowerCase() === cleanEmail);
-        const newCollab = {
-          uid: targetUid,
-          email: cleanEmail,
-          invitedAt: new Date().toISOString(),
-          joinedAt: new Date().toISOString(),
-          status: 'joined' as const,
-          permissions: {
-            today: true,
-            actions: true,
-            leads: true,
-            projects: true,
-            suppliers: true,
-            team: true,
-            clients: true,
-            deadlines: true,
-            finance: false,
-            health: false,
-            goals: true,
-            budget: false,
-            portfolio: true,
-          }
-        };
-
-        let updatedCollabs = [...collaborators];
-        if (existingIdx >= 0) {
-          updatedCollabs[existingIdx] = { ...updatedCollabs[existingIdx], ...newCollab };
-        } else {
-          updatedCollabs.push(newCollab);
-        }
-
-        await setDoc(ownerDocRef, {
-          collaborators: updatedCollabs,
-          collaboratorUids: Array.from(new Set([...(ownerData?.collaboratorUids || []), targetUid]))
-        }, { merge: true });
-      }
-
-      setIsAddModalOpen(false);
-      setNewEmail('');
-      setNewName('');
-      await handleManualRefresh();
-      alert('Usuário / Membro de Equipe cadastrado com sucesso!');
-    } catch (err: any) {
-      console.error(err);
-      alert(`Erro ao cadastrar usuário: ${err.message}`);
-    } finally {
-      setIsCreatingUser(false);
-    }
-  };
-
   const handleManualRefresh = async () => {
     setLoading(true);
     try {
@@ -371,6 +270,9 @@ export const AdminUsers: React.FC = () => {
     );
   }
 
+  // Filter pending users for high-visibility approval section
+  const pendingRequests = users.filter(u => u.status === 'pending' && u.role !== 'admin');
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
@@ -380,13 +282,6 @@ export const AdminUsers: React.FC = () => {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 bg-[var(--theme-primary)] hover:bg-[#a38f78] text-black rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Cadastrar Usuário / Membro</span>
-          </button>
-          <button
             onClick={handleManualRefresh}
             className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
           >
@@ -395,6 +290,68 @@ export const AdminUsers: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Prominent Pending Access Requests Alert Box */}
+      {pendingRequests.length > 0 && (
+        <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-5 space-y-4 shadow-lg animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-amber-500/20 pb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+              </span>
+              <h3 className="font-serif font-bold text-base text-amber-300">
+                🔔 {pendingRequests.length} Solicitação(ões) de Acesso Aguardando Sua Liberação
+              </h3>
+            </div>
+            <span className="text-[11px] font-bold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg">
+              Aguardando Conferência de Pagamento
+            </span>
+          </div>
+
+          <p className="text-xs text-[#d1c7bd]">
+            Os usuários abaixo fizeram cadastro ou login e estão aguardando você confirmar o pagamento para liberar o acesso ao sistema:
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {pendingRequests.map((pUser) => (
+              <div key={pUser.uid} className="bg-[#12100e] border border-[#3d342f] rounded-xl p-4 flex flex-col justify-between gap-3 shadow-md">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-[#fcf8f5]">{pUser.name || 'Novo Usuário'}</span>
+                    <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                      Pendente
+                    </span>
+                  </div>
+                  <div className="text-xs font-mono text-[var(--theme-primary)] font-bold truncate">
+                    {pUser.email}
+                  </div>
+                  <div className="text-[10px] text-[#a89c93]">
+                    Cadastrado em: {pUser.createdAt ? new Date(pUser.createdAt).toLocaleDateString('pt-BR') : 'Hoje'}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2 border-t border-[#2a2420]">
+                  <button
+                    onClick={() => updateStatus(pUser.uid, 'active')}
+                    className="flex-1 py-2 px-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Liberar Acesso (Ativar)</span>
+                  </button>
+                  <button
+                    onClick={() => updateStatus(pUser.uid, 'inactive')}
+                    className="py-2 px-3 bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-xs rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    <span>Bloquear</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {errorMessage && (
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center justify-between">
@@ -598,116 +555,6 @@ export const AdminUsers: React.FC = () => {
           </table>
         </div>
       </div>
-
-      {/* Modal: Cadastrar Usuário / Membro de Equipe */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1a1614] border border-[#3d342f] w-full max-w-md rounded-2xl p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-[#3d342f] pb-3">
-              <h3 className="text-lg font-serif font-bold text-[#fcf8f5] flex items-center gap-2">
-                <Plus className="w-5 h-5 text-[var(--theme-primary)]" /> Cadastrar Usuário / Membro
-              </h3>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-[#241e1b] text-[#a89c93] hover:text-[#fcf8f5]"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateUserOrMember} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#a89c93] mb-1">
-                  E-mail do Usuário *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="ex: sr.loureirodesign@gmail.com"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#a89c93] mb-1">
-                  Nome (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="ex: Sr. Loureiro Design"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#a89c93] mb-1">
-                  Tipo de Conta / Vínculo *
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setNewUserType('team')}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      newUserType === 'team'
-                        ? 'bg-blue-500/20 border-blue-500 text-blue-300'
-                        : 'bg-[#12100e] border-[#3d342f] text-[#a89c93]'
-                    }`}
-                  >
-                    👥 Membro de Equipe
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setNewUserType('subscriber')}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      newUserType === 'subscriber'
-                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                        : 'bg-[#12100e] border-[#3d342f] text-[#a89c93]'
-                    }`}
-                  >
-                    🌱 Assinante
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#a89c93] mb-1">
-                  Status do Acesso
-                </label>
-                <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value as 'active' | 'pending')}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
-                >
-                  <option value="active">Ativo (Acesso Liberado)</option>
-                  <option value="pending">Pendente (Aguardando Liberação)</option>
-                </select>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-[#241e1b] hover:bg-[#322a26] text-[#a89c93] text-xs font-bold transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingUser}
-                  className="px-5 py-2 rounded-xl bg-[var(--theme-primary)] hover:bg-[#a38f78] text-black text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer"
-                >
-                  {isCreatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  <span>Salvar Registro</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

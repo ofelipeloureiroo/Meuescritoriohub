@@ -13,47 +13,65 @@ export const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ chi
     return <>{children}</>;
   }
 
-  // Check if subscription is overdue or inactive
-  const isOverdue = profile.subscriptionDueDate ? new Date(profile.subscriptionDueDate) < new Date() : false;
+  // Check if user is pending owner release or inactive or overdue
+  const isPending = profile.status === 'pending';
   const isInactive = profile.status === 'inactive';
-  const isPendingExpired = profile.status === 'pending' && isOverdue;
-
-  const needsPayment = isInactive || isPendingExpired;
-
-  const handleSubscribe = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          uid: user.uid,
-          email: user.email,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create checkout session');
-      }
-
-      // Redirect to Stripe checkout
-      window.location.href = data.url;
-    } catch (err: any) {
-      console.error(err);
-      setError('Ocorreu um erro ao gerar o pagamento. Tente novamente ou contate o suporte.');
-      setLoading(false);
-    }
-  };
+  const isOverdue = profile.subscriptionDueDate ? new Date(profile.subscriptionDueDate) < new Date() : false;
 
   const handleLogout = () => {
     signOut(auth).catch(console.error);
   };
 
-  if (needsPayment) {
+  // 1. Pending Approval Screen (Waiting for Owner to Release Access)
+  if (isPending) {
+    return (
+      <div className="min-h-screen bg-[#12100e] text-[#fcf8f5] flex flex-col justify-center items-center p-6">
+        <div className="max-w-md w-full bg-[#1a1614] border border-amber-500/30 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto">
+            <Lock className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-serif font-bold text-[#fcf8f5]">Aguardando Liberação de Acesso</h2>
+            <p className="text-xs text-[#a89c93] leading-relaxed">
+              O seu cadastro <strong className="text-[#fcf8f5]">({user.email})</strong> foi recebido com sucesso. O proprietário do sistema verificará a confirmação do seu pagamento para liberar o seu acesso completo.
+            </p>
+          </div>
+
+          <div className="bg-[#12100e] border border-[#3d342f] rounded-2xl p-4 text-left space-y-2">
+            <div className="flex items-center gap-2 text-amber-400 text-xs font-bold">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+              Status: Pendente de Liberação
+            </div>
+            <p className="text-[11px] text-[#a89c93]">
+              Assim que o administrador aprovar o pagamento no Painel Financeiro, seu login será liberado automaticamente.
+            </p>
+          </div>
+
+          <div className="pt-2 flex flex-col gap-3">
+            <a
+              href={`https://wa.me/?text=Olá!%20Fiz%20o%20cadastro%20no%20Meu%20Escritório%20Online%20com%20o%20email%20${encodeURIComponent(user.email || '')}%20e%20gostaria%20de%20solicitar%20a%20liberação%20do%20meu%20acesso.`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
+            >
+              <span>Avisar Administrador via WhatsApp</span>
+            </a>
+            <button
+              onClick={handleLogout}
+              className="w-full py-2.5 px-4 rounded-xl bg-[#241e1b] hover:bg-[#322a26] text-[#a89c93] hover:text-[#fcf8f5] font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" /> Sair da Conta
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Inactive or Overdue Subscription Screen
+  if (isInactive || isOverdue) {
     return (
       <div className="min-h-screen bg-[#12100e] text-[#fcf8f5] flex flex-col">
         {/* Simple Navbar */}
