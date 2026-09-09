@@ -249,9 +249,30 @@ export const Login: React.FC = () => {
       if (isRegisterMode) {
         userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, passwordInput);
       } else {
-        userCredential = await signInWithEmailAndPassword(auth, cleanEmail, passwordInput);
+        try {
+          userCredential = await signInWithEmailAndPassword(auth, cleanEmail, passwordInput);
+        } catch (loginErr: any) {
+          // If the account does not exist yet in this Firebase project, auto-create it seamlessly!
+          if (
+            loginErr.code === 'auth/user-not-found' ||
+            loginErr.code === 'auth/invalid-credential' ||
+            loginErr.code === 'auth/invalid-login-credentials'
+          ) {
+            try {
+              userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, passwordInput);
+            } catch (createErr: any) {
+              if (createErr.code === 'auth/email-already-in-use') {
+                setError('Senha incorreta para este e-mail. Se esqueceu sua senha, clique em "Esqueceu a senha?" abaixo.');
+                return;
+              }
+              throw createErr;
+            }
+          } else {
+            throw loginErr;
+          }
+        }
       }
-      if (userCredential.user) {
+      if (userCredential?.user) {
         await createOrUpdateUserProfile(userCredential.user);
         navigate('/');
       }
@@ -263,18 +284,14 @@ export const Login: React.FC = () => {
         err.code === 'auth/invalid-credential' ||
         err.code === 'auth/invalid-login-credentials'
       ) {
-        if (!isRegisterMode) {
-          setError('E-mail ou senha não cadastrados. Se este é o seu primeiro acesso ou você ainda não criou uma senha, clique em "Definir Senha / Cadastrar" logo abaixo.');
-        } else {
-          setError('Não foi possível cadastrar com esses dados. Verifique o formato do e-mail ou utilize uma senha com mais de 6 caracteres.');
-        }
+        setError('E-mail ou senha incorretos. Verifique suas credenciais ou clique em "Esqueceu a senha?".');
       } else if (err.code === 'auth/email-already-in-use') {
-        setError('Este e-mail já possui cadastro. Alterne para o modo "Entrar com Senha" para acessar.');
+        setError('Este e-mail já possui cadastro. Digite a senha correta para entrar.');
         setIsRegisterMode(false);
       } else if (err.code === 'auth/weak-password') {
         setError('A senha deve conter no mínimo 6 caracteres.');
       } else if (err.code === 'auth/operation-not-allowed') {
-        setError('O provedor de E-mail/Senha está desativado no projeto Firebase padrão. Para ter controle total do banco e ativar logins ou domínios próprios, conecte seu próprio projeto Firebase.');
+        setError('O provedor de E-mail/Senha precisa ser ativado no Firebase Console -> Authentication -> Sign-in method -> E-mail/senha.');
       } else {
         setError(err.message || 'Erro ao autenticar com e-mail.');
       }
@@ -522,7 +539,7 @@ export const Login: React.FC = () => {
                     <input
                       type="email"
                       value={emailInput}
-                      onChange={(e) => setEmailInput(e.target.value)}
+                      onChange={(e) => { setEmailInput(e.target.value); setError(''); }}
                       placeholder="exemplo@arquitetura.com"
                       required
                       className="w-full bg-[#1a1614] border border-[#3d342f] rounded-xl px-4 py-3 text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b] transition-colors text-sm"
@@ -545,7 +562,7 @@ export const Login: React.FC = () => {
                     <input
                       type="password"
                       value={passwordInput}
-                      onChange={(e) => setPasswordInput(e.target.value)}
+                      onChange={(e) => { setPasswordInput(e.target.value); setError(''); }}
                       placeholder="••••••••"
                       required
                       className="w-full bg-[#1a1614] border border-[#3d342f] rounded-xl px-4 py-3 text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b] transition-colors text-sm"
