@@ -334,9 +334,9 @@ export const BudgetAndReportsTab: React.FC = () => {
       )}
 
       {/* CHARTS & COMPARISONS */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="w-full">
         {/* Budget vs Actual Bar Chart */}
-        <div className="lg:col-span-8 p-5 rounded-2xl bg-[#18181b] border border-[#27272a] space-y-4">
+        <div className="p-5 rounded-2xl bg-[#18181b] border border-[#27272a] space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-[#fafafa] flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-emerald-400" />
@@ -345,7 +345,7 @@ export const BudgetAndReportsTab: React.FC = () => {
             <span className="text-[11px] text-[#a1a1aa]">Verifique se está dentro do limite</span>
           </div>
 
-          <div className="h-[280px] w-full">
+          <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={budgetVsActualData} margin={{ top: 10, right: 10, left: 0, bottom: 25 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
@@ -378,71 +378,6 @@ export const BudgetAndReportsTab: React.FC = () => {
                 <Bar dataKey="Gasto" name="Gasto Real (R$)" fill="#f43f5e" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Income Sources CLT vs Freelancer */}
-        <div className="lg:col-span-4 p-5 rounded-2xl bg-[#18181b] border border-[#27272a] space-y-4 flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-[#fafafa] flex items-center gap-2">
-              <PieIcon className="w-4 h-4 text-indigo-400" />
-              Composição da Renda (CLT vs Freela)
-            </h3>
-            <p className="text-[11px] text-[#a1a1aa] mt-0.5">
-              Origem dos seus ganhos neste mês
-            </p>
-          </div>
-
-          <div className="h-[180px] w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={incomeDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={45}
-                  outerRadius={70}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {incomeDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(val: number) => formatCurrency(val)}
-                  contentStyle={{
-                    backgroundColor: '#18181b',
-                    borderColor: '#27272a',
-                    borderRadius: '12px',
-                    fontSize: '11px',
-                    color: '#fafafa',
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="space-y-2 text-xs pt-2 border-t border-[#27272a]">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-[#a1a1aa]">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                Salário CLT:
-              </span>
-              <span className="font-bold text-[#fafafa]">
-                {formatCurrency(monthlyIncomeSummary.clt)} ({cltPercent.toFixed(0)}%)
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-[#a1a1aa]">
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
-                Freelancer:
-              </span>
-              <span className="font-bold text-purple-300">
-                {formatCurrency(monthlyIncomeSummary.freelancer)} ({freelaPercent.toFixed(0)}%)
-              </span>
-            </div>
           </div>
         </div>
       </div>
