@@ -47,7 +47,7 @@ import { LeadDetailsDrawer } from './LeadDetailsDrawer';
 import { calculateLeadScore } from '../../utils/leadScoring';
 
 export const LeadsTab: React.FC = () => {
-  const { clients, addClient, updateClient, deleteClient, actions } = useFinance();
+  const { clients, addClient, updateClient, deleteClient, actions, officeSettings } = useFinance();
   const { teamMembers } = useTeamMembers();
 
   // Drawer state for Lead inspection
@@ -157,21 +157,17 @@ export const LeadsTab: React.FC = () => {
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   const getStageLabel = (stageId?: string) => {
-    switch (stageId) {
-      case 'novo':
-        return 'Novo';
-      case 'diagnostico':
-        return 'Diagnóstico';
-      case 'proposta':
-        return 'Proposta';
-      case 'negociacao':
-        return 'Negociação';
-      case 'contratado':
-        return 'Contratado';
-      case 'perdido':
-        return 'Perdido';
-      default:
-        return 'Novo';
+    if (!stageId) return 'Novo';
+    const found = officeSettings?.leadStages?.find(s => s.id === stageId);
+    if (found) return found.label;
+    switch (stageId.toLowerCase()) {
+      case 'novo': return 'Novo';
+      case 'diagnostico': return 'Diagnóstico';
+      case 'proposta': return 'Proposta';
+      case 'negociacao': return 'Negociação';
+      case 'contratado': return 'Contratado';
+      case 'perdido': return 'Perdido';
+      default: return stageId.charAt(0).toUpperCase() + stageId.slice(1);
     }
   };
 
@@ -458,14 +454,23 @@ export const LeadsTab: React.FC = () => {
   }, [leadsList, selectedPeriod, todayStr]);
 
   // Stage columns definition
-  const STAGES: Array<{ id: Client['pipelineStage']; label: string }> = [
-    { id: 'novo', label: 'NOVO' },
-    { id: 'diagnostico', label: 'DIAGNÓSTICO' },
-    { id: 'proposta', label: 'PROPOSTA' },
-    { id: 'negociacao', label: 'NEGOCIAÇÃO' },
-    { id: 'contratado', label: 'CONTRATADO' },
-    { id: 'perdido', label: 'PERDIDO' },
-  ];
+  const STAGES: Array<{ id: string; label: string; color?: string }> = useMemo(() => {
+    if (officeSettings?.leadStages && officeSettings.leadStages.length > 0) {
+      return officeSettings.leadStages.map(stg => ({
+        id: stg.id,
+        label: stg.label.toUpperCase(),
+        color: stg.color,
+      }));
+    }
+    return [
+      { id: 'novo', label: 'NOVO' },
+      { id: 'diagnostico', label: 'DIAGNÓSTICO' },
+      { id: 'proposta', label: 'PROPOSTA' },
+      { id: 'negociacao', label: 'NEGOCIAÇÃO' },
+      { id: 'contratado', label: 'CONTRATADO' },
+      { id: 'perdido', label: 'PERDIDO' },
+    ];
+  }, [officeSettings]);
 
   // Helper score color & label
   const getScoreInfo = (leadOrScore?: Client | number) => {

@@ -197,7 +197,7 @@ export interface Client {
   notes?: string;
 
   // CRM Pipeline & Scoring Fields
-  pipelineStage?: 'novo' | 'diagnostico' | 'proposta' | 'negociacao' | 'contratado' | 'perdido';
+  pipelineStage?: string;
   leadScore?: number;
   estimatedValue?: number;
   proposalsText?: string;
