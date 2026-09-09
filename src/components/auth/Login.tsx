@@ -549,15 +549,13 @@ export const Login: React.FC = () => {
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="block text-xs font-medium text-[#a89c93]">Sua Senha</label>
-                      {!isRegisterMode && (
-                        <button
-                          type="button"
-                          onClick={() => { setShowForgotPass(true); setError(''); }}
-                          className="text-xs text-[#c58a4b] hover:underline cursor-pointer"
-                        >
-                          Esqueceu a senha?
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => { setShowForgotPass(true); setError(''); }}
+                        className="text-xs text-[#c58a4b] hover:underline cursor-pointer"
+                      >
+                        Esqueceu a senha? / Redefinir
+                      </button>
                     </div>
                     <input
                       type="password"
@@ -584,15 +582,22 @@ export const Login: React.FC = () => {
                     )}
                   </button>
 
-                  <div className="pt-2 text-center">
+                  <div className="pt-2 text-center flex flex-col gap-2.5">
                     <button
                       type="button"
                       onClick={() => { setIsRegisterMode(!isRegisterMode); setError(''); }}
-                      className="text-xs text-[#c58a4b] hover:text-[#d49454] transition-colors cursor-pointer font-medium"
+                      className="text-xs text-[#c58a4b] hover:text-[#d49454] transition-colors cursor-pointer font-semibold"
                     >
                       {isRegisterMode 
                         ? 'Já tem uma senha definida? Clique para Entrar' 
                         : 'Primeiro acesso ou sem senha? Clique aqui para Definir Senha / Cadastrar'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowForgotPass(true); setError(''); }}
+                      className="text-xs text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer underline"
+                    >
+                      Esqueceu sua senha? Clique aqui para redefinir
                     </button>
                   </div>
                 </form>

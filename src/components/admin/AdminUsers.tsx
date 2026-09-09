@@ -164,7 +164,7 @@ export const AdminUsers: React.FC = () => {
       try {
         const snap = await getDocs(usersRef);
         await handleUsersData(snap.docs);
-      } catch (fallbackErr) {
+      } catch (fallbackErr: any) {
         console.warn("Fallback getDocs error:", fallbackErr);
         const currentUid = auth.currentUser?.uid || profile?.uid;
         const currentEmail = auth.currentUser?.email || profile?.email || 'lfquadrosdecorativos@gmail.com';
@@ -179,7 +179,7 @@ export const AdminUsers: React.FC = () => {
           };
           setUsers([selfUser]);
         }
-        setErrorMessage(null);
+        setErrorMessage(`Não foi possível carregar a lista de assinantes do banco de dados: ${fallbackErr?.message || fallbackErr}`);
         setLoading(false);
       }
     });

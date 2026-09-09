@@ -9,7 +9,8 @@ import {
   query, 
   where, 
   getDocs,
-  updateDoc
+  updateDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { Collaborator, CollaboratorPermissions } from '../types';
@@ -164,13 +165,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setLoading(false);
             }
           } else {
-            // Profile document does not exist yet; try creating it or set default in memory
+            // Profile document does not exist yet; check if there's a manual email-approved profile first
+            let finalProfile = { ...defaultProfile };
             try {
-              await setDoc(docRef, defaultProfile, { merge: true });
+              const usersRef = collection(db, 'users');
+              const q = query(usersRef, where('email', '==', email.trim().toLowerCase()));
+              const qSnap = await getDocs(q);
+              if (!qSnap.empty) {
+                const existingDoc = qSnap.docs[0];
+                const existingData = existingDoc.data() as UserProfile;
+                if (existingDoc.id !== firebaseUser.uid) {
+                  finalProfile = {
+                    ...defaultProfile,
+                    ...existingData,
+                    uid: firebaseUser.uid,
+                    email: email,
+                  };
+                  await setDoc(docRef, finalProfile, { merge: true });
+                  try {
+                    await deleteDoc(doc(db, 'users', existingDoc.id));
+                  } catch (delErr) {
+                    console.warn("Could not delete old random ID user doc:", delErr);
+                  }
+                } else {
+                  finalProfile = {
+                    ...defaultProfile,
+                    ...existingData,
+                  };
+                }
+              } else {
+                await setDoc(docRef, defaultProfile, { merge: true });
+              }
             } catch (err) {
-              console.warn("Could not write default profile to Firestore, using fallback in state:", err);
+              console.warn("Manual email approved profile migration notice:", err);
+              try {
+                await setDoc(docRef, defaultProfile, { merge: true });
+              } catch (setErr) {
+                console.warn("Could not write fallback default profile to Firestore:", setErr);
+              }
             }
-            setProfile(defaultProfile);
+            setProfile(finalProfile);
             setLoading(false);
           }
         }, (error) => {
