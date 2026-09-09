@@ -1015,7 +1015,45 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const updateTransaction = (id: string, updatedFields: Partial<Transaction>) => {
     recordLocalMutation();
     setTransactions((prev) =>
-      prev.map((tx) => (tx.id === id ? { ...tx, ...updatedFields } : tx))
+      prev.map((tx) => {
+        if (tx.id === id) {
+          const updated = { ...tx, ...updatedFields };
+          // Handle transition to completed
+          if (tx.status !== 'completed' && updated.status === 'completed') {
+            if (updated.type === 'income') {
+              setBankAccounts((bPrev) =>
+                bPrev.map((acc) =>
+                  acc.id === updated.bankAccountId ? { ...acc, balance: acc.balance + updated.amount } : acc
+                )
+              );
+            } else if (updated.type === 'expense') {
+              setBankAccounts((bPrev) =>
+                bPrev.map((acc) =>
+                  acc.id === updated.bankAccountId ? { ...acc, balance: acc.balance - updated.amount } : acc
+                )
+              );
+            }
+          }
+          // Handle transition from completed to non-completed
+          if (tx.status === 'completed' && updated.status !== 'completed') {
+            if (tx.type === 'income') {
+              setBankAccounts((bPrev) =>
+                bPrev.map((acc) =>
+                  acc.id === tx.bankAccountId ? { ...acc, balance: acc.balance - tx.amount } : acc
+                )
+              );
+            } else if (tx.type === 'expense') {
+              setBankAccounts((bPrev) =>
+                bPrev.map((acc) =>
+                  acc.id === tx.bankAccountId ? { ...acc, balance: acc.balance + tx.amount } : acc
+                )
+              );
+            }
+          }
+          return updated;
+        }
+        return tx;
+      })
     );
   };
 
@@ -1042,6 +1080,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const addBankAccount = (accountData: Omit<BankAccount, 'id'>) => {
+    recordLocalMutation();
     const newAcc: BankAccount = {
       ...accountData,
       id: `bank-${Date.now()}`,
@@ -1050,12 +1089,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateBankAccount = (id: string, updatedFields: Partial<BankAccount>) => {
+    recordLocalMutation();
     setBankAccounts((prev) =>
       prev.map((acc) => (acc.id === id ? { ...acc, ...updatedFields } : acc))
     );
   };
 
   const deleteBankAccount = (id: string) => {
+    recordLocalMutation();
     setBankAccounts((prev) => prev.filter((acc) => acc.id !== id));
   };
 

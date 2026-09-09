@@ -26,22 +26,36 @@ export interface BudgetLimits {
   freela_tools: number;
 }
 
+export type TransactionStructure = 'avulso' | 'contrato' | 'recorrente';
+export type TransactionOrigin = 'projeto' | 'cliente' | 'avulso' | 'operacional' | 'ajuste';
+export type TransactionRecurrenceFrequency = 'mensal' | 'quinzenal' | 'semanal' | 'anual';
+export type TransactionStatus = 'completed' | 'pending' | 'overdue' | 'lost' | 'cancelled';
+
 export interface Transaction {
   id: string;
   description: string;
   amount: number;
   type: TransactionType;
   incomeSource?: IncomeSource;
-  category?: ExpenseCategory;
+  category?: string;
   bankAccountId: string; // 'cash' for physical cash or bank id
   toBankAccountId?: string; // For transfers
   date: string; // YYYY-MM-DD
-  status: 'completed' | 'pending';
+  dueDate?: string; // YYYY-MM-DD
+  status: TransactionStatus;
   notes?: string;
   isRecurring?: boolean;
+  structure?: TransactionStructure;
+  origin?: TransactionOrigin;
+  recurrenceFrequency?: TransactionRecurrenceFrequency;
+  recurrenceStartDate?: string;
+  recurrenceEndDate?: string;
+  installmentsCount?: number;
+  installmentNumber?: number;
   clientName?: string;
   clientId?: string;
   projectId?: string;
+  projectName?: string;
   paymentMethod?: PaymentMethod;
 }
 

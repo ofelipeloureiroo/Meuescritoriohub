@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  AlertCircle,
   ArrowDownRight,
   ArrowRightLeft,
   ArrowUpRight,
@@ -9,34 +10,36 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
-  CreditCard,
+  DollarSign,
+  Download,
   Edit2,
+  FileText,
   Filter,
-  Lock,
+  Flame,
+  Layers,
+  MoreVertical,
+  Package,
   Plus,
   Search,
-  ShieldCheck,
-  Sparkles,
+  SlidersHorizontal,
   Trash2,
   TrendingDown,
   TrendingUp,
-  Vault,
+  User,
   Wallet,
+  Wrench,
+  X,
 } from 'lucide-react';
 import {
   Area,
   AreaChart,
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
 import { useFinance } from '../../context/FinanceContext';
-import { BankAccount, Transaction } from '../../types';
+import { BankAccount, Transaction, TransactionStatus } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 
 interface BanksAndCashTabProps {
@@ -54,821 +57,1274 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
     bankAccounts,
     totalNetWorth,
     totalBankBalance,
-    totalPhysicalCash,
+    transactions,
+    architectureProjects,
+    clients,
+    projectInstallments,
+    updateTransaction,
+    deleteTransaction,
+    updateProjectInstallment,
+    exportTransactionsCSV,
     addBankAccount,
     updateBankAccount,
     deleteBankAccount,
-    transactions,
-    deleteTransaction,
-    exportTransactionsCSV,
-    selectedMonth,
   } = useFinance();
 
-  // Hub Subtabs
-  const [activeSubtab, setActiveSubtab] = useState<'accounts' | 'charts' | 'txs'>('accounts');
+  // Navigation Subtabs: 'caixa_real' | 'projetos' | 'lancamentos'
+  const [activeTab, setActiveTab] = useState<'caixa_real' | 'projetos' | 'lancamentos'>('caixa_real');
 
-  // Add/Edit Bank modal state
+  // Month selector
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('current_month'); // 'current_month' | 'last_month' | 'all'
+
+  // Transactions filters for bottom table
+  const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all' | 'pending' | 'completed' | 'overdue' | 'lost' | 'cancelled'
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedBankFilter, setSelectedBankFilter] = useState<string>('all');
+
+  // Bank Accounts Drawer / Modal
+  const [isBankDrawerOpen, setIsBankDrawerOpen] = useState(false);
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
+  const [bankName, setBankName] = useState('');
+  const [bankBalance, setBankBalance] = useState('');
+  const [bankType, setBankType] = useState<'bank' | 'fintech' | 'investment' | 'physical_cash'>('bank');
 
-  // Bank Form State
-  const [name, setName] = useState('');
-  const [balance, setBalance] = useState('');
-  const [accountType, setAccountType] = useState<'bank' | 'fintech' | 'investment' | 'physical_cash'>('bank');
-  const [color, setColor] = useState('#c58a4b');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [bankCode, setBankCode] = useState('');
+  // Date calculation for "Este mês"
+  const currentMonthPrefix = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  }, []);
 
-  // Transactions local search & filter state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<string>('all'); // all, income, expense, transfer
-  const [filterAccount, setFilterAccount] = useState<string>('all');
+  const lastMonthPrefix = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  }, []);
 
-  const handleOpenAdd = () => {
-    setEditingAccount(null);
-    setName('');
-    setBalance('');
-    setAccountType('bank');
-    setColor('#c58a4b');
-    setAccountNumber('');
-    setBankCode('');
-    setIsAddAccountOpen(true);
-  };
+  // Filtered transactions for the selected period
+  const periodTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      const txDate = t.dueDate || t.date;
+      if (selectedPeriod === 'current_month') {
+        return txDate.startsWith(currentMonthPrefix);
+      }
+      if (selectedPeriod === 'last_month') {
+        return txDate.startsWith(lastMonthPrefix);
+      }
+      return true; // 'all'
+    });
+  }, [transactions, selectedPeriod, currentMonthPrefix, lastMonthPrefix]);
 
-  const handleOpenEdit = (acc: BankAccount) => {
-    setEditingAccount(acc);
-    setName(acc.name);
-    setBalance(acc.balance.toString());
-    setAccountType(acc.type);
-    setColor(acc.color);
-    setAccountNumber(acc.accountNumber || '');
-    setBankCode(acc.bankCode || '');
-    setIsAddAccountOpen(true);
-  };
-
-  const handleSaveAccount = (e: React.FormEvent) => {
-    e.preventDefault();
-    const numBalance = parseFloat(balance.replace(',', '.')) || 0;
-
-    if (!name.trim()) return;
-
-    if (editingAccount) {
-      updateBankAccount(editingAccount.id, {
-        name,
-        balance: numBalance,
-        type: accountType,
-        color,
-        accountNumber,
-        bankCode,
-      });
-    } else {
-      addBankAccount({
-        name,
-        balance: numBalance,
-        type: accountType,
-        color,
-        iconName: accountType === 'physical_cash' ? 'Banknote' : 'Building2',
-        accountNumber,
-        bankCode,
-      });
-    }
-
-    setIsAddAccountOpen(false);
-  };
-
-  // Pre-calculated stats for the currently selected month in standard context
-  const currentMonthTransactions = useMemo(() => {
-    return transactions.filter((t) => !selectedMonth || t.date.startsWith(selectedMonth));
-  }, [transactions, selectedMonth]);
-
-  const monthlyIncome = useMemo(() => {
-    return currentMonthTransactions
+  // Metrics for KPI Cards (Image 1)
+  const metricEntradasConfirmadas = useMemo(() => {
+    return periodTransactions
       .filter((t) => t.type === 'income' && t.status === 'completed')
       .reduce((sum, t) => sum + t.amount, 0);
-  }, [currentMonthTransactions]);
+  }, [periodTransactions]);
 
-  const monthlyExpense = useMemo(() => {
-    return currentMonthTransactions
+  const metricSaidasConfirmadas = useMemo(() => {
+    return periodTransactions
       .filter((t) => t.type === 'expense' && t.status === 'completed')
       .reduce((sum, t) => sum + t.amount, 0);
-  }, [currentMonthTransactions]);
+  }, [periodTransactions]);
 
-  const monthlySavingsRate = useMemo(() => {
-    return monthlyIncome > 0 ? Math.max(0, ((monthlyIncome - monthlyExpense) / monthlyIncome) * 100) : 0;
-  }, [monthlyIncome, monthlyExpense]);
+  const metricSaldoLiquido = useMemo(() => {
+    return metricEntradasConfirmadas - metricSaidasConfirmadas;
+  }, [metricEntradasConfirmadas, metricSaidasConfirmadas]);
 
-  // Area Chart Data: Day by day accumulation or comparison
-  const areaChartData = useMemo(() => {
-    const dailyMap: Record<string, { day: string; receitas: number; despesas: number }> = {};
-    
-    // Fallback template for days
-    for (let i = 1; i <= 30; i += 3) {
-      const dayStr = `Dia ${i}`;
-      dailyMap[dayStr] = { day: dayStr, receitas: 0, despesas: 0 };
+  const metricPrevistoReceber = useMemo(() => {
+    return periodTransactions
+      .filter((t) => t.type === 'income' && t.status === 'pending')
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [periodTransactions]);
+
+  const metricPrevistoPagar = useMemo(() => {
+    return periodTransactions
+      .filter((t) => t.type === 'expense' && t.status === 'pending')
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [periodTransactions]);
+
+  const metricEmAtraso = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return periodTransactions
+      .filter((t) => (t.status === 'overdue' || (t.status === 'pending' && (t.dueDate || t.date) < today)))
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [periodTransactions]);
+
+  const metricPerdido = useMemo(() => {
+    return periodTransactions
+      .filter((t) => t.status === 'lost')
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [periodTransactions]);
+
+  // Burn rate: Average monthly expenses over last 3 months
+  const metricBurnRate = useMemo(() => {
+    const expenses = transactions
+      .filter((t) => t.type === 'expense' && t.status === 'completed')
+      .reduce((sum, t) => sum + t.amount, 0);
+    return expenses > 0 ? expenses / 3 : 0;
+  }, [transactions]);
+
+  // Runway: Months of sustainability
+  const metricRunway = useMemo(() => {
+    if (metricBurnRate <= 0) return 0;
+    const months = Math.floor(totalNetWorth / metricBurnRate);
+    return isFinite(months) ? Math.max(0, months) : 0;
+  }, [totalNetWorth, metricBurnRate]);
+
+  // Historical Monthly Confirmed Income (6 Months for the chart)
+  const monthlyChartData = useMemo(() => {
+    const monthNames = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
+    const result: { month: string; receita: number }[] = [];
+    const now = new Date();
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const prefix = `${year}-${m}`;
+      const name = monthNames[d.getMonth()];
+
+      const monthIncome = transactions
+        .filter((t) => t.type === 'income' && t.status === 'completed' && (t.dueDate || t.date).startsWith(prefix))
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      result.push({
+        month: name,
+        receita: monthIncome,
+      });
     }
 
-    currentMonthTransactions.forEach((t) => {
-      if (t.status !== 'completed') return;
-      const dayNum = parseInt(t.date.split('-')[2]) || 1;
-      const bucket = `Dia ${dayNum}`;
-      if (!dailyMap[bucket]) {
-        dailyMap[bucket] = { day: bucket, receitas: 0, despesas: 0 };
-      }
-      if (t.type === 'income') dailyMap[bucket].receitas += t.amount;
-      if (t.type === 'expense') dailyMap[bucket].despesas += t.amount;
-    });
+    return result;
+  }, [transactions]);
 
-    return Object.values(dailyMap).sort((a, b) => {
-      const numA = parseInt(a.day.replace('Dia ', ''));
-      const numB = parseInt(b.day.replace('Dia ', ''));
-      return numA - numB;
-    });
-  }, [currentMonthTransactions]);
+  // Upcoming dues list (Próximos Vencimentos - Image 1)
+  const upcomingDues = useMemo(() => {
+    const list: {
+      id: string;
+      title: string;
+      subtitle: string;
+      amount: number;
+      dueDate: string;
+      daysRemaining: number;
+      type: 'transaction' | 'installment';
+      rawTx?: Transaction;
+      installmentId?: string;
+    }[] = [];
 
-  // Pie Chart category distribution
-  const expensePieData = useMemo(() => {
-    const categoriesMap: Record<string, { name: string; value: number; color: string }> = {
-      projetos: { name: 'Marketing/Projetos', value: 0, color: '#c58a4b' },
-      escritorio: { name: 'Aluguel & Escritório', value: 0, color: '#3b82f6' },
-      ferramentas: { name: 'Softwares & Ferramentas', value: 0, color: '#8b5cf6' },
-      lazer: { name: 'Viagens & Clientes', value: 0, color: '#ec4899' },
-      outros: { name: 'Impostos & Diversos', value: 0, color: '#64748b' },
-    };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    currentMonthTransactions
-      .filter((t) => t.type === 'expense' && t.status === 'completed')
+    // From transactions
+    transactions
+      .filter((t) => t.status === 'pending')
       .forEach((t) => {
-        const cat = t.category || 'outros';
-        const target = categoriesMap[cat] || categoriesMap.outros;
-        target.value += t.amount;
+        const d = new Date(t.dueDate || t.date);
+        const diffDays = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        let title = t.description;
+        if (t.projectName) title = t.projectName;
+        else if (t.clientName) title = t.clientName;
+
+        let subtitle = `${t.category || (t.type === 'income' ? 'Receita' : 'Despesa')}`;
+        if (diffDays > 0) subtitle += ` • em ${diffDays}d`;
+        else if (diffDays === 0) subtitle += ' • Vence hoje';
+        else subtitle += ` • Atrasado ${Math.abs(diffDays)}d`;
+
+        list.push({
+          id: t.id,
+          title,
+          subtitle,
+          amount: t.type === 'income' ? t.amount : -t.amount,
+          dueDate: t.dueDate || t.date,
+          daysRemaining: diffDays,
+          type: 'transaction',
+          rawTx: t,
+        });
       });
 
-    return Object.values(categoriesMap).filter((item) => item.value > 0);
-  }, [currentMonthTransactions]);
+    // From project installments
+    projectInstallments
+      .filter((pi) => pi.status === 'pending')
+      .forEach((pi) => {
+        const d = new Date(pi.dueDate);
+        const diffDays = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        const proj = architectureProjects.find((p) => p.id === pi.projectId);
 
-  // Live transaction log filtering
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((t) => {
-      // Month selector filter
-      if (selectedMonth && !t.date.startsWith(selectedMonth)) {
-        if (!searchTerm) return false;
+        let subtitle = `Honorários de Projeto`;
+        if (diffDays > 0) subtitle += ` • em ${diffDays}d`;
+        else if (diffDays === 0) subtitle += ' • Vence hoje';
+        else subtitle += ` • Atrasado ${Math.abs(diffDays)}d`;
+
+        list.push({
+          id: pi.id,
+          title: proj?.name || pi.title,
+          subtitle,
+          amount: pi.amount,
+          dueDate: pi.dueDate,
+          daysRemaining: diffDays,
+          type: 'installment',
+          installmentId: pi.id,
+        });
+      });
+
+    return list.sort((a, b) => a.daysRemaining - b.daysRemaining).slice(0, 6);
+  }, [transactions, projectInstallments, architectureProjects]);
+
+  // Confirming an upcoming due directly
+  const handleConfirmDue = (due: typeof upcomingDues[0]) => {
+    if (due.type === 'transaction' && due.rawTx) {
+      updateTransaction(due.rawTx.id, { status: 'completed' });
+    } else if (due.type === 'installment' && due.installmentId) {
+      updateProjectInstallment(due.installmentId, {
+        status: 'paid',
+        paidDate: new Date().toISOString().split('T')[0],
+      });
+    }
+  };
+
+  // Table items after all filters applied
+  const finalFilteredTransactions = useMemo(() => {
+    return periodTransactions.filter((t) => {
+      // Type Filter
+      if (typeFilter === 'income' && t.type !== 'income') return false;
+      if (typeFilter === 'expense' && t.type !== 'expense') return false;
+
+      // Status Filter
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'pending' && t.status !== 'pending') return false;
+        if (statusFilter === 'completed' && t.status !== 'completed') return false;
+        if (statusFilter === 'overdue') {
+          const today = new Date().toISOString().split('T')[0];
+          const isOverdue = t.status === 'overdue' || (t.status === 'pending' && (t.dueDate || t.date) < today);
+          if (!isOverdue) return false;
+        }
+        if (statusFilter === 'lost' && t.status !== 'lost') return false;
+        if (statusFilter === 'cancelled' && t.status !== 'cancelled') return false;
       }
 
-      // Filter by type
-      if (filterType !== 'all') {
-        if (filterType === 'income' && t.type !== 'income') return false;
-        if (filterType === 'expense' && t.type !== 'expense') return false;
-        if (filterType === 'transfer' && t.type !== 'transfer') return false;
+      // Bank account filter
+      if (selectedBankFilter !== 'all' && t.bankAccountId !== selectedBankFilter) {
+        return false;
       }
 
-      // Filter by bank account
-      if (filterAccount !== 'all') {
-        if (t.bankAccountId !== filterAccount && t.toBankAccountId !== filterAccount) return false;
-      }
-
-      // Filter by text search
-      if (searchTerm) {
+      // Search term
+      if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
         const matchesDesc = t.description.toLowerCase().includes(term);
         const matchesClient = t.clientName?.toLowerCase().includes(term);
-        const matchesNotes = t.notes?.toLowerCase().includes(term);
-        if (!matchesDesc && !matchesClient && !matchesNotes) return false;
+        const matchesProject = t.projectName?.toLowerCase().includes(term);
+        const matchesCategory = t.category?.toLowerCase().includes(term);
+        if (!matchesDesc && !matchesClient && !matchesProject && !matchesCategory) return false;
       }
 
       return true;
     });
-  }, [transactions, selectedMonth, filterType, filterAccount, searchTerm]);
+  }, [periodTransactions, typeFilter, statusFilter, selectedBankFilter, searchTerm]);
 
-  const regularBanks = bankAccounts.filter((a) => a.type !== 'physical_cash' && a.id !== 'cash-wallet');
-  const physicalCashAcc = bankAccounts.find((a) => a.type === 'physical_cash' || a.id === 'cash-wallet');
+  // Counts for filters
+  const countAll = periodTransactions.length;
+  const countIncome = periodTransactions.filter((t) => t.type === 'income').length;
+  const countExpense = periodTransactions.filter((t) => t.type === 'expense').length;
 
   return (
-    <div className="space-y-6 pb-12" id="finance-hub-main">
-      {/* Visual Header / Subtitle */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 rounded-2xl bg-[#1c1815] border border-[#3d342f]">
+    <div className="space-y-6 pb-16 font-sans text-[#1a1614]">
+      {/* Top Header (Image 1) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-serif font-bold text-[#fcf8f5] flex items-center gap-2.5">
-            <Wallet className="w-6 h-6" style={{ color: 'var(--theme-primary)' }} />
-            Centro Financeiro Integrado
-          </h2>
-          <p className="text-xs text-[#a89c93] mt-1.5 max-w-2xl">
-            Sua tesouraria completa. Gerencie saldos bancários, visualize relatórios de margens de projetos arquitetônicos e controle o livro caixa em tempo real.
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1a1614]">
+            Financeiro
+          </h1>
+          <p className="text-xs sm:text-sm text-[#73655c] mt-0.5">
+            Controle do caixa em tempo real
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          {activeSubtab === 'accounts' && (
-            <>
-              <button
-                onClick={onOpenTransferModal}
-                className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#241e1b] hover:bg-[#2e2622] text-[#fcf8f5] text-xs font-semibold border border-[#3d342f] transition-all cursor-pointer active:scale-95"
-              >
-                <ArrowRightLeft className="w-4 h-4" style={{ color: 'var(--theme-primary)' }} />
-                <span>Transferência</span>
-              </button>
-              <button
-                onClick={handleOpenAdd}
-                className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-black text-xs font-bold transition-all active:scale-95 shadow-md hover:brightness-110 cursor-pointer"
-                style={{ backgroundColor: 'var(--theme-primary)' }}
-              >
-                <Plus className="w-4 h-4 stroke-[2.5]" />
-                <span>Adicionar Banco</span>
-              </button>
-            </>
-          )}
+        {/* Top Right Quick Actions */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsBankDrawerOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#dfd7cc] bg-white text-xs font-semibold text-[#574d46] hover:bg-[#f8f5f1] transition-all cursor-pointer shadow-2xs"
+            title="Ver e gerenciar contas bancárias"
+          >
+            <Wallet className="w-3.5 h-3.5 text-[#c58a4b]" />
+            <span>Contas Bancárias ({bankAccounts.length})</span>
+          </button>
 
-          {activeSubtab === 'txs' && (
-            <>
-              <button
-                onClick={() => exportTransactionsCSV()}
-                className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#241e1b] hover:bg-[#2e2622] text-[#fcf8f5] text-xs font-semibold border border-[#3d342f] transition-all cursor-pointer"
-              >
-                <span>Exportar CSV</span>
-              </button>
-              {onOpenNewTxModal && (
-                <button
-                  onClick={() => onOpenNewTxModal('expense')}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-black text-xs font-bold transition-all active:scale-95 shadow-md hover:brightness-110 cursor-pointer"
-                  style={{ backgroundColor: 'var(--theme-primary)' }}
-                >
-                  <Plus className="w-4 h-4 stroke-[2.5]" />
-                  <span>Novo Lançamento</span>
-                </button>
-              )}
-            </>
-          )}
+          <button
+            onClick={onOpenTransferModal}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#dfd7cc] bg-white text-xs font-semibold text-[#574d46] hover:bg-[#f8f5f1] transition-all cursor-pointer shadow-2xs"
+            title="Transferência entre contas"
+          >
+            <ArrowRightLeft className="w-3.5 h-3.5 text-[#73655c]" />
+            <span className="hidden sm:inline">Transferir</span>
+          </button>
         </div>
       </div>
 
-      {/* Rhythmic Spacing Navigation Subtabs */}
-      <div className="flex items-center gap-1 bg-[#14110f] p-1 rounded-xl border border-[#3d342f] max-w-md">
-        <button
-          onClick={() => setActiveSubtab('accounts')}
-          className={`flex-1 text-center py-2 text-xs font-medium rounded-lg transition-all cursor-pointer ${
-            activeSubtab === 'accounts'
-              ? 'bg-[#241e1b] text-[#fcf8f5] border border-[#3d342f]/40 font-semibold'
-              : 'text-[#a89c93] hover:text-[#fcf8f5]'
-          }`}
-        >
-          Contas & Caixa
-        </button>
-        <button
-          onClick={() => setActiveSubtab('charts')}
-          className={`flex-1 text-center py-2 text-xs font-medium rounded-lg transition-all cursor-pointer ${
-            activeSubtab === 'charts'
-              ? 'bg-[#241e1b] text-[#fcf8f5] border border-[#3d342f]/40 font-semibold'
-              : 'text-[#a89c93] hover:text-[#fcf8f5]'
-          }`}
-        >
-          Resultados
-        </button>
-        <button
-          onClick={() => setActiveSubtab('txs')}
-          className={`flex-1 text-center py-2 text-xs font-medium rounded-lg transition-all cursor-pointer ${
-            activeSubtab === 'txs'
-              ? 'bg-[#241e1b] text-[#fcf8f5] border border-[#3d342f]/40 font-semibold'
-              : 'text-[#a89c93] hover:text-[#fcf8f5]'
-          }`}
-        >
-          Livro Caixa
-        </button>
+      {/* Subtabs Navigation Bar (Image 1) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Subtab: Caixa Real */}
+          <button
+            onClick={() => setActiveTab('caixa_real')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'caixa_real'
+                ? 'bg-[#b39b82] text-white shadow-xs'
+                : 'bg-white border border-[#e2dacf] text-[#73655c] hover:text-[#1a1614]'
+            }`}
+          >
+            <Briefcase className="w-3.5 h-3.5" />
+            <span>Caixa Real</span>
+          </button>
+
+          {/* Subtab: Projetos */}
+          <button
+            onClick={() => setActiveTab('projetos')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'projetos'
+                ? 'bg-[#b39b82] text-white shadow-xs'
+                : 'bg-white border border-[#e2dacf] text-[#73655c] hover:text-[#1a1614]'
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Projetos</span>
+          </button>
+
+          {/* Subtab: Lançamentos */}
+          <button
+            onClick={() => setActiveTab('lancamentos')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'lancamentos'
+                ? 'bg-[#b39b82] text-white shadow-xs'
+                : 'bg-white border border-[#e2dacf] text-[#73655c] hover:text-[#1a1614]'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Lançamentos</span>
+          </button>
+
+          {/* Month Selector Dropdown */}
+          <div className="relative">
+            <select
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value)}
+              className="appearance-none pl-7 pr-8 py-2 rounded-lg border border-[#e2dacf] bg-white text-xs font-semibold text-[#574d46] cursor-pointer hover:border-[#c58a4b] focus:outline-none"
+            >
+              <option value="current_month">Este mês</option>
+              <option value="last_month">Mês anterior</option>
+              <option value="all">Todo o histórico</option>
+            </select>
+            <Calendar className="w-3.5 h-3.5 text-[#73655c] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <span className="text-[10px] text-[#73655c] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+              ▼
+            </span>
+          </div>
+        </div>
+
+        {/* Right Action: + Novo Lançamento */}
+        <div>
+          <button
+            onClick={() => onOpenNewTxModal?.('income')}
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-[#b89f82] hover:bg-[#a68c6e] text-white text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer active:scale-95"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Novo Lançamento</span>
+          </button>
+        </div>
       </div>
 
-      {/* SUBTAB 1: CONTAS & CAIXA */}
-      {activeSubtab === 'accounts' && (
-        <div className="space-y-6" id="subtab-accounts">
-          {/* Summary KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-5 rounded-2xl bg-[#1c1815] border border-[#3d342f] flex items-center justify-between">
-              <div>
-                <span className="text-xs text-[#a89c93] font-medium">Patrimônio Consolidado</span>
-                <div className="text-2xl font-serif font-bold text-[#fcf8f5] mt-1.5">
-                  {formatCurrency(totalNetWorth)}
-                </div>
-                <span className="text-[10px] text-[#7a6f68] block mt-1">Soma de todos os saldos integrados</span>
-              </div>
-              <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
-                <Wallet className="w-5 h-5" />
-              </div>
-            </div>
+      {/* Breadcrumb indicator (Image 1) */}
+      <div className="pt-1">
+        <span className="text-[11px] font-bold tracking-wider text-[#73655c] uppercase block">
+          CAIXA REAL
+        </span>
+        <span className="text-xs text-[#9c8e85]">
+          {selectedPeriod === 'current_month'
+            ? 'Este mês'
+            : selectedPeriod === 'last_month'
+            ? 'Mês anterior'
+            : 'Histórico consolidado'}
+        </span>
+      </div>
 
-            <div className="p-5 rounded-2xl bg-[#1c1815] border border-[#3d342f] flex items-center justify-between">
-              <div>
-                <span className="text-xs text-[#a89c93] font-medium">Saldo em Bancos</span>
-                <div className="text-2xl font-serif font-bold text-[#fcf8f5] mt-1.5" style={{ color: 'var(--theme-primary)' }}>
-                  {formatCurrency(totalBankBalance)}
-                </div>
-                <span className="text-[10px] text-[#7a6f68] block mt-1">{regularBanks.length} contas bancárias ativas</span>
-              </div>
-              <div className="p-3 rounded-xl bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] border border-[var(--theme-primary)]/25">
-                <Building2 className="w-5 h-5" />
-              </div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#1c1815] border border-[#3d342f] flex items-center justify-between">
-              <div>
-                <span className="text-xs text-[#a89c93] font-medium">Dinheiro Físico (Cofre/Espécie)</span>
-                <div className="text-2xl font-serif font-bold text-[#fcf8f5] mt-1.5 text-yellow-500">
-                  {formatCurrency(totalPhysicalCash)}
-                </div>
-                <span className="text-[10px] text-[#7a6f68] block mt-1">Reserva guardada fisicamente</span>
-              </div>
-              <div className="p-3 rounded-xl bg-yellow-500/10 text-yellow-500 border border-yellow-500/25">
-                <Banknote className="w-5 h-5" />
-              </div>
-            </div>
-          </div>
-
-          {/* Regular Banks Section */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-serif font-bold text-[#fcf8f5] flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-[#a89c93]" />
-              Contas Correntes e Investimentos
-            </h3>
-
-            {regularBanks.length === 0 ? (
-              <div className="p-8 rounded-2xl border border-dashed border-[#3d342f] text-center text-[#a89c93]">
-                <Building2 className="w-8 h-8 mx-auto text-[#7a6f68] mb-3" />
-                <p className="text-xs font-medium">Nenhum banco ou corretora cadastrado.</p>
-                <button
-                  onClick={handleOpenAdd}
-                  className="mt-3 text-xs font-bold underline cursor-pointer"
-                  style={{ color: 'var(--theme-primary)' }}
-                >
-                  Adicionar primeira conta
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {regularBanks.map((acc) => (
-                  <div
-                    key={acc.id}
-                    className="p-5 rounded-2xl bg-[#1c1815] border border-[#3d342f] relative group hover:border-[#52463e] transition-all"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg text-white"
-                          style={{ backgroundColor: acc.color }}
-                        >
-                          {acc.name.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-semibold text-[#fcf8f5]">{acc.name}</h4>
-                          <span className="text-[10px] text-[#a89c93] uppercase font-bold tracking-wider">
-                            {acc.type === 'investment' ? 'Investimentos' : acc.type === 'fintech' ? 'Fintech / Digital' : 'Banco Tradicional'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1 bg-[#14110f] p-1 rounded-lg border border-[#3d342f]">
-                        <button
-                          onClick={() => handleOpenEdit(acc)}
-                          className="p-1.5 text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#241e1b] rounded transition-all cursor-pointer"
-                          title="Editar"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm(`Tem certeza que deseja excluir a conta "${acc.name}"? Todos os lançamentos associados perderão o vínculo.`)) {
-                              deleteBankAccount(acc.id);
-                            }
-                          }}
-                          className="p-1.5 text-[#a89c93] hover:text-red-400 hover:bg-[#241e1b] rounded transition-all cursor-pointer"
-                          title="Excluir"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="mt-5 flex items-baseline justify-between border-t border-[#3d342f]/40 pt-4">
-                      <span className="text-xs text-[#a89c93]">Saldo em Conta</span>
-                      <span className="text-lg font-bold font-serif text-[#fcf8f5]">
-                        {formatCurrency(acc.balance)}
-                      </span>
-                    </div>
-
-                    {(acc.accountNumber || acc.bankCode) && (
-                      <p className="text-[10px] text-[#7a6f68] mt-1.5 font-mono">
-                        {acc.bankCode ? `Cod: ${acc.bankCode}` : ''} {acc.accountNumber ? `| Ag/Cc: ${acc.accountNumber}` : ''}
-                      </p>
-                    )}
+      {/* ================= VIEW 1: CAIXA REAL ================= */}
+      {activeTab === 'caixa_real' && (
+        <div className="space-y-6">
+          {/* KPI ROW 1: Entradas, Saídas, Saldo Líquido, Saldo Acumulado (Image 1) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1: Entradas Confirmadas */}
+            <div className="p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs relative">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-xs font-medium text-[#73655c]">
+                    Entradas Confirmadas
+                  </span>
+                  <div className="text-xl sm:text-2xl font-bold text-[#1a1614] mt-2">
+                    {formatCurrency(metricEntradasConfirmadas)}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Physical Cash Vault Panel */}
-          <div className="p-6 rounded-2xl bg-[#1c1815] border border-[#3d342f] relative overflow-hidden space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400">
-                  <Banknote className="w-6 h-6" />
+                  <span className="text-xs text-[#9c8e85] block mt-1">Confirmado</span>
                 </div>
-                <div>
-                  <h4 className="font-serif font-bold text-[#fcf8f5]">Cofre Interno & Espécie</h4>
-                  <p className="text-xs text-[#a89c93] mt-0.5">Gestão dedicada de papel-moeda físico do escritório</p>
-                </div>
-              </div>
-
-              <button
-                onClick={onOpenCashModal}
-                className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-sm"
-              >
-                <Vault className="w-4 h-4" />
-                <span>Movimentar Cofre</span>
-              </button>
-            </div>
-
-            <div className="p-4 bg-[#14110f] rounded-xl border border-[#3d342f]/60 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <span className="text-xs text-[#a89c93]">Saldo Físico em Mãos</span>
-                <div className="text-3xl font-serif font-bold text-yellow-500 mt-1">
-                  {formatCurrency(totalPhysicalCash)}
-                </div>
-                <span className="text-[10px] text-[#7a6f68] block mt-1">Recomendado manter apenas valores operacionais</span>
-              </div>
-
-              <div className="flex flex-col justify-center text-xs text-[#a89c93] space-y-2 border-t sm:border-t-0 sm:border-l border-[#3d342f] pt-3 sm:pt-0 sm:pl-4">
-                <div className="flex items-center gap-2">
-                  <Lock className="w-3.5 h-3.5 text-yellow-500/70" />
-                  <span>Segurança aprimorada com criptografia local</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Sincronização imediata nas regras do Firestore</span>
+                <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
+                  <TrendingUp className="w-4 h-4 stroke-[2.5]" />
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* SUBTAB 2: RESULTADOS & INDICADORES */}
-      {activeSubtab === 'charts' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="subtab-charts">
-          {/* Main Chart Column */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="p-5 rounded-2xl bg-[#1c1815] border border-[#3d342f]">
-              <div className="flex items-center justify-between gap-3 mb-6">
+            {/* Card 2: Saídas Confirmadas */}
+            <div className="p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs relative">
+              <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-base font-serif font-bold text-[#fcf8f5]">Histórico de Lançamentos</h3>
-                  <p className="text-[11px] text-[#a89c93] mt-0.5">Análise temporal de fluxo de caixa operacional</p>
+                  <span className="text-xs font-medium text-[#73655c]">
+                    Saídas Confirmadas
+                  </span>
+                  <div className="text-xl sm:text-2xl font-bold text-[#1a1614] mt-2">
+                    {formatCurrency(metricSaidasConfirmadas)}
+                  </div>
+                  <span className="text-xs text-[#9c8e85] block mt-1">Confirmado</span>
                 </div>
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="flex items-center gap-1 text-[#fcf8f5] font-semibold">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[var(--theme-primary)]" /> Receitas
-                  </span>
-                  <span className="flex items-center gap-1 text-[#fcf8f5] font-semibold">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-400" /> Despesas
-                  </span>
+                <div className="p-1.5 rounded-lg bg-rose-50 text-rose-500 border border-rose-100">
+                  <TrendingDown className="w-4 h-4 stroke-[2.5]" />
                 </div>
               </div>
+            </div>
 
-              <div className="h-64 w-full">
+            {/* Card 3: Saldo Líquido */}
+            <div className="p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs relative">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-xs font-medium text-[#73655c]">
+                    Saldo Líquido
+                  </span>
+                  <div
+                    className={`text-xl sm:text-2xl font-bold mt-2 ${
+                      metricSaldoLiquido >= 0 ? 'text-[#1a1614]' : 'text-rose-600'
+                    }`}
+                  >
+                    {formatCurrency(metricSaldoLiquido)}
+                  </div>
+                  <span className="text-xs text-[#9c8e85] block mt-1">Este mês</span>
+                </div>
+                <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 font-bold text-xs flex items-center justify-center w-7 h-7">
+                  $
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Saldo Acumulado */}
+            <div className="p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs relative">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-xs font-medium text-[#73655c]">
+                    Saldo Acumulado
+                  </span>
+                  <div className="text-xl sm:text-2xl font-bold text-[#1a1614] mt-2">
+                    {formatCurrency(totalNetWorth || totalBankBalance)}
+                  </div>
+                  <span className="text-xs text-[#9c8e85] block mt-1">Histórico total</span>
+                </div>
+                <div className="p-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-100">
+                  <Wallet className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* KPI ROW 2: Previsto a Receber, Previsto a Pagar, Em Atraso, Perdido (Image 1) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1: Previsto a Receber */}
+            <div className="p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs relative">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-xs font-medium text-[#73655c]">
+                    Previsto a Receber
+                  </span>
+                  <div className="text-xl sm:text-2xl font-bold text-[#1a1614] mt-2">
+                    {formatCurrency(metricPrevistoReceber)}
+                  </div>
+                  <span className="text-xs text-[#9c8e85] block mt-1">
+                    Pendente no período
+                  </span>
+                </div>
+                <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
+                  <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Previsto a Pagar */}
+            <div className="p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs relative">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-xs font-medium text-[#73655c]">
+                    Previsto a Pagar
+                  </span>
+                  <div className="text-xl sm:text-2xl font-bold text-[#1a1614] mt-2">
+                    {formatCurrency(metricPrevistoPagar)}
+                  </div>
+                  <span className="text-xs text-[#9c8e85] block mt-1">
+                    Pendente no período
+                  </span>
+                </div>
+                <div className="p-1.5 rounded-lg bg-orange-50 text-orange-600 border border-orange-100">
+                  <ArrowDownRight className="w-4 h-4 stroke-[2.5]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Em Atraso */}
+            <div className="p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs relative">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-xs font-medium text-[#73655c]">Em Atraso</span>
+                  <div
+                    className={`text-xl sm:text-2xl font-bold mt-2 ${
+                      metricEmAtraso > 0 ? 'text-rose-600' : 'text-[#1a1614]'
+                    }`}
+                  >
+                    {formatCurrency(metricEmAtraso)}
+                  </div>
+                  <span className="text-xs text-[#9c8e85] block mt-1">
+                    {metricEmAtraso > 0 ? 'Exige atenção' : 'Nenhum em atraso'}
+                  </span>
+                </div>
+                <div
+                  className={`p-1.5 rounded-lg border ${
+                    metricEmAtraso > 0
+                      ? 'bg-rose-50 text-rose-600 border-rose-100'
+                      : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                  }`}
+                >
+                  <AlertCircle className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Perdido */}
+            <div className="p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs relative">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-xs font-medium text-[#73655c]">Perdido</span>
+                  <div className="text-xl sm:text-2xl font-bold text-[#1a1614] mt-2">
+                    {formatCurrency(metricPerdido)}
+                  </div>
+                  <span className="text-xs text-[#9c8e85] block mt-1">
+                    Sem perdas registradas
+                  </span>
+                </div>
+                <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
+                  <AlertCircle className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* KPI ROW 3: Burn Rate & Runway (Image 1) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+            {/* Card: Burn Rate */}
+            <div className="p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs relative">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-xs font-medium text-[#73655c]">Burn Rate</span>
+                  <div className="text-xl sm:text-2xl font-bold text-[#1a1614] mt-2">
+                    {formatCurrency(metricBurnRate)}
+                  </div>
+                  <span className="text-xs text-[#9c8e85] block mt-1">
+                    Gasto médio/mês
+                  </span>
+                </div>
+                <div className="p-1.5 rounded-lg bg-orange-50 text-orange-500 border border-orange-100">
+                  <Flame className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+
+            {/* Card: Runway */}
+            <div className="p-5 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs relative">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-xs font-medium text-[#73655c]">Runway</span>
+                  <div className="text-xl sm:text-2xl font-bold text-[#1a1614] mt-2">
+                    {metricRunway} {metricRunway === 1 ? 'mês' : 'meses'}
+                  </div>
+                  <span className="text-xs text-[#9c8e85] block mt-1">
+                    Sustentabilidade
+                  </span>
+                </div>
+                <div className="p-1.5 rounded-lg bg-rose-50 text-rose-500 border border-rose-100">
+                  <Clock className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* MIDDLE ROW: Historical Chart & Próximos Vencimentos (Image 1) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Column (8 cols): Receita Confirmada — Histórico Mensal */}
+            <div className="lg:col-span-8 p-6 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[#1a1614]">
+                  Receita Confirmada — Histórico Mensal
+                </h3>
+              </div>
+
+              <div className="h-60 w-full pt-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={areaChartData}>
+                  <AreaChart data={monthlyChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--theme-primary)" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="var(--theme-primary)" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f87171" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#f87171" stopOpacity={0}/>
+                      <linearGradient id="colorReceitaGold" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#c58a4b" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#c58a4b" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="day" stroke="#7a6f68" fontSize={10} tickLine={false} />
-                    <YAxis stroke="#7a6f68" fontSize={10} tickLine={false} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#1c1815', borderColor: '#3d342f', borderRadius: 12, color: '#fcf8f5' }}
-                      labelClassName="font-bold text-xs"
+                    <XAxis
+                      dataKey="month"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#73655c', fontSize: 12 }}
                     />
-                    <Area type="monotone" dataKey="receitas" stroke="var(--theme-primary)" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" name="Receitas" />
-                    <Area type="monotone" dataKey="despesas" stroke="#f87171" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" name="Despesas" />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#9c8e85', fontSize: 10 }}
+                      tickFormatter={(val) => `R$${val > 999 ? (val / 1000).toFixed(0) + 'k' : val}`}
+                    />
+                    <Tooltip
+                      formatter={(val: number) => [formatCurrency(val), 'Receita']}
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #eae4dc',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        color: '#1a1614',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="receita"
+                      stroke="#c58a4b"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorReceitaGold)"
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Incomes & Expenses Overview cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-[#1c1815] border border-[#3d342f] flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-[#a89c93]">Receitas Faturadas</span>
-                  <div className="text-xl font-bold font-serif text-emerald-400 mt-1">
-                    {formatCurrency(monthlyIncome)}
+            {/* Right Column (4 cols): Próximos Vencimentos */}
+            <div className="lg:col-span-4 p-6 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs space-y-4 flex flex-col justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-[#1a1614] mb-4">
+                  Próximos Vencimentos
+                </h3>
+
+                {upcomingDues.length === 0 ? (
+                  <div className="py-12 text-center text-[#9c8e85] text-xs">
+                    <CheckCircle2 className="w-8 h-8 mx-auto text-[#c58a4b] mb-2 opacity-60" />
+                    <p>Nenhum vencimento pendente no período.</p>
                   </div>
-                </div>
-                <ArrowUpRight className="w-5 h-5 text-emerald-400 bg-emerald-500/10 p-1.5 rounded-full" />
-              </div>
+                ) : (
+                  <div className="space-y-3">
+                    {upcomingDues.map((due) => (
+                      <div
+                        key={due.id}
+                        className="p-3 rounded-xl border border-[#eae4dc] hover:border-[#d6c9bd] transition-all flex items-center justify-between gap-3 bg-[#fdfcfb]"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs font-bold text-[#1a1614] truncate">
+                            {due.title}
+                          </h4>
+                          <span className="text-[10px] text-[#73655c] block truncate">
+                            {due.subtitle}
+                          </span>
+                        </div>
 
-              <div className="p-4 rounded-xl bg-[#1c1815] border border-[#3d342f] flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-[#a89c93]">Despesas Pagas</span>
-                  <div className="text-xl font-bold font-serif text-red-400 mt-1">
-                    {formatCurrency(monthlyExpense)}
-                  </div>
-                </div>
-                <ArrowDownRight className="w-5 h-5 text-red-400 bg-red-500/10 p-1.5 rounded-full" />
-              </div>
-            </div>
-          </div>
+                        <div className="text-right shrink-0 flex items-center gap-2">
+                          <span
+                            className={`text-xs font-bold ${
+                              due.amount >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                            }`}
+                          >
+                            {due.amount >= 0 ? `+${formatCurrency(due.amount)}` : formatCurrency(due.amount)}
+                          </span>
 
-          {/* Sidebar Metrics */}
-          <div className="space-y-6">
-            {/* Savings Rate Card */}
-            <div className="p-5 rounded-2xl bg-[#1c1815] border border-[#3d342f] text-center">
-              <span className="text-xs text-[#a89c93] block">Taxa de Conversão de Lucro</span>
-              <div className="text-4xl font-serif font-bold text-[#fcf8f5] mt-2">
-                {monthlySavingsRate.toFixed(1)}%
-              </div>
-              <div className="w-full bg-[#14110f] h-2 rounded-full overflow-hidden mt-4 border border-[#3d342f]">
-                <div
-                  className="h-full rounded-full bg-emerald-500"
-                  style={{ width: `${Math.min(100, monthlySavingsRate)}%` }}
-                />
-              </div>
-              <p className="text-[10px] text-[#7a6f68] mt-3">
-                Porcentagem de faturamento que virou saldo líquido neste mês.
-              </p>
-            </div>
-
-            {/* Expense Distribution Category Pie */}
-            <div className="p-5 rounded-2xl bg-[#1c1815] border border-[#3d342f]">
-              <h3 className="text-sm font-serif font-bold text-[#fcf8f5] mb-4">Distribuição de Gastos</h3>
-              
-              {expensePieData.length === 0 ? (
-                <p className="text-xs text-[#a89c93] text-center py-8">Nenhuma despesa para exibir gráficos.</p>
-              ) : (
-                <div className="space-y-4">
-                  <div className="h-40 w-full flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={expensePieData}
-                          innerRadius={50}
-                          outerRadius={70}
-                          paddingAngle={2}
-                          dataKey="value"
-                        >
-                          {expensePieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={{ backgroundColor: '#1c1815', borderColor: '#3d342f', borderRadius: 12, color: '#fcf8f5' }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    {expensePieData.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-xs">
-                        <span className="flex items-center gap-1.5 text-[#a89c93]">
-                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                          {item.name}
-                        </span>
-                        <span className="font-semibold text-[#fcf8f5]">{formatCurrency(item.value)}</span>
+                          <button
+                            onClick={() => handleConfirmDue(due)}
+                            className="px-2 py-0.5 rounded text-[10px] font-semibold border border-emerald-500/30 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors cursor-pointer"
+                          >
+                            Confirmar
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
+                )}
+              </div>
+
+              {upcomingDues.length > 0 && (
+                <div className="text-center pt-2">
+                  <button
+                    onClick={() => setActiveTab('lancamentos')}
+                    className="text-xs text-[#73655c] hover:text-[#1a1614] font-medium underline cursor-pointer"
+                  >
+                    Ver todos os lançamentos
+                  </button>
                 </div>
               )}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* SUBTAB 3: LIVRO CAIXA (TRANSAÇÕES) */}
-      {activeSubtab === 'txs' && (
-        <div className="space-y-4" id="subtab-transactions">
-          {/* Filters Bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl bg-[#1c1815] border border-[#3d342f]">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a89c93]" />
-              <input
-                type="text"
-                placeholder="Buscar por descrição, cliente ou notas..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-[#14110f] border border-[#3d342f] rounded-xl pl-10 pr-4 py-2 text-xs text-[#fcf8f5] placeholder-[#7a6f68] focus:outline-none focus:border-[#c58a4b] transition-colors"
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#14110f] border border-[#3d342f] rounded-xl text-xs text-[#a89c93]">
-                <Filter className="w-3.5 h-3.5" />
-                <select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
-                  className="bg-transparent text-[#fcf8f5] focus:outline-none cursor-pointer font-medium"
-                >
-                  <option value="all" className="bg-[#1c1815]">Todos os Tipos</option>
-                  <option value="income" className="bg-[#1c1815]">Receitas</option>
-                  <option value="expense" className="bg-[#1c1815]">Despesas</option>
-                  <option value="transfer" className="bg-[#1c1815]">Transferências</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#14110f] border border-[#3d342f] rounded-xl text-xs text-[#a89c93]">
-                <Building2 className="w-3.5 h-3.5" />
-                <select
-                  value={filterAccount}
-                  onChange={(e) => setFilterAccount(e.target.value)}
-                  className="bg-transparent text-[#fcf8f5] focus:outline-none cursor-pointer font-medium"
-                >
-                  <option value="all" className="bg-[#1c1815]">Todas as Contas</option>
-                  {bankAccounts.map((acc) => (
-                    <option key={acc.id} value={acc.id} className="bg-[#1c1815]">{acc.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Transactions Log Table */}
-          <div className="overflow-x-auto rounded-2xl border border-[#3d342f] bg-[#1c1815]">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-[#3d342f] bg-[#241e1b]/45 text-[10px] uppercase font-bold tracking-wider text-[#a89c93]">
-                  <th className="py-3 px-4">Data</th>
-                  <th className="py-3 px-4">Descrição</th>
-                  <th className="py-3 px-4">Origem / Destino</th>
-                  <th className="py-3 px-4">Categoria</th>
-                  <th className="py-3 px-4 text-right">Valor</th>
-                  <th className="py-3 px-4 text-center">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#3d342f]/50 text-xs">
-                {filteredTransactions.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-[#a89c93]">
-                      Nenhuma transação encontrada para os filtros aplicados neste mês.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredTransactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-[#241e1b]/30 transition-all">
-                      <td className="py-3.5 px-4 font-medium text-[#fcf8f5] whitespace-nowrap">
-                        {formatDate(tx.date)}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-[#fcf8f5]">{tx.description}</div>
-                        {tx.notes && <div className="text-[10px] text-[#7a6f68] font-medium mt-0.5">{tx.notes}</div>}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#14110f] border border-[#3d342f] text-[#a89c93]">
-                          {tx.bankAccountId === 'cash-wallet' ? 'Cofre Físico' : bankAccounts.find(a => a.id === tx.bankAccountId)?.name || 'Banco'}
-                        </span>
-                        {tx.toBankAccountId && (
-                          <span className="text-[10px] text-[#7a6f68] mx-1.5 font-bold">➔ {bankAccounts.find(a => a.id === tx.toBankAccountId)?.name || 'Cofre'}</span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-[#241e1b] text-[#fcf8f5] border border-[#3d342f]">
-                          {tx.type === 'income' ? (tx.incomeSource === 'clt' ? 'CLT / Pro-labore' : 'Projetos') : (tx.category || 'Geral')}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-bold whitespace-nowrap">
-                        {tx.type === 'income' ? (
-                          <span className="text-emerald-400">+{formatCurrency(tx.amount)}</span>
-                        ) : tx.type === 'expense' ? (
-                          <span className="text-red-400">-{formatCurrency(tx.amount)}</span>
-                        ) : (
-                          <span className="text-blue-400">{formatCurrency(tx.amount)}</span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => {
-                            if (confirm(`Excluir este lançamento de "${tx.description}"? Isso reverterá o saldo correspondente.`)) {
-                              deleteTransaction(tx.id);
-                            }
-                          }}
-                          className="p-1.5 text-[#a89c93] hover:text-red-400 hover:bg-[#14110f] rounded-lg transition-all cursor-pointer"
-                          title="Remover Lançamento"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Add/Edit account */}
-      {isAddAccountOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl max-w-md w-full p-6 shadow-xl animate-in fade-in zoom-in-95 duration-150">
-            <h3 className="text-base font-serif font-bold text-[#fcf8f5] mb-4">
-              {editingAccount ? 'Editar Conta Bancária' : 'Cadastrar Conta Bancária'}
-            </h3>
-
-            <form onSubmit={handleSaveAccount} className="space-y-4">
+          {/* BOTTOM SECTION: Lançamentos do Período (Image 1) */}
+          <div className="p-6 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs space-y-4">
+            {/* Header & Totals */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider font-bold text-[#a89c93] mb-1">Nome do Banco / Corretora</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Nubank, Itaú, XP"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-[#14110f] border border-[#3d342f] rounded-xl px-3 py-2 text-xs text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]"
-                  required
-                />
+                <h3 className="text-base font-bold text-[#1a1614]">
+                  Lançamentos do Período
+                </h3>
+                <span className="text-xs text-[#73655c]">
+                  Este mês • {finalFilteredTransactions.length} de {periodTransactions.length} lançamentos
+                </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center gap-3 text-xs font-bold">
+                <span className="text-emerald-700">
+                  +{formatCurrency(metricEntradasConfirmadas)}
+                </span>
+                <span className="text-rose-600">
+                  -{formatCurrency(metricSaidasConfirmadas)}
+                </span>
+              </div>
+            </div>
+
+            {/* Filter Pills Bar (Image 1) */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-[#f2ede6]">
+              {/* Type Filter Tabs: Todos, Receitas, Despesas */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setTypeFilter('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    typeFilter === 'all'
+                      ? 'bg-[#f0ebe3] text-[#1a1614] font-bold'
+                      : 'text-[#73655c] hover:bg-[#f8f5f1]'
+                  }`}
+                >
+                  Todos {countAll}
+                </button>
+                <button
+                  onClick={() => setTypeFilter('income')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    typeFilter === 'income'
+                      ? 'bg-[#e8f5ed] text-emerald-800 font-bold'
+                      : 'text-[#73655c] hover:bg-[#f8f5f1]'
+                  }`}
+                >
+                  Receitas {countIncome}
+                </button>
+                <button
+                  onClick={() => setTypeFilter('expense')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    typeFilter === 'expense'
+                      ? 'bg-[#fbeeed] text-rose-800 font-bold'
+                      : 'text-[#73655c] hover:bg-[#f8f5f1]'
+                  }`}
+                >
+                  Despesas {countExpense}
+                </button>
+              </div>
+
+              {/* Status Filter Pills: Todos, Previstos, Confirmados, Atrasados, Perdidos, Cancelados */}
+              <div className="flex flex-wrap items-center gap-1 text-xs">
+                {[
+                  { id: 'all', label: 'Todos' },
+                  { id: 'pending', label: 'Previstos' },
+                  { id: 'completed', label: 'Confirmados' },
+                  { id: 'overdue', label: 'Atrasados' },
+                  { id: 'lost', label: 'Perdidos' },
+                  { id: 'cancelled', label: 'Cancelados' },
+                ].map((st) => (
+                  <button
+                    key={st.id}
+                    onClick={() => setStatusFilter(st.id)}
+                    className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                      statusFilter === st.id
+                        ? 'bg-[#1a1614] text-white font-semibold'
+                        : 'text-[#73655c] hover:text-[#1a1614] hover:bg-[#f8f5f1]'
+                    }`}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+
+                {/* Filter toggle button */}
+                <button
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-[#dfd7cc] text-[#73655c] hover:text-[#1a1614] hover:bg-[#f8f5f1] transition-all cursor-pointer ml-1"
+                >
+                  <Filter className="w-3 h-3" />
+                  <span>Filtros</span>
+                  <span className="text-[10px]">▾</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Advanced Filters Expandable Box */}
+            {showAdvancedFilters && (
+              <div className="p-4 rounded-xl bg-[#f8f5f1] border border-[#eae4dc] grid grid-cols-1 sm:grid-cols-3 gap-3 animate-in fade-in">
                 <div>
-                  <label className="block text-[10px] uppercase tracking-wider font-bold text-[#a89c93] mb-1">Saldo Inicial (R$)</label>
-                  <input
-                    type="text"
-                    placeholder="0,00"
-                    value={balance}
-                    onChange={(e) => setBalance(e.target.value)}
-                    className="w-full bg-[#14110f] border border-[#3d342f] rounded-xl px-3 py-2 text-xs text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]"
-                    required
-                  />
+                  <label className="block text-[10px] font-bold uppercase text-[#73655c] mb-1">
+                    Buscar Texto
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Descrição, cliente, categoria..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-[#dfd7cc] bg-white text-xs text-[#1a1614] focus:outline-none focus:border-[#c58a4b]"
+                    />
+                    <Search className="w-3.5 h-3.5 text-[#9c8e85] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] uppercase tracking-wider font-bold text-[#a89c93] mb-1">Tipo de Conta</label>
+                  <label className="block text-[10px] font-bold uppercase text-[#73655c] mb-1">
+                    Filtrar por Conta
+                  </label>
                   <select
-                    value={accountType}
-                    onChange={(e) => setAccountType(e.target.value as any)}
-                    className="w-full bg-[#14110f] border border-[#3d342f] rounded-xl px-3 py-1.5 text-xs text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]"
+                    value={selectedBankFilter}
+                    onChange={(e) => setSelectedBankFilter(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg border border-[#dfd7cc] bg-white text-xs text-[#1a1614] focus:outline-none"
                   >
-                    <option value="bank" className="bg-[#1c1815]">Tradicional</option>
-                    <option value="fintech" className="bg-[#1c1815]">Fintech</option>
-                    <option value="investment" className="bg-[#1c1815]">Investimento</option>
+                    <option value="all">Todas as Contas</option>
+                    {bankAccounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] uppercase tracking-wider font-bold text-[#a89c93] mb-1">Cód. Banco (Opcional)</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: 260, 341"
-                    value={bankCode}
-                    onChange={(e) => setBankCode(e.target.value)}
-                    className="w-full bg-[#14110f] border border-[#3d342f] rounded-xl px-3 py-2 text-xs text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] uppercase tracking-wider font-bold text-[#a89c93] mb-1">Conta / Agência (Opcional)</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: 0001 / 12345-6"
-                    value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value)}
-                    className="w-full bg-[#14110f] border border-[#3d342f] rounded-xl px-3 py-2 text-xs text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]"
-                  />
+                <div className="flex items-end">
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSelectedBankFilter('all');
+                      setStatusFilter('all');
+                      setTypeFilter('all');
+                    }}
+                    className="px-3 py-1.5 text-xs text-[#73655c] hover:text-[#1a1614] underline cursor-pointer"
+                  >
+                    Limpar Filtros
+                  </button>
                 </div>
               </div>
+            )}
 
+            {/* Content: Empty State (Image 1) OR Populated Table */}
+            {finalFilteredTransactions.length === 0 ? (
+              <div className="py-16 text-center space-y-2">
+                <div className="text-4xl font-light text-[#bfb3a7] select-none">$</div>
+                <p className="text-xs text-[#73655c]">
+                  Nenhum lançamento neste período.
+                </p>
+                <button
+                  onClick={() => onOpenNewTxModal?.('income')}
+                  className="text-xs text-[#9c8e85] hover:text-[#1a1614] underline cursor-pointer transition-colors block mx-auto"
+                >
+                  Adicionar primeiro lançamento
+                </button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto pt-2">
+                <table className="w-full text-left text-xs text-[#1a1614] border-collapse">
+                  <thead>
+                    <tr className="border-b border-[#eae4dc] text-[11px] font-bold text-[#73655c] uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Status</th>
+                      <th className="py-2.5 px-3">Descrição</th>
+                      <th className="py-2.5 px-3">Categoria</th>
+                      <th className="py-2.5 px-3">Origem / Vínculo</th>
+                      <th className="py-2.5 px-3">Vencimento</th>
+                      <th className="py-2.5 px-3">Conta</th>
+                      <th className="py-2.5 px-3 text-right">Valor</th>
+                      <th className="py-2.5 px-3 text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#f2ede6]">
+                    {finalFilteredTransactions.map((tx) => {
+                      const bank = bankAccounts.find((a) => a.id === tx.bankAccountId);
+
+                      return (
+                        <tr key={tx.id} className="hover:bg-[#fbf9f6] transition-colors">
+                          <td className="py-3 px-3">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                tx.status === 'completed'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : tx.status === 'overdue'
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  : tx.status === 'lost'
+                                  ? 'bg-gray-100 text-gray-700 border border-gray-200'
+                                  : 'bg-blue-50 text-blue-700 border border-blue-200'
+                              }`}
+                            >
+                              {tx.status === 'completed'
+                                ? 'Confirmado'
+                                : tx.status === 'overdue'
+                                ? 'Atrasado'
+                                : tx.status === 'lost'
+                                ? 'Perdido'
+                                : 'Previsto'}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-3">
+                            <span className="font-semibold block text-[#1a1614]">
+                              {tx.description}
+                            </span>
+                            {tx.structure && (
+                              <span className="text-[10px] text-[#9c8e85] capitalize">
+                                {tx.structure === 'avulso'
+                                  ? 'Lançamento Avulso'
+                                  : tx.structure === 'contrato'
+                                  ? 'Contrato'
+                                  : 'Recorrente'}
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-3 text-[#574d46]">
+                            {tx.category || (tx.type === 'income' ? 'Receita' : 'Despesa')}
+                          </td>
+
+                          <td className="py-3 px-3 text-[#574d46]">
+                            {tx.projectName ? (
+                              <span className="flex items-center gap-1 text-[#8c6b48] font-medium">
+                                <Building2 className="w-3 h-3" />
+                                {tx.projectName}
+                              </span>
+                            ) : tx.clientName ? (
+                              <span className="flex items-center gap-1 text-[#574d46]">
+                                <User className="w-3 h-3" />
+                                {tx.clientName}
+                              </span>
+                            ) : (
+                              <span className="text-[#9c8e85] capitalize">{tx.origin || 'Avulso'}</span>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-3 text-[#73655c]">
+                            {formatDate(tx.dueDate || tx.date)}
+                          </td>
+
+                          <td className="py-3 px-3 text-[#73655c]">
+                            {bank?.name || 'Caixa Geral'}
+                          </td>
+
+                          <td className="py-3 px-3 text-right font-bold">
+                            <span
+                              className={
+                                tx.type === 'income' ? 'text-emerald-700' : 'text-rose-600'
+                              }
+                            >
+                              {tx.type === 'income' ? '+' : '-'}
+                              {formatCurrency(tx.amount)}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {tx.status !== 'completed' && (
+                                <button
+                                  onClick={() => updateTransaction(tx.id, { status: 'completed' })}
+                                  className="px-2 py-0.5 rounded text-[10px] font-semibold border border-emerald-500/30 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors cursor-pointer"
+                                  title="Marcar como Confirmado"
+                                >
+                                  Confirmar
+                                </button>
+                              )}
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Excluir o lançamento "${tx.description}"?`)) {
+                                    deleteTransaction(tx.id);
+                                  }
+                                }}
+                                className="p-1 rounded text-[#9c8e85] hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                title="Excluir"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ================= VIEW 2: PROJETOS ================= */}
+      {activeTab === 'projetos' && (
+        <div className="space-y-6">
+          <div className="p-6 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs">
+            <h3 className="text-base font-bold text-[#1a1614] mb-1">
+              Desempenho Financeiro por Projeto
+            </h3>
+            <p className="text-xs text-[#73655c] mb-6">
+              Acompanhamento de receitas contratadas, pagamentos recebidos, custos diretos e margem de lucro por obra/projeto.
+            </p>
+
+            {architectureProjects.length === 0 ? (
+              <div className="py-12 text-center text-[#9c8e85] text-xs">
+                Nenhum projeto cadastrado no sistema.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {architectureProjects.map((proj) => {
+                  const projTxs = transactions.filter((t) => t.projectId === proj.id);
+                  const projIncome = projTxs
+                    .filter((t) => t.type === 'income' && t.status === 'completed')
+                    .reduce((sum, t) => sum + t.amount, 0);
+                  const projExpenses = projTxs
+                    .filter((t) => t.type === 'expense' && t.status === 'completed')
+                    .reduce((sum, t) => sum + t.amount, 0);
+                  const projMargin = projIncome - projExpenses;
+                  const marginPct = projIncome > 0 ? Math.round((projMargin / projIncome) * 100) : 0;
+
+                  return (
+                    <div
+                      key={proj.id}
+                      className="p-5 rounded-2xl border border-[#eae4dc] bg-white shadow-2xs space-y-4 hover:border-[#c58a4b] transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="text-sm font-bold text-[#1a1614]">{proj.name}</h4>
+                          <span className="text-xs text-[#73655c]">
+                            {proj.clientName || 'Cliente não associado'}
+                          </span>
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#f5efe8] text-[#8c6b48]">
+                          {proj.status || 'Em andamento'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#f2ede6] text-xs">
+                        <div>
+                          <span className="text-[10px] text-[#9c8e85] block">Receita Entregue</span>
+                          <span className="font-bold text-emerald-700">
+                            {formatCurrency(projIncome)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-[#9c8e85] block">Custos Diretos</span>
+                          <span className="font-bold text-rose-600">
+                            {formatCurrency(projExpenses)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-[#9c8e85] block">Margem Líquida</span>
+                          <span className="font-bold text-[#1a1614]">
+                            {marginPct}% ({formatCurrency(projMargin)})
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ================= VIEW 3: LANÇAMENTOS ================= */}
+      {activeTab === 'lancamentos' && (
+        <div className="space-y-6">
+          <div className="p-6 rounded-2xl bg-white border border-[#eae4dc] shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider font-bold text-[#a89c93] mb-1.5">Cor Temática do Banco</label>
-                <div className="flex flex-wrap gap-2">
-                  {['#820ad1', '#f50d41', '#e57706', '#009aeb', '#c58a4b', '#10b981', '#64748b'].map((hex) => (
-                    <button
-                      key={hex}
-                      type="button"
-                      onClick={() => setColor(hex)}
-                      className={`w-6 h-6 rounded-full border-2 transition-all cursor-pointer ${color === hex ? 'border-[#fcf8f5] scale-110' : 'border-transparent'}`}
-                      style={{ backgroundColor: hex }}
-                    />
-                  ))}
-                </div>
+                <h3 className="text-base font-bold text-[#1a1614]">Livro Caixa Completo</h3>
+                <p className="text-xs text-[#73655c]">
+                  Histórico detalhado de todas as transações, parcelas e conciliações.
+                </p>
               </div>
 
-              <div className="flex items-center gap-2 pt-3 border-t border-[#3d342f]/40">
+              <div className="flex items-center gap-2">
                 <button
-                  type="button"
-                  onClick={() => setIsAddAccountOpen(false)}
-                  className="flex-1 py-2 text-xs font-semibold rounded-xl bg-[#241e1b] hover:bg-[#2e2622] text-[#fcf8f5] border border-[#3d342f] transition-colors cursor-pointer"
+                  onClick={() => exportTransactionsCSV()}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#dfd7cc] bg-white text-xs font-semibold text-[#574d46] hover:bg-[#f8f5f1] transition-all cursor-pointer shadow-2xs"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2 text-xs font-bold rounded-xl text-black transition-colors hover:brightness-110 cursor-pointer"
-                  style={{ backgroundColor: 'var(--theme-primary)' }}
-                >
-                  Salvar Conta
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Exportar CSV</span>
                 </button>
               </div>
-            </form>
+            </div>
+
+            {/* List with full search and filters */}
+            <div className="pt-2">
+              <input
+                type="text"
+                placeholder="Pesquisar em todo o histórico..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl border border-[#dfd7cc] bg-white text-xs text-[#1a1614] focus:outline-none focus:border-[#c58a4b] mb-4"
+              />
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-[#1a1614] border-collapse">
+                  <thead>
+                    <tr className="border-b border-[#eae4dc] text-[11px] font-bold text-[#73655c] uppercase">
+                      <th className="py-2.5 px-3">Data</th>
+                      <th className="py-2.5 px-3">Descrição</th>
+                      <th className="py-2.5 px-3">Tipo</th>
+                      <th className="py-2.5 px-3">Categoria</th>
+                      <th className="py-2.5 px-3">Status</th>
+                      <th className="py-2.5 px-3 text-right">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#f2ede6]">
+                    {transactions
+                      .filter((t) => {
+                        if (!searchTerm.trim()) return true;
+                        const s = searchTerm.toLowerCase();
+                        return (
+                          t.description.toLowerCase().includes(s) ||
+                          t.category?.toLowerCase().includes(s) ||
+                          t.clientName?.toLowerCase().includes(s)
+                        );
+                      })
+                      .map((tx) => (
+                        <tr key={tx.id} className="hover:bg-[#fbf9f6]">
+                          <td className="py-2.5 px-3 text-[#73655c]">
+                            {formatDate(tx.dueDate || tx.date)}
+                          </td>
+                          <td className="py-2.5 px-3 font-medium text-[#1a1614]">
+                            {tx.description}
+                          </td>
+                          <td className="py-2.5 px-3 capitalize text-[#73655c]">
+                            {tx.type === 'income' ? 'Receita' : 'Despesa'}
+                          </td>
+                          <td className="py-2.5 px-3 text-[#73655c]">
+                            {tx.category || '-'}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                tx.status === 'completed'
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : 'bg-blue-50 text-blue-700'
+                              }`}
+                            >
+                              {tx.status === 'completed' ? 'Confirmado' : 'Previsto'}
+                            </span>
+                          </td>
+                          <td
+                            className={`py-2.5 px-3 text-right font-bold ${
+                              tx.type === 'income' ? 'text-emerald-700' : 'text-rose-600'
+                            }`}
+                          >
+                            {tx.type === 'income' ? '+' : '-'}
+                            {formatCurrency(tx.amount)}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= DRAWER: CONTAS BANCÁRIAS ================= */}
+      {isBankDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-lg rounded-2xl bg-white text-[#1a1614] shadow-2xl border border-[#e8e2d9] p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#eae4dc] pb-3">
+              <h3 className="text-base font-bold text-[#1a1614] flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-[#c58a4b]" />
+                Contas Bancárias e Saldos
+              </h3>
+              <button
+                onClick={() => setIsBankDrawerOpen(false)}
+                className="p-1 rounded-lg text-[#73655c] hover:text-[#1a1614] hover:bg-[#f5f1eb] cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {bankAccounts.map((acc) => (
+                <div
+                  key={acc.id}
+                  className="p-4 rounded-xl border border-[#eae4dc] flex items-center justify-between gap-3 bg-[#fdfcfb]"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm"
+                      style={{ backgroundColor: acc.color || '#c58a4b' }}
+                    >
+                      {acc.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-[#1a1614]">{acc.name}</h4>
+                      <span className="text-[10px] text-[#73655c] capitalize">
+                        {acc.type === 'physical_cash' ? 'Caixa Físico' : 'Conta Corrente'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-xs text-[#9c8e85] block">Saldo Atual</span>
+                    <span className="text-sm font-bold font-serif text-[#1a1614]">
+                      {formatCurrency(acc.balance)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 flex items-center justify-between">
+              <button
+                onClick={onOpenTransferModal}
+                className="px-4 py-2 rounded-xl border border-[#dfd7cc] bg-white text-xs font-semibold text-[#574d46] hover:bg-[#f8f5f1] transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <ArrowRightLeft className="w-3.5 h-3.5" />
+                <span>Nova Transferência</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const name = prompt('Nome do Banco/Conta (ex: Nubank PJ, Itaú):');
+                  if (!name) return;
+                  const balanceStr = prompt('Saldo inicial (R$):', '0');
+                  const bal = parseFloat((balanceStr || '0').replace(',', '.')) || 0;
+                  addBankAccount({
+                    name,
+                    balance: bal,
+                    type: 'bank',
+                    color: '#c58a4b',
+                    iconName: 'Building2',
+                  });
+                }}
+                className="px-4 py-2 rounded-xl bg-[#c58a4b] text-white text-xs font-bold hover:bg-[#b0783d] transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Adicionar Banco</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
