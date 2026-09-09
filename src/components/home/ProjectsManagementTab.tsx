@@ -3,6 +3,7 @@ import {
   Briefcase,
   Building2,
   Calendar,
+  Camera,
   CheckCircle2,
   Clock,
   DollarSign,
@@ -360,7 +361,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
               >
                 {/* Card Top: Title, status, actions */}
                 <div className="flex items-start justify-between gap-4">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--theme-primary)] px-2 py-0.5 rounded-full bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)]">
                         {p.category.toUpperCase().replace('_', ' ')}
@@ -371,37 +372,59 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                         </span>
                       )}
                     </div>
-                    <h3 className="text-base font-serif font-bold text-[#fcf8f5] group-hover:text-[var(--theme-primary)] transition-colors mt-1.5">
+                    <h3 className="text-base font-serif font-bold text-[#fcf8f5] group-hover:text-[var(--theme-primary)] transition-colors mt-1.5 truncate">
                       {p.title}
                     </h3>
                     <div className="flex items-center gap-1 text-xs text-[#a89c93] mt-1">
-                      <User className="w-3.5 h-3.5" />
-                      <span>{p.clientName}</span>
+                      <User className="w-3.5 h-3.5 text-[#d49454]" />
+                      <span className="truncate">{p.clientName}</span>
                       {p.location && (
                         <>
                           <span className="mx-1">•</span>
-                          <MapPin className="w-3 h-3 text-red-400" />
-                          <span>{p.location}</span>
+                          <MapPin className="w-3 h-3 text-red-400 shrink-0" />
+                          <span className="truncate">{p.location}</span>
                         </>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
-                    <button
-                      onClick={(e) => handleOpenEditProject(p, e)}
-                      className="p-1.5 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#241e1b] border border-[#3d342f] transition-colors cursor-pointer"
-                      title="Editar dados"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => setSelectedProjectForDetail(p)}
-                      className="p-1.5 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#241e1b] border border-[#3d342f] transition-colors cursor-pointer"
-                      title="Visualizar Detalhes"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </button>
+                  <div className="flex items-center gap-2.5 shrink-0" onClick={e => e.stopPropagation()}>
+                    {/* Cover photo thumbnail */}
+                    {p.coverImage ? (
+                      <div className="w-16 h-16 rounded-xl overflow-hidden border border-[#3d342f] shadow-sm bg-[#12100e]">
+                        <img
+                          src={p.coverImage}
+                          alt={p.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => handleOpenEditProject(p, e)}
+                        className="w-16 h-16 rounded-xl border border-dashed border-[#3d342f] hover:border-[var(--theme-primary)] flex flex-col items-center justify-center text-[#a89c93] hover:text-[#fcf8f5] transition-colors bg-[#14110f]/40 group/img cursor-pointer"
+                        title="Adicionar foto do projeto"
+                      >
+                        <Camera className="w-4 h-4 text-[#a89c93] group-hover/img:text-[var(--theme-primary)]" />
+                        <span className="text-[9px] mt-0.5 font-medium">Foto</span>
+                      </button>
+                    )}
+
+                    <div className="flex flex-col gap-1.5">
+                      <button
+                        onClick={(e) => handleOpenEditProject(p, e)}
+                        className="p-1.5 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#241e1b] border border-[#3d342f] transition-colors cursor-pointer"
+                        title="Editar dados"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setSelectedProjectForDetail(p)}
+                        className="p-1.5 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#241e1b] border border-[#3d342f] transition-colors cursor-pointer"
+                        title="Visualizar Detalhes"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 

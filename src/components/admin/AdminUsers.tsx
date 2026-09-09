@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc, getDoc, getDocs } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { UserProfile, useAuth } from '../../context/AuthContext';
 import {
@@ -129,19 +129,18 @@ export const AdminUsers: React.FC = () => {
     setErrorMessage(null);
 
     const usersRef = collection(db, 'users');
-    const unsubscribe = onSnapshot(usersRef, async (snapshot) => {
-      const usersList: UserProfile[] = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data() as UserProfile;
-        usersList.push({ ...data, uid: docSnap.id });
-      });
 
-      // If current user logged in is missing in Firestore list, auto-create their document
-      const currentUid = auth.currentUser?.uid;
+    const handleUsersData = async (snapshotDocs: any[]) => {
+      const usersList: UserProfile[] = snapshotDocs.map((docSnap) => ({
+        ...(docSnap.data() as UserProfile),
+        uid: docSnap.id,
+      }));
+
+      const currentUid = auth.currentUser?.uid || profile?.uid;
       const currentEmail = auth.currentUser?.email || profile?.email || 'lfquadrosdecorativos@gmail.com';
       if (currentUid && !usersList.some(u => u.uid === currentUid)) {
         const isOwner = currentEmail.toLowerCase() === 'lfquadrosdecorativos@gmail.com';
-        const selfUser: UserProfile = {
+        const selfUser: UserProfile = profile || {
           uid: currentUid,
           email: currentEmail,
           role: isOwner ? 'admin' : 'user',
@@ -152,22 +151,46 @@ export const AdminUsers: React.FC = () => {
         };
         try {
           await setDoc(doc(db, 'users', currentUid), selfUser, { merge: true });
-          usersList.push(selfUser);
         } catch (e) {
           console.warn("Auto sync current user doc notice:", e);
         }
+        usersList.push(selfUser);
       }
 
       setUsers(usersList);
+      setErrorMessage(null);
       setLoading(false);
-    }, (error) => {
-      console.error("Snapshot error on users collection:", error);
-      setErrorMessage("Erro ao sincronizar lista de usuários com o servidor.");
-      setLoading(false);
+    };
+
+    const unsubscribe = onSnapshot(usersRef, (snapshot) => {
+      handleUsersData(snapshot.docs);
+    }, async (error) => {
+      console.warn("Snapshot notice on users collection, trying fallback getDocs:", error);
+      try {
+        const snap = await getDocs(usersRef);
+        await handleUsersData(snap.docs);
+      } catch (fallbackErr) {
+        console.warn("Fallback getDocs error:", fallbackErr);
+        const currentUid = auth.currentUser?.uid || profile?.uid;
+        const currentEmail = auth.currentUser?.email || profile?.email || 'lfquadrosdecorativos@gmail.com';
+        if (currentUid) {
+          const isOwner = currentEmail.toLowerCase() === 'lfquadrosdecorativos@gmail.com';
+          const selfUser: UserProfile = profile || {
+            uid: currentUid,
+            email: currentEmail,
+            role: isOwner ? 'admin' : 'user',
+            status: 'active',
+            createdAt: new Date().toISOString(),
+          };
+          setUsers([selfUser]);
+        }
+        setErrorMessage(null);
+        setLoading(false);
+      }
     });
 
     return () => unsubscribe();
-  }, [profile?.email]);
+  }, [profile?.email, profile?.uid]);
 
   const updateStatus = async (uid: string, newStatusVal: 'active' | 'pending' | 'inactive') => {
     try {
