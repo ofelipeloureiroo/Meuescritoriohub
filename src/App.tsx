@@ -98,6 +98,46 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const renderCurrentTab = () => {
+    if (!isTabAllowed(activeTab)) {
+      return (
+        <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-8 text-center max-w-lg mx-auto my-12 space-y-4 shadow-xl">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto">
+            <Lock className="w-6 h-6" />
+          </div>
+          <h3 className="text-xl font-serif font-bold text-[#fcf8f5]">Acesso Restrito ao Módulo</h3>
+          <p className="text-xs text-[#a89c93] leading-relaxed">
+            Você não possui permissão concedida pelo administrador do escritório para acessar este módulo. Caso precise de acesso, solicite ao gestor para liberar a permissão no painel de equipe.
+          </p>
+          <button
+            onClick={() => setActiveTab('today')}
+            className="px-5 py-2.5 bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-hover)] text-black font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+          >
+            Ir para Meu Dia & Agenda
+          </button>
+        </div>
+      );
+    }
+
+    switch (activeTab) {
+      case 'today': return <TodayTab />;
+      case 'actions': return <ActionsTab />;
+      case 'leads': return <LeadsTab />;
+      case 'dashboard': return <BusinessDashboardTab />;
+      case 'home': return <HomeProjectsTab onNavigateTab={setActiveTab} onOpenNewTxModal={handleOpenNewTx} />;
+      case 'projects': return <ProjectsManagementTab onNavigateTab={setActiveTab} />;
+      case 'suppliers': return <SuppliersTab />;
+      case 'team': return <TeamTab />;
+      case 'deadlines': return <DeadlinesAndInstallmentsTab />;
+      case 'freelance': return <FreelanceClientsTab />;
+      case 'banks': return <BanksAndCashTab onOpenTransferModal={() => setIsTransferModalOpen(true)} onOpenCashModal={() => setIsCashModalOpen(true)} onOpenNewTxModal={handleOpenNewTx} />;
+      case 'goals': return <SavingsGoalsTab />;
+      case 'budget': return <BudgetAndReportsTab />;
+      case 'settings': return <SettingsTab />;
+      default: return <TodayTab />;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[var(--bg-body)] text-[var(--text-main)] flex flex-col lg:flex-row selection:bg-[var(--theme-primary)]/30 selection:text-[#fcf8f5] font-sans antialiased">
       {/* Lateral Sidebar */}

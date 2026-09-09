@@ -31,11 +31,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == userId || 
-        isAdmin() || 
-        (resource != null && resource.data != null && resource.data.collaboratorUids != null && request.auth.uid in resource.data.collaboratorUids)
-      );
+      allow read: if isAuthenticated();
       
       allow create, update: if isAuthenticated() && (
         request.auth.uid == userId || 
