@@ -32,6 +32,7 @@ import { AmortizationModal } from './components/modals/AmortizationModal';
 import { TransferModal } from './components/modals/TransferModal';
 import { CashActionModal } from './components/modals/CashActionModal';
 import { SettingsModal } from './components/modals/SettingsModal';
+import { SupportChatWidget } from './components/support/SupportChatWidget';
 
 import { Building2, LogOut, Shield, Loader2, Lock } from 'lucide-react';
 import { signOut } from 'firebase/auth';
@@ -178,6 +179,7 @@ const AppContent: React.FC = () => {
       <TransferModal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} />
       <CashActionModal isOpen={isCashModalOpen} onClose={() => setIsCashModalOpen(false)} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SupportChatWidget />
     </div>
   );
 };
