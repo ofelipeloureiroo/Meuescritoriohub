@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FinanceProvider } from './context/FinanceContext';
@@ -42,7 +42,13 @@ import { SubscriptionGuard } from './components/auth/SubscriptionGuard';
 
 const AppContent: React.FC = () => {
   // Default to 'Meu Dia & Agenda'
-  const [activeTab, setActiveTab] = useState<string>('today');
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    return localStorage.getItem('office_active_tab') || 'today';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('office_active_tab', activeTab);
+  }, [activeTab]);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Modals state
