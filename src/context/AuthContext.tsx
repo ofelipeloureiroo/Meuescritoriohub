@@ -251,13 +251,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         joinedAt: new Date().toISOString(),
         status: 'joined',
         permissions: {
-          portfolio: true,
+          today: true,
+          actions: true,
+          leads: true,
           projects: true,
-          deadlines: true,
-          finance: true,
+          suppliers: true,
+          team: true,
           clients: true,
+          deadlines: true,
+          finance: false,
+          health: false,
           goals: true,
-          budget: true,
+          budget: false,
+          portfolio: true,
         }
       };
 
@@ -314,15 +320,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateCollaboratorPermissions = async (collaboratorUid: string, permissions: CollaboratorPermissions) => {
+  const updateCollaboratorPermissions = async (collaboratorUidOrEmail: string, permissions: CollaboratorPermissions) => {
     if (!user || !profile) return;
     try {
+      let found = false;
       const updatedCollaborators = (profile.collaborators || []).map(c => {
-        if (c.uid === collaboratorUid) {
-          return { ...c, permissions };
+        if (
+          (c.uid && c.uid === collaboratorUidOrEmail) ||
+          (c.email && c.email.toLowerCase() === collaboratorUidOrEmail.toLowerCase())
+        ) {
+          found = true;
+          return { ...c, permissions: { ...c.permissions, ...permissions } };
         }
         return c;
       });
+
+      if (!found) {
+        // If collaborator doc is not in list yet, create record
+        const newEntry: Collaborator = {
+          uid: collaboratorUidOrEmail.includes('@') ? '' : collaboratorUidOrEmail,
+          email: collaboratorUidOrEmail.includes('@') ? collaboratorUidOrEmail : '',
+          invitedAt: new Date().toISOString(),
+          status: 'joined',
+          permissions,
+        };
+        updatedCollaborators.push(newEntry);
+      }
 
       await updateProfile({ collaborators: updatedCollaborators });
     } catch (e) {

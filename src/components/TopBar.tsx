@@ -159,12 +159,12 @@ export const TopBar: React.FC<TopBarProps> = ({
                 onClick={() => setActiveTab?.(item.id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'bg-[#2c241f] text-[#c58a4b] border border-[#c58a4b]/40 shadow-xs'
+                    ? 'bg-[var(--theme-primary)]/15 text-[var(--theme-primary)] border border-[var(--theme-primary)]/40 shadow-xs'
                     : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#201a17] border border-transparent'
                 }`}
                 title={`Ir para ${item.label}`}
               >
-                <ItemIcon className={`w-3.5 h-3.5 ${isActive ? 'text-[#c58a4b]' : 'text-[#8c827a]'}`} />
+                <ItemIcon className={`w-3.5 h-3.5 ${isActive ? 'text-[var(--theme-primary)]' : 'text-[#8c827a]'}`} />
                 <span>{item.label}</span>
               </button>
             );
@@ -179,7 +179,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             className="flex items-center gap-2.5 p-1 sm:px-2.5 sm:py-1 rounded-xl hover:bg-[#201a17] border border-transparent hover:border-[#382f29] transition-all cursor-pointer text-left"
             title="Abrir Configurações do Perfil"
           >
-            <div className="w-8 h-8 rounded-full p-0.5 flex items-center justify-center overflow-hidden border border-[#c58a4b]/40 shadow-xs shrink-0 bg-[#12100e]">
+            <div className="w-8 h-8 rounded-full p-0.5 flex items-center justify-center overflow-hidden border border-[var(--theme-primary)]/40 shadow-xs shrink-0 bg-[#12100e]">
               {architectProfile?.photoUrl ? (
                 <img
                   src={architectProfile.photoUrl}
@@ -187,7 +187,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   className="w-full h-full object-cover rounded-full"
                 />
               ) : (
-                <div className="w-full h-full bg-[#201a17] rounded-full flex items-center justify-center font-serif font-bold text-xs text-[#c58a4b]">
+                <div className="w-full h-full bg-[#201a17] rounded-full flex items-center justify-center font-serif font-bold text-xs text-[var(--theme-primary)]">
                   {userInitials}
                 </div>
               )}
@@ -206,10 +206,10 @@ export const TopBar: React.FC<TopBarProps> = ({
           {/* Styled Date / Month Picker */}
           <div
             onClick={() => dateInputRef.current?.showPicker?.() || dateInputRef.current?.focus()}
-            className="relative flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#1c1815] hover:bg-[#241e1b] border border-[#3d342f] hover:border-[#c58a4b]/50 text-[#fcf8f5] text-xs font-medium transition-all shadow-xs cursor-pointer group"
+            className="relative flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#1c1815] hover:bg-[#241e1b] border border-[#3d342f] hover:border-[var(--theme-primary)]/50 text-[#fcf8f5] text-xs font-medium transition-all shadow-xs cursor-pointer group"
             title="Alterar Mês de Competência"
           >
-            <Calendar className="w-3.5 h-3.5 text-[#c58a4b] group-hover:scale-110 transition-transform shrink-0" />
+            <Calendar className="w-3.5 h-3.5 text-[var(--theme-primary)] group-hover:scale-110 transition-transform shrink-0" />
             <span className="text-xs text-[#fcf8f5] font-semibold whitespace-nowrap">
               {formatMonthDisplay(selectedMonth)}
             </span>
@@ -247,12 +247,12 @@ export const TopBar: React.FC<TopBarProps> = ({
               onClick={() => setActiveTab?.(item.id)}
               className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[11px] font-semibold transition-all cursor-pointer truncate ${
                 isActive
-                  ? 'bg-[#2c241f] text-[#c58a4b] border border-[#c58a4b]/40 shadow-xs'
+                  ? 'bg-[var(--theme-primary)]/15 text-[var(--theme-primary)] border border-[var(--theme-primary)]/40 shadow-xs'
                   : 'bg-[#1c1815] text-[#a89c93] border border-[#2d2520] hover:text-[#fcf8f5]'
               }`}
               title={item.label}
             >
-              <ItemIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#c58a4b]' : 'text-[#8c827a]'}`} />
+              <ItemIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[var(--theme-primary)]' : 'text-[#8c827a]'}`} />
               <span className="truncate">
                 {item.id === 'today' ? 'Meu Dia' : item.id === 'actions' ? 'Ações' : item.id === 'projects' ? 'Projetos' : 'Leads'}
               </span>

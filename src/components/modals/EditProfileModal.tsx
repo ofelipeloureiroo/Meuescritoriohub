@@ -17,8 +17,8 @@ import {
   X,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
-import { ArchitectProfile, NicheType, ThemeColorId } from '../../types';
-import { NICHES, THEMES } from '../../utils/theme';
+import { ArchitectProfile, BgThemeId, NicheType, ThemeColorId } from '../../types';
+import { BG_THEMES, NICHES, THEMES } from '../../utils/theme';
 import { cleanInstagramHandle, buildInstagramUrl, formatFollowersCount } from '../../utils/instagram';
 import { compressImage } from '../../utils/imageCompressor';
 
@@ -61,7 +61,7 @@ const PRESET_AVATARS = [
 ];
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) => {
-  const { architectProfile, updateArchitectProfile, updateProfilePhoto, changeTheme, changeNiche } = useFinance();
+  const { architectProfile, updateArchitectProfile, updateProfilePhoto, changeTheme, changeBgTheme, changeNiche } = useFinance();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<'theme_niche' | 'photo' | 'info'>('theme_niche');
@@ -154,6 +154,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     changeTheme(themeId);
   };
 
+  const handleSelectBgTheme = (bgThemeId: BgThemeId) => {
+    setFormData((prev) => ({
+      ...prev,
+      bgTheme: bgThemeId,
+    }));
+    changeBgTheme(bgThemeId);
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const finalHandle = cleanInstagramHandle(formData.instagramHandle);
@@ -171,6 +179,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     }
     if (formData.themeColor) {
       changeTheme(formData.themeColor);
+    }
+    if (formData.bgTheme) {
+      changeBgTheme(formData.bgTheme);
     }
     if (formData.niche && formData.niche !== architectProfile.niche) {
       changeNiche(formData.niche);
@@ -418,6 +429,47 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                       </button>
                     );
                   })}
+                </div>
+
+                {/* Background Theme Selector */}
+                <div className="pt-4 border-t border-[#342c27]/60">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-[#fcf8f5]">Aparência & Cor do Fundo</h4>
+                      <p className="text-xs text-[#a89c93]">
+                        Escolha a tonalidade de fundo do site (Modo Escuro Warm, OLED, Grafite ou Claro Elegante)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {(Object.keys(BG_THEMES) as BgThemeId[]).map((bgKey) => {
+                      const bgTh = BG_THEMES[bgKey];
+                      const isSelected = (formData.bgTheme || 'dark_warm') === bgKey;
+
+                      return (
+                        <button
+                          key={bgKey}
+                          type="button"
+                          onClick={() => handleSelectBgTheme(bgKey)}
+                          className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
+                            isSelected
+                              ? 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)] ring-2 ring-[var(--theme-primary)]'
+                              : 'bg-[#201a17] border-[#342c27] hover:border-[#4d423b]'
+                          }`}
+                        >
+                          <span
+                            className="w-6 h-6 rounded-lg border border-white/20 shrink-0 shadow-inner"
+                            style={{ backgroundColor: bgTh.previewBg }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-[#fcf8f5] truncate">{bgTh.name}</p>
+                            <p className="text-[10px] text-[#a89c93] truncate">{bgTh.subtitle}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>

@@ -21,6 +21,7 @@ import {
 } from '../data/initialData';
 import {
   ArchitectProfile,
+  BgThemeId,
   ArchitectureProject,
   BankAccount,
   CategoryBudget,
@@ -52,6 +53,7 @@ interface FinanceContextType {
   updateArchitectProfile: (profile: Partial<ArchitectProfile>) => void;
   updateProfilePhoto: (photoUrl: string) => void;
   changeTheme: (theme: ThemeColorId) => void;
+  changeBgTheme: (bgTheme: BgThemeId) => void;
   changeNiche: (niche: NicheType) => void;
   loadNicheSampleProjects: (niche?: NicheType) => void;
   transactions: Transaction[];
@@ -613,10 +615,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }));
   };
 
-  // Apply CSS color theme whenever themeColor changes or component mounts
+  // Apply CSS color theme whenever themeColor or bgTheme changes
   useEffect(() => {
-    applyThemeToDocument(architectProfile.themeColor || 'gold');
-  }, [architectProfile.themeColor]);
+    applyThemeToDocument(
+      architectProfile.themeColor || 'gold',
+      architectProfile.bgTheme || 'dark_warm'
+    );
+  }, [architectProfile.themeColor, architectProfile.bgTheme]);
 
   // Sync to user-scoped localStorage
   useEffect(() => {
@@ -984,10 +989,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const changeTheme = (theme: ThemeColorId) => {
     recordLocalMutation();
-    applyThemeToDocument(theme);
+    applyThemeToDocument(theme, architectProfile.bgTheme || 'dark_warm');
     setArchitectProfile((prev) => ({
       ...prev,
       themeColor: theme,
+    }));
+  };
+
+  const changeBgTheme = (bgTheme: BgThemeId) => {
+    recordLocalMutation();
+    applyThemeToDocument(architectProfile.themeColor || 'gold', bgTheme);
+    setArchitectProfile((prev) => ({
+      ...prev,
+      bgTheme,
     }));
   };
 
@@ -2471,6 +2485,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateArchitectProfile,
         updateProfilePhoto,
         changeTheme,
+        changeBgTheme,
         changeNiche,
         loadNicheSampleProjects,
         transactions,

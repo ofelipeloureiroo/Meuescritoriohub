@@ -1,4 +1,4 @@
-import { NicheType, ThemeColorId } from '../types';
+import { BgThemeId, NicheType, ThemeColorId } from '../types';
 import { NICHE_FORM_CONFIGS, NicheFormConfig } from './nicheFormConfigs';
 
 export type { NicheFormConfig };
@@ -666,12 +666,129 @@ export const NICHES: Record<NicheType, NicheConfig> = Object.fromEntries(
   ])
 ) as Record<NicheType, NicheConfig>;
 
-export const applyThemeToDocument = (themeId: ThemeColorId = 'gold') => {
+export interface BgThemeConfig {
+  id: BgThemeId;
+  name: string;
+  subtitle: string;
+  isDark: boolean;
+  bgBody: string;
+  bgCard: string;
+  bgCardHover: string;
+  bgCardSecondary: string;
+  bgSidebar: string;
+  bgHeader: string;
+  bgInput: string;
+  borderColor: string;
+  borderSubtle: string;
+  textMain: string;
+  textMuted: string;
+  previewBg: string;
+}
+
+export const BG_THEMES: Record<BgThemeId, BgThemeConfig> = {
+  dark_warm: {
+    id: 'dark_warm',
+    name: 'Escuro Warm (Padrão)',
+    subtitle: 'Tom escuro aquecido e sofisticado',
+    isDark: true,
+    bgBody: '#12100e',
+    bgCard: '#1c1815',
+    bgCardHover: '#251e1a',
+    bgCardSecondary: '#14110f',
+    bgSidebar: '#171311',
+    bgHeader: '#14110f',
+    bgInput: '#0e0c0b',
+    borderColor: '#3d342f',
+    borderSubtle: '#2a231f',
+    textMain: '#fcf8f5',
+    textMuted: '#a89c93',
+    previewBg: '#12100e',
+  },
+  dark_oled: {
+    id: 'dark_oled',
+    name: 'Preto Absoluto (OLED)',
+    subtitle: 'Preto puro de alto contraste',
+    isDark: true,
+    bgBody: '#000000',
+    bgCard: '#0d0d0d',
+    bgCardHover: '#181818',
+    bgCardSecondary: '#080808',
+    bgSidebar: '#080808',
+    bgHeader: '#080808',
+    bgInput: '#050505',
+    borderColor: '#262626',
+    borderSubtle: '#1a1a1a',
+    textMain: '#ffffff',
+    textMuted: '#a1a1aa',
+    previewBg: '#000000',
+  },
+  dark_graphite: {
+    id: 'dark_graphite',
+    name: 'Grafite & Mineral',
+    subtitle: 'Tom ardósia moderno e corporativo',
+    isDark: true,
+    bgBody: '#18181b',
+    bgCard: '#27272a',
+    bgCardHover: '#3f3f46',
+    bgCardSecondary: '#202023',
+    bgSidebar: '#1f1f23',
+    bgHeader: '#1f1f23',
+    bgInput: '#121215',
+    borderColor: '#3f3f46',
+    borderSubtle: '#27272a',
+    textMain: '#f4f4f5',
+    textMuted: '#a1a1aa',
+    previewBg: '#18181b',
+  },
+  light_cream: {
+    id: 'light_cream',
+    name: 'Claro Elegante (Cream)',
+    subtitle: 'Fundo marfim suave e refinado',
+    isDark: false,
+    bgBody: '#f9f6f0',
+    bgCard: '#ffffff',
+    bgCardHover: '#f3efe6',
+    bgCardSecondary: '#f2eddf',
+    bgSidebar: '#f3eee4',
+    bgHeader: '#ffffff',
+    bgInput: '#ffffff',
+    borderColor: '#e5dec9',
+    borderSubtle: '#ebe4d3',
+    textMain: '#1c1815',
+    textMuted: '#6e6359',
+    previewBg: '#f9f6f0',
+  },
+  light_pure: {
+    id: 'light_pure',
+    name: 'Claro / Branco Puro',
+    subtitle: 'Fundo branco limpo e cristalino',
+    isDark: false,
+    bgBody: '#f4f5f7',
+    bgCard: '#ffffff',
+    bgCardHover: '#f1f3f5',
+    bgCardSecondary: '#e9ecef',
+    bgSidebar: '#ffffff',
+    bgHeader: '#ffffff',
+    bgInput: '#f8f9fa',
+    borderColor: '#dee2e6',
+    borderSubtle: '#e9ecef',
+    textMain: '#0f172a',
+    textMuted: '#64748b',
+    previewBg: '#f4f5f7',
+  },
+};
+
+export const applyThemeToDocument = (
+  themeId: ThemeColorId = 'gold',
+  bgThemeId: BgThemeId = 'dark_warm'
+) => {
   const theme = THEMES[themeId] || THEMES.gold;
+  const bgTheme = BG_THEMES[bgThemeId] || BG_THEMES.dark_warm;
   const root = document.documentElement;
   const body = document.body;
 
   const setProps = (el: HTMLElement) => {
+    // Primary Chromatic Palette
     el.style.setProperty('--theme-primary', theme.primary);
     el.style.setProperty('--theme-primary-hover', theme.primaryHover);
     el.style.setProperty('--theme-accent', theme.accent);
@@ -684,6 +801,19 @@ export const applyThemeToDocument = (themeId: ThemeColorId = 'gold') => {
     el.style.setProperty('--theme-badge-border', theme.badgeBorder);
     el.style.setProperty('--theme-button-bg', theme.buttonBg);
     el.style.setProperty('--theme-button-hover', theme.buttonHover);
+
+    // Background Theme Variables
+    el.style.setProperty('--bg-body', bgTheme.bgBody);
+    el.style.setProperty('--bg-card', bgTheme.bgCard);
+    el.style.setProperty('--bg-card-hover', bgTheme.bgCardHover);
+    el.style.setProperty('--bg-card-secondary', bgTheme.bgCardSecondary);
+    el.style.setProperty('--bg-sidebar', bgTheme.bgSidebar);
+    el.style.setProperty('--bg-header', bgTheme.bgHeader);
+    el.style.setProperty('--bg-input', bgTheme.bgInput);
+    el.style.setProperty('--border-color', bgTheme.borderColor);
+    el.style.setProperty('--border-subtle', bgTheme.borderSubtle);
+    el.style.setProperty('--text-main', bgTheme.textMain);
+    el.style.setProperty('--text-muted', bgTheme.textMuted);
   };
 
   if (root) setProps(root);

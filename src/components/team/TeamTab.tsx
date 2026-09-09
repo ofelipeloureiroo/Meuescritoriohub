@@ -21,6 +21,10 @@ import {
   MessageCircle,
   Eye,
   RefreshCw,
+  Key,
+  Building2,
+  Link as LinkIcon,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useFinance } from '../../context/FinanceContext';
@@ -93,17 +97,23 @@ const MODULE_OPTIONS = [
 ];
 
 export const TeamTab: React.FC = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, updateCollaboratorPermissions, joinWithInviteCode } = useAuth();
   const { architectProfile } = useFinance();
+
+  // Invite Code State
+  const [inputInviteCode, setInputInviteCode] = useState('');
+  const [isJoiningByCode, setIsJoiningByCode] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [joinMessage, setJoinMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const [members, setMembers] = useState<TeamMember[]>(() => {
     const defaultOwner: TeamMember = {
-      id: 'member_owner',
+      id: user?.uid || 'member_owner',
       name: architectProfile?.name || profile?.companyName || user?.displayName || 'LF Quadros & Decoração',
       email: user?.email || 'lfquadrosdecorativos@gmail.com',
       role: 'admin',
       roleTitle: 'Administrador / Gestor',
-      initials: 'LF',
+      initials: (user?.displayName || 'LF').substring(0, 2).toUpperCase(),
       color: '#b8a38b',
       isCurrentUser: true,
       status: 'active',
@@ -149,6 +159,71 @@ export const TeamTab: React.FC = () => {
     }
     return [defaultOwner];
   });
+
+  // Sync profile.collaborators into members state in real-time
+  useEffect(() => {
+    if (!profile?.collaborators || !Array.isArray(profile.collaborators)) return;
+
+    setMembers((prev) => {
+      let updated = [...prev];
+      let hasChanges = false;
+
+      profile.collaborators.forEach((collab) => {
+        const existingIdx = updated.findIndex(
+          (m) =>
+            m.id === collab.uid ||
+            (m.email && collab.email && m.email.toLowerCase() === collab.email.toLowerCase())
+        );
+
+        if (existingIdx >= 0) {
+          const existing = updated[existingIdx];
+          const mergedPerms = { ...existing.permissions, ...collab.permissions };
+          if (JSON.stringify(existing.permissions) !== JSON.stringify(mergedPerms)) {
+            updated[existingIdx] = {
+              ...existing,
+              permissions: mergedPerms,
+              accessibleModulesCount: Object.values(mergedPerms).filter(Boolean).length,
+            };
+            hasChanges = true;
+          }
+        } else {
+          // Add collaborator automatically when they joined by invite code
+          const newMember: TeamMember = {
+            id: collab.uid || `collab_${Date.now()}`,
+            name: collab.email ? collab.email.split('@')[0] : 'Membro Colaborador',
+            email: collab.email,
+            roleTitle: 'Membro Colaborador',
+            role: 'member',
+            initials: (collab.email || 'MC').substring(0, 2).toUpperCase(),
+            color: '#c58a4b',
+            isCurrentUser: collab.uid === user?.uid,
+            status: 'active',
+            accessibleModulesCount: Object.values(collab.permissions || {}).filter(Boolean).length,
+            permissions: {
+              today: true,
+              actions: true,
+              leads: true,
+              projects: true,
+              suppliers: true,
+              team: true,
+              clients: true,
+              deadlines: true,
+              finance: false,
+              health: false,
+              goals: true,
+              budget: false,
+              ...(collab.permissions || {}),
+            },
+            joinedAt: collab.joinedAt || new Date().toISOString().split('T')[0],
+          };
+          updated.push(newMember);
+          hasChanges = true;
+        }
+      });
+
+      return hasChanges ? updated : prev;
+    });
+  }, [profile?.collaborators, user?.uid]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
@@ -334,7 +409,29 @@ export const TeamTab: React.FC = () => {
     setFormPermissions({ ...member.permissions });
   };
 
-  const handleSaveMember = (e: React.FormEvent) => {
+  const handleJoinOfficeByCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputInviteCode.trim()) return;
+
+    setIsJoiningByCode(true);
+    setJoinMessage(null);
+
+    try {
+      const res = await joinWithInviteCode(inputInviteCode);
+      if (res.success) {
+        setJoinMessage({ text: res.message, type: 'success' });
+        setInputInviteCode('');
+      } else {
+        setJoinMessage({ text: res.message, type: 'error' });
+      }
+    } catch (err: any) {
+      setJoinMessage({ text: `Erro: ${err.message}`, type: 'error' });
+    } finally {
+      setIsJoiningByCode(false);
+    }
+  };
+
+  const handleSaveMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim() || !formEmail.trim()) return;
 
@@ -359,6 +456,11 @@ export const TeamTab: React.FC = () => {
         prev.map((m) => (m.id === editingMember.id ? updatedMember : m))
       );
       setEditingMember(null);
+
+      // Save permissions to Firestore so collaborator profile updates in real-time
+      if (updateCollaboratorPermissions) {
+        await updateCollaboratorPermissions(updatedMember.id || updatedMember.email, formPermissions);
+      }
     } else {
       const initials = formName
         .trim()
@@ -387,7 +489,11 @@ export const TeamTab: React.FC = () => {
       setMembers((prev) => [...prev, newMember]);
       setIsAddModalOpen(false);
 
-      // Automatically send welcome email with access link and gratitude message!
+      if (updateCollaboratorPermissions) {
+        await updateCollaboratorPermissions(newMember.id || newMember.email, formPermissions);
+      }
+
+      // Automatically send welcome email with access link
       handleSendInvite(newMember, true);
     }
   };
@@ -427,6 +533,89 @@ export const TeamTab: React.FC = () => {
               <span className="text-emerald-600 font-medium">Ativa</span>
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Invite Code & Office Connection Box */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Box 1: Owner Share Office Code */}
+        <div className="bg-white rounded-2xl border border-zinc-200/90 p-5 shadow-xs flex flex-col justify-between space-y-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Key className="w-4 h-4 text-[#8c7456]" />
+              <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">
+                Código do Escritório
+              </h3>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Forneça este código aos membros da sua equipe para eles entrarem no seu escritório.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="bg-zinc-100 border border-zinc-200 px-4 py-2 rounded-xl font-mono text-sm font-bold text-zinc-900 tracking-widest flex-1 text-center select-all">
+              {profile?.inviteCode || 'CARLOS'}
+            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(profile?.inviteCode || '');
+                setCopiedCode(true);
+                setTimeout(() => setCopiedCode(false), 2000);
+              }}
+              className="px-3.5 py-2 bg-[#8c7456] hover:bg-[#786247] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>{copiedCode ? 'Copiado!' : 'Copiar'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Box 2: Join Another Office By Code */}
+        <div className="bg-white rounded-2xl border border-zinc-200/90 p-5 shadow-xs flex flex-col justify-between space-y-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Building2 className="w-4 h-4 text-emerald-600" />
+              <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">
+                Entrar em Escritório por Código
+              </h3>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Caso você seja colaborador, cole o código do escritório abaixo para vincular sua conta.
+            </p>
+          </div>
+
+          <form onSubmit={handleJoinOfficeByCode} className="space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Ex: ABC123"
+                maxLength={8}
+                value={inputInviteCode}
+                onChange={(e) => setInputInviteCode(e.target.value.toUpperCase())}
+                className="bg-zinc-50 border border-zinc-200 px-3.5 py-2 rounded-xl text-xs text-zinc-800 font-mono tracking-widest uppercase focus:outline-none focus:border-[#8c7456] flex-1"
+              />
+              <button
+                type="submit"
+                disabled={isJoiningByCode || !inputInviteCode.trim()}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                {isJoiningByCode ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <LinkIcon className="w-3.5 h-3.5" />
+                )}
+                <span>Acessar</span>
+              </button>
+            </div>
+            {joinMessage && (
+              <p
+                className={`text-[11px] font-medium ${
+                  joinMessage.type === 'success' ? 'text-emerald-600' : 'text-red-500'
+                }`}
+              >
+                {joinMessage.text}
+              </p>
+            )}
+          </form>
         </div>
       </div>
 

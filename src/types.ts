@@ -314,6 +314,8 @@ export type ThemeColorId =
   | 'cyan'
   | 'slate';
 
+export type BgThemeId = 'dark_warm' | 'dark_oled' | 'dark_graphite' | 'light_cream' | 'light_pure';
+
 export interface ProjectTaskItem {
   id: string;
   name: string;
@@ -442,6 +444,7 @@ export interface ArchitectProfile {
   niche?: NicheType;
   nicheCustomName?: string;
   themeColor?: ThemeColorId;
+  bgTheme?: BgThemeId;
   customAccentColor?: string;
   logoUrl?: string;
   websiteUrl?: string;

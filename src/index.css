@@ -13,13 +13,26 @@
   --theme-badge-border: rgba(197, 138, 75, 0.35);
   --theme-button-bg: #c58a4b;
   --theme-button-hover: #d49454;
+
+  --bg-body: #12100e;
+  --bg-card: #1c1815;
+  --bg-card-hover: #251e1a;
+  --bg-card-secondary: #14110f;
+  --bg-sidebar: #171311;
+  --bg-header: #14110f;
+  --bg-input: #0e0c0b;
+  --border-color: #3d342f;
+  --border-subtle: #2a231f;
+  --text-main: #fcf8f5;
+  --text-muted: #a89c93;
 }
 
 @layer base {
   body {
-    background-color: #12100e;
-    color: #fcf8f5;
+    background-color: var(--bg-body, #12100e);
+    color: var(--text-main, #fcf8f5);
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   h1, h2, h3, .font-serif {

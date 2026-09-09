@@ -203,16 +203,16 @@ export const Header: React.FC<HeaderProps> = ({
                 title="Meu Escritório Online - Início"
               >
                 <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md bg-[#c58a4b] text-[#12100e] group-hover:bg-[#d49454] transition-colors flex-shrink-0"
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md bg-[var(--theme-primary)] text-black group-hover:bg-[var(--theme-primary-hover)] transition-colors flex-shrink-0"
                 >
-                  <Building2 className="w-5 h-5 text-[#12100e]" />
+                  <Building2 className="w-5 h-5 text-black" />
                 </div>
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1.5">
                     <span className="font-serif font-bold text-base sm:text-lg tracking-wider text-[#fcf8f5] uppercase leading-none">
                       MEU ESCRITÓRIO
                     </span>
-                    <span className="text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-[#c58a4b]/20 text-[#e6b37e] border border-[#c58a4b]/40">
+                    <span className="text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)]">
                       ONLINE
                     </span>
                   </div>
@@ -237,7 +237,7 @@ export const Header: React.FC<HeaderProps> = ({
                       className="w-full h-full object-cover rounded-full"
                     />
                   ) : (
-                    <div className="w-full h-full bg-[#1c1815] rounded-full flex items-center justify-center font-serif font-bold text-[11px] text-[#c58a4b]">
+                    <div className="w-full h-full bg-[#1c1815] rounded-full flex items-center justify-center font-serif font-bold text-[11px] text-[var(--theme-primary)]">
                       {((architectProfile?.name || profile?.companyName || user?.displayName || 'LF').slice(0, 2)).toUpperCase()}
                     </div>
                   )}
@@ -246,7 +246,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="text-xs font-semibold text-[#ded5cc]">
                     {architectProfile?.name || profile?.companyName || user?.displayName || 'LF Quadros & Decoração'}
                   </span>
-                  <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full bg-[#c58a4b]/15 text-[#e6b37e] border border-[#c58a4b]/30">
+                  <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)]">
                     Pro
                   </span>
                 </div>

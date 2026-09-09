@@ -45,15 +45,15 @@ export const FooterBar: React.FC = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Brand & Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-md border border-[#c58a4b]/40 bg-gradient-to-br from-[#2c221a] via-[#1c1815] to-[#12100e] text-[#c58a4b] shrink-0">
-              <Building2 className="w-4 h-4 text-[#c58a4b]" />
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-md border border-[var(--theme-primary)]/40 bg-gradient-to-br from-[#2c221a] via-[#1c1815] to-[#12100e] text-[var(--theme-primary)] shrink-0">
+              <Building2 className="w-4 h-4 text-[var(--theme-primary)]" />
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
                 <span className="font-serif font-bold text-sm tracking-wider text-[#fcf8f5] uppercase leading-none">
                   MEU ESCRITÓRIO
                 </span>
-                <span className="text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.2 rounded-md bg-[#c58a4b]/20 text-[#e6b37e] border border-[#c58a4b]/40">
+                <span className="text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.2 rounded-md bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)]">
                   ONLINE
                 </span>
               </div>
@@ -80,17 +80,17 @@ export const FooterBar: React.FC = () => {
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#1c1815] hover:bg-[#251e1a] border border-[#3d342f] hover:border-[#c58a4b]/60 text-[#ded5cc] hover:text-[#fcf8f5] text-xs font-semibold transition-all shadow-xs cursor-pointer"
+              className="group flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#1c1815] hover:bg-[#251e1a] border border-[#3d342f] hover:border-[var(--theme-primary)]/60 text-[#ded5cc] hover:text-[#fcf8f5] text-xs font-semibold transition-all shadow-xs cursor-pointer"
               title="Falar com o Suporte via WhatsApp"
             >
-              <div className="w-5 h-5 rounded-lg bg-[#c58a4b]/15 border border-[#c58a4b]/30 flex items-center justify-center text-[#c58a4b] group-hover:scale-110 transition-transform">
+              <div className="w-5 h-5 rounded-lg bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-[var(--theme-primary)] group-hover:scale-110 transition-transform">
                 <MessageCircle className="w-3 h-3" />
               </div>
               <div className="flex flex-col text-left leading-tight">
                 <span className="text-xs">Suporte WhatsApp</span>
                 <span className="text-[9px] text-[#a89c93] font-normal">(21) 99821-3069</span>
               </div>
-              <ExternalLink className="w-3 h-3 text-[#a89c93] opacity-60 group-hover:opacity-100 group-hover:text-[#c58a4b]" />
+              <ExternalLink className="w-3 h-3 text-[#a89c93] opacity-60 group-hover:opacity-100 group-hover:text-[var(--theme-primary)]" />
             </a>
 
             {/* Instagram Oficial */}
@@ -98,27 +98,27 @@ export const FooterBar: React.FC = () => {
               href={instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#1c1815] hover:bg-[#251e1a] border border-[#3d342f] hover:border-[#c58a4b]/60 text-[#ded5cc] hover:text-[#fcf8f5] text-xs font-semibold transition-all shadow-xs cursor-pointer"
+              className="group flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#1c1815] hover:bg-[#251e1a] border border-[#3d342f] hover:border-[var(--theme-primary)]/60 text-[#ded5cc] hover:text-[#fcf8f5] text-xs font-semibold transition-all shadow-xs cursor-pointer"
               title="Acompanhar no Instagram"
             >
-              <div className="w-5 h-5 rounded-lg bg-[#c58a4b]/15 border border-[#c58a4b]/30 flex items-center justify-center text-[#c58a4b] group-hover:scale-110 transition-transform">
+              <div className="w-5 h-5 rounded-lg bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-[var(--theme-primary)] group-hover:scale-110 transition-transform">
                 <Instagram className="w-3 h-3" />
               </div>
               <div className="flex flex-col text-left leading-tight">
                 <span className="text-xs">Instagram</span>
                 <span className="text-[9px] text-[#a89c93] font-normal">{instagramHandle}</span>
               </div>
-              <ExternalLink className="w-3 h-3 text-[#a89c93] opacity-60 group-hover:opacity-100 group-hover:text-[#c58a4b]" />
+              <ExternalLink className="w-3 h-3 text-[#a89c93] opacity-60 group-hover:opacity-100 group-hover:text-[var(--theme-primary)]" />
             </a>
 
             {/* Admin Panel Link (Only visible to the owner lfquadrosdecorativos@gmail.com) */}
             {isSuperAdmin && (
               <a
                 href="/admin"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1c1815] hover:bg-[#251e1a] border border-[#3d342f] hover:border-[#c58a4b]/40 text-[#a89c93] hover:text-[#fcf8f5] text-xs font-medium transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1c1815] hover:bg-[#251e1a] border border-[#3d342f] hover:border-[var(--theme-primary)]/40 text-[#a89c93] hover:text-[#fcf8f5] text-xs font-medium transition-colors cursor-pointer"
                 title="Acessar Painel Administrativo"
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-[#c58a4b]" />
+                <ShieldCheck className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
                 <span className="hidden sm:inline text-[11px]">Admin</span>
               </a>
             )}
@@ -126,10 +126,10 @@ export const FooterBar: React.FC = () => {
             {/* Quick Support Modal Button */}
             <button
               onClick={() => setShowSupportModal(true)}
-              className="p-2 rounded-xl bg-[#1c1815] hover:bg-[#251e1a] border border-[#3d342f] hover:border-[#c58a4b]/50 text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer"
+              className="p-2 rounded-xl bg-[#1c1815] hover:bg-[#251e1a] border border-[#3d342f] hover:border-[var(--theme-primary)]/50 text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer"
               title="Canais de Atendimento"
             >
-              <HelpCircle className="w-4 h-4 text-[#c58a4b]" />
+              <HelpCircle className="w-4 h-4 text-[var(--theme-primary)]" />
             </button>
           </div>
         </div>
@@ -142,7 +142,7 @@ export const FooterBar: React.FC = () => {
             {/* Header */}
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#c58a4b]/20 border border-[#c58a4b]/40 flex items-center justify-center text-[#c58a4b]">
+                <div className="w-10 h-10 rounded-2xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-[var(--theme-primary)]">
                   <Headphones className="w-5 h-5" />
                 </div>
                 <div>
@@ -169,16 +169,16 @@ export const FooterBar: React.FC = () => {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between p-3.5 rounded-2xl bg-[#14110f] hover:bg-[#201a17] border border-[#3d342f] hover:border-[#c58a4b]/60 transition-all group"
+                className="flex items-center justify-between p-3.5 rounded-2xl bg-[#14110f] hover:bg-[#201a17] border border-[#3d342f] hover:border-[var(--theme-primary)]/60 transition-all group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#c58a4b]/15 border border-[#c58a4b]/30 flex items-center justify-center text-[#c58a4b] group-hover:scale-105 transition-transform">
+                  <div className="w-9 h-9 rounded-xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-[var(--theme-primary)] group-hover:scale-105 transition-transform">
                     <MessageCircle className="w-4 h-4" />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-[#fcf8f5] flex items-center gap-1.5">
                       Suporte via WhatsApp
-                      <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-[#c58a4b]/20 text-[#e6b37e] border border-[#c58a4b]/30">
+                      <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)]">
                         (21) 99821-3069
                       </span>
                     </h4>
@@ -187,7 +187,7 @@ export const FooterBar: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <ExternalLink className="w-4 h-4 text-[#a89c93] opacity-70 group-hover:opacity-100 group-hover:text-[#c58a4b]" />
+                <ExternalLink className="w-4 h-4 text-[#a89c93] opacity-70 group-hover:opacity-100 group-hover:text-[var(--theme-primary)]" />
               </a>
 
               {/* Instagram Card */}
@@ -195,16 +195,16 @@ export const FooterBar: React.FC = () => {
                 href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between p-3.5 rounded-2xl bg-[#14110f] hover:bg-[#201a17] border border-[#3d342f] hover:border-[#c58a4b]/60 transition-all group"
+                className="flex items-center justify-between p-3.5 rounded-2xl bg-[#14110f] hover:bg-[#201a17] border border-[#3d342f] hover:border-[var(--theme-primary)]/60 transition-all group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#c58a4b]/15 border border-[#c58a4b]/30 flex items-center justify-center text-[#c58a4b] group-hover:scale-105 transition-transform">
+                  <div className="w-9 h-9 rounded-xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-[var(--theme-primary)] group-hover:scale-105 transition-transform">
                     <Instagram className="w-4 h-4" />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-[#fcf8f5] flex items-center gap-1.5">
                       Instagram Oficial
-                      <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-[#c58a4b]/20 text-[#e6b37e] border border-[#c58a4b]/30">
+                      <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)]">
                         {instagramHandle}
                       </span>
                     </h4>
@@ -213,7 +213,7 @@ export const FooterBar: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <ExternalLink className="w-4 h-4 text-[#a89c93] opacity-70 group-hover:opacity-100 group-hover:text-[#c58a4b]" />
+                <ExternalLink className="w-4 h-4 text-[#a89c93] opacity-70 group-hover:opacity-100 group-hover:text-[var(--theme-primary)]" />
               </a>
             </div>
 

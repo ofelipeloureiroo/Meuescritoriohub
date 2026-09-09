@@ -7,11 +7,17 @@ service cloud.firestore {
     }
     
     function isOwnerEmail() {
-      return isAuthenticated() && request.auth.token.email == 'lfquadrosdecorativos@gmail.com';
+      return isAuthenticated() && 
+             request.auth.token.email != null && 
+             request.auth.token.email.lower() == 'lfquadrosdecorativos@gmail.com';
     }
 
     function isAdmin() {
-      return isOwnerEmail() || (isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      return isOwnerEmail() || (
+        isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
     }
 
     // Connection test doc
@@ -19,9 +25,9 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // Absolute power to the owner across all documents
+    // Absolute power to the owner/admin across all documents
     match /{document=**} {
-      allow read, write: if isOwnerEmail();
+      allow read, write: if isOwnerEmail() || isAdmin();
     }
 
     match /users/{userId} {
@@ -31,21 +37,12 @@ service cloud.firestore {
         (resource != null && resource.data != null && resource.data.collaboratorUids != null && request.auth.uid in resource.data.collaboratorUids)
       );
       
-      // Allow users to create their own profile
-      // Regular users are enforced to be 'user' and 'pending'
-      // The owner is allowed to be 'admin' and 'active'
-      allow create: if isAuthenticated() 
-                    && request.auth.uid == userId
-                    && (
-                      (request.resource.data.role == 'user' && request.resource.data.status == 'pending') ||
-                      (isOwnerEmail() && request.resource.data.role == 'admin' && request.resource.data.status == 'active')
-                    );
-                    
-      allow update: if isAuthenticated() && (
+      allow create, update: if isAuthenticated() && (
         request.auth.uid == userId || 
         isAdmin() ||
         (resource != null && resource.data != null && resource.data.collaboratorUids != null && request.auth.uid in resource.data.collaboratorUids)
       );
+      
       allow delete: if isAdmin();
 
       // Allow users and authorized collaborators to read and save workspace sections

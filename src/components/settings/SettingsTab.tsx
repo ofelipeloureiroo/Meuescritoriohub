@@ -43,8 +43,8 @@ import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
-import { NicheType, ThemeColorId, OfficeSettings, CollaboratorPermissions } from '../../types';
-import { NICHES, THEMES } from '../../utils/theme';
+import { NicheType, ThemeColorId, BgThemeId, OfficeSettings, CollaboratorPermissions } from '../../types';
+import { NICHES, THEMES, BG_THEMES } from '../../utils/theme';
 
 const PRESET_AVATARS = [
   {
@@ -70,6 +70,7 @@ export const SettingsTab: React.FC = () => {
     updateArchitectProfile,
     updateProfilePhoto,
     changeTheme,
+    changeBgTheme,
     changeNiche,
     exportDataJSON,
     importDataJSON,
@@ -175,6 +176,7 @@ export const SettingsTab: React.FC = () => {
   const [photoUrl, setPhotoUrl] = useState(architectProfile.photoUrl || '');
   const [selectedNiche, setSelectedNiche] = useState<NicheType>(architectProfile.niche || 'arquitetura');
   const [selectedTheme, setSelectedTheme] = useState<ThemeColorId>(architectProfile.themeColor || 'gold');
+  const [selectedBgTheme, setSelectedBgTheme] = useState<BgThemeId>(architectProfile.bgTheme || 'dark_warm');
 
   // Collaboration state
   const [inviteCodeInput, setInviteCodeInput] = useState('');
@@ -208,6 +210,7 @@ export const SettingsTab: React.FC = () => {
     setPhotoUrl(architectProfile.photoUrl || '');
     setSelectedNiche(architectProfile.niche || 'arquitetura');
     setSelectedTheme(architectProfile.themeColor || 'gold');
+    setSelectedBgTheme(architectProfile.bgTheme || 'dark_warm');
   }, [architectProfile]);
 
   // Actions Matrix update helper
@@ -390,9 +393,10 @@ export const SettingsTab: React.FC = () => {
 
   // Profile Action Saves
   const handleSaveProfile = () => {
-    updateArchitectProfile({ name, title: titleText, niche: selectedNiche, themeColor: selectedTheme, photoUrl });
+    updateArchitectProfile({ name, title: titleText, niche: selectedNiche, themeColor: selectedTheme, bgTheme: selectedBgTheme, photoUrl });
     updateProfilePhoto(photoUrl);
     changeTheme(selectedTheme);
+    changeBgTheme(selectedBgTheme);
     changeNiche(selectedNiche);
     setResetStatus('Dados de perfil e estilo atualizados com sucesso!');
     setTimeout(() => setResetStatus(null), 3000);
@@ -682,36 +686,73 @@ export const SettingsTab: React.FC = () => {
                 </div>
 
                 {/* Color swatch selection */}
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-[#a89c93] mb-2">Paleta Cromática do Sistema</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {(Object.keys(THEMES) as ThemeColorId[]).map((tk) => {
-                      const th = THEMES[tk];
-                      const isSelected = selectedTheme === tk;
-                      return (
-                        <button
-                          key={tk}
-                          type="button"
-                          onClick={() => {
-                            setSelectedTheme(tk);
-                            changeTheme(tk);
-                          }}
-                          className={`flex items-center gap-2 p-2 rounded-xl border text-left transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-[#28221e] border-white/20 ring-1 ring-[var(--theme-primary)]'
-                              : 'bg-[#0e0c0b] border-[#3d342f] hover:border-[#52443c]'
-                          }`}
-                        >
-                          <span
-                            className="w-3.5 h-3.5 rounded-full border border-white/10 shrink-0"
-                            style={{ backgroundColor: th.primary }}
-                          />
-                          <span className="text-[11px] font-semibold text-[#fcf8f5] truncate">
-                            {th.name.split(' ')[0]}
-                          </span>
-                        </button>
-                      );
-                    })}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-[#a89c93] mb-2">Paleta Cromática do Painel (Destaques & Detalhes)</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {(Object.keys(THEMES) as ThemeColorId[]).map((tk) => {
+                        const th = THEMES[tk];
+                        const isSelected = selectedTheme === tk;
+                        return (
+                          <button
+                            key={tk}
+                            type="button"
+                            onClick={() => {
+                              setSelectedTheme(tk);
+                              changeTheme(tk);
+                            }}
+                            className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#28221e] border-white/30 ring-2 ring-[var(--theme-primary)]'
+                                : 'bg-[#0e0c0b] border-[#3d342f] hover:border-[#52443c]'
+                            }`}
+                          >
+                            <span
+                              className="w-4 h-4 rounded-full border border-white/20 shrink-0 shadow-xs"
+                              style={{ backgroundColor: th.primary }}
+                            />
+                            <span className="text-[11px] font-semibold text-[#fcf8f5] truncate">
+                              {th.name.split(' ')[0]}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Background Theme Selection */}
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-[#a89c93] mb-2">Aparência & Cor do Fundo do Site</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {(Object.keys(BG_THEMES) as BgThemeId[]).map((bgKey) => {
+                        const bgTh = BG_THEMES[bgKey];
+                        const isSelected = selectedBgTheme === bgKey;
+                        return (
+                          <button
+                            key={bgKey}
+                            type="button"
+                            onClick={() => {
+                              setSelectedBgTheme(bgKey);
+                              changeBgTheme(bgKey);
+                            }}
+                            className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)] ring-2 ring-[var(--theme-primary)]'
+                                : 'bg-[#0e0c0b] border-[#3d342f] hover:border-[#52443c]'
+                            }`}
+                          >
+                            <span
+                              className="w-5 h-5 rounded-md border border-white/20 shrink-0 shadow-inner"
+                              style={{ backgroundColor: bgTh.previewBg }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[11px] font-bold text-[#fcf8f5] truncate">{bgTh.name}</p>
+                              <p className="text-[9px] text-[#a89c93] truncate">{bgTh.subtitle}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 

@@ -33,7 +33,7 @@ import { TransferModal } from './components/modals/TransferModal';
 import { CashActionModal } from './components/modals/CashActionModal';
 import { SettingsModal } from './components/modals/SettingsModal';
 
-import { Building2, LogOut, Shield, Loader2 } from 'lucide-react';
+import { Building2, LogOut, Shield, Loader2, Lock } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from './lib/firebase';
 
@@ -71,8 +71,35 @@ const AppContent: React.FC = () => {
     setIsNewTxModalOpen(true);
   };
 
+  const { user, profile } = useAuth();
+  const isCollaborator = !!profile?.joinedOwnerUid;
+  const collaboratorObj = isCollaborator
+    ? profile?.collaborators?.find((c) => c.uid === user?.uid)
+    : null;
+  const permissions = collaboratorObj?.permissions;
+
+  const isTabAllowed = (tab: string): boolean => {
+    if (!isCollaborator || !permissions) return true;
+    switch (tab) {
+      case 'today': return permissions.today !== false;
+      case 'actions': return permissions.actions !== false;
+      case 'leads': return permissions.leads !== false;
+      case 'home':
+      case 'projects': return permissions.projects !== false;
+      case 'suppliers': return permissions.suppliers !== false;
+      case 'team': return permissions.team !== false;
+      case 'freelance': return permissions.clients !== false;
+      case 'deadlines': return permissions.deadlines !== false;
+      case 'banks': return permissions.finance !== false;
+      case 'dashboard': return permissions.health !== false && permissions.finance !== false;
+      case 'goals': return permissions.goals !== false;
+      case 'budget': return permissions.budget !== false;
+      default: return true;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#12100e] text-[#fcf8f5] flex flex-col lg:flex-row selection:bg-[#c58a4b]/30 selection:text-[#fcf8f5] font-sans antialiased">
+    <div className="min-h-screen bg-[var(--bg-body)] text-[var(--text-main)] flex flex-col lg:flex-row selection:bg-[var(--theme-primary)]/30 selection:text-[#fcf8f5] font-sans antialiased">
       {/* Lateral Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -94,35 +121,7 @@ const AppContent: React.FC = () => {
         />
 
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {activeTab === 'today' && <TodayTab />}
-          {activeTab === 'actions' && <ActionsTab />}
-          {activeTab === 'leads' && <LeadsTab />}
-          {activeTab === 'dashboard' && <BusinessDashboardTab />}
-          {activeTab === 'home' && (
-            <HomeProjectsTab
-              onNavigateTab={setActiveTab}
-              onOpenNewTxModal={handleOpenNewTx}
-            />
-          )}
-          {activeTab === 'projects' && (
-            <ProjectsManagementTab
-              onNavigateTab={setActiveTab}
-            />
-          )}
-          {activeTab === 'suppliers' && <SuppliersTab />}
-          {activeTab === 'team' && <TeamTab />}
-          {activeTab === 'deadlines' && <DeadlinesAndInstallmentsTab />}
-          {activeTab === 'freelance' && <FreelanceClientsTab />}
-          {activeTab === 'banks' && (
-            <BanksAndCashTab
-              onOpenTransferModal={() => setIsTransferModalOpen(true)}
-              onOpenCashModal={() => setIsCashModalOpen(true)}
-              onOpenNewTxModal={handleOpenNewTx}
-            />
-          )}
-          {activeTab === 'goals' && <SavingsGoalsTab />}
-          {activeTab === 'budget' && <BudgetAndReportsTab />}
-          {activeTab === 'settings' && <SettingsTab />}
+          {renderCurrentTab()}
         </main>
 
         <FooterBar />
@@ -150,11 +149,11 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-[#c58a4b] rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 text-[#12100e]" />
+              <div className="w-8 h-8 bg-[var(--theme-primary)] rounded-lg flex items-center justify-center">
+                <Shield className="w-5 h-5 text-black" />
               </div>
               <span className="font-serif font-bold text-lg text-[#fcf8f5] tracking-wide">
-                Admin | <span className="text-[#c58a4b]">Escritório Online</span>
+                Admin | <span className="text-[var(--theme-primary)]">Escritório Online</span>
               </span>
             </div>
             <div className="flex items-center gap-4">
@@ -183,8 +182,8 @@ const HomeOrLandingRoute: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#12100e] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#c58a4b] animate-spin" />
+      <div className="min-h-screen bg-[var(--bg-body)] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-[var(--theme-primary)] animate-spin" />
       </div>
     );
   }
