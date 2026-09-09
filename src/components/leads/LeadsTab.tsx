@@ -158,8 +158,8 @@ export const LeadsTab: React.FC = () => {
 
   const getStageLabel = (stageId?: string) => {
     if (!stageId) return 'Novo';
-    const found = officeSettings?.leadStages?.find(s => s.id === stageId);
-    if (found) return found.label;
+    const found = officeSettings?.leadStages?.find(s => s && s.id === stageId);
+    if (found?.label) return found.label;
     switch (stageId.toLowerCase()) {
       case 'novo': return 'Novo';
       case 'diagnostico': return 'Diagnóstico';
@@ -455,11 +455,11 @@ export const LeadsTab: React.FC = () => {
 
   // Stage columns definition
   const STAGES: Array<{ id: string; label: string; color?: string }> = useMemo(() => {
-    if (officeSettings?.leadStages && officeSettings.leadStages.length > 0) {
+    if (officeSettings?.leadStages && Array.isArray(officeSettings.leadStages) && officeSettings.leadStages.length > 0) {
       return officeSettings.leadStages.map(stg => ({
-        id: stg.id,
-        label: stg.label.toUpperCase(),
-        color: stg.color,
+        id: stg?.id || 'novo',
+        label: (stg?.label || stg?.id || 'Novo').toUpperCase(),
+        color: stg?.color,
       }));
     }
     return [
