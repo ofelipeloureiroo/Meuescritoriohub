@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 import { Loader2, CreditCard, Lock, Building2, CheckCircle2, PieChart, FolderKanban, Users, LogOut } from 'lucide-react';
 
 export const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -48,11 +50,7 @@ export const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const handleLogout = () => {
-    import('firebase/auth').then(({ signOut }) => {
-      import('../../lib/firebase').then(({ auth }) => {
-        signOut(auth);
-      });
-    });
+    signOut(auth).catch(console.error);
   };
 
   if (needsPayment) {

@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import Stripe from "stripe";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
@@ -565,16 +566,36 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    // Determine static dist path robustly across environments (Google, Hostinger, VPS, Docker)
+    const distPath = fs.existsSync(path.join(__dirname, 'index.html'))
+      ? __dirname
+      : (fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'))
+        ? path.join(process.cwd(), 'dist')
+        : path.resolve(__dirname, '..', 'dist'));
+
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      const indexPath = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(404).send("Aplicação não encontrada. Execute 'npm run build' para gerar os arquivos estáticos.");
+      }
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+  const rawPort = process.env.PORT || 3000;
+  if (typeof rawPort === 'string' && isNaN(Number(rawPort))) {
+    // Unix domain socket (used by Hostinger / Phusion Passenger)
+    app.listen(rawPort, () => {
+      console.log(`Server running on socket: ${rawPort}`);
+    });
+  } else {
+    const numericPort = Number(rawPort) || 3000;
+    app.listen(numericPort, "0.0.0.0", () => {
+      console.log(`Server running on port ${numericPort}`);
+    });
+  }
 }
 
 startServer();
