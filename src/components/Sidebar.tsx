@@ -267,8 +267,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="flex items-center gap-3 text-left group cursor-pointer hover:opacity-95 transition-opacity"
           title="Ir para Meu Dia & Agenda"
         >
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md border border-[#c58a4b]/40 bg-gradient-to-br from-[#2c221a] via-[#1c1815] to-[#12100e] text-[#c58a4b] shrink-0 group-hover:border-[#c58a4b] transition-colors">
-            <Building2 className="w-5 h-5 text-[#c58a4b]" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md bg-[#c58a4b] text-[#12100e] shrink-0 group-hover:bg-[#d49454] transition-colors">
+            <Building2 className="w-5 h-5 text-[#12100e]" />
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
