@@ -28,6 +28,7 @@ import { TodayTab } from './components/today/TodayTab';
 import { TeamTab } from './components/team/TeamTab';
 import { SuppliersTab } from './components/suppliers/SuppliersTab';
 import { SettingsTab } from './components/settings/SettingsTab';
+import { ClientPortalOfficeTab } from './components/portal/ClientPortalOfficeTab';
 import { NewTransactionModal } from './components/modals/NewTransactionModal';
 import { TransactionStructure } from './types';
 import { AmortizationModal } from './components/modals/AmortizationModal';
@@ -97,6 +98,7 @@ const AppContent: React.FC = () => {
       case 'projects': return permissions.projects !== false;
       case 'suppliers': return permissions.suppliers !== false;
       case 'team': return permissions.team !== false;
+      case 'portal_cliente':
       case 'freelance': return permissions.clients !== false;
       case 'deadlines': return permissions.deadlines !== false;
       case 'banks': return permissions.finance !== false;
@@ -139,6 +141,7 @@ const AppContent: React.FC = () => {
       case 'team': return <TeamTab />;
       case 'deadlines': return <DeadlinesAndInstallmentsTab />;
       case 'freelance': return <FreelanceClientsTab />;
+      case 'portal_cliente': return <ClientPortalOfficeTab onNavigateTab={setActiveTab} />;
       case 'banks': return <BanksAndCashTab onOpenTransferModal={() => setIsTransferModalOpen(true)} onOpenCashModal={() => setIsCashModalOpen(true)} onOpenNewTxModal={handleOpenNewTx} />;
       case 'goals': return <SavingsGoalsTab />;
       case 'budget': return <BudgetAndReportsTab />;

@@ -231,18 +231,30 @@ export const ClientLogin: React.FC = () => {
               )}
             </button>
 
-            {/* Direct Quick Demo Button */}
-            <div className="pt-2">
+            {/* Direct Quick Demo & Admin Access Buttons */}
+            <div className="pt-2 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  sessionStorage.setItem('client_portal_session', JSON.stringify(SAMPLE_CLIENT_PORTAL));
+                  navigate('/cliente/dashboard?admin=true');
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-[#2a221d] hover:bg-[#342b24] text-[var(--theme-primary)] border border-[var(--theme-primary)]/50 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm hover:border-[var(--theme-primary)]"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Acessar Portal como Administrador do Escritório</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => {
                   sessionStorage.setItem('client_portal_session', JSON.stringify(SAMPLE_CLIENT_PORTAL));
                   navigate('/cliente/dashboard');
                 }}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#241e1b] hover:bg-[#2e2622] text-[var(--theme-primary)] border border-[var(--theme-primary)]/40 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm hover:border-[var(--theme-primary)]"
+                className="w-full py-2 px-4 rounded-xl bg-[#1c1815] hover:bg-[#25201c] text-[#a89c93] hover:text-[#fcf8f5] border border-[#3d342f] font-medium text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Entrar Direto (Acesso Rápido com Projeto Modelo)</span>
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Testar como Cliente (Projeto Modelo)</span>
               </button>
             </div>
           </form>

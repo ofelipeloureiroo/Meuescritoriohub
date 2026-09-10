@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Building2, 
   LogOut, 
@@ -23,8 +23,14 @@ import {
   Info,
   Check,
   FileCheck2,
-  Paperclip
+  Paperclip,
+  Settings2,
+  ArrowLeft,
+  Crown,
+  Eye,
+  SlidersHorizontal
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { 
   ClientPortalAccess, 
   ClientPortalMessage,
@@ -34,11 +40,24 @@ import {
 import { 
   subscribeToClientPortal, 
   sendPortalMessage,
+  subscribeToOfficePortals,
   SAMPLE_CLIENT_PORTAL 
 } from '../../services/clientPortalService';
+import { OfficeClientPortalManagerModal } from './OfficeClientPortalManagerModal';
 
 export const ClientPortalDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+
+  const isAdminParam = searchParams.get('admin') === 'true';
+  const requestedPortalId = searchParams.get('portalId');
+  const isAdminMode = isAdminParam || !!user;
+
+  const [officePortals, setOfficePortals] = useState<ClientPortalAccess[]>([SAMPLE_CLIENT_PORTAL]);
+  const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
+  const [adminSenderRole, setAdminSenderRole] = useState<'office' | 'client'>('office');
+
   const [portal, setPortal] = useState<ClientPortalAccess>(() => {
     const raw = sessionStorage.getItem('client_portal_session');
     if (raw) {
@@ -56,6 +75,24 @@ export const ClientPortalDashboard: React.FC = () => {
   const [newMessageText, setNewMessageText] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
 
+  // Load office portals if admin/office user is logged in
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = subscribeToOfficePortals(user.uid, (list) => {
+      if (list && list.length > 0) {
+        setOfficePortals(list);
+        if (requestedPortalId) {
+          const matched = list.find(p => p.id === requestedPortalId);
+          if (matched) {
+            setPortal(matched);
+            sessionStorage.setItem('client_portal_session', JSON.stringify(matched));
+          }
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [user, requestedPortalId]);
+
   // Subscribe to real-time updates if connected to a real Firestore document
   useEffect(() => {
     if (!portal || portal.id === SAMPLE_CLIENT_PORTAL.id) {
@@ -66,14 +103,14 @@ export const ClientPortalDashboard: React.FC = () => {
       if (updatedPortal) {
         setPortal(updatedPortal);
         sessionStorage.setItem('client_portal_session', JSON.stringify(updatedPortal));
-      } else {
+      } else if (!isAdminMode) {
         sessionStorage.removeItem('client_portal_session');
         navigate('/cliente/login');
       }
     });
 
     return () => unsubscribe();
-  }, [portal?.id]);
+  }, [portal?.id, isAdminMode]);
 
   // Set default active project
   useEffect(() => {
@@ -96,37 +133,42 @@ export const ClientPortalDashboard: React.FC = () => {
     const textToSend = newMessageText.trim();
     setNewMessageText('');
 
-    // If in demo mode, update local state and simulate office reply
+    const sender = isAdminMode ? adminSenderRole : 'client';
+    const senderName = sender === 'office' ? `${portal.officeName} (Equipe)` : portal.clientName;
+
+    // If in demo mode, update local state and simulate office reply if client sent
     if (portal.id === SAMPLE_CLIENT_PORTAL.id) {
-      const clientMsg: ClientPortalMessage = {
+      const newMsg: ClientPortalMessage = {
         id: `msg-${Date.now()}`,
-        sender: 'client',
-        senderName: portal.clientName,
+        sender,
+        senderName,
         text: textToSend,
         createdAt: new Date().toISOString()
       };
       
       const updated = {
         ...portal,
-        messages: [...(portal.messages || []), clientMsg]
+        messages: [...(portal.messages || []), newMsg]
       };
       setPortal(updated);
       sessionStorage.setItem('client_portal_session', JSON.stringify(updated));
 
-      setTimeout(() => {
-        const replyMsg: ClientPortalMessage = {
-          id: `msg-${Date.now() + 1}`,
-          sender: 'office',
-          senderName: `${portal.officeName} (Equipe)`,
-          text: 'Recebemos sua mensagem! Nossa equipe já registrou a solicitação e responderemos em breve.',
-          createdAt: new Date().toISOString()
-        };
-        setPortal(prev => {
-          const up = { ...prev, messages: [...(prev.messages || []), replyMsg] };
-          sessionStorage.setItem('client_portal_session', JSON.stringify(up));
-          return up;
-        });
-      }, 1200);
+      if (sender === 'client') {
+        setTimeout(() => {
+          const replyMsg: ClientPortalMessage = {
+            id: `msg-${Date.now() + 1}`,
+            sender: 'office',
+            senderName: `${portal.officeName} (Equipe)`,
+            text: 'Recebemos sua mensagem! Nossa equipe já registrou a solicitação e responderemos em breve.',
+            createdAt: new Date().toISOString()
+          };
+          setPortal(prev => {
+            const up = { ...prev, messages: [...(prev.messages || []), replyMsg] };
+            sessionStorage.setItem('client_portal_session', JSON.stringify(up));
+            return up;
+          });
+        }, 1200);
+      }
       return;
     }
 
@@ -134,8 +176,8 @@ export const ClientPortalDashboard: React.FC = () => {
     try {
       await sendPortalMessage(
         portal.id,
-        'client',
-        portal.clientName,
+        sender,
+        senderName,
         textToSend
       );
     } catch (err) {
@@ -188,40 +230,108 @@ export const ClientPortalDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#12100e] text-[#fcf8f5] flex flex-col font-sans selection:bg-[var(--theme-primary)]/30">
       
-      {/* Top Preview Bar for quick switching between views */}
-      <div className="bg-[#1b1714] border-b border-[#3d342f] px-4 py-2 text-xs">
-        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span className="text-[#a89c93]">
-              Visualizando: <strong className="text-[var(--theme-primary)]">Portal do Cliente</strong> (Área externa exclusiva para acompanhamento do cliente)
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                localStorage.setItem('meo_active_view', 'vendas');
-                navigate('/vendas');
-              }}
-              className="px-2.5 py-1 rounded-lg bg-[#241e1b] hover:bg-[#2d2622] text-[#a89c93] hover:text-[#fcf8f5] border border-[#3d342f] transition-colors cursor-pointer"
-            >
-              🌐 Landing Page de Vendas
-            </button>
-            <button
-              onClick={() => {
-                localStorage.setItem('meo_active_view', 'app');
-                navigate('/app');
-              }}
-              className="px-2.5 py-1 rounded-lg bg-[var(--theme-primary)] text-black font-bold hover:brightness-110 transition-colors cursor-pointer"
-            >
-              🏢 Sistema do Escritório
-            </button>
+      {/* Top Preview / Admin Control Bar */}
+      {isAdminMode ? (
+        <div className="bg-gradient-to-r from-[#211a14] via-[#2c2219] to-[#211a14] border-b border-[var(--theme-primary)]/40 px-4 py-2.5 text-xs text-[#fcf8f5] shadow-lg sticky top-0 z-50">
+          <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="px-2.5 py-1 rounded-lg bg-[var(--theme-primary)] text-black font-bold text-xs flex items-center gap-1.5 shadow-sm">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Modo Administrador do Escritório</span>
+              </span>
+
+              {/* Client Selector */}
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-[#a89c93] hidden sm:inline">Cliente:</span>
+                <select
+                  value={portal.id}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    const pool = [...officePortals, SAMPLE_CLIENT_PORTAL];
+                    const found = pool.find(p => p.id === selectedId);
+                    if (found) {
+                      setPortal(found);
+                      sessionStorage.setItem('client_portal_session', JSON.stringify(found));
+                      if (found.projects && found.projects.length > 0) {
+                        setActiveProjectId(found.projects[0].id);
+                      }
+                    }
+                  }}
+                  className="bg-[#14110f] border border-[#3d342f] text-[var(--theme-primary)] font-bold rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
+                >
+                  {officePortals.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.clientName} ({p.projects?.[0]?.title || 'Projeto'})
+                    </option>
+                  ))}
+                  {!officePortals.some(p => p.id === SAMPLE_CLIENT_PORTAL.id) && (
+                    <option value={SAMPLE_CLIENT_PORTAL.id}>
+                      {SAMPLE_CLIENT_PORTAL.clientName} (Modelo Demonstração)
+                    </option>
+                  )}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsManagerModalOpen(true)}
+                className="px-3 py-1.5 rounded-lg bg-[#2e2621] hover:bg-[#382f29] text-[var(--theme-primary)] border border-[var(--theme-primary)]/40 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Editar etapas, status, documentos e credenciais deste portal"
+              >
+                <Settings2 className="w-3.5 h-3.5" />
+                <span>Gerenciar Este Portal</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  localStorage.setItem('meo_active_view', 'app');
+                  navigate('/app');
+                }}
+                className="px-3 py-1.5 rounded-lg bg-[var(--theme-primary)] hover:brightness-110 text-black font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Painel do Escritório</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        /* Top Preview Bar for normal client or quick switching */
+        <div className="bg-[#1b1714] border-b border-[#3d342f] px-4 py-2 text-xs">
+          <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-[#a89c93]">
+                Visualizando: <strong className="text-[var(--theme-primary)]">Portal do Cliente</strong> (Área externa exclusiva para acompanhamento do cliente)
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  sessionStorage.setItem('client_portal_session', JSON.stringify(SAMPLE_CLIENT_PORTAL));
+                  navigate('/cliente/dashboard?admin=true');
+                }}
+                className="px-2.5 py-1 rounded-lg bg-[#241e1b] hover:bg-[#2d2622] text-[var(--theme-primary)] border border-[var(--theme-primary)]/30 transition-colors cursor-pointer font-medium"
+              >
+                🛡️ Ver como Administrador
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.setItem('meo_active_view', 'app');
+                  navigate('/app');
+                }}
+                className="px-2.5 py-1 rounded-lg bg-[var(--theme-primary)] text-black font-bold hover:brightness-110 transition-colors cursor-pointer"
+              >
+                🏢 Sistema do Escritório
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Top Client Navbar */}
       <header className="sticky top-0 z-40 bg-[#161210]/95 backdrop-blur-md border-b border-[#3d342f] px-4 sm:px-8 py-3.5">
@@ -691,13 +801,47 @@ export const ClientPortalDashboard: React.FC = () => {
                 )}
               </div>
 
+              {/* If Admin mode, allow choosing who to send as */}
+              {isAdminMode && (
+                <div className="pt-2 pb-1 flex items-center justify-between text-xs border-t border-[#3d342f]/70">
+                  <span className="text-[#a89c93] flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+                    <span>Responder mensagem como:</span>
+                  </span>
+                  <div className="flex items-center gap-1 bg-[#12100e] p-1 rounded-lg border border-[#3d342f]">
+                    <button
+                      type="button"
+                      onClick={() => setAdminSenderRole('office')}
+                      className={`px-2.5 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                        adminSenderRole === 'office'
+                          ? 'bg-[var(--theme-primary)] text-black shadow-sm'
+                          : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                      }`}
+                    >
+                      🏢 Equipe do Escritório
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAdminSenderRole('client')}
+                      className={`px-2.5 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                        adminSenderRole === 'client'
+                          ? 'bg-amber-500 text-black shadow-sm'
+                          : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                      }`}
+                    >
+                      👤 Simular Cliente
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Message Input Box */}
               <form onSubmit={handleSendMessage} className="pt-3 border-t border-[#3d342f] flex gap-2">
                 <input
                   type="text"
                   value={newMessageText}
                   onChange={(e) => setNewMessageText(e.target.value)}
-                  placeholder="Escreva sua mensagem ou dúvida sobre o projeto..."
+                  placeholder={isAdminMode && adminSenderRole === 'office' ? "Escreva uma resposta oficial da equipe para o cliente..." : "Escreva sua mensagem ou dúvida sobre o projeto..."}
                   className="flex-1 bg-[#12100e] border border-[#3d342f] rounded-xl px-4 py-3 text-xs text-[#fcf8f5] placeholder-[#6b625b] focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
                 />
                 <button
@@ -722,6 +866,17 @@ export const ClientPortalDashboard: React.FC = () => {
           {portal.officeName || 'Meu Escritório Online'} • Portal do Cliente • Acompanhamento em Tempo Real
         </p>
       </footer>
+
+      {/* Office Manager Modal when admin clicks Gerenciar Este Portal */}
+      <OfficeClientPortalManagerModal
+        isOpen={isManagerModalOpen}
+        onClose={() => setIsManagerModalOpen(false)}
+        portalToEdit={portal.id === SAMPLE_CLIENT_PORTAL.id ? undefined : portal}
+        onSaveSuccess={(updatedPortal) => {
+          setPortal(updatedPortal);
+          sessionStorage.setItem('client_portal_session', JSON.stringify(updatedPortal));
+        }}
+      />
 
     </div>
   );

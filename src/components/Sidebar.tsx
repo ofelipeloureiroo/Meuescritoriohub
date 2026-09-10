@@ -9,6 +9,7 @@ import {
   FolderOpen,
   Home,
   Instagram,
+  KeyRound,
   MessageCircle,
   Package,
   PieChart,
@@ -179,6 +180,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           id: 'freelance',
           label: 'Clientes & Contratos',
           icon: Briefcase,
+          visible: !isCollaborator || !permissions || permissions.clients !== false,
+        },
+        {
+          id: 'portal_cliente',
+          label: 'Portal do Cliente',
+          icon: KeyRound,
+          badge: 'Novo',
           visible: !isCollaborator || !permissions || permissions.clients !== false,
         },
         {

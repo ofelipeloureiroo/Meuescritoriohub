@@ -5,6 +5,7 @@ import {
   getDocs, 
   setDoc, 
   updateDoc, 
+  deleteDoc,
   query, 
   where, 
   onSnapshot 
@@ -299,6 +300,14 @@ export async function setPortalStatus(
     status,
     updatedAt: new Date().toISOString()
   });
+}
+
+/**
+ * Permanently deletes a client portal document.
+ */
+export async function deleteClientPortalAccess(portalId: string): Promise<void> {
+  const portalRef = doc(db, 'clientPortals', portalId);
+  await deleteDoc(portalRef);
 }
 
 /**
