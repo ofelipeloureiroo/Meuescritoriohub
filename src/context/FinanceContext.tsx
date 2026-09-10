@@ -52,6 +52,7 @@ import {
 } from '../types';
 import { applyThemeToDocument, NICHES, THEMES } from '../utils/theme';
 import { getNicheSampleProjects } from '../utils/nicheSampleData';
+import { deleteClientPortalsForClient } from '../services/clientPortalService';
 
 interface FinanceContextType {
   architectProfile: ArchitectProfile;
@@ -495,13 +496,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [clients, setClients] = useState<Client[]>(() => {
     const saved = localStorage.getItem(getStorageKey('clients'));
-    if (saved) {
+    if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          if (!parsed.some((c: any) => c.id === CONNECTED_PORTAL_CLIENT.id || c.name?.toLowerCase().includes('roberto & camila'))) {
-            return [CONNECTED_PORTAL_CLIENT, ...parsed];
-          }
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       } catch {}
@@ -511,13 +509,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [freelanceProjects, setFreelanceProjects] = useState<FreelanceProject[]>(() => {
     const saved = localStorage.getItem(getStorageKey('projects'));
-    if (saved) {
+    if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.some((p: any) => p.id === 'fp-1' || p.id === 'fp-2')) {
-          return [];
+        if (Array.isArray(parsed)) {
+          return parsed;
         }
-        return parsed;
       } catch {}
     }
     return [];
@@ -525,17 +522,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [architectureProjects, setArchitectureProjects] = useState<ArchitectureProject[]>(() => {
     const saved = localStorage.getItem(getStorageKey('architecture_projects'));
-    if (saved) {
+    if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const filtered = parsed.filter((p: any) => p.id !== 'proj-bfe' && p.id !== 'proj-1');
-          if (filtered.length > 0) {
-            if (!filtered.some((p: any) => p.id === CONNECTED_PORTAL_PROJECT_1.id || p.id === 'proj-alphaville-01')) {
-              return [CONNECTED_PORTAL_PROJECT_1, CONNECTED_PORTAL_PROJECT_2, ...filtered];
-            }
-            return filtered;
-          }
+          return parsed.filter((p: any) => p.id !== 'proj-bfe' && p.id !== 'proj-1');
         }
       } catch {}
     }
@@ -544,13 +535,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [projectInstallments, setProjectInstallments] = useState<ProjectInstallment[]>(() => {
     const saved = localStorage.getItem(getStorageKey('installments'));
-    if (saved) {
+    if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          if (!parsed.some((i: any) => i.projectId === 'proj-alphaville-01')) {
-            return [...CONNECTED_PORTAL_INSTALLMENTS, ...parsed];
-          }
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       } catch {}
@@ -560,10 +548,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [projectMilestones, setProjectMilestones] = useState<ProjectMilestone[]>(() => {
     const saved = localStorage.getItem(getStorageKey('milestones'));
-    if (saved) {
+    if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
       } catch {}
     }
     return [];
@@ -571,13 +561,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [workContracts, setWorkContracts] = useState<WorkContract[]>(() => {
     const saved = localStorage.getItem(getStorageKey('work_contracts'));
-    if (saved) {
+    if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          if (!parsed.some((c: any) => c.id === CONNECTED_PORTAL_CONTRACT_1.id || c.projectId === 'proj-alphaville-01')) {
-            return [CONNECTED_PORTAL_CONTRACT_1, ...parsed];
-          }
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       } catch {}
@@ -788,46 +775,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (data.debts) setDebts(data.debts);
           if (data.clients) {
             const cloudClients = Array.isArray(data.clients) ? data.clients : [];
-            if (cloudClients.length > 0 && !cloudClients.some((c: any) => c.id === CONNECTED_PORTAL_CLIENT.id || c.name?.toLowerCase().includes('roberto & camila'))) {
-              setClients([CONNECTED_PORTAL_CLIENT, ...cloudClients]);
-            } else if (cloudClients.length === 0) {
-              setClients([CONNECTED_PORTAL_CLIENT]);
-            } else {
-              setClients(cloudClients);
-            }
+            setClients(cloudClients);
           }
-          if (data.freelanceProjects) setFreelanceProjects(data.freelanceProjects);
+          if (data.freelanceProjects) setFreelanceProjects(Array.isArray(data.freelanceProjects) ? data.freelanceProjects : []);
           if (data.architectureProjects) {
             const cloudProjects = Array.isArray(data.architectureProjects) ? data.architectureProjects : [];
             const filteredProjects = cloudProjects.filter((p: any) => p.id !== 'proj-bfe' && p.id !== 'proj-1');
-            if (filteredProjects.length > 0 && !filteredProjects.some((p: any) => p.id === CONNECTED_PORTAL_PROJECT_1.id || p.id === 'proj-alphaville-01')) {
-              setArchitectureProjects([CONNECTED_PORTAL_PROJECT_1, CONNECTED_PORTAL_PROJECT_2, ...filteredProjects]);
-            } else if (filteredProjects.length === 0) {
-              setArchitectureProjects([CONNECTED_PORTAL_PROJECT_1, CONNECTED_PORTAL_PROJECT_2]);
-            } else {
-              setArchitectureProjects(filteredProjects);
-            }
+            setArchitectureProjects(filteredProjects);
           }
           if (data.projectInstallments) {
             const cloudInst = Array.isArray(data.projectInstallments) ? data.projectInstallments : [];
-            if (cloudInst.length > 0 && !cloudInst.some((i: any) => i.projectId === 'proj-alphaville-01')) {
-              setProjectInstallments([...CONNECTED_PORTAL_INSTALLMENTS, ...cloudInst]);
-            } else if (cloudInst.length === 0) {
-              setProjectInstallments(CONNECTED_PORTAL_INSTALLMENTS);
-            } else {
-              setProjectInstallments(cloudInst);
-            }
+            setProjectInstallments(cloudInst);
           }
-          if (data.projectMilestones) setProjectMilestones(data.projectMilestones);
+          if (data.projectMilestones) setProjectMilestones(Array.isArray(data.projectMilestones) ? data.projectMilestones : []);
           if (data.workContracts) {
             const cloudContracts = Array.isArray(data.workContracts) ? data.workContracts : [];
-            if (cloudContracts.length > 0 && !cloudContracts.some((c: any) => c.id === CONNECTED_PORTAL_CONTRACT_1.id || c.projectId === 'proj-alphaville-01')) {
-              setWorkContracts([CONNECTED_PORTAL_CONTRACT_1, ...cloudContracts]);
-            } else if (cloudContracts.length === 0) {
-              setWorkContracts([CONNECTED_PORTAL_CONTRACT_1]);
-            } else {
-              setWorkContracts(cloudContracts);
-            }
+            setWorkContracts(cloudContracts);
           }
           if (data.savingsGoals) setSavingsGoals(data.savingsGoals);
           if (data.categoryBudgets) setCategoryBudgets(data.categoryBudgets);
@@ -1473,7 +1436,71 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteClient = (id: string) => {
-    setClients((prev) => prev.filter((c) => c.id !== id));
+    recordLocalMutation();
+    const clientToDelete = clients.find(c => c.id === id);
+    const clientNameNorm = clientToDelete?.name?.trim().toLowerCase();
+    const clientEmailNorm = clientToDelete?.email?.trim().toLowerCase();
+
+    // 1. Remove client from state & storage
+    const updatedClients = clients.filter((c) => c.id !== id);
+    setClients(updatedClients);
+    safeSetItem('clients', updatedClients);
+
+    // 2. Remove all architecture projects linked to this client
+    const updatedArchProjects = architectureProjects.filter((p) => {
+      if (p.clientId === id) return false;
+      if (clientNameNorm && p.clientName && p.clientName.trim().toLowerCase() === clientNameNorm) return false;
+      if (clientEmailNorm && p.clientEmail && p.clientEmail.trim().toLowerCase() === clientEmailNorm) return false;
+      if (p.linkedClients?.some(lc => lc.id === id || (clientNameNorm && lc.name.trim().toLowerCase() === clientNameNorm))) return false;
+      return true;
+    });
+    setArchitectureProjects(updatedArchProjects);
+    safeSetItem('architecture_projects', updatedArchProjects);
+
+    // 3. Remove all freelance projects linked to this client
+    const updatedFreelance = freelanceProjects.filter((p) => p.clientId !== id && (!clientNameNorm || p.clientName?.trim().toLowerCase() !== clientNameNorm));
+    setFreelanceProjects(updatedFreelance);
+    safeSetItem('projects', updatedFreelance);
+
+    // 4. Identify deleted project IDs to remove installments, milestones, contracts, and actions
+    const deletedProjectIds = new Set([
+      ...architectureProjects.filter(p => p.clientId === id || (clientNameNorm && p.clientName?.trim().toLowerCase() === clientNameNorm)).map(p => p.id),
+      ...freelanceProjects.filter(p => p.clientId === id || (clientNameNorm && p.clientName?.trim().toLowerCase() === clientNameNorm)).map(p => p.id)
+    ]);
+
+    const updatedInstallments = projectInstallments.filter((i) => !deletedProjectIds.has(i.projectId));
+    setProjectInstallments(updatedInstallments);
+    safeSetItem('installments', updatedInstallments);
+
+    const updatedMilestones = projectMilestones.filter((m) => !deletedProjectIds.has(m.projectId));
+    setProjectMilestones(updatedMilestones);
+    safeSetItem('milestones', updatedMilestones);
+
+    const updatedContracts = workContracts.filter((c) => c.clientId !== id && (!c.projectId || !deletedProjectIds.has(c.projectId)));
+    setWorkContracts(updatedContracts);
+    safeSetItem('work_contracts', updatedContracts);
+
+    const updatedActions = actions.filter((a) => a.relatedId !== id && (!a.relatedId || !deletedProjectIds.has(a.relatedId)));
+    setActions(updatedActions);
+    safeSetItem('actions', updatedActions);
+
+    // 5. Delete associated client portals from Firestore
+    deleteClientPortalsForClient(id).catch(console.error);
+
+    // 6. Direct workspace Firestore sync
+    if (targetUid) {
+      const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
+      setDoc(workspaceDocRef, {
+        clients: updatedClients,
+        architectureProjects: updatedArchProjects,
+        freelanceProjects: updatedFreelance,
+        projectInstallments: updatedInstallments,
+        projectMilestones: updatedMilestones,
+        workContracts: updatedContracts,
+        actions: updatedActions,
+        updatedAt: new Date().toISOString()
+      }, { merge: true }).catch(console.error);
+    }
   };
 
   const addFreelanceProject = (projectData: Omit<FreelanceProject, 'id' | 'createdAt'>) => {
@@ -1553,10 +1580,51 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteArchitectureProject = (id: string) => {
     recordLocalMutation();
-    setArchitectureProjects((prev) => prev.filter((p) => p.id !== id));
-    setProjectMilestones((prev) => prev.filter((m) => m.projectId !== id));
-    setProjectInstallments((prev) => prev.filter((i) => i.projectId !== id));
-    setActions((prev) => prev.filter((a) => a.relatedId !== id));
+    const updatedArchProjects = architectureProjects.filter((p) => p.id !== id);
+    setArchitectureProjects(updatedArchProjects);
+    safeSetItem('architecture_projects', updatedArchProjects);
+
+    const updatedMilestones = projectMilestones.filter((m) => m.projectId !== id);
+    setProjectMilestones(updatedMilestones);
+    safeSetItem('milestones', updatedMilestones);
+
+    const updatedInstallments = projectInstallments.filter((i) => i.projectId !== id);
+    setProjectInstallments(updatedInstallments);
+    safeSetItem('installments', updatedInstallments);
+
+    const updatedContracts = workContracts.filter((c) => c.projectId !== id);
+    setWorkContracts(updatedContracts);
+    safeSetItem('work_contracts', updatedContracts);
+
+    const updatedActions = actions.filter((a) => a.relatedId !== id);
+    setActions(updatedActions);
+    safeSetItem('actions', updatedActions);
+
+    // Update projects count for remaining clients
+    const updatedClients = clients.map((c) => {
+      const remainingProjects = updatedArchProjects.filter(
+        (p) => p.clientId === c.id || (p.clientName && p.clientName.trim().toLowerCase() === c.name.trim().toLowerCase())
+      );
+      return {
+        ...c,
+        projectsCount: remainingProjects.length,
+      };
+    });
+    setClients(updatedClients);
+    safeSetItem('clients', updatedClients);
+
+    if (targetUid) {
+      const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
+      setDoc(workspaceDocRef, {
+        clients: updatedClients,
+        architectureProjects: updatedArchProjects,
+        projectMilestones: updatedMilestones,
+        projectInstallments: updatedInstallments,
+        workContracts: updatedContracts,
+        actions: updatedActions,
+        updatedAt: new Date().toISOString()
+      }, { merge: true }).catch(console.error);
+    }
   };
 
   const addPhotoToProject = (projectId: string, photoUrl: string) => {

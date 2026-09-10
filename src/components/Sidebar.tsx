@@ -184,7 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         },
         {
           id: 'portal_cliente',
-          label: 'Portal do Cliente',
+          label: 'Radar da Cliente',
           icon: KeyRound,
           badge: 'Novo',
           visible: !isCollaborator || !permissions || permissions.clients !== false,

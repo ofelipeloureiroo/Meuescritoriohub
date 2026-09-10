@@ -314,8 +314,31 @@ export async function setPortalStatus(
  * Permanently deletes a client portal document.
  */
 export async function deleteClientPortalAccess(portalId: string): Promise<void> {
-  const portalRef = doc(db, 'clientPortals', portalId);
-  await deleteDoc(portalRef);
+  try {
+    const portalRef = doc(db, 'clientPortals', portalId);
+    await deleteDoc(portalRef);
+  } catch (err) {
+    console.error('Error deleting client portal access:', err);
+  }
+}
+
+/**
+ * Permanently deletes all portals associated with a specific clientId.
+ */
+export async function deleteClientPortalsForClient(clientId: string): Promise<void> {
+  try {
+    // 1. Direct portalId patterns
+    await deleteClientPortalAccess(`portal-${clientId}`);
+    await deleteClientPortalAccess(`demo-portal-${clientId}`);
+
+    // 2. Query any documents where clientId matches
+    const q = query(collection(db, 'clientPortals'), where('clientId', '==', clientId));
+    const snapshot = await getDocs(q);
+    const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));
+    await Promise.all(deletePromises);
+  } catch (err) {
+    console.error('Error deleting portals for client:', clientId, err);
+  }
 }
 
 /**

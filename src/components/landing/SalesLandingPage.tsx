@@ -1227,8 +1227,6 @@ export const SalesLandingPage: React.FC = () => {
             © {new Date().getFullYear()} Meu Escritório Online. Todos os direitos reservados.
           </div>
           <div className="flex items-center gap-4 text-xs text-[#a89c93]">
-            <Link to="/cliente/login" className="hover:text-[var(--theme-primary)] transition-colors font-medium">Portal do Cliente</Link>
-            <span>•</span>
             <Link to="/login" className="hover:text-[#fcf8f5] transition-colors">Acessar Conta</Link>
             <span>•</span>
             <Link

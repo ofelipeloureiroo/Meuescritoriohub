@@ -123,7 +123,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
   const handleCopyCredentials = (p: ClientPortalAccess) => {
     const origin = window.location.origin;
     const directUrl = `${origin}/cliente/login?email=${encodeURIComponent(p.clientEmail)}&code=${encodeURIComponent(p.accessCode)}`;
-    const text = `*Portal do Cliente - ${p.officeName || 'Meu Escritório'}*\n\nOlá, ${p.clientName}!\nVocê pode acompanhar todas as etapas, prazos, arquivos e falar com a equipe pelo seu portal exclusivo:\n\n🔗 *Acesso Direto:* ${directUrl}\n📧 *E-mail:* ${p.clientEmail}\n🔑 *Senha/Código de Acesso:* ${p.accessCode}\n\nQualquer dúvida, estamos à disposição!`;
+    const text = `*Radar da Cliente - ${p.officeName || 'Meu Escritório'}*\n\nOlá, ${p.clientName}!\nVocê pode acompanhar todas as etapas, prazos, arquivos e falar com a equipe pelo seu portal exclusivo:\n\n🔗 *Acesso Direto:* ${directUrl}\n📧 *E-mail:* ${p.clientEmail}\n🔑 *Senha/Código de Acesso:* ${p.accessCode}\n\nQualquer dúvida, estamos à disposição!`;
     navigator.clipboard.writeText(text);
     setCopiedId(p.id + '-text');
     setTimeout(() => setCopiedId(null), 2500);
@@ -132,7 +132,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
   const handleOpenWhatsApp = (p: ClientPortalAccess) => {
     const origin = window.location.origin;
     const directUrl = `${origin}/cliente/login?email=${encodeURIComponent(p.clientEmail)}&code=${encodeURIComponent(p.accessCode)}`;
-    const text = `Olá, ${p.clientName}! Aqui está o seu link de acesso ao Portal do Cliente para acompanhar o projeto em tempo real:\n\n${directUrl}\n\nE-mail: ${p.clientEmail}\nCódigo de Acesso: ${p.accessCode}`;
+    const text = `Olá, ${p.clientName}! Aqui está o seu link de acesso ao Radar da Cliente para acompanhar o projeto em tempo real:\n\n${directUrl}\n\nE-mail: ${p.clientEmail}\nCódigo de Acesso: ${p.accessCode}`;
     const rawPhone = (p.clientPhone || '').replace(/\D/g, '');
     const phoneWithDDI = rawPhone.length <= 11 ? `55${rawPhone}` : rawPhone;
     window.open(`https://wa.me/${phoneWithDDI}?text=${encodeURIComponent(text)}`, '_blank');
@@ -187,7 +187,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
               <span>Painel de Gestão do Escritório</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#fcf8f5] tracking-tight">
-              Portal do Cliente & Transparência
+              Radar da Cliente & Transparência
             </h1>
             <p className="text-xs sm:text-sm text-[#a89c93] leading-relaxed">
               Crie acessos exclusivos para os clientes acompanharem as etapas dos projetos, baixarem plantas e documentos aprovados, e trocarem mensagens com sua equipe de forma centralizada.
@@ -609,7 +609,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
       <div className="bg-[#161311] border border-[#3d342f] rounded-2xl p-6 space-y-4">
         <div className="flex items-center gap-2 text-sm font-bold text-[#fcf8f5]">
           <Sparkles className="w-4 h-4 text-[var(--theme-primary)]" />
-          <span>Como funciona a segurança e o isolamento do Portal do Cliente?</span>
+          <span>Como funciona a segurança e o isolamento do Radar da Cliente?</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-[#a89c93]">
           <div className="space-y-1.5 p-3.5 rounded-xl bg-[#1c1815] border border-[#3d342f]/60">
@@ -621,7 +621,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
           <div className="space-y-1.5 p-3.5 rounded-xl bg-[#1c1815] border border-[#3d342f]/60">
             <strong className="text-[#fcf8f5] block">2. Controle em Tempo Real</strong>
             <p className="leading-relaxed">
-              Tudo o que você atualizar na tela de gestão (avançar de fase, adicionar prancha em PDF ou enviar mensagem) é refletido instantaneamente no portal do cliente.
+              Tudo o que você atualizar na tela de gestão (avançar de fase, adicionar prancha em PDF ou enviar mensagem) é refletido instantaneamente no radar da cliente.
             </p>
           </div>
           <div className="space-y-1.5 p-3.5 rounded-xl bg-[#1c1815] border border-[#3d342f]/60">
