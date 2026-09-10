@@ -27,19 +27,28 @@ import {
 } from 'lucide-react';
 import { 
   ClientPortalAccess, 
+  ClientPortalMessage,
   ClientPortalProject, 
   ClientProjectHealthStatus 
 } from '../../types';
 import { 
   subscribeToClientPortal, 
-  sendPortalMessage 
+  sendPortalMessage,
+  SAMPLE_CLIENT_PORTAL 
 } from '../../services/clientPortalService';
 
 export const ClientPortalDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [portal, setPortal] = useState<ClientPortalAccess | null>(() => {
+  const [portal, setPortal] = useState<ClientPortalAccess>(() => {
     const raw = sessionStorage.getItem('client_portal_session');
-    return raw ? JSON.parse(raw) : null;
+    if (raw) {
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        // fallback
+      }
+    }
+    return SAMPLE_CLIENT_PORTAL;
   });
 
   const [activeProjectId, setActiveProjectId] = useState<string>('');
@@ -47,20 +56,17 @@ export const ClientPortalDashboard: React.FC = () => {
   const [newMessageText, setNewMessageText] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
 
-  // If no session found, redirect to login
+  // Subscribe to real-time updates if connected to a real Firestore document
   useEffect(() => {
-    if (!portal) {
-      navigate('/cliente/login');
+    if (!portal || portal.id === SAMPLE_CLIENT_PORTAL.id) {
       return;
     }
 
-    // Subscribe to real-time updates of this portal doc in Firestore
     const unsubscribe = subscribeToClientPortal(portal.id, (updatedPortal) => {
       if (updatedPortal) {
         setPortal(updatedPortal);
         sessionStorage.setItem('client_portal_session', JSON.stringify(updatedPortal));
       } else {
-        // Doc might have been deleted or access revoked
         sessionStorage.removeItem('client_portal_session');
         navigate('/cliente/login');
       }
@@ -81,15 +87,48 @@ export const ClientPortalDashboard: React.FC = () => {
     navigate('/cliente/login');
   };
 
-  if (!portal) {
-    return null;
-  }
-
   const currentProject = portal.projects?.find(p => p.id === activeProjectId) || portal.projects?.[0];
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessageText.trim() || !portal) return;
+    if (!newMessageText.trim()) return;
+
+    const textToSend = newMessageText.trim();
+    setNewMessageText('');
+
+    // If in demo mode, update local state and simulate office reply
+    if (portal.id === SAMPLE_CLIENT_PORTAL.id) {
+      const clientMsg: ClientPortalMessage = {
+        id: `msg-${Date.now()}`,
+        sender: 'client',
+        senderName: portal.clientName,
+        text: textToSend,
+        createdAt: new Date().toISOString()
+      };
+      
+      const updated = {
+        ...portal,
+        messages: [...(portal.messages || []), clientMsg]
+      };
+      setPortal(updated);
+      sessionStorage.setItem('client_portal_session', JSON.stringify(updated));
+
+      setTimeout(() => {
+        const replyMsg: ClientPortalMessage = {
+          id: `msg-${Date.now() + 1}`,
+          sender: 'office',
+          senderName: `${portal.officeName} (Equipe)`,
+          text: 'Recebemos sua mensagem! Nossa equipe já registrou a solicitação e responderemos em breve.',
+          createdAt: new Date().toISOString()
+        };
+        setPortal(prev => {
+          const up = { ...prev, messages: [...(prev.messages || []), replyMsg] };
+          sessionStorage.setItem('client_portal_session', JSON.stringify(up));
+          return up;
+        });
+      }, 1200);
+      return;
+    }
 
     setSendingMessage(true);
     try {
@@ -97,9 +136,8 @@ export const ClientPortalDashboard: React.FC = () => {
         portal.id,
         'client',
         portal.clientName,
-        newMessageText.trim()
+        textToSend
       );
-      setNewMessageText('');
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
     } finally {
@@ -150,6 +188,41 @@ export const ClientPortalDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#12100e] text-[#fcf8f5] flex flex-col font-sans selection:bg-[var(--theme-primary)]/30">
       
+      {/* Top Preview Bar for quick switching between views */}
+      <div className="bg-[#1b1714] border-b border-[#3d342f] px-4 py-2 text-xs">
+        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="text-[#a89c93]">
+              Visualizando: <strong className="text-[var(--theme-primary)]">Portal do Cliente</strong> (Área externa exclusiva para acompanhamento do cliente)
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                localStorage.setItem('meo_active_view', 'vendas');
+                navigate('/vendas');
+              }}
+              className="px-2.5 py-1 rounded-lg bg-[#241e1b] hover:bg-[#2d2622] text-[#a89c93] hover:text-[#fcf8f5] border border-[#3d342f] transition-colors cursor-pointer"
+            >
+              🌐 Landing Page de Vendas
+            </button>
+            <button
+              onClick={() => {
+                localStorage.setItem('meo_active_view', 'app');
+                navigate('/app');
+              }}
+              className="px-2.5 py-1 rounded-lg bg-[var(--theme-primary)] text-black font-bold hover:brightness-110 transition-colors cursor-pointer"
+            >
+              🏢 Sistema do Escritório
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Top Client Navbar */}
       <header className="sticky top-0 z-40 bg-[#161210]/95 backdrop-blur-md border-b border-[#3d342f] px-4 sm:px-8 py-3.5">
         <div className="max-w-6xl mx-auto flex items-center justify-between">

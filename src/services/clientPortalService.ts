@@ -300,3 +300,182 @@ export async function setPortalStatus(
     updatedAt: new Date().toISOString()
   });
 }
+
+/**
+ * High-fidelity sample client portal for immediate preview & demonstration.
+ */
+export const SAMPLE_CLIENT_PORTAL: ClientPortalAccess = {
+  id: 'demo-portal-roberto-silveira',
+  officeUid: 'demo-office-user',
+  officeName: 'Studio Arq & Design de Interiores',
+  officeEmail: 'contato@studioarq.com.br',
+  officePhone: '(11) 98765-4321',
+  clientId: 'demo-client-01',
+  clientName: 'Roberto & Camila Silveira',
+  clientEmail: 'roberto.silveira@exemplo.com',
+  clientPhone: '(11) 99888-7766',
+  accessCode: 'MEO-DEMO',
+  status: 'active',
+  createdAt: '2026-02-15T10:00:00.000Z',
+  lastLoginAt: new Date().toISOString(),
+  projects: [
+    {
+      id: 'proj-alphaville-01',
+      title: 'Residência Alphaville - Reforma Completa & Design de Interiores',
+      category: 'Residencial Alto Padrão',
+      description: 'Reforma geral dos 320m², integração entre living e área gourmet, reforma completa da suíte máster e projeto luminotécnico integrado.',
+      status: 'executivo',
+      generalStatus: 'no_prazo',
+      currentStageName: 'Projeto Executivo & Detalhamentos',
+      currentStageIndex: 3,
+      progressPercent: 68,
+      startDate: '10/02/2026',
+      deliveryDate: '15/12/2026',
+      contractTitle: 'Contrato de Projeto Arquitetônico & Interiores',
+      contractNumber: 'CTR-2026/088',
+      contractStatus: 'signed',
+      totalValue: 48000,
+      currency: 'BRL',
+      stages: [
+        {
+          id: 'stage-1',
+          name: '1. Briefing & Levantamento Técnico',
+          description: 'Reunião de alinhamento das necessidades do casal e medição a laser in loco.',
+          status: 'completed',
+          completedAt: '25/02/2026',
+          plannedDate: '28/02/2026'
+        },
+        {
+          id: 'stage-2',
+          name: '2. Estudo Preliminar & Modelagem 3D',
+          description: 'Apresentação do layout humanizado e maquete 3D com passeios virtuais realistas.',
+          status: 'completed',
+          completedAt: '05/04/2026',
+          plannedDate: '10/04/2026'
+        },
+        {
+          id: 'stage-3',
+          name: '3. Anteprojeto Arquitetônico',
+          description: 'Definição de paginações de pisos, revestimentos, forros e aprovação na associação do condomínio.',
+          status: 'completed',
+          completedAt: '20/05/2026',
+          plannedDate: '25/05/2026'
+        },
+        {
+          id: 'stage-4',
+          name: '4. Projeto Executivo & Marcenaria (Fase Atual)',
+          description: 'Elaboração das pranchas técnicas executivas para marcenaria sob medida, iluminação e marmoraria.',
+          status: 'in_progress',
+          plannedDate: '15/07/2026'
+        },
+        {
+          id: 'stage-5',
+          name: '5. Acompanhamento de Obra & Entrega Final',
+          description: 'Visitas semanais de fiscalização, alinhamento com empreiteiro e montagem dos móveis soltos.',
+          status: 'pending',
+          plannedDate: '15/12/2026'
+        }
+      ]
+    },
+    {
+      id: 'proj-alphaville-02',
+      title: 'Espaço Gourmet Externo & Piscina Aquecida',
+      category: 'Área de Lazer & Paisagismo',
+      description: 'Criação de anexo gourmet com churrasqueira a gás, bancada em granito escovado e solário integrado.',
+      status: 'estudo_preliminar',
+      generalStatus: 'no_prazo',
+      currentStageName: 'Estudo Preliminar & 3D',
+      currentStageIndex: 1,
+      progressPercent: 35,
+      startDate: '12/04/2026',
+      deliveryDate: '28/11/2026',
+      contractTitle: 'Anexo de Contrato - Paisagismo e Lazer',
+      contractNumber: 'CTR-2026/088-B',
+      contractStatus: 'signed',
+      totalValue: 18000,
+      currency: 'BRL',
+      stages: [
+        {
+          id: 'stage-b1',
+          name: '1. Briefing & Estudo de Insolação',
+          description: 'Levantamento topográfico e mapa de sombra na piscina.',
+          status: 'completed',
+          completedAt: '20/04/2026',
+          plannedDate: '22/04/2026'
+        },
+        {
+          id: 'stage-b2',
+          name: '2. Estudo Preliminar 3D (Em Andamento)',
+          description: 'Renderizações com opções de pergolado bioclimático e revestimento da piscina.',
+          status: 'in_progress',
+          plannedDate: '30/05/2026'
+        },
+        {
+          id: 'stage-b3',
+          name: '3. Detalhamento Técnico & Hidráulica de Piscina',
+          description: 'Especificação do sistema de aquecimento solar e iluminação subaquática.',
+          status: 'pending',
+          plannedDate: '20/07/2026'
+        }
+      ]
+    }
+  ],
+  documents: [
+    {
+      id: 'doc-1',
+      title: 'Planta Humanizada e Layout Mobiliário Aprovado (Rev. 03)',
+      category: 'planta',
+      fileName: 'Planta_Humanizada_Rev03_Alphaville.pdf',
+      date: '18/05/2026',
+      size: '8.4 MB'
+    },
+    {
+      id: 'doc-2',
+      title: 'Caderno de Paginação de Pisos e Revestimentos',
+      category: 'entregavel',
+      fileName: 'Paginacao_Pisos_Portobello_Acabamentos.pdf',
+      date: '22/05/2026',
+      size: '14.2 MB'
+    },
+    {
+      id: 'doc-3',
+      title: 'Projeto Luminotécnico & Especificação de Lâmpadas',
+      category: 'entregavel',
+      fileName: 'Projeto_Iluminacao_Cenários_LED.pdf',
+      date: '02/06/2026',
+      size: '6.1 MB'
+    },
+    {
+      id: 'doc-4',
+      title: 'Contrato de Prestação de Serviços Arquitetônicos Assinado',
+      category: 'contrato',
+      fileName: 'Contrato_CTR2026_088_Assinado_Digitalmente.pdf',
+      date: '10/02/2026',
+      size: '1.8 MB'
+    }
+  ],
+  messages: [
+    {
+      id: 'msg-1',
+      sender: 'office',
+      senderName: 'Studio Arq (Arquiteta Responsável)',
+      text: 'Olá Roberto e Camila! Seja muito bem-vindo ao seu portal exclusivo. Aqui vocês podem acompanhar cada etapa da reforma em tempo real, baixar as plantas aprovadas e falar conosco sempre que quiserem!',
+      createdAt: '2026-02-16T14:30:00.000Z'
+    },
+    {
+      id: 'msg-2',
+      sender: 'client',
+      senderName: 'Roberto Silveira',
+      text: 'Muito obrigado! Adoramos as imagens renderizadas da sala de estar e a ilha com a bancada em quartzito. Ficou sensacional!',
+      createdAt: '2026-04-06T11:15:00.000Z'
+    },
+    {
+      id: 'msg-3',
+      sender: 'office',
+      senderName: 'Studio Arq (Arquiteta Responsável)',
+      text: 'Que alegria que gostaram! Nós já finalizamos os detalhamentos da marcenaria da cozinha e da adega climatizada. Já deixamos os arquivos PDF disponíveis na aba "Documentos & Plantas". Qualquer dúvida estamos à disposição!',
+      createdAt: '2026-06-03T16:40:00.000Z'
+    }
+  ]
+};
+

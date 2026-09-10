@@ -12,9 +12,10 @@ import {
   KeyRound, 
   ExternalLink,
   MessageSquare,
-  FileCheck
+  FileCheck,
+  Sparkles
 } from 'lucide-react';
-import { loginClient, recoverClientPassword } from '../../services/clientPortalService';
+import { loginClient, recoverClientPassword, SAMPLE_CLIENT_PORTAL } from '../../services/clientPortalService';
 import { ClientPortalAccess } from '../../types';
 
 export const ClientLogin: React.FC = () => {
@@ -229,6 +230,21 @@ export const ClientLogin: React.FC = () => {
                 </>
               )}
             </button>
+
+            {/* Direct Quick Demo Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  sessionStorage.setItem('client_portal_session', JSON.stringify(SAMPLE_CLIENT_PORTAL));
+                  navigate('/cliente/dashboard');
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-[#241e1b] hover:bg-[#2e2622] text-[var(--theme-primary)] border border-[var(--theme-primary)]/40 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm hover:border-[var(--theme-primary)]"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Entrar Direto (Acesso Rápido com Projeto Modelo)</span>
+              </button>
+            </div>
           </form>
 
           {/* Quick Help Footer */}
