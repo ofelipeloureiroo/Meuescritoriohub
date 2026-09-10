@@ -241,17 +241,12 @@ const HomeOrLandingRoute: React.FC = () => {
     );
   }
 
-  // If not logged in, show the public sales / landing page
-  if (!user) {
-    return <SalesLandingPage />;
+  // If logged in, redirect straight to app
+  if (user) {
+    return <Navigate to="/app" replace />;
   }
 
-  // If logged in, show the application
-  return (
-    <SubscriptionGuard>
-      <AppContent />
-    </SubscriptionGuard>
-  );
+  return <SalesLandingPage />;
 };
 
 export default function App() {
