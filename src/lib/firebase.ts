@@ -1,7 +1,9 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfigData from '../../firebase-applet-config.json';
+
+const firebaseConfig = firebaseConfigData as any;
 
 // Support both embedded configuration and optional environment variable overrides for external hosting (Hostinger, Vercel, VPS)
 const activeConfig = {

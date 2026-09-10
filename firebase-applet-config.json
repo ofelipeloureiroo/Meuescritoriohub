@@ -1,12 +1,11 @@
 {
-  "projectId": "meuescritoriohub",
-  "appId": "1:96842951839:web:1e0d0545efb55819b5c6aa",
-  "apiKey": "AIzaSyD_JGWKeSgjB0mf3SHUcIGp46wwR1fdbJY",
-  "authDomain": "meuescritoriohub.firebaseapp.com",
-  "firestoreDatabaseId": "(default)",
-  "storageBucket": "meuescritoriohub.firebasestorage.app",
-  "messagingSenderId": "96842951839",
-  "measurementId": "G-JVJ1F8C714",
-  "oAuthClientId": "",
+  "projectId": "gen-lang-client-0643365748",
+  "appId": "1:168055958710:web:f21a7a23917ad8fe2f8a17",
+  "apiKey": "AIzaSyDi1WySEHbcVV3bgpwabrp1QswqjXeqJgA",
+  "authDomain": "gen-lang-client-0643365748.firebaseapp.com",
+  "storageBucket": "gen-lang-client-0643365748.firebasestorage.app",
+  "messagingSenderId": "168055958710",
+  "measurementId": "",
+  "oAuthClientId": "168055958710-rqkhu2r99qf6cm8fhi086ige754opb7p.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }

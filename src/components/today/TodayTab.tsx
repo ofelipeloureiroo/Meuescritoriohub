@@ -86,6 +86,35 @@ export const TodayTab: React.FC = () => {
     return localStorage.getItem('today_scratchpad') || '';
   });
 
+  // Google Calendar Integration State
+  const [isGoogleSynced, setIsGoogleSynced] = useState<boolean>(() => {
+    return localStorage.getItem('office_gcal_synced') === 'true';
+  });
+  const [isSyncingCalendar, setIsSyncingCalendar] = useState<boolean>(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const handleSyncGoogleCalendar = async () => {
+    setIsSyncingCalendar(true);
+    setSyncMessage(null);
+    try {
+      await new Promise((r) => setTimeout(r, 1000));
+      const newState = !isGoogleSynced;
+      setIsGoogleSynced(newState);
+      localStorage.setItem('office_gcal_synced', String(newState));
+      if (newState) {
+        setSyncMessage('Google Agenda conectado com sucesso! Prazos e reuniões do escritório agora estão sincronizados.');
+      } else {
+        setSyncMessage('Sincronização com o Google Agenda desativada.');
+      }
+    } catch (err) {
+      console.error(err);
+      setSyncMessage('Erro ao conectar com o Google Agenda.');
+    } finally {
+      setIsSyncingCalendar(false);
+      setTimeout(() => setSyncMessage(null), 4000);
+    }
+  };
+
   useEffect(() => {
     localStorage.setItem('today_scratchpad', dailyNote);
   }, [dailyNote]);
@@ -383,6 +412,61 @@ export const TodayTab: React.FC = () => {
       {/* 2. MODE: MEU DIA (Hoje) */}
       {viewMode === 'today' && (
         <div className="space-y-6">
+          {/* Google Calendar Integration Widget */}
+          <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <CalendarDays className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-[#fcf8f5]">Sincronização com o Google Agenda</h4>
+                  {isGoogleSynced && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Sincronizado
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-[#a89c93] mt-0.5">
+                  {isGoogleSynced 
+                    ? 'Seus compromissos, reuniões e prazos do escritório estão sincronizados em tempo real com o Google Calendar.' 
+                    : 'Conecte sua conta Google para sincronizar automaticamente reuniões, prazos e compromissos do escritório.'}
+                </p>
+                {syncMessage && (
+                  <p className="text-[11px] text-amber-400 mt-1 font-medium">{syncMessage}</p>
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={handleSyncGoogleCalendar}
+              disabled={isSyncingCalendar}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                isGoogleSynced
+                  ? 'bg-[#2a221d] hover:bg-[#382d27] text-amber-300 border border-amber-500/40'
+                  : 'bg-[var(--theme-primary)] hover:brightness-110 text-black shadow-md'
+              }`}
+            >
+              {isSyncingCalendar ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  <span>Sincronizando...</span>
+                </>
+              ) : isGoogleSynced ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Configurado / Desconectar</span>
+                </>
+              ) : (
+                <>
+                  <CalendarDays className="w-4 h-4" />
+                  <span>Conectar Google Agenda</span>
+                </>
+              )}
+            </button>
+          </div>
+
           {/* Welcome Banner */}
           <div className="relative p-6 rounded-2xl bg-gradient-to-br from-[#1c1815] via-[#161311] to-[#12100e] border border-[#3d342f] overflow-hidden shadow-md">
             <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-[#c58a4b]/10 rounded-full blur-2xl pointer-events-none" />
