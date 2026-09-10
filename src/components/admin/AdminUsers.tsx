@@ -523,30 +523,25 @@ export const AdminUsers: React.FC = () => {
               </button>
             </form>
           </div>
-        </div>
-      )}
-      {errorMessage && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{errorMessage}</span>
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold transition-colors"
-          >
-            Recarregar Page
-          </button>
-        </div>
-      )}
 
-      <DashboardSubscriptions users={users} />
-      {/* ... */}
-    </div>
-  );
-};
+          {errorMessage && (
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold transition-colors"
+              >
+                Recarregar Page
+              </button>
+            </div>
+          )}
 
-      {/* Filter and Search Bar */}
+          <DashboardSubscriptions users={users} />
+
+          {/* Filter and Search Bar */}
       <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a89c93]" />
@@ -856,6 +851,8 @@ export const AdminUsers: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
         </div>
       )}
     </div>
