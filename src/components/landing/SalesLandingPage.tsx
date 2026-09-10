@@ -31,7 +31,14 @@ import {
   CheckSquare,
   BarChart3,
   CalendarCheck2,
-  ListTodo
+  ListTodo,
+  Radio,
+  MessageSquare,
+  Download,
+  KeyRound,
+  ExternalLink,
+  Shield,
+  Eye
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -45,7 +52,7 @@ export const SalesLandingPage: React.FC = () => {
   
   // Interactive niche showcase selector on the landing page
   const [activeNicheKey, setActiveNicheKey] = useState<NicheType>('advocacia');
-  const [previewTab, setPreviewTab] = useState<'projetos' | 'prazos' | 'crm'>('projetos');
+  const [previewTab, setPreviewTab] = useState<'radar_cliente' | 'projetos' | 'prazos' | 'crm'>('radar_cliente');
 
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
@@ -149,6 +156,10 @@ export const SalesLandingPage: React.FC = () => {
           </div>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#a89c93]">
+            <a href="#radar-cliente" className="text-[#fcf8f5] hover:text-[var(--theme-primary)] transition-colors flex items-center gap-1.5 font-semibold">
+              <Radio className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <span>Radar do Cliente</span>
+            </a>
             <a href="#diferencial" className="hover:text-[#fcf8f5] transition-colors">Por Que Nós</a>
             <a href="#nichos" className="hover:text-[#fcf8f5] transition-colors">Seu Nicho</a>
             <a href="#recursos" className="hover:text-[#fcf8f5] transition-colors">Recursos do Gestor</a>
@@ -239,14 +250,30 @@ export const SalesLandingPage: React.FC = () => {
           </div>
 
           {/* Key Value Badges */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto pt-6 border-t border-[#3d342f]/40 text-left">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-5xl mx-auto pt-6 border-t border-[#3d342f]/40 text-left">
+            <div className="bg-[#161210] border border-[var(--theme-primary)]/50 p-3.5 rounded-xl flex items-center gap-3 relative overflow-hidden group hover:border-[var(--theme-primary)] transition-all">
+              <div className="absolute top-1 right-1.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              </div>
+              <div className="p-2 rounded-lg bg-[var(--theme-badge-bg)] text-[var(--theme-primary)] shrink-0">
+                <Radio className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-[#fcf8f5] flex items-center gap-1">
+                  Radar do Cliente
+                </div>
+                <div className="text-[11px] text-amber-400/90 font-medium">Acesso exclusivo do cliente</div>
+              </div>
+            </div>
+
             <div className="bg-[#161210] border border-[#3d342f]/80 p-3.5 rounded-xl flex items-center gap-3">
               <div className="p-2 rounded-lg bg-[var(--theme-badge-bg)] text-[var(--theme-primary)] shrink-0">
                 <FolderKanban className="w-4 h-4" />
               </div>
               <div>
                 <div className="text-xs font-bold text-[#fcf8f5]">Gestão de Projetos</div>
-                <div className="text-[11px] text-[#a89c93]">Kanban, fases e entregáveis</div>
+                <div className="text-[11px] text-[#a89c93]">Kanban, fases e entregas</div>
               </div>
             </div>
 
@@ -292,18 +319,30 @@ export const SalesLandingPage: React.FC = () => {
               className="text-xs font-bold uppercase tracking-widest"
               style={{ color: 'var(--theme-primary)' }}
             >
-              Visão Operacional
+              Visão Operacional & Experiência do Cliente
             </span>
             <h2 className="text-3xl sm:text-4xl font-serif font-bold text-[#fcf8f5] mt-2 mb-3">
-              O centro de comando do seu escritório
+              O centro de comando do seu escritório e dos seus clientes
             </h2>
             <p className="text-[#a89c93] text-sm sm:text-base">
-              Veja como o Meu Escritório Online organiza seus projetos e prazos de forma clara, intuitiva e sem complicação.
+              Veja como o Meu Escritório Online organiza seus projetos e proporciona uma experiência VIP e transparente para seu cliente.
             </p>
           </div>
 
           {/* Preview Navigation Tabs */}
-          <div className="flex justify-center gap-2 mb-8">
+          <div className="flex flex-wrap justify-center gap-2 mb-8">
+            <button
+              onClick={() => setPreviewTab('radar_cliente')}
+              className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                previewTab === 'radar_cliente'
+                  ? 'bg-[var(--theme-primary)] text-black shadow-lg scale-105'
+                  : 'bg-[#1a1614] border border-[#3d342f] text-[#a89c93] hover:text-[#fcf8f5]'
+              }`}
+            >
+              <Radio className="w-4 h-4 text-amber-400" />
+              <span>★ Radar do Cliente (Portal VIP)</span>
+            </button>
+
             <button
               onClick={() => setPreviewTab('projetos')}
               className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
@@ -349,13 +388,221 @@ export const SalesLandingPage: React.FC = () => {
                 <div className="w-3 h-3 rounded-full bg-red-500/60" />
                 <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
                 <div className="w-3 h-3 rounded-full bg-emerald-500/60" />
-                <span className="text-xs text-[#a89c93] font-mono ml-2">meuescritorio.online/painel</span>
+                <span className="text-xs text-[#a89c93] font-mono ml-2">
+                  {previewTab === 'radar_cliente' ? 'meuescritorio.online/cliente/acesso-vip' : 'meuescritorio.online/painel'}
+                </span>
               </div>
               <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Operação ao vivo
+                {previewTab === 'radar_cliente' ? 'Portal Exclusivo do Cliente Ativo' : 'Operação ao vivo'}
               </span>
             </div>
+
+            {/* Content for TAB: Radar do Cliente */}
+            {previewTab === 'radar_cliente' && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-amber-500/10 via-[#1e1916] to-transparent p-4 rounded-2xl border border-amber-500/30">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wider flex items-center gap-1">
+                        <Radio className="w-3 h-3 text-amber-400" />
+                        Radar do Cliente em Tempo Real
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-serif font-bold text-[#fcf8f5]">Acesso Exclusivo & Transparente para seu Cliente</h3>
+                    <p className="text-xs text-[#a89c93]">O cliente entra com CPF/CNPJ ou PIN de acesso e acompanha tudo sem precisar mandar WhatsApp cobrando status</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs bg-[#12100e] px-3.5 py-2 rounded-xl border border-amber-500/40 text-amber-300 font-bold flex items-center gap-1.5 shadow-inner">
+                      <KeyRound className="w-3.5 h-3.5" />
+                      Login 100% Personalizado
+                    </span>
+                  </div>
+                </div>
+
+                {/* Simulated Client Portal UI Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                  {/* Left Col: Progress and Milestones */}
+                  <div className="lg:col-span-2 space-y-4">
+                    {/* Project Header Banner */}
+                    <div className="bg-[#12100e] border border-[#3d342f] p-5 rounded-2xl space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#a89c93] tracking-wider block">Projeto em Acompanhamento</span>
+                          <h4 className="text-base font-bold text-[#fcf8f5] flex items-center gap-2">
+                            Ação Cível e Regularização Imobiliária
+                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                              Em Andamento
+                            </span>
+                          </h4>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] text-[#a89c93] block">Previsão de Entrega</span>
+                          <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            28 de Outubro
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div>
+                        <div className="flex justify-between items-center text-xs mb-1.5">
+                          <span className="text-[#a89c93] font-medium flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            Progresso Geral do Contrato
+                          </span>
+                          <span className="text-emerald-400 font-extrabold text-sm">75% Concluído</span>
+                        </div>
+                        <div className="w-full bg-[#241e1b] h-3 rounded-full overflow-hidden p-0.5 border border-[#3d342f]">
+                          <div className="bg-gradient-to-r from-amber-500 to-emerald-400 h-full rounded-full transition-all" style={{ width: '75%' }} />
+                        </div>
+                      </div>
+
+                      {/* Milestone Steps Timeline */}
+                      <div className="pt-3 border-t border-[#3d342f]/70">
+                        <span className="text-[11px] font-bold text-[#fcf8f5] block mb-3">Linha do Tempo das Etapas:</span>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="bg-[#1a1614] border border-emerald-500/40 p-2.5 rounded-xl">
+                            <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 mb-1">
+                              <Check className="w-3 h-3" />
+                              1. Briefing
+                            </div>
+                            <span className="text-[10px] text-[#a89c93]">Concluído</span>
+                          </div>
+
+                          <div className="bg-[#1a1614] border border-emerald-500/40 p-2.5 rounded-xl">
+                            <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 mb-1">
+                              <Check className="w-3 h-3" />
+                              2. Documentação
+                            </div>
+                            <span className="text-[10px] text-[#a89c93]">Aprovado</span>
+                          </div>
+
+                          <div className="bg-[#1a1614] border border-amber-500/60 p-2.5 rounded-xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-amber-400 animate-ping m-1" />
+                            <div className="flex items-center gap-1 text-[11px] font-bold text-amber-400 mb-1">
+                              <Radio className="w-3 h-3 animate-spin" />
+                              3. Execução
+                            </div>
+                            <span className="text-[10px] text-amber-300 font-semibold">Fase Atual</span>
+                          </div>
+
+                          <div className="bg-[#1a1614] border border-[#3d342f] p-2.5 rounded-xl opacity-60">
+                            <div className="flex items-center gap-1 text-[11px] font-bold text-[#a89c93] mb-1">
+                              4. Protocolo Final
+                            </div>
+                            <span className="text-[10px] text-[#a89c93]">Próxima Etapa</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Shared Documents Box */}
+                    <div className="bg-[#12100e] border border-[#3d342f] p-5 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-[var(--theme-primary)]" />
+                          <h4 className="text-sm font-bold text-[#fcf8f5]">Documentos & Arquivos Liberados</h4>
+                        </div>
+                        <span className="text-[11px] text-[#a89c93]">Downloads seguros com 1 clique</span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#1a1614] border border-[#3d342f] hover:border-[var(--theme-primary)]/50 transition-colors">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-1.5 rounded-lg bg-red-500/10 text-red-400">
+                              <FileText className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-semibold text-[#fcf8f5]">Contrato_Prestacao_Servicos_Assinado.pdf</div>
+                              <div className="text-[10px] text-[#a89c93]">Disponibilizado pelo escritório • 1.4 MB</div>
+                            </div>
+                          </div>
+                          <span className="px-3 py-1 rounded-lg bg-[#241e1b] hover:bg-[#322a26] text-xs font-bold text-[var(--theme-primary)] flex items-center gap-1 cursor-pointer">
+                            <Download className="w-3 h-3" />
+                            Baixar
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#1a1614] border border-[#3d342f] hover:border-[var(--theme-primary)]/50 transition-colors">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400">
+                              <FileText className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-semibold text-[#fcf8f5]">Relatorio_Status_Etapa_02.pdf</div>
+                              <div className="text-[10px] text-[#a89c93]">Atualizado há 2 dias • 850 KB</div>
+                            </div>
+                          </div>
+                          <span className="px-3 py-1 rounded-lg bg-[#241e1b] hover:bg-[#322a26] text-xs font-bold text-[var(--theme-primary)] flex items-center gap-1 cursor-pointer">
+                            <Download className="w-3 h-3" />
+                            Baixar
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Col: Direct Office Chat & Client Support */}
+                  <div className="space-y-4">
+                    <div className="bg-[#12100e] border border-[#3d342f] p-5 rounded-2xl space-y-4 h-full flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 pb-3 border-b border-[#3d342f]">
+                          <div className="w-8 h-8 rounded-full bg-[var(--theme-badge-bg)] text-[var(--theme-primary)] flex items-center justify-center font-bold text-xs">
+                            <MessageSquare className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-[#fcf8f5]">Canal Direto com o Escritório</h4>
+                            <span className="text-[10px] text-emerald-400 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              Equipe Online
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 my-4">
+                          {/* Message from client */}
+                          <div className="flex flex-col items-end">
+                            <div className="bg-[#2a221d] border border-[#3d342f] p-3 rounded-2xl rounded-tr-none text-xs text-[#fcf8f5] max-w-[90%]">
+                              Olá! Consegui enviar as certidões solicitadas pelo portal ontem.
+                            </div>
+                            <span className="text-[9px] text-[#a89c93] mt-1">Ontem 17:42 • Você</span>
+                          </div>
+
+                          {/* Message from Office */}
+                          <div className="flex flex-col items-start">
+                            <div className="bg-[#1e1916] border border-[var(--theme-primary)]/30 p-3 rounded-2xl rounded-tl-none text-xs text-[#fcf8f5] max-w-[90%]">
+                              <span className="text-[10px] font-bold text-[var(--theme-primary)] block mb-0.5">Escritório:</span>
+                              Perfeito, Roberto! Já validamos os documentos e a minuta da peça já está em elaboração.
+                            </div>
+                            <span className="text-[9px] text-[#a89c93] mt-1">Hoje 09:15 • Adv. Responsável</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Mock Chat Input */}
+                      <div className="pt-3 border-t border-[#3d342f]">
+                        <div className="flex items-center gap-2 bg-[#1a1614] border border-[#3d342f] p-1.5 rounded-xl">
+                          <input 
+                            type="text" 
+                            disabled 
+                            placeholder="Digite uma mensagem para o escritório..." 
+                            className="bg-transparent text-xs text-[#fcf8f5] px-2 flex-1 focus:outline-none placeholder-[#6b5f58]"
+                          />
+                          <button className="p-2 rounded-lg bg-[var(--theme-primary)] text-black font-bold text-xs">
+                            Enviar
+                          </button>
+                        </div>
+                        <span className="text-[9px] text-[#a89c93] text-center block mt-2">
+                          🔒 Todas as mensagens e arquivos ficam gravados no histórico do projeto
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Content for TAB 1: Projetos & Demandas */}
             {previewTab === 'projetos' && (
@@ -871,6 +1118,149 @@ export const SalesLandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Dedicated Highlight Section: Radar do Cliente (Acesso Exclusivo do Cliente) */}
+      <section id="radar-cliente" className="py-20 md:py-28 bg-[#130f0d] border-b border-[#3d342f] relative overflow-hidden">
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[var(--theme-primary)]/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            
+            {/* Left Col: Explanatory Copy & Key Benefits */}
+            <div className="lg:col-span-6 space-y-6">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-wider">
+                <Radio className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                Diferencial Exclusivo
+              </div>
+
+              <h2 className="text-3xl sm:text-5xl font-serif font-bold text-[#fcf8f5] leading-tight">
+                Radar do Cliente: <br />
+                <span style={{ color: 'var(--theme-primary)' }}>Acesso exclusivo</span> para encantar seus clientes
+              </h2>
+
+              <p className="text-[#a89c93] text-base sm:text-lg leading-relaxed">
+                Diga adeus a mensagens diárias no WhatsApp perguntando <em>"Como está meu processo/projeto?"</em>. O <strong>Radar do Cliente</strong> é um portal VIP e seguro onde seu cliente acompanha cada avanço em tempo real.
+              </p>
+
+              {/* 3 Core Pillars of Client Radar */}
+              <div className="space-y-4 pt-2">
+                <div className="bg-[#1a1614] border border-[#3d342f] p-4 rounded-2xl flex items-start gap-3.5 hover:border-amber-500/40 transition-colors">
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 shrink-0 mt-0.5">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-[#fcf8f5]">Acompanhar o Progresso do Projeto</h3>
+                    <p className="text-xs text-[#a89c93] mt-0.5">
+                      Cronograma visual interativo com etapas concluídas, fase atual em andamento e previsão exata de conclusão.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-[#1a1614] border border-[#3d342f] p-4 rounded-2xl flex items-start gap-3.5 hover:border-amber-500/40 transition-colors">
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 shrink-0 mt-0.5">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-[#fcf8f5]">Acessar Documentos e Contratos</h3>
+                    <p className="text-xs text-[#a89c93] mt-0.5">
+                      Repositório seguro de arquivos: minutas, laudos, relatórios e contratos disponíveis para download com um clique.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-[#1a1614] border border-[#3d342f] p-4 rounded-2xl flex items-start gap-3.5 hover:border-amber-500/40 transition-colors">
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 shrink-0 mt-0.5">
+                    <MessageSquare className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-[#fcf8f5]">Conversar Diretamente com o Escritório</h3>
+                    <p className="text-xs text-[#a89c93] mt-0.5">
+                      Canal oficial e unificado de mensagens. Todas as orientações e dúvidas ficam salvas no histórico do projeto.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row items-center gap-4">
+                <button
+                  onClick={() => {
+                    setPreviewTab('radar_cliente');
+                    const el = document.getElementById('interativo');
+                    el?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-xl text-black font-bold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg hover:brightness-110"
+                  style={{ backgroundColor: 'var(--theme-primary)' }}
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>Ver Demonstração Interativa</span>
+                </button>
+                <span className="text-xs text-[#a89c93]">
+                  Incluído sem custo adicional em todos os planos
+                </span>
+              </div>
+            </div>
+
+            {/* Right Col: Visual Card Preview of the Radar Experience */}
+            <div className="lg:col-span-6">
+              <div className="bg-[#1a1614] border border-amber-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
+                <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#3d342f]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xs">
+                      <Radio className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-[#fcf8f5] block">Portal do Cliente</span>
+                      <span className="text-[10px] text-[#a89c93]">Acesso via CPF / CNPJ do cliente</span>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    ● Acesso Ativo
+                  </span>
+                </div>
+
+                <div className="space-y-4 text-left">
+                  {/* Status Banner */}
+                  <div className="p-3.5 rounded-xl bg-[#12100e] border border-[#3d342f] space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-semibold text-[#fcf8f5]">Status Geral da Prestação de Serviço</span>
+                      <span className="text-emerald-400 font-bold">75% Concluído</span>
+                    </div>
+                    <div className="w-full bg-[#241e1b] h-2.5 rounded-full overflow-hidden">
+                      <div className="bg-gradient-to-r from-amber-500 to-emerald-400 h-full w-3/4" />
+                    </div>
+                  </div>
+
+                  {/* 3 Actionable Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div className="p-3 rounded-xl bg-[#12100e] border border-[#3d342f] text-center">
+                      <Clock className="w-4 h-4 text-amber-400 mx-auto mb-1" />
+                      <div className="text-[10px] text-[#a89c93]">Próxima Entrega</div>
+                      <div className="text-xs font-bold text-[#fcf8f5]">28 de Out</div>
+                    </div>
+                    <div className="p-3 rounded-xl bg-[#12100e] border border-[#3d342f] text-center">
+                      <FileText className="w-4 h-4 text-blue-400 mx-auto mb-1" />
+                      <div className="text-[10px] text-[#a89c93]">Documentos</div>
+                      <div className="text-xs font-bold text-[#fcf8f5]">4 Arquivos</div>
+                    </div>
+                    <div className="p-3 rounded-xl bg-[#12100e] border border-[#3d342f] text-center">
+                      <MessageSquare className="w-4 h-4 text-emerald-400 mx-auto mb-1" />
+                      <div className="text-[10px] text-[#a89c93]">Chat Escritório</div>
+                      <div className="text-xs font-bold text-emerald-400">Online</div>
+                    </div>
+                  </div>
+
+                  {/* Quote / Testimonial Box */}
+                  <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-xs text-[#a89c93] italic leading-relaxed">
+                    "Transmitir esse nível de organização e transparência para o cliente eleva o valor percebido do seu trabalho e justifica honorários mais altos."
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
       {/* Main Features Section - The 6 Core Pillars */}
       <section id="recursos" className="py-20 md:py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
@@ -1035,7 +1425,11 @@ export const SalesLandingPage: React.FC = () => {
               <div className="space-y-4 mb-8 pt-6 border-t border-[#3d342f]">
                 <div className="flex items-start gap-3">
                   <Check className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--theme-primary)' }} />
-                  <span className="text-sm text-[#fcf8f5]">Gestor Completo de Projetos & Demandas</span>
+                  <span className="text-sm text-[#fcf8f5]"><strong>Radar do Cliente:</strong> Portal exclusivo com login para seu cliente</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--theme-primary)' }} />
+                  <span className="text-sm text-[#fcf8f5]">Gestor Completo de Projetos & Fases</span>
                 </div>
                 <div className="flex items-start gap-3">
                   <Check className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--theme-primary)' }} />
@@ -1043,7 +1437,7 @@ export const SalesLandingPage: React.FC = () => {
                 </div>
                 <div className="flex items-start gap-3">
                   <Check className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--theme-primary)' }} />
-                  <span className="text-sm text-[#fcf8f5]">CRM de Clientes, Contratos e Honorários</span>
+                  <span className="text-sm text-[#fcf8f5]">CRM de Clientes, Documentos e Contratos</span>
                 </div>
                 <div className="flex items-start gap-3">
                   <Check className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--theme-primary)' }} />
@@ -1156,6 +1550,10 @@ export const SalesLandingPage: React.FC = () => {
 
           <div className="space-y-4">
             {[
+              {
+                q: "O que é o Radar do Cliente e como meu cliente acessa?",
+                a: "O Radar do Cliente é um portal exclusivo e seguro onde seus clientes podem acompanhar o andamento dos projetos e demandas em tempo real, baixar documentos e contratos e conversar diretamente com o escritório. Seu cliente acessa com CPF/CNPJ ou link exclusivo sem precisar criar senhas complexas, economizando horas de atendimento e transmitindo profissionalismo impecável."
+              },
               {
                 q: "O Meu Escritório Online é só para controle financeiro?",
                 a: "Não! O Meu Escritório Online é um gestor completo de negócios. Ele foi projetado para gerenciar projetos do início ao fim, controlar prazos de entrega e marcos importantes, gerenciar clientes (CRM), organizar a rotina diária da equipe e conectar o faturamento e honorários de forma natural ao trabalho executado."
