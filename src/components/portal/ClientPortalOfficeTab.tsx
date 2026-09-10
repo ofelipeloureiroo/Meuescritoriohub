@@ -51,7 +51,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { architectureProjects, clients, architectProfile } = useFinance();
+  const { architectureProjects, clients, architectProfile, projectMilestones } = useFinance();
 
   const [portals, setPortals] = useState<ClientPortalAccess[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,9 +93,9 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
           (p.clientEmail && client.email && p.clientEmail.trim().toLowerCase() === client.email.trim().toLowerCase()) ||
           p.clientName.trim().toLowerCase() === client.name.trim().toLowerCase()
       );
-      return buildClientPortalAccess(client, architectureProjects, architectProfile, cloudMatch);
+      return buildClientPortalAccess(client, architectureProjects, architectProfile, cloudMatch, projectMilestones);
     });
-  }, [clients, portals, architectureProjects, architectProfile]);
+  }, [clients, portals, architectureProjects, architectProfile, projectMilestones]);
 
   const filteredPortals = displayPortals.filter((p) => {
     const matchSearch =

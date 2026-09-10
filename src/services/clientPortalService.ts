@@ -19,7 +19,8 @@ import {
   ClientPortalStage,
   ArchitectureProject,
   Client,
-  ArchitectProfile
+  ArchitectProfile,
+  ProjectMilestone
 } from '../types';
 
 export const generateProvisionalPassword = (): string => {
@@ -520,32 +521,77 @@ export const SAMPLE_CLIENT_PORTAL: ClientPortalAccess = {
 };
 
 /**
+ * Calculates the exact schedule & milestone progress percent for an architecture project.
+ */
+export function calculateProjectScheduleProgress(
+  ap: ArchitectureProject, 
+  milestones?: ProjectMilestone[]
+): number {
+  const pStages = (ap.stages && ap.stages.length > 0) ? ap.stages : [];
+  const stageTasks = pStages.flatMap(s => s.tasks || []);
+  const projectMils = (milestones || []).filter(m => m.projectId === ap.id);
+
+  const stageTasksTotal = stageTasks.length;
+  const stageTasksCompleted = stageTasks.filter(t => t.status === 'completed').length;
+  const milsTotal = projectMils.length;
+  const milsCompleted = projectMils.filter(m => m.completed).length;
+
+  const totalItems = stageTasksTotal + milsTotal;
+  const completedCount = stageTasksCompleted + milsCompleted;
+
+  if (totalItems > 0) {
+    return Math.min(100, Math.max(0, Math.round((completedCount / totalItems) * 100)));
+  }
+
+  // If there are stages without subtasks, compute based on stage statuses
+  if (pStages.length > 0) {
+    const total = pStages.length;
+    let score = 0;
+    pStages.forEach(s => {
+      const st = s.status as string;
+      if (st === 'concluida' || st === 'completed') score += 100 / total;
+      else if (st === 'em_andamento' || st === 'in_progress') score += 50 / total;
+    });
+    return Math.min(100, Math.max(0, Math.round(score)));
+  }
+
+  // Fallback by project status category
+  if (ap.status === 'entregue' || ap.status === 'concluido') return 100;
+  if (ap.status === 'obra') return 80;
+  if (ap.status === 'executivo') return 60;
+  if (ap.status === 'anteprojeto') return 40;
+  if (ap.status === 'estudo_preliminar') return 20;
+  return 0;
+}
+
+/**
  * Converts an ArchitectureProject (from FinanceContext/Gestor) into a high-fidelity ClientPortalProject.
  */
-export function convertArchitectureProjectToPortalProject(ap: ArchitectureProject): ClientPortalProject {
+export function convertArchitectureProjectToPortalProject(
+  ap: ArchitectureProject,
+  milestones?: ProjectMilestone[]
+): ClientPortalProject {
   const isDelivered = ap.status === 'entregue' || ap.status === 'concluido';
   const isObra = ap.status === 'obra';
   const isExecutivo = ap.status === 'executivo';
   const isAnteprojeto = ap.status === 'anteprojeto';
 
-  let defaultProgress = 30;
+  const calculatedProgress = calculateProjectScheduleProgress(ap, milestones);
+
+  let defaultProgress = calculatedProgress;
   let stageName = 'Estudo Preliminar & Modelagem 3D';
   let stageIndex = 1;
 
   if (isDelivered) {
-    defaultProgress = 100;
     stageName = 'Entrega Final & Obra Concluída';
     stageIndex = 5;
   } else if (isObra) {
-    defaultProgress = 80;
     stageName = 'Acompanhamento de Obra';
     stageIndex = 4;
   } else if (isExecutivo) {
-    defaultProgress = 60;
     stageName = 'Projeto Executivo & Marcenaria';
     stageIndex = 3;
   } else if (isAnteprojeto) {
-    defaultProgress = 40;
     stageName = 'Anteprojeto & Aprovação 3D';
     stageIndex = 2;
   }
@@ -559,9 +605,9 @@ export function convertArchitectureProjectToPortalProject(ap: ArchitectureProjec
   if (ap.stages && ap.stages.length > 0) {
     portalStages = ap.stages.map((st, i) => {
       let stStatus: 'completed' | 'in_progress' | 'pending' = 'pending';
-      if (st.status === 'completed') {
+      if (st.status === 'completed' || (st as any).status === 'concluida') {
         stStatus = 'completed';
-      } else if (st.status === 'in_progress') {
+      } else if (st.status === 'in_progress' || (st as any).status === 'em_andamento') {
         stStatus = 'in_progress';
       }
       const stAny = st as any;
@@ -640,7 +686,8 @@ export function buildClientPortalAccess(
   client: Client,
   allProjects: ArchitectureProject[],
   profile?: ArchitectProfile | null,
-  existingPortal?: ClientPortalAccess | null
+  existingPortal?: ClientPortalAccess | null,
+  milestones?: ProjectMilestone[]
 ): ClientPortalAccess {
   // Find all projects belonging to this client in real time
   const clientNameNormalized = client.name.trim().toLowerCase();
@@ -654,7 +701,9 @@ export function buildClientPortalAccess(
     return false;
   });
 
-  const portalProjects: ClientPortalProject[] = clientProjects.map(convertArchitectureProjectToPortalProject);
+  const portalProjects: ClientPortalProject[] = clientProjects.map(p => 
+    convertArchitectureProjectToPortalProject(p, milestones)
+  );
 
   const portalId = existingPortal?.id || `portal-${client.id}`;
   const accessCode = existingPortal?.accessCode || `MEO-${client.id.replace(/\D/g, '').slice(-4) || '2026'}`;
@@ -708,7 +757,8 @@ export function syncPortalWithOfficeRegistry(
   portal: ClientPortalAccess,
   clients: Client[],
   architectureProjects: ArchitectureProject[],
-  profile?: ArchitectProfile | null
+  profile?: ArchitectProfile | null,
+  milestones?: ProjectMilestone[]
 ): ClientPortalAccess {
   // 1. Check if portal client matches any client in office database
   const matchedClient = clients.find(
@@ -718,7 +768,7 @@ export function syncPortalWithOfficeRegistry(
   );
 
   if (matchedClient) {
-    return buildClientPortalAccess(matchedClient, architectureProjects, profile, portal);
+    return buildClientPortalAccess(matchedClient, architectureProjects, profile, portal, milestones);
   }
 
   // 2. If no matched client, check which projects from architectureProjects match this portal's clientName or project list
@@ -733,7 +783,7 @@ export function syncPortalWithOfficeRegistry(
   });
 
   // If projects exist in Gestor for this client, convert them
-  const portalProjects = activeProjects.map(convertArchitectureProjectToPortalProject);
+  const portalProjects = activeProjects.map(p => convertArchitectureProjectToPortalProject(p, milestones));
 
   const profileAny = profile as any;
 

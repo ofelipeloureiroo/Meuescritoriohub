@@ -18,7 +18,9 @@ import {
   AlertTriangle,
   Building2,
   ExternalLink,
-  Check
+  Check,
+  Zap,
+  Edit2
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -65,6 +67,7 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
     clients, 
     architectureProjects, 
     architectProfile,
+    projectMilestones,
     addClient,
     updateClient,
     addArchitectureProject,
@@ -85,13 +88,74 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
   const [accessCode, setAccessCode] = useState('');
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
 
-  // Project state
+  // Project state & Auto-progress mode
   const [projectTitle, setProjectTitle] = useState('');
   const [currentStageName, setCurrentStageName] = useState('Projeto Executivo & Marcenaria');
+  const [isAutoProgress, setIsAutoProgress] = useState(true);
   const [progressPercent, setProgressPercent] = useState(65);
   const [generalStatus, setGeneralStatus] = useState<ClientProjectHealthStatus>('no_prazo');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [stages, setStages] = useState<ClientPortalStage[]>(DEFAULT_STAGES);
+
+  // Dynamic automatic calculation based on schedule, tasks and stages
+  const calculateDynamicProgress = (
+    currentStages: ClientPortalStage[], 
+    projectId?: string
+  ): { percent: number; label: string; isFromTasks: boolean } => {
+    // 1. If connected to an office architecture project with milestones or schedule tasks
+    if (projectId) {
+      const linkedProject = architectureProjects.find(p => p.id === projectId);
+      if (linkedProject) {
+        const pStages = (linkedProject.stages && linkedProject.stages.length > 0) ? linkedProject.stages : [];
+        const stageTasks = pStages.flatMap(s => s.tasks || []);
+        const projectMils = (projectMilestones || []).filter(m => m.projectId === projectId);
+
+        const stageTasksTotal = stageTasks.length;
+        const stageTasksCompleted = stageTasks.filter(t => t.status === 'completed').length;
+        const milsTotal = projectMils.length;
+        const milsCompleted = projectMils.filter(m => m.completed).length;
+
+        const totalItems = stageTasksTotal + milsTotal;
+        const completedCount = stageTasksCompleted + milsCompleted;
+
+        if (totalItems > 0) {
+          const pct = Math.min(100, Math.max(0, Math.round((completedCount / totalItems) * 100)));
+          return {
+            percent: pct,
+            label: `${completedCount} de ${totalItems} entregas & marcos concluídos`,
+            isFromTasks: true
+          };
+        }
+      }
+    }
+
+    // 2. Otherwise calculate based on the stages list in the modal/portal
+    if (!currentStages || currentStages.length === 0) {
+      return { percent: 0, label: '0 etapas configuradas', isFromTasks: false };
+    }
+
+    const total = currentStages.length;
+    let score = 0;
+    let completedStages = 0;
+    let inProgressStages = 0;
+
+    currentStages.forEach(s => {
+      if (s.status === 'completed') {
+        score += 100 / total;
+        completedStages++;
+      } else if (s.status === 'in_progress') {
+        score += 50 / total;
+        inProgressStages++;
+      }
+    });
+
+    const pct = Math.min(100, Math.max(0, Math.round(score)));
+    return {
+      percent: pct,
+      label: `${completedStages}/${total} etapas concluídas${inProgressStages > 0 ? ` (+${inProgressStages} em andamento)` : ''}`,
+      isFromTasks: false
+    };
+  };
 
   // Documents state
   const [documents, setDocuments] = useState<ClientPortalDocument[]>([]);
@@ -299,7 +363,25 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
         setProjectTitle(clientProject.title);
         if (clientProject.deliveryDate) setDeliveryDate(clientProject.deliveryDate);
         if (clientProject.currentStageName) setCurrentStageName(clientProject.currentStageName);
-        if (typeof clientProject.progressPercent === 'number') setProgressPercent(clientProject.progressPercent);
+        
+        let loadedStages = stages;
+        if (clientProject.stages && clientProject.stages.length > 0) {
+          loadedStages = clientProject.stages.map((st, idx) => ({
+            id: st.id || `stg-${idx}`,
+            name: st.name,
+            status: st.status === 'concluida' ? 'completed' : st.status === 'em_andamento' ? 'in_progress' : 'pending',
+            plannedDate: st.deadline || undefined,
+            completedAt: st.completedDate || undefined,
+          }));
+          setStages(loadedStages);
+        }
+
+        if (isAutoProgress) {
+          const calc = calculateDynamicProgress(loadedStages, clientProject.id);
+          setProgressPercent(calc.percent);
+        } else if (typeof clientProject.progressPercent === 'number') {
+          setProgressPercent(clientProject.progressPercent);
+        }
       }
     }
   };
@@ -312,18 +394,24 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
       setProjectTitle(found.title);
       if (found.deliveryDate) setDeliveryDate(found.deliveryDate);
       if (found.currentStageName) setCurrentStageName(found.currentStageName);
-      if (typeof found.progressPercent === 'number') setProgressPercent(found.progressPercent);
 
+      let loadedStages = stages;
       if (found.stages && found.stages.length > 0) {
-        setStages(
-          found.stages.map((st, idx) => ({
-            id: st.id || `stg-${idx}`,
-            name: st.name,
-            status: st.status === 'concluida' ? 'completed' : st.status === 'em_andamento' ? 'in_progress' : 'pending',
-            plannedDate: st.deadline || undefined,
-            completedAt: st.completedDate || undefined,
-          }))
-        );
+        loadedStages = found.stages.map((st, idx) => ({
+          id: st.id || `stg-${idx}`,
+          name: st.name,
+          status: st.status === 'concluida' ? 'completed' : st.status === 'em_andamento' ? 'in_progress' : 'pending',
+          plannedDate: st.deadline || undefined,
+          completedAt: st.completedDate || undefined,
+        }));
+        setStages(loadedStages);
+      }
+
+      if (isAutoProgress) {
+        const calc = calculateDynamicProgress(loadedStages, found.id);
+        setProgressPercent(calc.percent);
+      } else if (typeof found.progressPercent === 'number') {
+        setProgressPercent(found.progressPercent);
       }
 
       // If client not yet selected, match by project
@@ -344,16 +432,39 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
     }
   };
 
-  // Stage status toggles
+  // Stage status toggles with automatic progress recalculation
   const handleToggleStageStatus = (stageId: string) => {
-    setStages(prev =>
-      prev.map(s => {
-        if (s.id !== stageId) return s;
-        if (s.status === 'completed') return { ...s, status: 'pending', completedAt: undefined };
-        if (s.status === 'in_progress') return { ...s, status: 'completed', completedAt: new Date().toLocaleDateString('pt-BR') };
-        return { ...s, status: 'in_progress', plannedDate: 'Em andamento' };
-      })
-    );
+    const nextStages = stages.map(s => {
+      if (s.id !== stageId) return s;
+      if (s.status === 'completed') return { ...s, status: 'pending' as const, completedAt: undefined };
+      if (s.status === 'in_progress') return { ...s, status: 'completed' as const, completedAt: new Date().toLocaleDateString('pt-BR') };
+      return { ...s, status: 'in_progress' as const, plannedDate: 'Em andamento' };
+    });
+    setStages(nextStages);
+
+    if (isAutoProgress) {
+      const calc = calculateDynamicProgress(nextStages, selectedProjectId);
+      setProgressPercent(calc.percent);
+
+      // Auto update current stage name
+      const activeStage = nextStages.find(s => s.status === 'in_progress') || 
+                          [...nextStages].reverse().find(s => s.status === 'completed');
+      if (activeStage) {
+        setCurrentStageName(activeStage.name);
+      }
+
+      if (calc.percent === 100) {
+        setGeneralStatus('concluido');
+      } else if (generalStatus === 'concluido' && calc.percent < 100) {
+        setGeneralStatus('no_prazo');
+      }
+    }
+  };
+
+  const handleEnableAutoProgress = () => {
+    setIsAutoProgress(true);
+    const calc = calculateDynamicProgress(stages, selectedProjectId);
+    setProgressPercent(calc.percent);
   };
 
   // Add document
@@ -838,23 +949,111 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[11px] font-bold text-[#a89c93]">
-                      Progresso Geral:
-                    </label>
-                    <span className="font-bold text-[var(--theme-primary)] text-xs">
-                      {progressPercent}%
-                    </span>
+                {/* Progress Control Block */}
+                <div className="md:col-span-2 bg-[#14110f] border border-[#3d342f] rounded-2xl p-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-bold text-[#fcf8f5]">
+                          Progresso Geral do Projeto
+                        </label>
+                        {isAutoProgress ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                            <Zap className="w-3 h-3" />
+                            Cálculo Automático
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#a89c93] bg-[#241e1b] border border-[#3d342f] px-2 py-0.5 rounded-full">
+                            <Edit2 className="w-3 h-3" />
+                            Manual
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#a89c93] mt-0.5">
+                        {isAutoProgress 
+                          ? `Sincronizado automaticamente com o cronograma (${calculateDynamicProgress(stages, selectedProjectId).label})`
+                          : 'Modo manual ativo (ajuste livre na barra)'}
+                      </p>
+                    </div>
+
+                    {/* Mode toggle button */}
+                    <div className="flex items-center bg-[#1c1815] border border-[#3d342f] rounded-xl p-1 gap-1">
+                      <button
+                        type="button"
+                        onClick={handleEnableAutoProgress}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+                          isAutoProgress 
+                            ? 'bg-[var(--theme-primary)] text-black font-bold shadow-sm' 
+                            : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                        }`}
+                        title="Calcular automaticamente pelas etapas e entregas do cronograma"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        Automático
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsAutoProgress(false)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+                          !isAutoProgress 
+                            ? 'bg-[#2e2621] text-[#fcf8f5] font-bold border border-[#4a3f38]' 
+                            : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                        }`}
+                        title="Ajustar porcentagem manualmente"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        Manual
+                      </button>
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={progressPercent}
-                    onChange={(e) => setProgressPercent(Number(e.target.value))}
-                    className="w-full accent-[var(--theme-primary)] cursor-pointer"
-                  />
+
+                  {/* Progress Visual Display */}
+                  <div className="space-y-2 pt-1">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[#a89c93] font-medium">Conclusão Estimada:</span>
+                      <span className="font-bold text-[var(--theme-primary)] text-sm">
+                        {progressPercent}%
+                      </span>
+                    </div>
+
+                    {/* Dynamic Progress Bar */}
+                    <div className="w-full bg-[#1c1815] h-3 rounded-full overflow-hidden border border-[#3d342f] p-0.5">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[var(--theme-primary)] to-amber-400 transition-all duration-300 rounded-full"
+                        style={{ width: `${Math.max(0, Math.min(100, progressPercent))}%` }}
+                      />
+                    </div>
+
+                    {/* If in manual mode, show range slider */}
+                    {!isAutoProgress ? (
+                      <div className="pt-2 space-y-2 border-t border-[#3d342f]/50">
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          value={progressPercent}
+                          onChange={(e) => setProgressPercent(Number(e.target.value))}
+                          className="w-full accent-[var(--theme-primary)] cursor-pointer"
+                        />
+                        <div className="flex justify-between items-center text-[10px] text-[#a89c93]">
+                          <span>0% (Início)</span>
+                          <button
+                            type="button"
+                            onClick={handleEnableAutoProgress}
+                            className="text-[var(--theme-primary)] hover:underline flex items-center gap-1 font-medium cursor-pointer"
+                          >
+                            <Zap className="w-3 h-3" />
+                            Restaurar Cálculo Automático
+                          </button>
+                          <span>100% (Entregue)</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-[#8e8177] italic">
+                        💡 Dica: Ao alternar o status das etapas abaixo ou concluir marcos no Gestor, a porcentagem se ajusta em tempo real.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
