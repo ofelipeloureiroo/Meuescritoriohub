@@ -7,6 +7,8 @@ import { Login } from './components/auth/Login';
 import { AdminUsers } from './components/admin/AdminUsers';
 import { SalesLandingPage } from './components/landing/SalesLandingPage';
 import { CheckoutPage } from './components/checkout/CheckoutPage';
+import { ClientLogin } from './components/portal/ClientLogin';
+import { ClientPortalDashboard } from './components/portal/ClientPortalDashboard';
 
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
@@ -265,6 +267,12 @@ export default function App() {
 
           {/* Authentication Route */}
           <Route path="/login" element={<Login />} />
+
+          {/* Client Portal Routes (Dedicated Client Login & Real-time Isolated Dashboard) */}
+          <Route path="/cliente/login" element={<ClientLogin />} />
+          <Route path="/cliente/dashboard" element={<ClientPortalDashboard />} />
+          <Route path="/cliente" element={<Navigate to="/cliente/login" replace />} />
+          <Route path="/portal-cliente" element={<Navigate to="/cliente/login" replace />} />
           
           {/* Admin Management Route */}
           <Route path="/admin/*" element={

@@ -44,6 +44,7 @@ import {
   UserPlus,
   Users,
   X,
+  KeyRound,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { Client, ContractStatus, WorkContract } from '../../types';
@@ -52,6 +53,7 @@ import { WorkContractModal } from '../contracts/WorkContractModal';
 import { NewContractModal } from '../contracts/NewContractModal';
 import { DigitalSignatureModal } from '../contracts/DigitalSignatureModal';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
+import { OfficeClientPortalManagerModal } from '../portal/OfficeClientPortalManagerModal';
 
 interface FreelanceClientsTabProps {
   onNavigateToMap?: () => void;
@@ -126,6 +128,8 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
   // Selected client for detail view
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [selectedClientForPortal, setSelectedClientForPortal] = useState<Client | null>(null);
+  const [isPortalModalOpen, setIsPortalModalOpen] = useState(false);
 
   useEffect(() => {
     setIsConfirmingDelete(false);
@@ -544,6 +548,17 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setSelectedClientForPortal(viewingClient);
+                      setIsPortalModalOpen(true);
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-[#faf6f0] border border-[#e5dcd0] text-[#a38253] hover:bg-[#f0eae1] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                    title="Gerenciar Portal do Cliente"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                    <span>Portal do Cliente</span>
+                  </button>
                   <button
                     onClick={() => setIsAssociateModalOpen(true)}
                     className="px-3.5 py-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1417,6 +1432,17 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            setSelectedClientForPortal(client);
+                            setIsPortalModalOpen(true);
+                          }}
+                          className="p-1.5 rounded-lg text-[#c8a97e] hover:bg-[#faf6f0] border border-transparent hover:border-[#e5dcd0] transition-colors cursor-pointer"
+                          title="Gerenciar Portal do Cliente"
+                        >
+                          <KeyRound className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
                             handleOpenEditClient(client);
                           }}
                           className="p-1.5 rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-zinc-800 transition-colors cursor-pointer"
@@ -2056,6 +2082,15 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
           </div>
         </div>
       )}
+      {/* Office Client Portal Manager Modal */}
+      <OfficeClientPortalManagerModal
+        isOpen={isPortalModalOpen}
+        onClose={() => {
+          setIsPortalModalOpen(false);
+          setSelectedClientForPortal(null);
+        }}
+        initialClient={selectedClientForPortal}
+      />
     </div>
   );
 };

@@ -629,4 +629,80 @@ export interface AppAction {
   isAppointment?: boolean;
 }
 
+// ==========================================
+// CLIENT PORTAL (PORTAL DO CLIENTE) TYPES
+// ==========================================
+
+export type ClientProjectHealthStatus = 'no_prazo' | 'atencao' | 'atrasado' | 'concluido';
+
+export interface ClientPortalStage {
+  id: string;
+  name: string;
+  description?: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  completedAt?: string;
+  plannedDate?: string;
+}
+
+export interface ClientPortalProject {
+  id: string;
+  title: string;
+  category?: string;
+  description?: string;
+  status: string;
+  generalStatus: ClientProjectHealthStatus;
+  currentStageName: string;
+  currentStageIndex: number;
+  progressPercent: number;
+  stages: ClientPortalStage[];
+  startDate: string;
+  deliveryDate: string;
+  contractTitle?: string;
+  contractNumber?: string;
+  contractStatus?: string;
+  totalValue?: number;
+  currency?: string;
+}
+
+export interface ClientPortalMessage {
+  id: string;
+  sender: 'office' | 'client';
+  senderName: string;
+  text: string;
+  createdAt: string;
+  read?: boolean;
+}
+
+export interface ClientPortalDocument {
+  id: string;
+  title: string;
+  category: 'contrato' | 'relatorio' | 'entregavel' | 'planta' | 'outro';
+  fileName: string;
+  fileUrl?: string;
+  date: string;
+  size?: string;
+}
+
+export interface ClientPortalAccess {
+  id: string; // Document ID
+  officeUid: string;
+  officeName: string;
+  officeEmail?: string;
+  officePhone?: string;
+  officeLogo?: string;
+  clientId: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone?: string;
+  clientDocument?: string; // CPF or CNPJ
+  accessCode: string; // Provisional password / access key
+  status: 'active' | 'inactive';
+  createdAt: string;
+  lastLoginAt?: string;
+  projects: ClientPortalProject[];
+  messages: ClientPortalMessage[];
+  documents: ClientPortalDocument[];
+}
+
+
 

@@ -153,7 +153,9 @@ export const SalesLandingPage: React.FC = () => {
             <a href="#nichos" className="hover:text-[#fcf8f5] transition-colors">Seu Nicho</a>
             <a href="#recursos" className="hover:text-[#fcf8f5] transition-colors">Recursos do Gestor</a>
             <a href="#planos" className="hover:text-[#fcf8f5] transition-colors">Planos & Preços</a>
-            <a href="#faq" className="hover:text-[#fcf8f5] transition-colors">Dúvidas</a>
+            <Link to="/cliente/login" className="text-[var(--theme-primary)] font-bold hover:brightness-125 transition-all">
+              Portal do Cliente ↗
+            </Link>
           </nav>
 
           <div className="flex items-center gap-4">
@@ -1228,6 +1230,8 @@ export const SalesLandingPage: React.FC = () => {
             © {new Date().getFullYear()} Meu Escritório Online. Todos os direitos reservados.
           </div>
           <div className="flex items-center gap-4 text-xs text-[#a89c93]">
+            <Link to="/cliente/login" className="hover:text-[var(--theme-primary)] transition-colors font-medium">Portal do Cliente</Link>
+            <span>•</span>
             <Link to="/login" className="hover:text-[#fcf8f5] transition-colors">Acessar Conta</Link>
             <span>•</span>
             <Link

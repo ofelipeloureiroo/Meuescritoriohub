@@ -22,6 +22,21 @@
         "updatedAt": { "type": "string" },
         "version": { "type": "number" }
       }
+    },
+    "ClientPortalAccess": {
+      "title": "ClientPortalAccess",
+      "description": "Client individual portal access for tracking project stages, deadlines, documents, and messages",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "officeUid": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientEmail": { "type": "string" },
+        "accessCode": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "officeUid", "clientName", "clientEmail", "status"]
     }
   },
   "firestore": {
@@ -32,6 +47,10 @@
     "/users/{userId}/data/{sectionId}": {
       "schema": "UserWorkspaceSection",
       "description": "User workspace section documents (profile, projects, clients, contracts, finance)"
+    },
+    "/clientPortals/{portalId}": {
+      "schema": "ClientPortalAccess",
+      "description": "Isolated client portal documents for clients to track their projects"
     }
   }
 }

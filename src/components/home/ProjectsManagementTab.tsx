@@ -24,6 +24,7 @@ import {
   CreditCard,
   User,
   Users,
+  KeyRound,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { ArchitectureProject, ProjectInstallment, ProjectMilestone } from '../../types';
@@ -34,6 +35,7 @@ import { AddProjectModal } from '../modals/AddProjectModal';
 import { NewContractModal } from '../contracts/NewContractModal';
 import { ProjectDetailModal } from '../modals/ProjectDetailModal';
 import { ProjectWorkspaceView } from '../projects/ProjectWorkspaceView';
+import { OfficeClientPortalManagerModal } from '../portal/OfficeClientPortalManagerModal';
 
 interface ProjectsManagementTabProps {
   onNavigateTab: (tab: string) => void;
@@ -65,6 +67,8 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
   const [isNewContractModalOpen, setIsNewContractModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<ArchitectureProject | null>(null);
   const [selectedProjectForDetail, setSelectedProjectForDetail] = useState<ArchitectureProject | null>(null);
+  const [selectedProjectForPortal, setSelectedProjectForPortal] = useState<ArchitectureProject | null>(null);
+  const [isPortalModalOpen, setIsPortalModalOpen] = useState(false);
 
   // Mini-form state for quick milestones inside cards
   const [activeAddingMilestoneProjectId, setActiveAddingMilestoneProjectId] = useState<string | null>(null);
@@ -424,6 +428,17 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                       >
                         <Eye className="w-3.5 h-3.5" />
                       </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProjectForPortal(p);
+                          setIsPortalModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-lg text-[var(--theme-primary)] hover:text-black hover:bg-[var(--theme-primary)] border border-[var(--theme-primary)]/40 transition-colors cursor-pointer"
+                        title="Gerenciar Portal do Cliente (Acesso, Fases & Mensagens)"
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -691,6 +706,16 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
           setEditingProject(p);
           setIsAddModalOpen(true);
         }}
+      />
+
+      {/* Office Client Portal Manager Modal */}
+      <OfficeClientPortalManagerModal
+        isOpen={isPortalModalOpen}
+        onClose={() => {
+          setIsPortalModalOpen(false);
+          setSelectedProjectForPortal(null);
+        }}
+        initialProject={selectedProjectForPortal}
       />
     </div>
   );
