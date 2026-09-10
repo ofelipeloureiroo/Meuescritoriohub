@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   KeyRound,
@@ -36,6 +36,8 @@ import {
   subscribeToOfficePortals, 
   setPortalStatus, 
   deleteClientPortalAccess,
+  buildClientPortalAccess,
+  syncPortalWithOfficeRegistry,
   SAMPLE_CLIENT_PORTAL 
 } from '../../services/clientPortalService';
 import { OfficeClientPortalManagerModal } from './OfficeClientPortalManagerModal';
@@ -49,7 +51,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { architectureProjects, clients } = useFinance();
+  const { architectureProjects, clients, architectProfile } = useFinance();
 
   const [portals, setPortals] = useState<ClientPortalAccess[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,8 +79,26 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
     return () => unsubscribe();
   }, [user]);
 
-  // Combine real portals with sample/demo portal if list is empty for immediate demonstration
-  const displayPortals = portals.length > 0 ? portals : [SAMPLE_CLIENT_PORTAL];
+  // Combine real office clients with real-time projects and any cloud saved portals
+  const displayPortals = useMemo(() => {
+    if (clients && clients.length > 0) {
+      return clients.map((client) => {
+        const cloudMatch = portals.find(
+          (p) =>
+            p.clientId === client.id ||
+            (p.clientEmail && client.email && p.clientEmail.trim().toLowerCase() === client.email.trim().toLowerCase()) ||
+            p.clientName.trim().toLowerCase() === client.name.trim().toLowerCase()
+        );
+        return buildClientPortalAccess(client, architectureProjects, architectProfile, cloudMatch);
+      });
+    }
+
+    if (portals.length > 0) {
+      return portals.map((p) => syncPortalWithOfficeRegistry(p, clients, architectureProjects, architectProfile));
+    }
+
+    return [syncPortalWithOfficeRegistry(SAMPLE_CLIENT_PORTAL, clients, architectureProjects, architectProfile)];
+  }, [clients, portals, architectureProjects, architectProfile]);
 
   const filteredPortals = displayPortals.filter((p) => {
     const matchSearch =
@@ -119,8 +139,9 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
   };
 
   const handleOpenClientPortal = (p: ClientPortalAccess) => {
-    sessionStorage.setItem('client_portal_session', JSON.stringify(p));
-    navigate(`/cliente/dashboard?portalId=${p.id}`);
+    const freshPortal = syncPortalWithOfficeRegistry(p, clients, architectureProjects, architectProfile);
+    sessionStorage.setItem('client_portal_session', JSON.stringify(freshPortal));
+    navigate(`/cliente/dashboard?portalId=${encodeURIComponent(freshPortal.id)}&clientId=${encodeURIComponent(freshPortal.clientId)}&admin=true`);
   };
 
   const handleToggleStatus = async (p: ClientPortalAccess) => {

@@ -15,7 +15,11 @@ import {
   ClientPortalAccess, 
   ClientPortalDocument, 
   ClientPortalMessage, 
-  ClientPortalProject 
+  ClientPortalProject,
+  ClientPortalStage,
+  ArchitectureProject,
+  Client,
+  ArchitectProfile
 } from '../types';
 
 export const generateProvisionalPassword = (): string => {
@@ -491,4 +495,233 @@ export const SAMPLE_CLIENT_PORTAL: ClientPortalAccess = {
     }
   ]
 };
+
+/**
+ * Converts an ArchitectureProject (from FinanceContext/Gestor) into a high-fidelity ClientPortalProject.
+ */
+export function convertArchitectureProjectToPortalProject(ap: ArchitectureProject): ClientPortalProject {
+  const isDelivered = ap.status === 'entregue' || ap.status === 'concluido';
+  const isObra = ap.status === 'obra';
+  const isExecutivo = ap.status === 'executivo';
+  const isAnteprojeto = ap.status === 'anteprojeto';
+
+  let defaultProgress = 30;
+  let stageName = 'Estudo Preliminar & Modelagem 3D';
+  let stageIndex = 1;
+
+  if (isDelivered) {
+    defaultProgress = 100;
+    stageName = 'Entrega Final & Obra Concluída';
+    stageIndex = 5;
+  } else if (isObra) {
+    defaultProgress = 80;
+    stageName = 'Acompanhamento de Obra';
+    stageIndex = 4;
+  } else if (isExecutivo) {
+    defaultProgress = 60;
+    stageName = 'Projeto Executivo & Marcenaria';
+    stageIndex = 3;
+  } else if (isAnteprojeto) {
+    defaultProgress = 40;
+    stageName = 'Anteprojeto & Aprovação 3D';
+    stageIndex = 2;
+  }
+
+  const rawAny = ap as any;
+  const progress = typeof rawAny.progressPercent === 'number' ? rawAny.progressPercent : defaultProgress;
+  const currentStage = (rawAny.currentStageName as string) || stageName;
+
+  // Stages
+  let portalStages: ClientPortalStage[] = [];
+  if (ap.stages && ap.stages.length > 0) {
+    portalStages = ap.stages.map((st, i) => {
+      let stStatus: 'completed' | 'in_progress' | 'pending' = 'pending';
+      if (st.status === 'completed') {
+        stStatus = 'completed';
+      } else if (st.status === 'in_progress') {
+        stStatus = 'in_progress';
+      }
+      const stAny = st as any;
+      return {
+        id: st.id || `stg-${i}`,
+        name: st.name,
+        status: stStatus,
+        completedAt: stStatus === 'completed' ? (stAny.completedDate || 'Concluído') : undefined,
+        plannedDate: st.endDatePlanned || stAny.deadline || undefined
+      };
+    });
+  } else {
+    // Generate standard 5 stages reflecting project status & progress
+    portalStages = [
+      { 
+        id: `stg-${ap.id}-1`, 
+        name: '1. Briefing & Levantamento Técnico', 
+        description: 'Alinhamento do programa de necessidades e medições detalhadas.',
+        status: 'completed', 
+        completedAt: 'Concluído' 
+      },
+      { 
+        id: `stg-${ap.id}-2`, 
+        name: '2. Estudo Preliminar & Modelagem 3D', 
+        description: 'Apresentação de layouts humanizados e volumetria 3D.',
+        status: (progress >= 35 ? 'completed' : 'in_progress'), 
+        completedAt: progress >= 35 ? 'Concluído' : undefined 
+      },
+      { 
+        id: `stg-${ap.id}-3`, 
+        name: '3. Anteprojeto & Aprovação', 
+        description: 'Definição de materiais, iluminação e aprovações necessárias.',
+        status: (progress >= 55 ? 'completed' : progress >= 35 ? 'in_progress' : 'pending'), 
+        completedAt: progress >= 55 ? 'Concluído' : undefined 
+      },
+      { 
+        id: `stg-${ap.id}-4`, 
+        name: '4. Projeto Executivo & Marcenaria', 
+        description: 'Pranchas executivas técnicas para marcenaria, forro e marmoraria.',
+        status: (progress >= 75 ? 'completed' : progress >= 55 ? 'in_progress' : 'pending') 
+      },
+      { 
+        id: `stg-${ap.id}-5`, 
+        name: '5. Acompanhamento & Entrega Final', 
+        description: 'Visitas técnicas, fiscalização de obra e entrega do caderno final.',
+        status: (progress >= 100 ? 'completed' : progress >= 75 ? 'in_progress' : 'pending') 
+      }
+    ];
+  }
+
+  return {
+    id: ap.id,
+    title: ap.title,
+    category: ap.category || 'Arquitetura e Interiores',
+    description: ap.description || `Projeto de ${ap.title} para ${ap.clientName}`,
+    status: ap.status || 'executivo',
+    generalStatus: isDelivered ? 'concluido' : 'no_prazo',
+    currentStageName: currentStage,
+    currentStageIndex: stageIndex,
+    progressPercent: progress,
+    stages: portalStages,
+    startDate: ap.startDate || ap.createdAt || new Date().toLocaleDateString('pt-BR'),
+    deliveryDate: ap.deliveryDate || 'A combinar com o escritório',
+    contractTitle: `Contrato de Prestação de Serviços - ${ap.title}`,
+    contractNumber: `CTR-${ap.id.slice(-4).toUpperCase()}`,
+    contractStatus: 'signed',
+    totalValue: ap.honorarios || 0,
+    currency: ap.currency || 'BRL'
+  };
+}
+
+/**
+ * Builds a dynamic ClientPortalAccess directly linked to a registered Client in FinanceContext.
+ */
+export function buildClientPortalAccess(
+  client: Client,
+  allProjects: ArchitectureProject[],
+  profile?: ArchitectProfile | null,
+  existingPortal?: ClientPortalAccess | null
+): ClientPortalAccess {
+  // Find all projects belonging to this client in real time
+  const clientNameNormalized = client.name.trim().toLowerCase();
+  const clientEmailNormalized = (client.email || '').trim().toLowerCase();
+
+  const clientProjects = allProjects.filter(ap => {
+    if (ap.clientName && ap.clientName.trim().toLowerCase() === clientNameNormalized) return true;
+    if (ap.clientEmail && clientEmailNormalized && ap.clientEmail.trim().toLowerCase() === clientEmailNormalized) return true;
+    if (ap.linkedClients?.some(lc => lc.id === client.id || lc.name.trim().toLowerCase() === clientNameNormalized)) return true;
+    if (existingPortal?.projects?.some(p => p.id === ap.id || p.title.trim().toLowerCase() === ap.title.trim().toLowerCase())) return true;
+    return false;
+  });
+
+  const portalProjects: ClientPortalProject[] = clientProjects.map(convertArchitectureProjectToPortalProject);
+
+  const portalId = existingPortal?.id || `portal-${client.id}`;
+  const accessCode = existingPortal?.accessCode || `MEO-${client.id.replace(/\D/g, '').slice(-4) || '2026'}`;
+
+  const profileAny = profile as any;
+
+  return {
+    id: portalId,
+    officeUid: existingPortal?.officeUid || 'office-current',
+    officeName: profile?.name || profile?.title || 'Studio Arq & Interiores',
+    officeEmail: profileAny?.email || 'contato@escritorio.com',
+    officePhone: profileAny?.phone || '(11) 98765-4321',
+    officeLogo: profile?.logoUrl || profile?.photoUrl,
+    clientId: client.id,
+    clientName: client.name,
+    clientEmail: client.email || `${client.name.toLowerCase().replace(/\s+/g, '.')}@cliente.com`,
+    clientPhone: client.phone || '',
+    clientDocument: client.document || '',
+    accessCode: accessCode,
+    status: (existingPortal?.status as 'active' | 'inactive') || 'active',
+    createdAt: existingPortal?.createdAt || client.createdAt || new Date().toISOString(),
+    lastLoginAt: existingPortal?.lastLoginAt || new Date().toISOString(),
+    projects: portalProjects,
+    documents: existingPortal?.documents && existingPortal.documents.length > 0 ? existingPortal.documents : [
+      {
+        id: `doc-${client.id}-1`,
+        title: `Contrato de Prestação de Serviços Arquitetônicos - ${client.name}`,
+        category: 'contrato',
+        fileName: `Contrato_${client.name.replace(/\s+/g, '_')}.pdf`,
+        date: new Date().toLocaleDateString('pt-BR'),
+        size: '1.4 MB'
+      }
+    ],
+    messages: existingPortal?.messages && existingPortal.messages.length > 0 ? existingPortal.messages : [
+      {
+        id: `msg-${client.id}-1`,
+        sender: 'office',
+        senderName: `${profile?.name || 'Escritório'} (Equipe)`,
+        text: `Olá, ${client.name}! Seja muito bem-vindo ao seu Portal exclusivo. Aqui você acompanha as etapas, prazos e novidades do seu projeto em tempo real.`,
+        createdAt: new Date().toISOString(),
+        read: false
+      }
+    ]
+  };
+}
+
+/**
+ * Ensures any ClientPortalAccess is synchronized with the latest office registry (Client info, Projects, Office profile).
+ */
+export function syncPortalWithOfficeRegistry(
+  portal: ClientPortalAccess,
+  clients: Client[],
+  architectureProjects: ArchitectureProject[],
+  profile?: ArchitectProfile | null
+): ClientPortalAccess {
+  // 1. Check if portal client matches any client in office database
+  const matchedClient = clients.find(
+    c => c.id === portal.clientId ||
+         (portal.clientEmail && c.email && c.email.trim().toLowerCase() === portal.clientEmail.trim().toLowerCase()) ||
+         c.name.trim().toLowerCase() === portal.clientName.trim().toLowerCase()
+  );
+
+  if (matchedClient) {
+    return buildClientPortalAccess(matchedClient, architectureProjects, profile, portal);
+  }
+
+  // 2. If no matched client, check which projects from architectureProjects match this portal's clientName or project list
+  const clientNameNormalized = portal.clientName.trim().toLowerCase();
+  const clientEmailNormalized = (portal.clientEmail || '').trim().toLowerCase();
+
+  const activeProjects = architectureProjects.filter(ap => {
+    if (ap.clientName && ap.clientName.trim().toLowerCase() === clientNameNormalized) return true;
+    if (ap.clientEmail && clientEmailNormalized && ap.clientEmail.trim().toLowerCase() === clientEmailNormalized) return true;
+    if (portal.projects?.some(p => p.id === ap.id || p.title.trim().toLowerCase() === ap.title.trim().toLowerCase())) return true;
+    return false;
+  });
+
+  // If projects exist in Gestor for this client, convert them
+  const portalProjects = activeProjects.map(convertArchitectureProjectToPortalProject);
+
+  const profileAny = profile as any;
+
+  return {
+    ...portal,
+    officeName: profile?.name || profile?.title || portal.officeName,
+    officeEmail: profileAny?.email || portal.officeEmail,
+    officePhone: profileAny?.phone || portal.officePhone,
+    officeLogo: profile?.logoUrl || profile?.photoUrl || portal.officeLogo,
+    projects: portalProjects
+  };
+}
+
 

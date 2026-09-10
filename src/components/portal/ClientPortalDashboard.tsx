@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Building2, 
@@ -28,9 +28,11 @@ import {
   ArrowLeft,
   Crown,
   Eye,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Plus
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useFinance } from '../../context/FinanceContext';
 import { 
   ClientPortalAccess, 
   ClientPortalMessage,
@@ -41,6 +43,8 @@ import {
   subscribeToClientPortal, 
   sendPortalMessage,
   subscribeToOfficePortals,
+  buildClientPortalAccess,
+  syncPortalWithOfficeRegistry,
   SAMPLE_CLIENT_PORTAL 
 } from '../../services/clientPortalService';
 import { OfficeClientPortalManagerModal } from './OfficeClientPortalManagerModal';
@@ -49,9 +53,11 @@ export const ClientPortalDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { clients, architectureProjects, architectProfile } = useFinance();
 
   const isAdminParam = searchParams.get('admin') === 'true';
   const requestedPortalId = searchParams.get('portalId');
+  const requestedClientId = searchParams.get('clientId');
   const isAdminMode = isAdminParam || !!user;
 
   const [officePortals, setOfficePortals] = useState<ClientPortalAccess[]>([SAMPLE_CLIENT_PORTAL]);
@@ -75,6 +81,40 @@ export const ClientPortalDashboard: React.FC = () => {
   const [newMessageText, setNewMessageText] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
 
+  // Synchronize the portal state in real time with the Office database
+  const effectivePortal = useMemo(() => {
+    const targetClientId = requestedClientId || portal.clientId;
+    const matchedClient = clients.find(
+      (c) =>
+        (targetClientId && c.id === targetClientId) ||
+        (requestedPortalId && (requestedPortalId === `portal-${c.id}` || requestedPortalId === c.id)) ||
+        (portal.clientEmail && c.email && c.email.trim().toLowerCase() === portal.clientEmail.trim().toLowerCase()) ||
+        (portal.clientName && c.name.trim().toLowerCase() === portal.clientName.trim().toLowerCase())
+    );
+
+    if (matchedClient) {
+      return buildClientPortalAccess(matchedClient, architectureProjects, architectProfile, portal);
+    }
+
+    return syncPortalWithOfficeRegistry(portal, clients, architectureProjects, architectProfile);
+  }, [portal, clients, architectureProjects, architectProfile, requestedClientId, requestedPortalId]);
+
+  // All client portal options available for office preview
+  const allOfficeClientPortals = useMemo(() => {
+    if (clients && clients.length > 0) {
+      return clients.map((c) => {
+        const match = officePortals.find(
+          (p) =>
+            p.clientId === c.id ||
+            (p.clientEmail && c.email && p.clientEmail.trim().toLowerCase() === c.email.trim().toLowerCase()) ||
+            p.clientName.trim().toLowerCase() === c.name.trim().toLowerCase()
+        );
+        return buildClientPortalAccess(c, architectureProjects, architectProfile, match);
+      });
+    }
+    return officePortals.length > 0 ? officePortals : [SAMPLE_CLIENT_PORTAL];
+  }, [clients, officePortals, architectureProjects, architectProfile]);
+
   // Load office portals if admin/office user is logged in
   useEffect(() => {
     if (!user) return;
@@ -82,7 +122,7 @@ export const ClientPortalDashboard: React.FC = () => {
       if (list && list.length > 0) {
         setOfficePortals(list);
         if (requestedPortalId) {
-          const matched = list.find(p => p.id === requestedPortalId);
+          const matched = list.find((p) => p.id === requestedPortalId);
           if (matched) {
             setPortal(matched);
             sessionStorage.setItem('client_portal_session', JSON.stringify(matched));
@@ -110,21 +150,25 @@ export const ClientPortalDashboard: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, [portal?.id, isAdminMode]);
+  }, [portal?.id, isAdminMode, navigate]);
 
-  // Set default active project
+  // Set default active project based on effectivePortal
   useEffect(() => {
-    if (portal && portal.projects && portal.projects.length > 0 && !activeProjectId) {
-      setActiveProjectId(portal.projects[0].id);
+    if (effectivePortal.projects && effectivePortal.projects.length > 0) {
+      if (!activeProjectId || !effectivePortal.projects.some((p) => p.id === activeProjectId)) {
+        setActiveProjectId(effectivePortal.projects[0].id);
+      }
+    } else {
+      setActiveProjectId('');
     }
-  }, [portal, activeProjectId]);
+  }, [effectivePortal.projects, activeProjectId]);
 
   const handleLogout = () => {
     sessionStorage.removeItem('client_portal_session');
     navigate('/cliente/login');
   };
 
-  const currentProject = portal.projects?.find(p => p.id === activeProjectId) || portal.projects?.[0];
+  const currentProject = effectivePortal.projects?.find((p) => p.id === activeProjectId) || effectivePortal.projects?.[0];
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,35 +178,34 @@ export const ClientPortalDashboard: React.FC = () => {
     setNewMessageText('');
 
     const sender = isAdminMode ? adminSenderRole : 'client';
-    const senderName = sender === 'office' ? `${portal.officeName} (Equipe)` : portal.clientName;
+    const senderName = sender === 'office' ? `${effectivePortal.officeName} (Equipe)` : effectivePortal.clientName;
 
-    // If in demo mode, update local state and simulate office reply if client sent
-    if (portal.id === SAMPLE_CLIENT_PORTAL.id) {
-      const newMsg: ClientPortalMessage = {
-        id: `msg-${Date.now()}`,
-        sender,
-        senderName,
-        text: textToSend,
-        createdAt: new Date().toISOString()
-      };
-      
-      const updated = {
-        ...portal,
-        messages: [...(portal.messages || []), newMsg]
-      };
-      setPortal(updated);
-      sessionStorage.setItem('client_portal_session', JSON.stringify(updated));
+    const newMsg: ClientPortalMessage = {
+      id: `msg-${Date.now()}`,
+      sender,
+      senderName,
+      text: textToSend,
+      createdAt: new Date().toISOString()
+    };
 
+    const updated = {
+      ...portal,
+      messages: [...(effectivePortal.messages || []), newMsg]
+    };
+    setPortal(updated);
+    sessionStorage.setItem('client_portal_session', JSON.stringify(updated));
+
+    if (portal.id === SAMPLE_CLIENT_PORTAL.id || !portal.id.startsWith('portal-')) {
       if (sender === 'client') {
         setTimeout(() => {
           const replyMsg: ClientPortalMessage = {
             id: `msg-${Date.now() + 1}`,
             sender: 'office',
-            senderName: `${portal.officeName} (Equipe)`,
+            senderName: `${effectivePortal.officeName} (Equipe)`,
             text: 'Recebemos sua mensagem! Nossa equipe já registrou a solicitação e responderemos em breve.',
             createdAt: new Date().toISOString()
           };
-          setPortal(prev => {
+          setPortal((prev) => {
             const up = { ...prev, messages: [...(prev.messages || []), replyMsg] };
             sessionStorage.setItem('client_portal_session', JSON.stringify(up));
             return up;
@@ -187,7 +230,7 @@ export const ClientPortalDashboard: React.FC = () => {
     }
   };
 
-  const getHealthBadge = (health: ClientProjectHealthStatus) => {
+  const getHealthBadge = (health?: ClientProjectHealthStatus) => {
     switch (health) {
       case 'no_prazo':
         return (
@@ -244,27 +287,28 @@ export const ClientPortalDashboard: React.FC = () => {
               <div className="flex items-center gap-1.5 text-xs">
                 <span className="text-[#a89c93] hidden sm:inline">Cliente:</span>
                 <select
-                  value={portal.id}
+                  value={effectivePortal.clientId || effectivePortal.id}
                   onChange={(e) => {
                     const selectedId = e.target.value;
-                    const pool = [...officePortals, SAMPLE_CLIENT_PORTAL];
-                    const found = pool.find(p => p.id === selectedId);
+                    const pool = [...allOfficeClientPortals, SAMPLE_CLIENT_PORTAL];
+                    const found = pool.find((p) => p.id === selectedId || p.clientId === selectedId);
                     if (found) {
-                      setPortal(found);
-                      sessionStorage.setItem('client_portal_session', JSON.stringify(found));
-                      if (found.projects && found.projects.length > 0) {
-                        setActiveProjectId(found.projects[0].id);
+                      const synced = syncPortalWithOfficeRegistry(found, clients, architectureProjects, architectProfile);
+                      setPortal(synced);
+                      sessionStorage.setItem('client_portal_session', JSON.stringify(synced));
+                      if (synced.projects && synced.projects.length > 0) {
+                        setActiveProjectId(synced.projects[0].id);
                       }
                     }
                   }}
                   className="bg-[#14110f] border border-[#3d342f] text-[var(--theme-primary)] font-bold rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
                 >
-                  {officePortals.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.clientName} ({p.projects?.[0]?.title || 'Projeto'})
+                  {allOfficeClientPortals.map((p) => (
+                    <option key={p.id} value={p.clientId || p.id}>
+                      {p.clientName} ({p.projects?.length || 0} {p.projects?.length === 1 ? 'projeto' : 'projetos'})
                     </option>
                   ))}
-                  {!officePortals.some(p => p.id === SAMPLE_CLIENT_PORTAL.id) && (
+                  {!allOfficeClientPortals.some((p) => p.id === SAMPLE_CLIENT_PORTAL.id) && (
                     <option value={SAMPLE_CLIENT_PORTAL.id}>
                       {SAMPLE_CLIENT_PORTAL.clientName} (Modelo Demonstração)
                     </option>
@@ -313,23 +357,23 @@ export const ClientPortalDashboard: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-serif font-bold text-base sm:text-lg text-[#fcf8f5] leading-tight">
-                  {portal.officeName || 'Meu Escritório Online'}
+                  {effectivePortal.officeName || 'Meu Escritório Online'}
                 </span>
                 <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                   Portal Seguro
                 </span>
               </div>
               <span className="text-[11px] text-[#a89c93] block">
-                Cliente: <strong className="text-[#fcf8f5]">{portal.clientName}</strong>
+                Cliente: <strong className="text-[#fcf8f5]">{effectivePortal.clientName}</strong>
               </span>
             </div>
           </div>
 
           {/* Right Controls: Office contact & Logout */}
           <div className="flex items-center gap-2 sm:gap-4">
-            {portal.officePhone && (
+            {effectivePortal.officePhone && (
               <a
-                href={`https://wa.me/${portal.officePhone.replace(/\D/g, '')}`}
+                href={`https://wa.me/${effectivePortal.officePhone.replace(/\D/g, '')}`}
                 target="_blank"
                 rel="noreferrer"
                 className="hidden md:flex items-center gap-1.5 text-xs text-[#a89c93] hover:text-emerald-400 border border-[#3d342f] px-3 py-1.5 rounded-xl transition-colors"
@@ -355,14 +399,14 @@ export const ClientPortalDashboard: React.FC = () => {
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-6 sm:py-8 space-y-6">
         
         {/* Project Switcher Bar (if more than 1 project) */}
-        {portal.projects && portal.projects.length > 1 && (
+        {effectivePortal.projects && effectivePortal.projects.length > 1 && (
           <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-xs text-[#a89c93]">
               <Layers className="w-4 h-4 text-[var(--theme-primary)]" />
-              <span>Você possui <strong>{portal.projects.length} projetos</strong> com este escritório:</span>
+              <span>Você possui <strong>{effectivePortal.projects.length} projetos</strong> com este escritório:</span>
             </div>
             <div className="flex items-center gap-2 overflow-x-auto">
-              {portal.projects.map((proj) => (
+              {effectivePortal.projects.map((proj) => (
                 <button
                   key={proj.id}
                   onClick={() => setActiveProjectId(proj.id)}
@@ -471,7 +515,7 @@ export const ClientPortalDashboard: React.FC = () => {
                   Etapas Concluídas
                 </span>
                 <span className="text-sm font-bold text-emerald-400">
-                  {currentProject.stages?.filter(s => s.status === 'completed').length || 0} de {currentProject.stages?.length || 1}
+                  {currentProject.stages?.filter((s) => s.status === 'completed').length || 0} de {currentProject.stages?.length || 1}
                 </span>
               </div>
 
@@ -480,19 +524,31 @@ export const ClientPortalDashboard: React.FC = () => {
                   Documentos & Arquivos
                 </span>
                 <span className="text-sm font-bold text-[#fcf8f5]">
-                  {portal.documents?.length || 0} disponíveis
+                  {effectivePortal.documents?.length || 0} disponíveis
                 </span>
               </div>
             </div>
 
           </div>
         ) : (
-          <div className="bg-[#1a1614] border border-[#3d342f] rounded-3xl p-8 text-center">
-            <FolderKanban className="w-10 h-10 text-[#a89c93] mx-auto mb-3" />
+          <div className="bg-[#1a1614] border border-[#3d342f] rounded-3xl p-8 text-center space-y-4">
+            <FolderKanban className="w-12 h-12 text-[var(--theme-primary)] mx-auto opacity-70" />
             <h3 className="text-lg font-bold text-[#fcf8f5]">Nenhum projeto associado no momento</h3>
-            <p className="text-xs text-[#a89c93] mt-1">
-              O escritório está preparando seu ambiente. Em breve seu projeto aparecerá aqui.
+            <p className="text-xs text-[#a89c93] max-w-md mx-auto">
+              Quando um projeto for cadastrado ou atualizado no gestor do escritório para este cliente, ele aparecerá aqui automaticamente com todas as etapas e entregas em tempo real.
             </p>
+            {isAdminMode && (
+              <button
+                onClick={() => {
+                  localStorage.setItem('meo_active_view', 'app');
+                  navigate('/app?tab=projetos');
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--theme-primary)] text-black font-bold text-xs hover:brightness-110 transition-all cursor-pointer shadow-md"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Adicionar Projeto no Gestor</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -519,7 +575,7 @@ export const ClientPortalDashboard: React.FC = () => {
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>Documentos & Entregáveis ({portal.documents?.length || 0})</span>
+            <span>Documentos & Entregáveis ({effectivePortal.documents?.length || 0})</span>
           </button>
 
           <button
@@ -531,7 +587,7 @@ export const ClientPortalDashboard: React.FC = () => {
             }`}
           >
             <MessageSquare className="w-4 h-4" />
-            <span>Mensagens & Avisos ({portal.messages?.length || 0})</span>
+            <span>Mensagens & Avisos ({effectivePortal.messages?.length || 0})</span>
           </button>
         </div>
 
@@ -644,13 +700,13 @@ export const ClientPortalDashboard: React.FC = () => {
                   </p>
                 </div>
                 <span className="text-xs bg-[#241e1b] px-3 py-1.5 rounded-xl border border-[#3d342f] text-[#a89c93] self-start sm:self-center">
-                  Total: <strong>{portal.documents?.length || 0} arquivos</strong>
+                  Total: <strong>{effectivePortal.documents?.length || 0} arquivos</strong>
                 </span>
               </div>
 
-              {portal.documents && portal.documents.length > 0 ? (
+              {effectivePortal.documents && effectivePortal.documents.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {portal.documents.map((docItem) => (
+                  {effectivePortal.documents.map((docItem) => (
                     <div 
                       key={docItem.id}
                       className="bg-[#12100e] border border-[#3d342f] p-4 rounded-2xl flex items-center justify-between gap-4 hover:border-[var(--theme-primary)]/40 transition-colors"
@@ -729,8 +785,8 @@ export const ClientPortalDashboard: React.FC = () => {
 
               {/* Chat Message Stream */}
               <div className="flex-1 overflow-y-auto space-y-3 pr-2 mb-4">
-                {portal.messages && portal.messages.length > 0 ? (
-                  portal.messages.map((msg) => {
+                {effectivePortal.messages && effectivePortal.messages.length > 0 ? (
+                  effectivePortal.messages.map((msg) => {
                     const isClient = msg.sender === 'client';
                     return (
                       <div
@@ -828,7 +884,7 @@ export const ClientPortalDashboard: React.FC = () => {
       {/* Footer */}
       <footer className="border-t border-[#3d342f]/40 py-6 text-center text-xs text-[#a89c93] mt-12">
         <p>
-          {portal.officeName || 'Meu Escritório Online'} • Portal do Cliente • Acompanhamento em Tempo Real
+          {effectivePortal.officeName || 'Meu Escritório Online'} • Portal do Cliente • Acompanhamento em Tempo Real
         </p>
       </footer>
 
@@ -836,7 +892,7 @@ export const ClientPortalDashboard: React.FC = () => {
       <OfficeClientPortalManagerModal
         isOpen={isManagerModalOpen}
         onClose={() => setIsManagerModalOpen(false)}
-        portalToEdit={portal.id === SAMPLE_CLIENT_PORTAL.id ? undefined : portal}
+        portalToEdit={effectivePortal.id === SAMPLE_CLIENT_PORTAL.id ? undefined : effectivePortal}
         onSaveSuccess={(updatedPortal) => {
           setPortal(updatedPortal);
           sessionStorage.setItem('client_portal_session', JSON.stringify(updatedPortal));

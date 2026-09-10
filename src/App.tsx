@@ -249,9 +249,7 @@ const HomeOrLandingRoute: React.FC = () => {
   // If logged in, show the application
   return (
     <SubscriptionGuard>
-      <FinanceProvider>
-        <AppContent />
-      </FinanceProvider>
+      <AppContent />
     </SubscriptionGuard>
   );
 };
@@ -259,50 +257,50 @@ const HomeOrLandingRoute: React.FC = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Sales Page & Checkout Routes */}
-          <Route path="/" element={<HomeOrLandingRoute />} />
-          <Route path="/vendas" element={<SalesLandingPage />} />
-          <Route path="/planos" element={<SalesLandingPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/pagamento" element={<CheckoutPage />} />
+      <FinanceProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public Sales Page & Checkout Routes */}
+            <Route path="/" element={<HomeOrLandingRoute />} />
+            <Route path="/vendas" element={<SalesLandingPage />} />
+            <Route path="/planos" element={<SalesLandingPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/pagamento" element={<CheckoutPage />} />
 
-          {/* Authentication Route */}
-          <Route path="/login" element={<Login />} />
+            {/* Authentication Route */}
+            <Route path="/login" element={<Login />} />
 
-          {/* Client Portal Routes (Dedicated Client Login & Real-time Isolated Dashboard) */}
-          <Route path="/cliente/login" element={<ClientLogin />} />
-          <Route path="/cliente/dashboard" element={<ClientPortalDashboard />} />
-          <Route path="/cliente" element={<Navigate to="/cliente/login" replace />} />
-          <Route path="/portal-cliente" element={<Navigate to="/cliente/login" replace />} />
-          
-          {/* Admin Management Route */}
-          <Route path="/admin/*" element={
-            <AuthGuard requireAdmin>
-              <AdminLayout>
-                <Routes>
-                  <Route path="/" element={<AdminUsers />} />
-                </Routes>
-              </AdminLayout>
-            </AuthGuard>
-          } />
-          
-          {/* Main Application Route for Authenticated Users */}
-          <Route path="/app/*" element={
-            <AuthGuard>
-              <SubscriptionGuard>
-                <FinanceProvider>
+            {/* Client Portal Routes (Dedicated Client Login & Real-time Isolated Dashboard) */}
+            <Route path="/cliente/login" element={<ClientLogin />} />
+            <Route path="/cliente/dashboard" element={<ClientPortalDashboard />} />
+            <Route path="/cliente" element={<Navigate to="/cliente/login" replace />} />
+            <Route path="/portal-cliente" element={<Navigate to="/cliente/login" replace />} />
+            
+            {/* Admin Management Route */}
+            <Route path="/admin/*" element={
+              <AuthGuard requireAdmin>
+                <AdminLayout>
+                  <Routes>
+                    <Route path="/" element={<AdminUsers />} />
+                  </Routes>
+                </AdminLayout>
+              </AuthGuard>
+            } />
+            
+            {/* Main Application Route for Authenticated Users */}
+            <Route path="/app/*" element={
+              <AuthGuard>
+                <SubscriptionGuard>
                   <AppContent />
-                </FinanceProvider>
-              </SubscriptionGuard>
-            </AuthGuard>
-          } />
+                </SubscriptionGuard>
+              </AuthGuard>
+            } />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </FinanceProvider>
     </AuthProvider>
   );
 }
