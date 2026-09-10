@@ -230,14 +230,14 @@ export const ClientPortalDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#12100e] text-[#fcf8f5] flex flex-col font-sans selection:bg-[var(--theme-primary)]/30">
       
-      {/* Top Preview / Admin Control Bar */}
-      {isAdminMode ? (
+      {/* Top Office Preview Control Bar - only displayed when architect is logged into the system */}
+      {user && (
         <div className="bg-gradient-to-r from-[#211a14] via-[#2c2219] to-[#211a14] border-b border-[var(--theme-primary)]/40 px-4 py-2.5 text-xs text-[#fcf8f5] shadow-lg sticky top-0 z-50">
           <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <span className="px-2.5 py-1 rounded-lg bg-[var(--theme-primary)] text-black font-bold text-xs flex items-center gap-1.5 shadow-sm">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Modo Administrador do Escritório</span>
+                <Building2 className="w-3.5 h-3.5" />
+                <span>Visualização pelo Escritório</span>
               </span>
 
               {/* Client Selector */}
@@ -292,41 +292,6 @@ export const ClientPortalDashboard: React.FC = () => {
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Painel do Escritório</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* Top Preview Bar for normal client or quick switching */
-        <div className="bg-[#1b1714] border-b border-[#3d342f] px-4 py-2 text-xs">
-          <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-[#a89c93]">
-                Visualizando: <strong className="text-[var(--theme-primary)]">Portal do Cliente</strong> (Área externa exclusiva para acompanhamento do cliente)
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  sessionStorage.setItem('client_portal_session', JSON.stringify(SAMPLE_CLIENT_PORTAL));
-                  navigate('/cliente/dashboard?admin=true');
-                }}
-                className="px-2.5 py-1 rounded-lg bg-[#241e1b] hover:bg-[#2d2622] text-[var(--theme-primary)] border border-[var(--theme-primary)]/30 transition-colors cursor-pointer font-medium"
-              >
-                🛡️ Ver como Administrador
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.setItem('meo_active_view', 'app');
-                  navigate('/app');
-                }}
-                className="px-2.5 py-1 rounded-lg bg-[var(--theme-primary)] text-black font-bold hover:brightness-110 transition-colors cursor-pointer"
-              >
-                🏢 Sistema do Escritório
               </button>
             </div>
           </div>

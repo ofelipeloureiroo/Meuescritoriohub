@@ -18,6 +18,11 @@ import {
   INITIAL_SAVINGS_GOALS,
   INITIAL_TRANSACTIONS,
   INITIAL_WORK_CONTRACTS,
+  CONNECTED_PORTAL_CLIENT,
+  CONNECTED_PORTAL_PROJECT_1,
+  CONNECTED_PORTAL_PROJECT_2,
+  CONNECTED_PORTAL_CONTRACT_1,
+  CONNECTED_PORTAL_INSTALLMENTS,
 } from '../data/initialData';
 import {
   ArchitectProfile,
@@ -491,9 +496,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [clients, setClients] = useState<Client[]>(() => {
     const saved = localStorage.getItem(getStorageKey('clients'));
     if (saved) {
-      try { return JSON.parse(saved); } catch {}
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          if (!parsed.some((c: any) => c.id === CONNECTED_PORTAL_CLIENT.id || c.name?.toLowerCase().includes('roberto & camila'))) {
+            return [CONNECTED_PORTAL_CLIENT, ...parsed];
+          }
+          return parsed;
+        }
+      } catch {}
     }
-    return [];
+    return [CONNECTED_PORTAL_CLIENT];
   });
 
   const [freelanceProjects, setFreelanceProjects] = useState<FreelanceProject[]>(() => {
@@ -515,13 +528,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.some((p: any) => p.id === 'proj-bfe' || p.id === 'proj-1')) {
-          return [];
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter((p: any) => p.id !== 'proj-bfe' && p.id !== 'proj-1');
+          if (filtered.length > 0) {
+            if (!filtered.some((p: any) => p.id === CONNECTED_PORTAL_PROJECT_1.id || p.id === 'proj-alphaville-01')) {
+              return [CONNECTED_PORTAL_PROJECT_1, CONNECTED_PORTAL_PROJECT_2, ...filtered];
+            }
+            return filtered;
+          }
         }
-        return parsed;
       } catch {}
     }
-    return [];
+    return [CONNECTED_PORTAL_PROJECT_1, CONNECTED_PORTAL_PROJECT_2];
   });
 
   const [projectInstallments, setProjectInstallments] = useState<ProjectInstallment[]>(() => {
@@ -529,13 +547,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.some((i: any) => i.id?.startsWith('inst-'))) {
-          return [];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          if (!parsed.some((i: any) => i.projectId === 'proj-alphaville-01')) {
+            return [...CONNECTED_PORTAL_INSTALLMENTS, ...parsed];
+          }
+          return parsed;
         }
-        return parsed;
       } catch {}
     }
-    return [];
+    return CONNECTED_PORTAL_INSTALLMENTS;
   });
 
   const [projectMilestones, setProjectMilestones] = useState<ProjectMilestone[]>(() => {
@@ -543,9 +563,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.some((m: any) => m.id?.startsWith('mile-'))) {
-          return [];
-        }
         return parsed;
       } catch {}
     }
@@ -557,13 +574,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.some((c: any) => c.id?.startsWith('contract-'))) {
-          return [];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          if (!parsed.some((c: any) => c.id === CONNECTED_PORTAL_CONTRACT_1.id || c.projectId === 'proj-alphaville-01')) {
+            return [CONNECTED_PORTAL_CONTRACT_1, ...parsed];
+          }
+          return parsed;
         }
-        return parsed;
       } catch {}
     }
-    return [];
+    return [CONNECTED_PORTAL_CONTRACT_1];
   });
 
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(() => {
@@ -732,11 +751,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
               bankAccounts: EMPTY_BANK_ACCOUNTS,
               houseMortgage: EMPTY_HOUSE_MORTGAGE,
               debts: [],
-              architectureProjects: [],
+              architectureProjects: [CONNECTED_PORTAL_PROJECT_1, CONNECTED_PORTAL_PROJECT_2],
               freelanceProjects: [],
-              projectInstallments: [],
+              projectInstallments: CONNECTED_PORTAL_INSTALLMENTS,
               projectMilestones: [],
-              workContracts: [],
+              workContracts: [CONNECTED_PORTAL_CONTRACT_1],
+              clients: [CONNECTED_PORTAL_CLIENT],
               savingsGoals: [],
               actions: [],
               updatedAt: new Date().toISOString(),
@@ -746,11 +766,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setBankAccounts(EMPTY_BANK_ACCOUNTS);
             setHouseMortgage(EMPTY_HOUSE_MORTGAGE);
             setDebts([]);
-            setArchitectureProjects([]);
+            setArchitectureProjects([CONNECTED_PORTAL_PROJECT_1, CONNECTED_PORTAL_PROJECT_2]);
             setFreelanceProjects([]);
-            setProjectInstallments([]);
+            setProjectInstallments(CONNECTED_PORTAL_INSTALLMENTS);
             setProjectMilestones([]);
-            setWorkContracts([]);
+            setWorkContracts([CONNECTED_PORTAL_CONTRACT_1]);
+            setClients([CONNECTED_PORTAL_CLIENT]);
             setSavingsGoals([]);
             setActions([]);
             isCloudLoadedRef.current = true;
@@ -765,12 +786,49 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (data.bankAccounts) setBankAccounts(data.bankAccounts);
           if (data.houseMortgage) setHouseMortgage(data.houseMortgage);
           if (data.debts) setDebts(data.debts);
-          if (data.clients) setClients(data.clients);
+          if (data.clients) {
+            const cloudClients = Array.isArray(data.clients) ? data.clients : [];
+            if (cloudClients.length > 0 && !cloudClients.some((c: any) => c.id === CONNECTED_PORTAL_CLIENT.id || c.name?.toLowerCase().includes('roberto & camila'))) {
+              setClients([CONNECTED_PORTAL_CLIENT, ...cloudClients]);
+            } else if (cloudClients.length === 0) {
+              setClients([CONNECTED_PORTAL_CLIENT]);
+            } else {
+              setClients(cloudClients);
+            }
+          }
           if (data.freelanceProjects) setFreelanceProjects(data.freelanceProjects);
-          if (data.architectureProjects) setArchitectureProjects(data.architectureProjects);
-          if (data.projectInstallments) setProjectInstallments(data.projectInstallments);
+          if (data.architectureProjects) {
+            const cloudProjects = Array.isArray(data.architectureProjects) ? data.architectureProjects : [];
+            const filteredProjects = cloudProjects.filter((p: any) => p.id !== 'proj-bfe' && p.id !== 'proj-1');
+            if (filteredProjects.length > 0 && !filteredProjects.some((p: any) => p.id === CONNECTED_PORTAL_PROJECT_1.id || p.id === 'proj-alphaville-01')) {
+              setArchitectureProjects([CONNECTED_PORTAL_PROJECT_1, CONNECTED_PORTAL_PROJECT_2, ...filteredProjects]);
+            } else if (filteredProjects.length === 0) {
+              setArchitectureProjects([CONNECTED_PORTAL_PROJECT_1, CONNECTED_PORTAL_PROJECT_2]);
+            } else {
+              setArchitectureProjects(filteredProjects);
+            }
+          }
+          if (data.projectInstallments) {
+            const cloudInst = Array.isArray(data.projectInstallments) ? data.projectInstallments : [];
+            if (cloudInst.length > 0 && !cloudInst.some((i: any) => i.projectId === 'proj-alphaville-01')) {
+              setProjectInstallments([...CONNECTED_PORTAL_INSTALLMENTS, ...cloudInst]);
+            } else if (cloudInst.length === 0) {
+              setProjectInstallments(CONNECTED_PORTAL_INSTALLMENTS);
+            } else {
+              setProjectInstallments(cloudInst);
+            }
+          }
           if (data.projectMilestones) setProjectMilestones(data.projectMilestones);
-          if (data.workContracts) setWorkContracts(data.workContracts);
+          if (data.workContracts) {
+            const cloudContracts = Array.isArray(data.workContracts) ? data.workContracts : [];
+            if (cloudContracts.length > 0 && !cloudContracts.some((c: any) => c.id === CONNECTED_PORTAL_CONTRACT_1.id || c.projectId === 'proj-alphaville-01')) {
+              setWorkContracts([CONNECTED_PORTAL_CONTRACT_1, ...cloudContracts]);
+            } else if (cloudContracts.length === 0) {
+              setWorkContracts([CONNECTED_PORTAL_CONTRACT_1]);
+            } else {
+              setWorkContracts(cloudContracts);
+            }
+          }
           if (data.savingsGoals) setSavingsGoals(data.savingsGoals);
           if (data.categoryBudgets) setCategoryBudgets(data.categoryBudgets);
           if (data.officeSettings) setOfficeSettings(data.officeSettings);

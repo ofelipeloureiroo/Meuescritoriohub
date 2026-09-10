@@ -24,6 +24,8 @@ import {
   Lock,
   Phone,
   Mail,
+  Building2,
+  Link2,
   RefreshCw,
   SlidersHorizontal
 } from 'lucide-react';
@@ -116,9 +118,9 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
     window.open(`https://wa.me/${phoneWithDDI}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  const handleEnterAsAdmin = (p: ClientPortalAccess) => {
+  const handleOpenClientPortal = (p: ClientPortalAccess) => {
     sessionStorage.setItem('client_portal_session', JSON.stringify(p));
-    navigate(`/cliente/dashboard?portalId=${p.id}&admin=true`);
+    navigate(`/cliente/dashboard?portalId=${p.id}`);
   };
 
   const handleToggleStatus = async (p: ClientPortalAccess) => {
@@ -171,22 +173,13 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <button
-              onClick={() => handleEnterAsAdmin(displayPortals[0] || SAMPLE_CLIENT_PORTAL)}
-              className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-[#2a231f] hover:bg-[#362d28] text-[var(--theme-primary)] border border-[var(--theme-primary)]/40 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm hover:border-[var(--theme-primary)]"
-              title="Abrir a visão do cliente com privilégios de administrador"
-            >
-              <Eye className="w-4 h-4" />
-              <span>Ver Portal como Administrador</span>
-            </button>
-
+          <div className="flex items-center gap-3 w-full md:w-auto">
             <button
               onClick={() => {
                 setSelectedPortalForEdit(null);
                 setIsManagerModalOpen(true);
               }}
-              className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-[var(--theme-primary)] hover:brightness-110 text-black font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+              className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-[var(--theme-primary)] hover:brightness-110 text-black font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
             >
               <Plus className="w-4 h-4" />
               <span>Novo Acesso de Cliente</span>
@@ -313,6 +306,17 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
           const showPassword = !!showPasswordMap[p.id];
           const primaryProject = p.projects?.[0];
 
+          // Check linkage to office registry
+          const linkedOfficeClient = clients.find(
+            c => c.id === p.clientId ||
+                 (c.email && c.email.toLowerCase() === p.clientEmail.toLowerCase()) ||
+                 c.name.toLowerCase() === p.clientName.toLowerCase()
+          );
+
+          const linkedOfficeProject = architectureProjects.find(
+            ap => p.projects?.some(proj => proj.id === ap.id || proj.title.toLowerCase() === ap.title.toLowerCase())
+          );
+
           return (
             <div
               key={p.id}
@@ -344,6 +348,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                         {p.status === 'active' ? '● Acesso Liberado' : '○ Acesso Suspenso'}
                       </span>
                     </div>
+
                     <div className="flex items-center gap-4 text-xs text-[#a89c93] mt-0.5">
                       <span className="flex items-center gap-1">
                         <Mail className="w-3 h-3 text-[#a89c93]" />
@@ -356,18 +361,45 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                         </span>
                       )}
                     </div>
+
+                    {/* Office Connection Badges */}
+                    <div className="flex items-center gap-2 flex-wrap mt-2">
+                      {linkedOfficeClient ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          <span>Cliente conectado ao cadastro</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[#241e1b] text-[#a89c93] border border-[#3d342f]">
+                          <Building2 className="w-3 h-3 text-[#a89c93]" />
+                          <span>Cliente não vinculado</span>
+                        </span>
+                      )}
+
+                      {linkedOfficeProject ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/25">
+                          <FolderOpen className="w-3 h-3 text-blue-400" />
+                          <span>Projeto vinculado: {linkedOfficeProject.title}</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[#241e1b] text-[#a89c93] border border-[#3d342f]">
+                          <FolderOpen className="w-3 h-3 text-[#a89c93]" />
+                          <span>Projeto local</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 {/* Top Action Buttons */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
-                    onClick={() => handleEnterAsAdmin(p)}
-                    className="px-3 py-1.5 rounded-xl bg-[#251f1b] hover:bg-[#322a24] text-[var(--theme-primary)] border border-[var(--theme-primary)]/40 hover:border-[var(--theme-primary)] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                    title="Acessar o portal deste cliente em modo administrador"
+                    onClick={() => handleOpenClientPortal(p)}
+                    className="px-3 py-1.5 rounded-xl bg-[#251f1b] hover:bg-[#322a24] text-[#fcf8f5] hover:text-[var(--theme-primary)] border border-[#3d342f] hover:border-[var(--theme-primary)] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                    title="Visualizar o portal como o cliente visualiza"
                   >
-                    <ShieldCheck className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                    <span>Acessar como Admin</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+                    <span>Visualizar Portal</span>
                   </button>
 
                   <button
@@ -572,9 +604,9 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
             </p>
           </div>
           <div className="space-y-1.5 p-3.5 rounded-xl bg-[#1c1815] border border-[#3d342f]/60">
-            <strong className="text-[#fcf8f5] block">3. Modo Administrador</strong>
+            <strong className="text-[#fcf8f5] block">3. Gestão Centralizada no Escritório</strong>
             <p className="leading-relaxed">
-              Você e sua equipe podem entrar no portal a qualquer momento pelo botão "Ver como Administrador" para auditar a visão do cliente ou responder mensagens.
+              Você e sua equipe gerenciam prazos, etapas, pranchas em PDF, senhas e canais de atendimento diretamente por este painel, com praticidade total.
             </p>
           </div>
         </div>

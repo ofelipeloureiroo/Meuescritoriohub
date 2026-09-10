@@ -110,6 +110,10 @@ export async function loginClient(
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
+      if (cleanEmail === SAMPLE_CLIENT_PORTAL.clientEmail.toLowerCase() &&
+          (cleanCode.toUpperCase() === SAMPLE_CLIENT_PORTAL.accessCode.toUpperCase() || cleanCode === SAMPLE_CLIENT_PORTAL.id)) {
+        return { success: true, portal: SAMPLE_CLIENT_PORTAL };
+      }
       return { 
         success: false, 
         error: 'Nenhum acesso de cliente localizado para este e-mail. Verifique se o escritório já liberou seu acesso.' 
@@ -319,7 +323,7 @@ export const SAMPLE_CLIENT_PORTAL: ClientPortalAccess = {
   officeName: 'Studio Arq & Design de Interiores',
   officeEmail: 'contato@studioarq.com.br',
   officePhone: '(11) 98765-4321',
-  clientId: 'demo-client-01',
+  clientId: 'cli-silveira-1',
   clientName: 'Roberto & Camila Silveira',
   clientEmail: 'roberto.silveira@exemplo.com',
   clientPhone: '(11) 99888-7766',
