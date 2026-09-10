@@ -1,24 +1,41 @@
-import React from 'react';
-import { RefreshCw, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { RefreshCw, TrendingUp, Trash2 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 
 export const FinancialControlTab: React.FC = () => {
-  const { transactions } = useFinance();
+  const { transactions, resetFinancialData } = useFinance();
+  const [confirmReset, setConfirmReset] = useState(false);
 
   const incomeTransactions = transactions.filter(t => t.type === 'income');
   const totalIncoming = incomeTransactions.reduce((acc, t) => acc + t.amount, 0);
+
+  const handleReset = () => {
+    if (window.confirm('Tem certeza que deseja zerar todo o controle financeiro e transações? Esta ação não pode ser desfeita.')) {
+      resetFinancialData();
+      setConfirmReset(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-serif font-bold text-[#fcf8f5]">Controle Financeiro</h2>
-        <button
-          onClick={() => {/* TODO: Implement refresh logic */}}
-          className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
-        >
-          <RefreshCw className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-          <span>Atualizar</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleReset}
+            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Zerar Controle</span>
+          </button>
+          <button
+            onClick={() => {/* refresh */}}
+            className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+            <span>Atualizar</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-6 relative overflow-hidden h-[130px] flex flex-col justify-center">
