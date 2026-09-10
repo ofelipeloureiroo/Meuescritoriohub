@@ -81,23 +81,20 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
 
   // Combine real office clients with real-time projects and any cloud saved portals
   const displayPortals = useMemo(() => {
-    if (clients && clients.length > 0) {
-      return clients.map((client) => {
-        const cloudMatch = portals.find(
-          (p) =>
-            p.clientId === client.id ||
-            (p.clientEmail && client.email && p.clientEmail.trim().toLowerCase() === client.email.trim().toLowerCase()) ||
-            p.clientName.trim().toLowerCase() === client.name.trim().toLowerCase()
-        );
-        return buildClientPortalAccess(client, architectureProjects, architectProfile, cloudMatch);
-      });
+    // Se não há clientes cadastrados no escritório, o Radar da Cliente deve estar estritamente vazio
+    if (!clients || clients.length === 0) {
+      return [];
     }
 
-    if (portals.length > 0) {
-      return portals.map((p) => syncPortalWithOfficeRegistry(p, clients, architectureProjects, architectProfile));
-    }
-
-    return [syncPortalWithOfficeRegistry(SAMPLE_CLIENT_PORTAL, clients, architectureProjects, architectProfile)];
+    return clients.map((client) => {
+      const cloudMatch = portals.find(
+        (p) =>
+          p.clientId === client.id ||
+          (p.clientEmail && client.email && p.clientEmail.trim().toLowerCase() === client.email.trim().toLowerCase()) ||
+          p.clientName.trim().toLowerCase() === client.name.trim().toLowerCase()
+      );
+      return buildClientPortalAccess(client, architectureProjects, architectProfile, cloudMatch);
+    });
   }, [clients, portals, architectureProjects, architectProfile]);
 
   const filteredPortals = displayPortals.filter((p) => {
@@ -322,287 +319,327 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
 
       {/* Portals List Cards */}
       <div className="space-y-4">
-        {filteredPortals.map((p) => {
-          const isSample = p.id === SAMPLE_CLIENT_PORTAL.id;
-          const showPassword = !!showPasswordMap[p.id];
-          const primaryProject = p.projects?.[0];
+        {filteredPortals.length === 0 ? (
+          <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-10 sm:p-14 text-center space-y-4 shadow-sm flex flex-col items-center justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-[#241e1b] border border-[#3d342f] text-[var(--theme-primary)] flex items-center justify-center shadow-inner">
+              <Users className="w-8 h-8 opacity-75 text-[var(--theme-primary)]" />
+            </div>
+            
+            <div className="space-y-1.5 max-w-md">
+              <h3 className="text-base sm:text-lg font-bold text-[#fcf8f5]">
+                {clients.length === 0
+                  ? 'Nenhum cliente cadastrado no escritório'
+                  : 'Nenhum radar encontrado para esta busca'}
+              </h3>
+              <p className="text-xs sm:text-sm text-[#a89c93] leading-relaxed">
+                {clients.length === 0
+                  ? 'O Radar da Cliente exibe e sincroniza os acessos dos clientes cadastrados no seu escritório. Cadastre seus clientes e vincule projetos para liberar o acompanhamento exclusivo em tempo real.'
+                  : 'Tente alterar os termos da busca ou os filtros de status acima.'}
+              </p>
+            </div>
 
-          // Check linkage to office registry
-          const linkedOfficeClient = clients.find(
-            c => c.id === p.clientId ||
-                 (c.email && c.email.toLowerCase() === p.clientEmail.toLowerCase()) ||
-                 c.name.toLowerCase() === p.clientName.toLowerCase()
-          );
-
-          const linkedOfficeProject = architectureProjects.find(
-            ap => p.projects?.some(proj => proj.id === ap.id || proj.title.toLowerCase() === ap.title.toLowerCase())
-          );
-
-          return (
-            <div
-              key={p.id}
-              className={`bg-[#1a1614] border rounded-2xl p-5 sm:p-6 transition-all hover:border-[var(--theme-primary)]/50 space-y-4 shadow-sm ${
-                p.status === 'active' ? 'border-[#3d342f]' : 'border-rose-900/40 opacity-80'
-              }`}
-            >
-              {/* Header row */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#3d342f]/60">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#241e1b] border border-[#3d342f] text-[var(--theme-primary)] flex items-center justify-center font-bold text-base">
-                    {p.clientName ? p.clientName.charAt(0).toUpperCase() : 'C'}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-[#fcf8f5] text-base">
-                        {p.clientName}
-                      </h3>
-                      {isSample && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                          Modelo / Demonstração
-                        </span>
-                      )}
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                        p.status === 'active' 
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
-                          : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                      }`}>
-                        {p.status === 'active' ? '● Acesso Liberado' : '○ Acesso Suspenso'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-xs text-[#a89c93] mt-0.5">
-                      <span className="flex items-center gap-1">
-                        <Mail className="w-3 h-3 text-[#a89c93]" />
-                        {p.clientEmail}
-                      </span>
-                      {p.clientPhone && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-[#a89c93]" />
-                          {p.clientPhone}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Office Connection Badges */}
-                    <div className="flex items-center gap-2 flex-wrap mt-2">
-                      {linkedOfficeClient ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                          <span>Cliente conectado ao cadastro</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[#241e1b] text-[#a89c93] border border-[#3d342f]">
-                          <Building2 className="w-3 h-3 text-[#a89c93]" />
-                          <span>Cliente não vinculado</span>
-                        </span>
-                      )}
-
-                      {linkedOfficeProject ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/25">
-                          <FolderOpen className="w-3 h-3 text-blue-400" />
-                          <span>Projeto vinculado: {linkedOfficeProject.title}</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[#241e1b] text-[#a89c93] border border-[#3d342f]">
-                          <FolderOpen className="w-3 h-3 text-[#a89c93]" />
-                          <span>Projeto local</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Top Action Buttons */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={() => handleOpenClientPortal(p)}
-                    className="px-3 py-1.5 rounded-xl bg-[#251f1b] hover:bg-[#322a24] text-[#fcf8f5] hover:text-[var(--theme-primary)] border border-[#3d342f] hover:border-[var(--theme-primary)] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                    title="Visualizar o portal como o cliente visualiza"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                    <span>Visualizar Portal</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setSelectedPortalForEdit(p);
+            {clients.length === 0 && (
+              <div className="pt-2">
+                <button
+                  onClick={() => {
+                    if (onNavigateTab) {
+                      onNavigateTab('freelance');
+                    } else {
+                      setSelectedPortalForEdit(null);
                       setIsManagerModalOpen(true);
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-[#241e1b] hover:bg-[#2d2521] text-[#fcf8f5] border border-[#3d342f] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                    title="Gerenciar fases, documentos e configurações"
-                  >
-                    <Settings2 className="w-3.5 h-3.5 text-[#a89c93]" />
-                    <span>Gerenciar Portal</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleToggleStatus(p)}
-                    className={`p-1.5 rounded-xl border transition-colors cursor-pointer ${
-                      p.status === 'active'
-                        ? 'border-[#3d342f] text-[#a89c93] hover:text-rose-400 hover:border-rose-500/30'
-                        : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
-                    }`}
-                    title={p.status === 'active' ? 'Suspender Acesso' : 'Ativar Acesso'}
-                  >
-                    <Power className="w-4 h-4" />
-                  </button>
-
-                  {!isSample && (
-                    <button
-                      onClick={() => handleDeletePortal(p)}
-                      className="p-1.5 rounded-xl border border-[#3d342f] text-[#a89c93] hover:text-rose-400 hover:border-rose-500/30 transition-colors cursor-pointer"
-                      title="Excluir Acesso"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+                    }
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-[var(--theme-primary)] hover:brightness-110 text-black font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Cadastrar Primeiro Cliente</span>
+                </button>
               </div>
+            )}
+          </div>
+        ) : (
+          filteredPortals.map((p) => {
+            const isSample = p.id === SAMPLE_CLIENT_PORTAL.id;
+            const showPassword = !!showPasswordMap[p.id];
+            const primaryProject = p.projects?.[0];
 
-              {/* Projects & Credentials Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                
-                {/* Projects Column */}
-                <div className="md:col-span-2 space-y-2">
-                  <span className="text-[10px] font-bold text-[#a89c93] uppercase tracking-wider block">
-                    Projetos Vinculados ({p.projects?.length || 0})
-                  </span>
-                  
-                  <div className="space-y-2">
-                    {(p.projects || []).map((proj) => (
-                      <div
-                        key={proj.id}
-                        className="bg-[#14110f] border border-[#3d342f] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                      >
-                        <div className="space-y-1">
-                          <span className="font-bold text-[#fcf8f5] block">
-                            {proj.title}
+            // Check linkage to office registry
+            const linkedOfficeClient = clients.find(
+              c => c.id === p.clientId ||
+                   (c.email && c.email.toLowerCase() === p.clientEmail.toLowerCase()) ||
+                   c.name.toLowerCase() === p.clientName.toLowerCase()
+            );
+
+            const linkedOfficeProject = architectureProjects.find(
+              ap => p.projects?.some(proj => proj.id === ap.id || proj.title.toLowerCase() === ap.title.toLowerCase())
+            );
+
+            return (
+              <div
+                key={p.id}
+                className={`bg-[#1a1614] border rounded-2xl p-5 sm:p-6 transition-all hover:border-[var(--theme-primary)]/50 space-y-4 shadow-sm ${
+                  p.status === 'active' ? 'border-[#3d342f]' : 'border-rose-900/40 opacity-80'
+                }`}
+              >
+                {/* Header row */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#3d342f]/60">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#241e1b] border border-[#3d342f] text-[var(--theme-primary)] flex items-center justify-center font-bold text-base">
+                      {p.clientName ? p.clientName.charAt(0).toUpperCase() : 'C'}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-bold text-[#fcf8f5] text-base">
+                          {p.clientName}
+                        </h3>
+                        {isSample && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                            Modelo / Demonstração
                           </span>
-                          <div className="flex items-center gap-2 flex-wrap text-[11px] text-[#a89c93]">
-                            <span className="px-2 py-0.5 rounded-md bg-[#241e1b] border border-[#3d342f] text-[var(--theme-primary)] font-medium">
-                              Fase: {proj.currentStageName || proj.status}
+                        )}
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          p.status === 'active' 
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                            : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                        }`}>
+                          {p.status === 'active' ? '● Acesso Liberado' : '○ Acesso Suspenso'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-4 text-xs text-[#a89c93] mt-0.5">
+                        <span className="flex items-center gap-1">
+                          <Mail className="w-3 h-3 text-[#a89c93]" />
+                          {p.clientEmail}
+                        </span>
+                        {p.clientPhone && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-[#a89c93]" />
+                            {p.clientPhone}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Office Connection Badges */}
+                      <div className="flex items-center gap-2 flex-wrap mt-2">
+                        {linkedOfficeClient ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            <span>Cliente conectado ao cadastro</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[#241e1b] text-[#a89c93] border border-[#3d342f]">
+                            <Building2 className="w-3 h-3 text-[#a89c93]" />
+                            <span>Cliente não vinculado</span>
+                          </span>
+                        )}
+
+                        {linkedOfficeProject ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/25">
+                            <FolderOpen className="w-3 h-3 text-blue-400" />
+                            <span>Projeto vinculado: {linkedOfficeProject.title}</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[#241e1b] text-[#a89c93] border border-[#3d342f]">
+                            <FolderOpen className="w-3 h-3 text-[#a89c93]" />
+                            <span>Projeto local</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Action Buttons */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => handleOpenClientPortal(p)}
+                      className="px-3 py-1.5 rounded-xl bg-[#251f1b] hover:bg-[#322a24] text-[#fcf8f5] hover:text-[var(--theme-primary)] border border-[#3d342f] hover:border-[var(--theme-primary)] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                      title="Visualizar o portal como o cliente visualiza"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+                      <span>Visualizar Portal</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedPortalForEdit(p);
+                        setIsManagerModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-[#241e1b] hover:bg-[#2d2521] text-[#fcf8f5] border border-[#3d342f] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      title="Gerenciar fases, documentos e configurações"
+                    >
+                      <Settings2 className="w-3.5 h-3.5 text-[#a89c93]" />
+                      <span>Gerenciar Portal</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleToggleStatus(p)}
+                      className={`p-1.5 rounded-xl border transition-colors cursor-pointer ${
+                        p.status === 'active'
+                          ? 'border-[#3d342f] text-[#a89c93] hover:text-rose-400 hover:border-rose-500/30'
+                          : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
+                      }`}
+                      title={p.status === 'active' ? 'Suspender Acesso' : 'Ativar Acesso'}
+                    >
+                      <Power className="w-4 h-4" />
+                    </button>
+
+                    {!isSample && (
+                      <button
+                        onClick={() => handleDeletePortal(p)}
+                        className="p-1.5 rounded-xl border border-[#3d342f] text-[#a89c93] hover:text-rose-400 hover:border-rose-500/30 transition-colors cursor-pointer"
+                        title="Excluir Acesso"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Projects & Credentials Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  
+                  {/* Projects Column */}
+                  <div className="md:col-span-2 space-y-2">
+                    <span className="text-[10px] font-bold text-[#a89c93] uppercase tracking-wider block">
+                      Projetos Vinculados ({p.projects?.length || 0})
+                    </span>
+                    
+                    <div className="space-y-2">
+                      {(p.projects || []).map((proj) => (
+                        <div
+                          key={proj.id}
+                          className="bg-[#14110f] border border-[#3d342f] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                        >
+                          <div className="space-y-1">
+                            <span className="font-bold text-[#fcf8f5] block">
+                              {proj.title}
                             </span>
-                            <span>•</span>
-                            <span>Progresso: <strong className="text-[#fcf8f5]">{proj.progressPercent || 0}%</strong></span>
-                            {proj.deliveryDate && (
+                            <div className="flex items-center gap-2 flex-wrap text-[11px] text-[#a89c93]">
+                              <span className="px-2 py-0.5 rounded-md bg-[#241e1b] border border-[#3d342f] text-[var(--theme-primary)] font-medium">
+                                Fase: {proj.currentStageName || proj.status}
+                              </span>
+                              <span>•</span>
+                              <span>Progresso: <strong className="text-[#fcf8f5]">{proj.progressPercent || 0}%</strong></span>
+                              {proj.deliveryDate && (
+                                <>
+                                  <span>•</span>
+                                  <span>Previsão: {proj.deliveryDate}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Progress mini bar */}
+                          <div className="w-full sm:w-28 space-y-1">
+                            <div className="h-1.5 w-full bg-[#241e1b] rounded-full overflow-hidden border border-[#3d342f]">
+                              <div 
+                                className="h-full bg-[var(--theme-primary)] rounded-full transition-all"
+                                style={{ width: `${proj.progressPercent || 0}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Access Credentials & Sharing Column */}
+                  <div className="bg-[#14110f] border border-[#3d342f] rounded-xl p-3.5 space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-bold text-[#a89c93] uppercase tracking-wider block">
+                        Credenciais do Cliente
+                      </span>
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between bg-[#1c1815] px-2.5 py-1.5 rounded-lg border border-[#3d342f]">
+                          <span className="text-[11px] text-[#a89c93]">Código / Senha:</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-[var(--theme-primary)] text-xs">
+                              {showPassword ? p.accessCode : '••••••••'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => toggleShowPassword(p.id)}
+                              className="text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer"
+                              title={showPassword ? 'Ocultar código' : 'Ver código'}
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            onClick={() => handleCopyCredentials(p)}
+                            className="flex-1 py-1.5 px-2 bg-[#241e1b] hover:bg-[#2e2622] text-[#fcf8f5] border border-[#3d342f] rounded-lg font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                            title="Copiar mensagem com credenciais completas"
+                          >
+                            {copiedId === p.id + '-text' ? (
                               <>
-                                <span>•</span>
-                                <span>Previsão: {proj.deliveryDate}</span>
+                                <Check className="w-3 h-3 text-emerald-400" />
+                                <span className="text-emerald-400">Copiado!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3 text-[#a89c93]" />
+                                <span>Copiar Texto</span>
                               </>
                             )}
-                          </div>
-                        </div>
+                          </button>
 
-                        {/* Progress mini bar */}
-                        <div className="w-full sm:w-28 space-y-1">
-                          <div className="h-1.5 w-full bg-[#241e1b] rounded-full overflow-hidden border border-[#3d342f]">
-                            <div 
-                              className="h-full bg-[var(--theme-primary)] rounded-full transition-all"
-                              style={{ width: `${proj.progressPercent || 0}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Access Credentials & Sharing Column */}
-                <div className="bg-[#14110f] border border-[#3d342f] rounded-xl p-3.5 space-y-3 flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-[#a89c93] uppercase tracking-wider block">
-                      Credenciais do Cliente
-                    </span>
-
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between bg-[#1c1815] px-2.5 py-1.5 rounded-lg border border-[#3d342f]">
-                        <span className="text-[11px] text-[#a89c93]">Código / Senha:</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-[var(--theme-primary)] text-xs">
-                            {showPassword ? p.accessCode : '••••••••'}
-                          </span>
                           <button
-                            type="button"
-                            onClick={() => toggleShowPassword(p.id)}
-                            className="text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer"
-                            title={showPassword ? 'Ocultar código' : 'Ver código'}
+                            onClick={() => handleCopyLink(p)}
+                            className="flex-1 py-1.5 px-2 bg-[#241e1b] hover:bg-[#2e2622] text-[#fcf8f5] border border-[#3d342f] rounded-lg font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                            title="Copiar link direto para envio"
                           >
-                            <Eye className="w-3.5 h-3.5" />
+                            {copiedId === p.id + '-link' ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-400" />
+                                <span className="text-emerald-400">Link Copiado!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Share2 className="w-3 h-3 text-[#a89c93]" />
+                                <span>Link Direto</span>
+                              </>
+                            )}
                           </button>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2 pt-1">
-                        <button
-                          onClick={() => handleCopyCredentials(p)}
-                          className="flex-1 py-1.5 px-2 bg-[#241e1b] hover:bg-[#2e2622] text-[#fcf8f5] border border-[#3d342f] rounded-lg font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                          title="Copiar mensagem com credenciais completas"
-                        >
-                          {copiedId === p.id + '-text' ? (
-                            <>
-                              <Check className="w-3 h-3 text-emerald-400" />
-                              <span className="text-emerald-400">Copiado!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3 text-[#a89c93]" />
-                              <span>Copiar Texto</span>
-                            </>
-                          )}
-                        </button>
-
-                        <button
-                          onClick={() => handleCopyLink(p)}
-                          className="flex-1 py-1.5 px-2 bg-[#241e1b] hover:bg-[#2e2622] text-[#fcf8f5] border border-[#3d342f] rounded-lg font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                          title="Copiar link direto para envio"
-                        >
-                          {copiedId === p.id + '-link' ? (
-                            <>
-                              <Check className="w-3 h-3 text-emerald-400" />
-                              <span className="text-emerald-400">Link Copiado!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Share2 className="w-3 h-3 text-[#a89c93]" />
-                              <span>Link Direto</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
                     </div>
+
+                    {/* Send via WhatsApp Button */}
+                    {p.clientPhone && (
+                      <button
+                        onClick={() => handleOpenWhatsApp(p)}
+                        className="w-full py-2 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>Enviar Acesso no WhatsApp</span>
+                      </button>
+                    )}
                   </div>
 
-                  {/* Send via WhatsApp Button */}
-                  {p.clientPhone && (
-                    <button
-                      onClick={() => handleOpenWhatsApp(p)}
-                      className="w-full py-2 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>Enviar Acesso no WhatsApp</span>
-                    </button>
-                  )}
                 </div>
 
-              </div>
-
-              {/* Bottom quick stats */}
-              <div className="flex items-center justify-between pt-2 border-t border-[#3d342f]/40 text-[11px] text-[#a89c93]">
-                <div className="flex items-center gap-4">
-                  <span>Arquivos disponibilizados: <strong className="text-[#fcf8f5]">{p.documents?.length || 0}</strong></span>
-                  <span>Mensagens no chat: <strong className="text-[#fcf8f5]">{p.messages?.length || 0}</strong></span>
+                {/* Bottom quick stats */}
+                <div className="flex items-center justify-between pt-2 border-t border-[#3d342f]/40 text-[11px] text-[#a89c93]">
+                  <div className="flex items-center gap-4">
+                    <span>Arquivos disponibilizados: <strong className="text-[#fcf8f5]">{p.documents?.length || 0}</strong></span>
+                    <span>Mensagens no chat: <strong className="text-[#fcf8f5]">{p.messages?.length || 0}</strong></span>
+                  </div>
+                  <div>
+                    {p.lastLoginAt ? (
+                      <span>Último acesso do cliente: {new Date(p.lastLoginAt).toLocaleDateString('pt-BR')}</span>
+                    ) : (
+                      <span className="italic">Cliente ainda não fez o primeiro login</span>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  {p.lastLoginAt ? (
-                    <span>Último acesso do cliente: {new Date(p.lastLoginAt).toLocaleDateString('pt-BR')}</span>
-                  ) : (
-                    <span className="italic">Cliente ainda não fez o primeiro login</span>
-                  )}
-                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
       {/* Guide Card for the Office */}
