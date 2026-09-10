@@ -1,6 +1,6 @@
 {
-  "name": "Meu Escritório Online ",
-  "description": "Gestão Financeira, Contratos \u0026 Projetos.",
+  "name": "Meu Escritório Online",
+  "description": "Gestão de Escritório, Gestão de Projetos, Prazos & Negócios.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
