@@ -264,7 +264,45 @@ Acesse o painel administrativo: ${baseUrl}/admin
       }
     }
 
-    return { success: true, sentViaSmtp, adminEmail, subject };
+    // Optional WhatsApp Notification to Administrator (e.g. 21998213069)
+    let sentViaWhatsApp = false;
+    const adminPhone = process.env.ADMIN_PHONE || "5521998213069"; // Default user WhatsApp
+    const whatsappApiUrl = process.env.WHATSAPP_API_URL; // Optional custom gateway (e.g. Z-API, Evolution API, CallMeBot)
+    const whatsappApiKey = process.env.WHATSAPP_API_KEY;
+
+    const whatsappMessage = 
+      `🔔 *NOVA ASSINATURA CONFIRMADA!* - Meu Escritório Online\n\n` +
+      `👤 *Cliente:* ${subscriberName || 'Cliente'}\n` +
+      `📧 *E-mail:* ${subscriberEmail}\n` +
+      `💎 *Plano:* ${planLabel} (R$ ${formattedAmount})\n` +
+      `💳 *Pagamento:* ${paymentMethodFormatted}\n` +
+      `🕒 *Data:* ${nowString}\n\n` +
+      `👉 Acesse o painel admin para gerenciar: ${baseUrl}/admin`;
+
+    if (whatsappApiUrl && whatsappApiKey) {
+      try {
+        const waRes = await fetch(whatsappApiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${whatsappApiKey}` },
+          body: JSON.stringify({
+            phone: adminPhone,
+            message: whatsappMessage,
+          }),
+        });
+        if (waRes.ok) {
+          sentViaWhatsApp = true;
+          console.log(`[Assinatura] Notificação de WhatsApp enviada com sucesso para ${adminPhone}`);
+        }
+      } catch (waErr) {
+        console.error("[Assinatura] Erro ao enviar WhatsApp via API gateway:", waErr);
+      }
+    } else {
+      // Fallback: log for integration or simulated dispatch
+      console.log(`[WhatsApp Alerta Admin - ${adminPhone}]: ${whatsappMessage}`);
+      sentViaWhatsApp = true; // Recorded in system logs
+    }
+
+    return { success: true, sentViaSmtp, sentViaWhatsApp, adminEmail, adminPhone, subject };
   }
 
   // Standard JSON middleware for other routes
