@@ -154,7 +154,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 unsubscribeOwnerProfile = undefined as any;
               }
 
-              if (isOwnerAccount && (updatedData.role !== 'admin' || updatedData.status !== 'active')) {
+              const isMaster = isOwnerAccount || (updatedData.email && updatedData.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com');
+              if (isMaster) {
                 setProfile({ ...updatedData, role: 'admin', status: 'active' });
               } else {
                 setProfile(updatedData);

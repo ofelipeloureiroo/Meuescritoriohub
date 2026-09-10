@@ -166,11 +166,11 @@ export const SalesLandingPage: React.FC = () => {
             <a href="#planos" className="hover:text-[#fcf8f5] transition-colors">Planos & Preços</a>
           </nav>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
             {user ? (
               <button
                 onClick={() => navigate('/app')}
-                className="px-5 py-2.5 rounded-xl text-black font-bold text-sm transition-all shadow-lg hover:brightness-110 cursor-pointer"
+                className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-black font-bold text-xs sm:text-sm transition-all shadow-lg hover:brightness-110 cursor-pointer"
                 style={{ backgroundColor: 'var(--theme-primary)' }}
               >
                 Acessar Meu Painel
@@ -179,16 +179,17 @@ export const SalesLandingPage: React.FC = () => {
               <>
                 <Link
                   to="/login"
-                  className="hidden sm:inline-block text-sm font-semibold text-[#a89c93] hover:text-[#fcf8f5] transition-colors px-3 py-2"
+                  className="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-[#fcf8f5] bg-[#241e1b] hover:bg-[#322a26] border border-[#3d342f] flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
                 >
-                  Entrar
+                  <KeyRound className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+                  <span>Entrar</span>
                 </Link>
                 <button
                   onClick={handleSubscribeClick}
-                  className="px-5 py-2.5 rounded-xl text-black font-bold text-sm transition-all shadow-lg hover:brightness-110 cursor-pointer"
+                  className="px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-black font-bold text-xs sm:text-sm transition-all shadow-lg hover:brightness-110 cursor-pointer"
                   style={{ backgroundColor: 'var(--theme-primary)' }}
                 >
-                  Assinar por R$ 50/mês
+                  <span className="hidden xs:inline">Assinar por </span>R$ 50/mês
                 </button>
               </>
             )}
@@ -1637,6 +1638,38 @@ export const SalesLandingPage: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* Mobile Sticky Bar for quick mobile access */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 p-3 bg-[#181412]/95 backdrop-blur-xl border-t border-[#3d342f] flex items-center gap-2.5 shadow-2xl">
+        {user ? (
+          <button
+            onClick={() => navigate('/app')}
+            className="w-full py-3 rounded-xl text-black font-bold text-sm flex items-center justify-center gap-2 shadow-lg"
+            style={{ backgroundColor: 'var(--theme-primary)' }}
+          >
+            <Building2 className="w-4 h-4" />
+            <span>Acessar Meu Escritório</span>
+          </button>
+        ) : (
+          <>
+            <Link
+              to="/login"
+              className="flex-1 py-3 px-3 rounded-xl text-xs font-bold text-[#fcf8f5] bg-[#241e1b] border border-[#3d342f] flex items-center justify-center gap-1.5 active:bg-[#322a26] transition-colors"
+            >
+              <KeyRound className="w-4 h-4 text-[var(--theme-primary)]" />
+              <span>Entrar</span>
+            </Link>
+            <button
+              onClick={handleSubscribeClick}
+              className="flex-1 py-3 px-3 rounded-xl text-black font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg active:brightness-90 transition-all"
+              style={{ backgroundColor: 'var(--theme-primary)' }}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Assinar R$ 50/mês</span>
+            </button>
+          </>
+        )}
+      </div>
 
     </div>
   );
