@@ -19,6 +19,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { SupplierItem } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 const INITIAL_SUPPLIERS: SupplierItem[] = [
   {
@@ -167,22 +168,14 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
 };
 
 export const SuppliersTab: React.FC = () => {
-  const [suppliers, setSuppliers] = useState<SupplierItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('meu_escritorio_fornecedores_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.some((s: any) => s.id === 'supp_1' || s.id === 'supp_2' || s.name?.includes('Granitos Brasil'))) {
-          localStorage.setItem('meu_escritorio_fornecedores_v1', JSON.stringify([]));
-          return [];
-        }
-        return parsed;
-      }
-    } catch {
-      // fallback
-    }
-    return [];
-  });
+  const { user, profile } = useAuth();
+  const targetUid = profile?.joinedOwnerUid || user?.uid;
+
+  const getStorageKey = (key: string) => {
+    return targetUid ? `office_v2_${targetUid}_${key}` : `office_v2_guest_${key}`;
+  };
+
+  const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
@@ -207,18 +200,41 @@ export const SuppliersTab: React.FC = () => {
   const [formNotes, setFormNotes] = useState('');
   const [formIsFavorite, setFormIsFavorite] = useState(false);
 
+  // Load suppliers whenever targetUid changes
   useEffect(() => {
     try {
-      localStorage.setItem('meu_escritorio_fornecedores_v1', JSON.stringify(suppliers));
+      const saved = localStorage.getItem(getStorageKey('suppliers'));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.some((s: any) => s.id === 'supp_1' || s.id === 'supp_2' || s.name?.includes('Granitos Brasil'))) {
+          localStorage.setItem(getStorageKey('suppliers'), JSON.stringify([]));
+          setSuppliers([]);
+        } else {
+          setSuppliers(parsed);
+        }
+      } else {
+        setSuppliers([]);
+      }
+    } catch {
+      setSuppliers([]);
+    }
+  }, [targetUid]);
+
+  // Save suppliers whenever suppliers list changes
+  useEffect(() => {
+    if (!targetUid) return;
+    try {
+      localStorage.setItem(getStorageKey('suppliers'), JSON.stringify(suppliers));
     } catch (e) {
       console.error('Failed to persist suppliers', e);
     }
-  }, [suppliers]);
+  }, [suppliers, targetUid]);
 
+  // Synchronize with external changes or events
   useEffect(() => {
     const handleSuppliersUpdated = () => {
       try {
-        const saved = localStorage.getItem('meu_escritorio_fornecedores_v1');
+        const saved = localStorage.getItem(getStorageKey('suppliers'));
         if (saved) {
           setSuppliers(JSON.parse(saved));
         } else {
@@ -234,7 +250,7 @@ export const SuppliersTab: React.FC = () => {
       window.removeEventListener('suppliers_updated', handleSuppliersUpdated);
       window.removeEventListener('storage', handleSuppliersUpdated);
     };
-  }, []);
+  }, [targetUid]);
 
   const handleOpenAddModal = () => {
     setEditingSupplier(null);

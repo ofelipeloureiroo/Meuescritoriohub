@@ -701,6 +701,158 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     safeSetItem('actions', actions);
   }, [actions, targetUid]);
 
+  // Load and synchronize states from local storage whenever targetUid changes
+  useEffect(() => {
+    if (!targetUid) return;
+
+    // Reset cloud loaded reference as we are switching/starting a new authenticated session
+    isCloudLoadedRef.current = false;
+
+    // Load Profile
+    const savedProfile = localStorage.getItem(getStorageKey('profile'));
+    if (savedProfile) {
+      try {
+        const parsed = JSON.parse(savedProfile);
+        setArchitectProfile(parsed);
+      } catch {}
+    } else {
+      if (isOwner) {
+        setArchitectProfile({
+          name: 'LF Quadros & Decoração',
+          title: 'Arte, Decoração & Vendas',
+          photoUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=400&q=80',
+          location: 'Brasil • Atendimento Nacional',
+          specialty: 'Quadros sob medida, telas canvas e composições de parede',
+          tagline: 'Arte que transforma ambientes com estilo e sofisticação.',
+          description: 'Vendas de quadros sob medida, impressões fine art, telas canvas e soluções decorativas.',
+          instagramHandle: '@lfquadrosdecorativos',
+          instagramUrl: 'https://instagram.com/lfquadrosdecorativos',
+          followersCount: '15 mil seguidores',
+          rating: 5.0,
+          pixKey: 'lfquadrosdecorativos@gmail.com',
+          pixKeyType: 'email',
+          niche: 'arte_decoracao',
+          themeColor: 'amber',
+          showPortfolio: true,
+        });
+      } else {
+        setArchitectProfile(getCleanProfile());
+      }
+    }
+
+    // Load Transactions
+    const savedTx = localStorage.getItem(getStorageKey('transactions'));
+    if (savedTx) {
+      try { setTransactions(JSON.parse(savedTx)); } catch { setTransactions([]); }
+    } else {
+      setTransactions([]);
+    }
+
+    // Load Bank Accounts
+    const savedAccounts = localStorage.getItem(getStorageKey('accounts'));
+    if (savedAccounts) {
+      try { setBankAccounts(JSON.parse(savedAccounts)); } catch { setBankAccounts(EMPTY_BANK_ACCOUNTS); }
+    } else {
+      setBankAccounts(EMPTY_BANK_ACCOUNTS);
+    }
+
+    // Load Mortgage
+    const savedMortgage = localStorage.getItem(getStorageKey('mortgage'));
+    if (savedMortgage) {
+      try { setHouseMortgage(JSON.parse(savedMortgage)); } catch { setHouseMortgage(EMPTY_HOUSE_MORTGAGE); }
+    } else {
+      setHouseMortgage(EMPTY_HOUSE_MORTGAGE);
+    }
+
+    // Load Debts
+    const savedDebts = localStorage.getItem(getStorageKey('debts'));
+    if (savedDebts) {
+      try { setDebts(JSON.parse(savedDebts)); } catch { setDebts([]); }
+    } else {
+      setDebts([]);
+    }
+
+    // Load Clients
+    const savedClients = localStorage.getItem(getStorageKey('clients'));
+    if (savedClients) {
+      try { setClients(JSON.parse(savedClients)); } catch { setClients([]); }
+    } else {
+      setClients([]);
+    }
+
+    // Load Freelance Projects
+    const savedProjects = localStorage.getItem(getStorageKey('projects'));
+    if (savedProjects) {
+      try { setFreelanceProjects(JSON.parse(savedProjects)); } catch { setFreelanceProjects([]); }
+    } else {
+      setFreelanceProjects([]);
+    }
+
+    // Load Architecture Projects
+    const savedArchProjects = localStorage.getItem(getStorageKey('architecture_projects'));
+    if (savedArchProjects) {
+      try { setArchitectureProjects(JSON.parse(savedArchProjects)); } catch { setArchitectureProjects([]); }
+    } else {
+      setArchitectureProjects([]);
+    }
+
+    // Load Installments
+    const savedInstallments = localStorage.getItem(getStorageKey('installments'));
+    if (savedInstallments) {
+      try { setProjectInstallments(JSON.parse(savedInstallments)); } catch { setProjectInstallments([]); }
+    } else {
+      setProjectInstallments([]);
+    }
+
+    // Load Milestones
+    const savedMilestones = localStorage.getItem(getStorageKey('milestones'));
+    if (savedMilestones) {
+      try { setProjectMilestones(JSON.parse(savedMilestones)); } catch { setProjectMilestones([]); }
+    } else {
+      setProjectMilestones([]);
+    }
+
+    // Load Contracts
+    const savedContracts = localStorage.getItem(getStorageKey('work_contracts'));
+    if (savedContracts) {
+      try { setWorkContracts(JSON.parse(savedContracts)); } catch { setWorkContracts([]); }
+    } else {
+      setWorkContracts([]);
+    }
+
+    // Load Goals
+    const savedGoals = localStorage.getItem(getStorageKey('goals'));
+    if (savedGoals) {
+      try { setSavingsGoals(JSON.parse(savedGoals)); } catch { setSavingsGoals([]); }
+    } else {
+      setSavingsGoals([]);
+    }
+
+    // Load Budgets
+    const savedBudgets = localStorage.getItem(getStorageKey('budgets'));
+    if (savedBudgets) {
+      try { setCategoryBudgets(JSON.parse(savedBudgets)); } catch { setCategoryBudgets(INITIAL_CATEGORY_BUDGETS); }
+    } else {
+      setCategoryBudgets(INITIAL_CATEGORY_BUDGETS);
+    }
+
+    // Load Settings
+    const savedSettings = localStorage.getItem(getStorageKey('office_settings'));
+    if (savedSettings) {
+      try { setOfficeSettings(JSON.parse(savedSettings)); } catch { setOfficeSettings(INITIAL_OFFICE_SETTINGS); }
+    } else {
+      setOfficeSettings(INITIAL_OFFICE_SETTINGS);
+    }
+
+    // Load Actions
+    const savedActions = localStorage.getItem(getStorageKey('actions'));
+    if (savedActions) {
+      try { setActions(JSON.parse(savedActions)); } catch { setActions([]); }
+    } else {
+      setActions([]);
+    }
+  }, [targetUid]);
+
   // Real-time Cloud Sync from Firestore
   useEffect(() => {
     if (!targetUid) {

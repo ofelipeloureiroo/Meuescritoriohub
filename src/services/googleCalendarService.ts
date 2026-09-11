@@ -1,4 +1,4 @@
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, linkWithPopup, reauthenticateWithPopup } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
 // In-memory cache for the Google Calendar OAuth Access Token and Email
@@ -52,8 +52,29 @@ export const authenticateGoogleCalendar = async (): Promise<{ token: string; ema
   provider.addScope('https://www.googleapis.com/auth/calendar.events');
 
   try {
-    // Explicitly sign in with popup to trigger account chooser & scope request
-    const result = await signInWithPopup(auth, provider);
+    let result: any;
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      const isGoogleLinked = currentUser.providerData.some(p => p.providerId === 'google.com');
+      if (isGoogleLinked) {
+        try {
+          result = await reauthenticateWithPopup(currentUser, provider);
+        } catch (reauthErr) {
+          console.warn('Reautenticação falhou, tentando login direto:', reauthErr);
+          result = await signInWithPopup(auth, provider);
+        }
+      } else {
+        try {
+          result = await linkWithPopup(currentUser, provider);
+        } catch (linkErr: any) {
+          console.warn('Link falhou, tentando login direto:', linkErr);
+          result = await signInWithPopup(auth, provider);
+        }
+      }
+    } else {
+      result = await signInWithPopup(auth, provider);
+    }
+
     const credential = GoogleAuthProvider.credentialFromResult(result);
     
     if (!credential?.accessToken) {
@@ -61,15 +82,13 @@ export const authenticateGoogleCalendar = async (): Promise<{ token: string; ema
     }
 
     cachedGCalToken = credential.accessToken;
-    cachedGCalEmail = result.user.email;
+    cachedGCalEmail = result.user.email || currentUser?.email || 'lfquadrosdecorativos@gmail.com';
 
     // Persist active integration flags and the connected email (non-sensitive info)
     localStorage.setItem('office_gcal_synced', 'true');
-    if (result.user.email) {
-      localStorage.setItem('office_gcal_email', result.user.email);
-    }
+    localStorage.setItem('office_gcal_email', cachedGCalEmail);
 
-    return { token: cachedGCalToken, email: cachedGCalEmail || '' };
+    return { token: cachedGCalToken, email: cachedGCalEmail };
   } catch (error) {
     console.error('Erro na autenticação do Google Calendar:', error);
     throw error;
