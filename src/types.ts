@@ -627,6 +627,7 @@ export interface AppAction {
   completedAt?: string;
   createdAt: string;
   isAppointment?: boolean;
+  gcalEventId?: string;
 }
 
 // ==========================================

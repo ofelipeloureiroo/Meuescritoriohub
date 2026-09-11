@@ -33,6 +33,18 @@ import { useAuth } from '../../context/AuthContext';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
 import { AppAction } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
+import {
+  authenticateGoogleCalendar,
+  disconnectGoogleCalendar,
+  fetchGoogleEvents,
+  createGoogleEvent,
+  updateGoogleEvent,
+  deleteGoogleEvent,
+  getGoogleAccessToken,
+  getGoogleUserEmail,
+  isGoogleCalendarEnabled,
+  GoogleCalendarEvent,
+} from '../../services/googleCalendarService';
 
 const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -87,9 +99,10 @@ export const TodayTab: React.FC = () => {
   });
 
   // Google Calendar Integration State
-  const [isGoogleSynced, setIsGoogleSynced] = useState<boolean>(() => {
-    return localStorage.getItem('office_gcal_synced') === 'true';
-  });
+  const [isGoogleSynced, setIsGoogleSynced] = useState<boolean>(() => isGoogleCalendarEnabled());
+  const [googleEmail, setGoogleEmail] = useState<string | null>(() => getGoogleUserEmail());
+  const [googleEvents, setGoogleEvents] = useState<GoogleCalendarEvent[]>([]);
+  const [tokenExpired, setTokenExpired] = useState<boolean>(false);
   const [isSyncingCalendar, setIsSyncingCalendar] = useState<boolean>(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
@@ -97,23 +110,59 @@ export const TodayTab: React.FC = () => {
     setIsSyncingCalendar(true);
     setSyncMessage(null);
     try {
-      await new Promise((r) => setTimeout(r, 1000));
-      const newState = !isGoogleSynced;
-      setIsGoogleSynced(newState);
-      localStorage.setItem('office_gcal_synced', String(newState));
-      if (newState) {
-        setSyncMessage('Google Agenda conectado com sucesso! Prazos e reuniões do escritório agora estão sincronizados.');
-      } else {
+      if (isGoogleSynced) {
+        disconnectGoogleCalendar();
+        setIsGoogleSynced(false);
+        setGoogleEmail(null);
+        setGoogleEvents([]);
+        setTokenExpired(false);
         setSyncMessage('Sincronização com o Google Agenda desativada.');
+      } else {
+        const res = await authenticateGoogleCalendar();
+        setIsGoogleSynced(true);
+        setGoogleEmail(res.email);
+        setTokenExpired(false);
+        setSyncMessage(`Conectado com sucesso à conta: ${res.email}`);
+        
+        try {
+          const events = await fetchGoogleEvents();
+          setGoogleEvents(events);
+        } catch (e) {
+          console.error("Initial sync fetch warning:", e);
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setSyncMessage('Erro ao conectar com o Google Agenda.');
+      setSyncMessage(err.message || 'Erro ao conectar com o Google Agenda.');
     } finally {
       setIsSyncingCalendar(false);
-      setTimeout(() => setSyncMessage(null), 4000);
+      setTimeout(() => setSyncMessage(null), 6000);
     }
   };
+
+  useEffect(() => {
+    const initFetch = async () => {
+      if (isGoogleSynced) {
+        const token = getGoogleAccessToken();
+        if (!token) {
+          setTokenExpired(true);
+        } else {
+          setTokenExpired(false);
+          setIsSyncingCalendar(true);
+          try {
+            const events = await fetchGoogleEvents();
+            setGoogleEvents(events);
+          } catch (err) {
+            console.error("Auto fetch error:", err);
+            setTokenExpired(true);
+          } finally {
+            setIsSyncingCalendar(false);
+          }
+        }
+      }
+    };
+    initFetch();
+  }, [isGoogleSynced]);
 
   useEffect(() => {
     localStorage.setItem('today_scratchpad', dailyNote);
@@ -130,22 +179,54 @@ export const TodayTab: React.FC = () => {
     return new Date().toLocaleDateString('pt-BR', options);
   }, []);
 
-  // Today's actions sorted by time
+  // Map Google Calendar Events into the AppAction model schema for unified display
+  const mappedGoogleEvents = useMemo(() => {
+    if (!isGoogleSynced || googleEvents.length === 0) return [];
+    
+    return googleEvents.map((evt) => {
+      const startVal = evt.start.dateTime || evt.start.date || '';
+      const evtDateStr = startVal.split('T')[0];
+      const startTime = evt.start.dateTime
+        ? new Date(evt.start.dateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        : undefined;
+
+      const act: AppAction = {
+        id: `gcal-${evt.id}`,
+        type: 'Google Agenda',
+        area: 'Operação',
+        origin: 'Interna',
+        description: evt.summary || '(Sem título)',
+        date: evtDateStr,
+        time: startTime,
+        status: 'pending',
+        notes: evt.description || '',
+        createdAt: new Date().toISOString(),
+        isAppointment: true,
+        gcalEventId: evt.id,
+      };
+      return act;
+    });
+  }, [googleEvents, isGoogleSynced]);
+
+  // Today's actions sorted by time (Combining local database events and live Google Calendar events)
   const todayActions = useMemo(() => {
-    return actions
-      .filter((a) => {
-        if (!a.date) return false;
-        if (a.date === todayStr) return true;
-        if (a.date.includes('/')) {
-          const [d, m, y] = a.date.split('/');
-          if (d && m && y) {
-            return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}` === todayStr;
-          }
+    const localToday = actions.filter((a) => {
+      if (!a.date) return false;
+      if (a.date === todayStr) return true;
+      if (a.date.includes('/')) {
+        const [d, m, y] = a.date.split('/');
+        if (d && m && y) {
+          return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}` === todayStr;
         }
-        return false;
-      })
+      }
+      return false;
+    });
+
+    const googleToday = mappedGoogleEvents.filter((a) => a.date === todayStr);
+
+    return [...localToday, ...googleToday]
       .sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
-  }, [actions, todayStr]);
+  }, [actions, mappedGoogleEvents, todayStr]);
 
   // Completed today counter
   const completedToday = useMemo(() => {
@@ -170,7 +251,7 @@ export const TodayTab: React.FC = () => {
   const [quickTaskText, setQuickTaskText] = useState('');
   const [quickTaskFeedback, setQuickTaskFeedback] = useState<string | null>(null);
 
-  const handleAddQuickTask = (e?: React.FormEvent) => {
+  const handleAddQuickTask = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const text = quickTaskText.trim();
     if (!text) {
@@ -179,14 +260,35 @@ export const TodayTab: React.FC = () => {
       return;
     }
 
+    let gcalEventId: string | undefined = undefined;
+    const timeNow = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    if (isGoogleSynced && getGoogleAccessToken()) {
+      try {
+        const res = await createGoogleEvent(
+          `Tarefa rápida: ${text}`,
+          'Criado via Meu Escritório Online',
+          todayStr,
+          timeNow
+        );
+        gcalEventId = res.id;
+        
+        // Refresh Google Calendar events
+        fetchGoogleEvents().then(events => setGoogleEvents(events)).catch(e => console.warn(e));
+      } catch (err) {
+        console.warn("Erro ao criar tarefa rápida no Google Calendar:", err);
+      }
+    }
+
     addAppAction({
       type: 'Tarefa rápida',
       area: 'Operação',
       origin: 'Interna',
       description: text,
       date: todayStr,
-      time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      time: timeNow,
       status: 'pending',
+      gcalEventId,
     });
 
     setQuickTaskText('');
@@ -194,6 +296,33 @@ export const TodayTab: React.FC = () => {
     setTimeout(() => {
       setQuickTaskFeedback(null);
     }, 3500);
+  };
+
+  // Safe Deletion wrapper to handle both local and remote Google Calendar deletions
+  const handleDeleteActionWrapper = async (id: string) => {
+    const act = actions.find(a => a.id === id);
+    if (act && act.gcalEventId && isGoogleSynced && getGoogleAccessToken()) {
+      try {
+        await deleteGoogleEvent(act.gcalEventId);
+      } catch (err) {
+        console.warn("Google Calendar deletion error:", err);
+      }
+    } else if (id.startsWith('gcal-')) {
+      // It's a Google Calendar event from the live list
+      const cleanId = id.replace('gcal-', '');
+      if (isGoogleSynced && getGoogleAccessToken()) {
+        try {
+          await deleteGoogleEvent(cleanId);
+          // Instantly refresh
+          const events = await fetchGoogleEvents();
+          setGoogleEvents(events);
+          return;
+        } catch (err) {
+          console.warn("Google Calendar live event deletion error:", err);
+        }
+      }
+    }
+    deleteAppAction(id);
   };
 
   // Calendar Helpers
@@ -217,9 +346,9 @@ export const TodayTab: React.FC = () => {
     return days;
   }, [currentDate]);
 
-  // Filtered actions for calendar & 7days
+  // Filtered actions for calendar & 7days (Combines local database and Google Calendar)
   const filteredActions = useMemo(() => {
-    return actions.filter((action) => {
+    const localFiltered = actions.filter((action) => {
       if (selectedArea !== 'all' && action.area !== selectedArea) {
         return false;
       }
@@ -233,7 +362,22 @@ export const TodayTab: React.FC = () => {
       }
       return true;
     });
-  }, [actions, selectedArea, searchQuery]);
+
+    const googleFiltered = mappedGoogleEvents.filter((evt) => {
+      if (selectedArea !== 'all' && selectedArea !== 'Operação') {
+        return false; // Show Google events under Operação filter or when all
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchDesc = evt.description?.toLowerCase().includes(q);
+        const matchType = evt.type?.toLowerCase().includes(q);
+        if (!matchDesc && !matchType) return false;
+      }
+      return true;
+    });
+
+    return [...localFiltered, ...googleFiltered];
+  }, [actions, mappedGoogleEvents, selectedArea, searchQuery]);
 
   // Modal State for Creating / Editing Actions
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
@@ -301,7 +445,7 @@ export const TodayTab: React.FC = () => {
   };
 
   // Submit action modal
-  const handleSaveAction = (e: React.FormEvent) => {
+  const handleSaveAction = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalType = formType === 'Personalizado' ? formCustomType.trim() : formType;
     if (!finalType) return;
@@ -313,6 +457,45 @@ export const TodayTab: React.FC = () => {
     } else if (formOrigin === 'Projeto' && formRelatedId) {
       const p = architectureProjects.find((x) => x.id === formRelatedId);
       if (p) relatedTitleFinal = p.name;
+    }
+
+    let gcalEventId = editingAction?.gcalEventId;
+
+    if (isGoogleSynced && getGoogleAccessToken()) {
+      try {
+        if (editingAction) {
+          if (editingAction.gcalEventId) {
+            await updateGoogleEvent(
+              editingAction.gcalEventId,
+              `Ação: ${finalType}`,
+              formDescription,
+              formEndDate || formStartDate,
+              formTime || undefined
+            );
+          } else {
+            const res = await createGoogleEvent(
+              `Ação: ${finalType}`,
+              formDescription,
+              formEndDate || formStartDate,
+              formTime || undefined
+            );
+            gcalEventId = res.id;
+          }
+        } else {
+          const res = await createGoogleEvent(
+            `Ação: ${finalType}`,
+            formDescription,
+            formEndDate || formStartDate,
+            formTime || undefined
+          );
+          gcalEventId = res.id;
+        }
+
+        // Immediately refresh Google events in background
+        fetchGoogleEvents().then(events => setGoogleEvents(events)).catch(e => console.warn(e));
+      } catch (err) {
+        console.warn("Erro ao salvar no Google Calendar:", err);
+      }
     }
 
     if (editingAction) {
@@ -329,6 +512,7 @@ export const TodayTab: React.FC = () => {
         time: formTime || undefined,
         responsibleId: formResponsibleId || undefined,
         responsibleName: formResponsibleName || undefined,
+        gcalEventId,
       });
     } else {
       addAppAction({
@@ -345,6 +529,7 @@ export const TodayTab: React.FC = () => {
         responsibleId: formResponsibleId || undefined,
         responsibleName: formResponsibleName || undefined,
         status: 'pending',
+        gcalEventId,
       });
     }
 
@@ -422,15 +607,23 @@ export const TodayTab: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <h4 className="text-sm font-bold text-[#fcf8f5]">Sincronização com o Google Agenda</h4>
                   {isGoogleSynced && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Sincronizado
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 ${
+                      tokenExpired
+                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                        : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        tokenExpired ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400 animate-pulse'
+                      }`} />
+                      {tokenExpired ? 'Conexão Pendente' : 'Sincronizado'}
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-[#a89c93] mt-0.5">
-                  {isGoogleSynced 
-                    ? 'Seus compromissos, reuniões e prazos do escritório estão sincronizados em tempo real com o Google Calendar.' 
+                  {isGoogleSynced
+                    ? tokenExpired
+                      ? 'Sua conexão com o Google Agenda expirou. Clique em Reautorizar para restaurar a sincronização em tempo real.'
+                      : `Conectado como ${googleEmail || 'lfquadrosdecorativos@gmail.com'}. Seus compromissos do escritório e prazos estão sincronizados.`
                     : 'Conecte sua conta Google para sincronizar automaticamente reuniões, prazos e compromissos do escritório.'}
                 </p>
                 {syncMessage && (
@@ -444,7 +637,9 @@ export const TodayTab: React.FC = () => {
               disabled={isSyncingCalendar}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
                 isGoogleSynced
-                  ? 'bg-[#2a221d] hover:bg-[#382d27] text-amber-300 border border-amber-500/40'
+                  ? tokenExpired
+                    ? 'bg-amber-500 text-black hover:bg-amber-400 shadow-md'
+                    : 'bg-[#2a221d] hover:bg-[#382d27] text-amber-300 border border-amber-500/40'
                   : 'bg-[var(--theme-primary)] hover:brightness-110 text-black shadow-md'
               }`}
             >
@@ -454,10 +649,17 @@ export const TodayTab: React.FC = () => {
                   <span>Sincronizando...</span>
                 </>
               ) : isGoogleSynced ? (
-                <>
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Configurado / Desconectar</span>
-                </>
+                tokenExpired ? (
+                  <>
+                    <Sparkles className="w-4 h-4 animate-bounce" />
+                    <span>Reautorizar Google</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span>Desconectar Agenda</span>
+                  </>
+                )
               ) : (
                 <>
                   <CalendarDays className="w-4 h-4" />
@@ -600,85 +802,123 @@ export const TodayTab: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    todayActions.map((act) => (
-                      <div
-                        key={act.id}
-                        className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${
-                          act.status === 'completed'
-                            ? 'bg-[#14110f]/60 border-emerald-500/20 opacity-70'
-                            : 'bg-[#221c18] border-[#3d342f] hover:border-[#c58a4b]/40'
-                        }`}
-                      >
-                        <div className="flex gap-3">
-                          {/* Checkbox trigger */}
-                          <button
-                            onClick={() =>
-                              updateAppAction(act.id, {
-                                status: act.status === 'completed' ? 'pending' : 'completed',
-                                completedAt: act.status === 'completed' ? undefined : new Date().toISOString(),
-                              })
-                            }
-                            className={`w-5 h-5 rounded-md border flex items-center justify-center mt-0.5 shrink-0 transition-colors cursor-pointer ${
-                              act.status === 'completed'
-                                ? 'bg-emerald-500 border-transparent text-white'
-                                : 'border-[#73655c] hover:border-[#c58a4b]'
-                            }`}
-                          >
-                            {act.status === 'completed' && <Check className="w-3.5 h-3.5" />}
-                          </button>
+                    todayActions.map((act) => {
+                      const isGCal = act.id.startsWith('gcal-');
+                      return (
+                        <div
+                          key={act.id}
+                          className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${
+                            act.status === 'completed'
+                              ? 'bg-[#14110f]/60 border-emerald-500/20 opacity-70'
+                              : isGCal
+                              ? 'bg-[#1c1815] border-amber-500/20 hover:border-amber-500/40'
+                              : 'bg-[#221c18] border-[#3d342f] hover:border-[#c58a4b]/40'
+                          }`}
+                        >
+                          <div className="flex gap-3">
+                            {/* Checkbox trigger or Calendar badge */}
+                            {isGCal ? (
+                              <div className="w-5 h-5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center justify-center mt-0.5 shrink-0" title="Evento do Google Agenda">
+                                <CalendarDays className="w-3.5 h-3.5" />
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  updateAppAction(act.id, {
+                                    status: act.status === 'completed' ? 'pending' : 'completed',
+                                    completedAt: act.status === 'completed' ? undefined : new Date().toISOString(),
+                                  })
+                                }
+                                className={`w-5 h-5 rounded-md border flex items-center justify-center mt-0.5 shrink-0 transition-colors cursor-pointer ${
+                                  act.status === 'completed'
+                                    ? 'bg-emerald-500 border-transparent text-white'
+                                    : 'border-[#73655c] hover:border-[#c58a4b]'
+                                }`}
+                              >
+                                {act.status === 'completed' && <Check className="w-3.5 h-3.5" />}
+                              </button>
+                            )}
 
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`text-xs font-bold text-[#fcf8f5] ${act.status === 'completed' ? 'line-through text-[#73655c]' : ''}`}>
-                                {act.type}
-                              </span>
-                              {act.time && (
-                                <span className="text-[9px] font-semibold text-[#c58a4b] flex items-center gap-1">
-                                  <Clock className="w-3 h-3" /> {act.time}
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-xs font-bold text-[#fcf8f5] ${act.status === 'completed' ? 'line-through text-[#73655c]' : ''}`}>
+                                  {act.type}
+                                </span>
+                                {act.time && (
+                                  <span className="text-[9px] font-semibold text-[#c58a4b] flex items-center gap-1">
+                                    <Clock className="w-3 h-3" /> {act.time}
+                                  </span>
+                                )}
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded border font-semibold uppercase ${
+                                  isGCal
+                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                    : 'bg-[#2c241f] text-[#c58a4b] border-[#3d342f]'
+                                }`}>
+                                  {isGCal ? 'Google Agenda' : act.area}
+                                </span>
+                              </div>
+                              <p className={`text-[11px] text-[#ded5cc] mt-1 ${act.status === 'completed' ? 'line-through text-[#73655c]' : ''}`}>
+                                {act.description}
+                              </p>
+                              {act.relatedTitle && (
+                                <span className="text-[9px] text-[#8c827a] mt-1.5 block font-medium">
+                                  Ref: {act.relatedTitle}
                                 </span>
                               )}
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#2c241f] text-[#c58a4b] border border-[#3d342f] font-semibold uppercase">
-                                {act.area}
-                              </span>
                             </div>
-                            <p className={`text-[11px] text-[#ded5cc] mt-1 ${act.status === 'completed' ? 'line-through text-[#73655c]' : ''}`}>
-                              {act.description}
-                            </p>
-                            {act.relatedTitle && (
-                              <span className="text-[9px] text-[#8c827a] mt-1.5 block font-medium">
-                                Ref: {act.relatedTitle}
-                              </span>
+                          </div>
+
+                          {/* Controls */}
+                          <div className="flex items-center gap-2 self-end sm:self-center">
+                            {isGCal ? (
+                              <>
+                                <a
+                                  href={`https://calendar.google.com/calendar/r/eventedit/${act.gcalEventId}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 rounded-lg text-[#8c827a] hover:text-[#fcf8f5] transition-colors"
+                                  title="Abrir no Google Agenda"
+                                >
+                                  <ArrowUpRight className="w-3.5 h-3.5 text-amber-400" />
+                                </a>
+                                <button
+                                  onClick={() => handleDeleteActionWrapper(act.id)}
+                                  className="p-1.5 rounded-lg text-rose-500 hover:text-rose-400 transition-colors cursor-pointer"
+                                  title="Excluir do Google Agenda"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                {act.status === 'pending' && (
+                                  <button
+                                    onClick={() => updateAppAction(act.id, { status: 'in_progress' })}
+                                    className="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <Play className="w-3 h-3" /> Começar
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleOpenEditAction(act)}
+                                  className="p-1.5 rounded-lg text-[#8c827a] hover:text-[#fcf8f5] transition-colors cursor-pointer"
+                                  title="Editar ação"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteActionWrapper(act.id)}
+                                  className="p-1.5 rounded-lg text-rose-500 hover:text-rose-400 transition-colors cursor-pointer"
+                                  title="Excluir ação"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
                             )}
                           </div>
                         </div>
-
-                        {/* Controls */}
-                        <div className="flex items-center gap-2 self-end sm:self-center">
-                          {act.status === 'pending' && (
-                            <button
-                              onClick={() => updateAppAction(act.id, { status: 'in_progress' })}
-                              className="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
-                            >
-                              <Play className="w-3 h-3" /> Começar
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleOpenEditAction(act)}
-                            className="p-1.5 rounded-lg text-[#8c827a] hover:text-[#fcf8f5] transition-colors cursor-pointer"
-                            title="Editar ação"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => deleteAppAction(act.id)}
-                            className="p-1.5 rounded-lg text-rose-500 hover:text-rose-400 transition-colors cursor-pointer"
-                            title="Excluir ação"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
