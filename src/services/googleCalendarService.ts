@@ -1,7 +1,7 @@
 import { GoogleAuthProvider, signInWithPopup, linkWithPopup, reauthenticateWithPopup } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 // In-memory cache for the Google Calendar OAuth Access Token and Email
@@ -13,6 +13,8 @@ export interface GoogleCalendarEvent {
   summary: string;
   description?: string;
   location?: string;
+  calendarId?: string;
+  calendarTitle?: string;
   start: {
     dateTime?: string;
     date?: string;
@@ -36,6 +38,33 @@ export const getGoogleAccessToken = (): string | null => {
       return stored;
     }
   } catch {}
+  return null;
+};
+
+/**
+ * Attempts to restore token from Firestore if local storage is missing (e.g. iframe refresh)
+ */
+export const restoreGoogleTokenFromCloud = async (): Promise<string | null> => {
+  if (cachedGCalToken) return cachedGCalToken;
+  try {
+    const snap = await getDoc(doc(db, 'system_integrations', 'google_calendar'));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data.token && data.synced) {
+        cachedGCalToken = data.token;
+        if (data.email) cachedGCalEmail = data.email;
+        try {
+          sessionStorage.setItem('office_gcal_token', data.token);
+          localStorage.setItem('office_gcal_token', data.token);
+          localStorage.setItem('office_gcal_synced', 'true');
+          if (data.email) localStorage.setItem('office_gcal_email', data.email);
+        } catch {}
+        return data.token;
+      }
+    }
+  } catch (e) {
+    console.warn('Could not restore token from cloud:', e);
+  }
   return null;
 };
 
@@ -109,6 +138,16 @@ export const authenticateGoogleCalendar = async (): Promise<{ token: string; ema
         localStorage.setItem('office_gcal_token', token);
         localStorage.setItem('office_gcal_synced', 'true');
         localStorage.setItem('office_gcal_email', cachedGCalEmail);
+      } catch {}
+
+      // Persist to Firestore for durable cross-session sync
+      try {
+        setDoc(doc(db, 'system_integrations', 'google_calendar'), {
+          token,
+          email: cachedGCalEmail,
+          updatedAt: Date.now(),
+          synced: true,
+        }, { merge: true }).catch(() => {});
       } catch {}
 
       if (popup && !popup.closed) {
@@ -196,6 +235,9 @@ export const disconnectGoogleCalendar = () => {
     localStorage.removeItem('office_gcal_synced');
     localStorage.removeItem('office_gcal_email');
   } catch {}
+  try {
+    deleteDoc(doc(db, 'system_integrations', 'google_calendar')).catch(() => {});
+  } catch {}
 };
 
 /**
@@ -209,51 +251,102 @@ const formatDateTimeISO = (dateStr: string, timeStr?: string): string => {
 };
 
 /**
- * Fetches events from the user's Primary Google Calendar
+ * Fetches events across ALL user calendars (Primary + Secondary/Team calendars)
+ * using a broad date range (past year to next 2 years by default).
  */
 export const fetchGoogleEvents = async (timeMin?: string, timeMax?: string): Promise<GoogleCalendarEvent[]> => {
-  const token = getGoogleAccessToken();
+  let token = getGoogleAccessToken();
+  if (!token) {
+    // Attempt cloud recovery
+    token = await restoreGoogleTokenFromCloud();
+  }
   if (!token) {
     throw new Error('Sessão do Google expirada. Reautorize para sincronizar.');
   }
 
-  const url = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
-  url.searchParams.set('singleEvents', 'true');
-  url.searchParams.set('orderBy', 'startTime');
-  url.searchParams.set('maxResults', '150');
+  // Broad date window: from 1 year ago to 2 years in the future
+  const past = new Date();
+  past.setFullYear(past.getFullYear() - 1);
+  const future = new Date();
+  future.setFullYear(future.getFullYear() + 2);
 
-  if (timeMin) {
-    url.searchParams.set('timeMin', timeMin);
-  } else {
-    // Default to fetch events starting from 3 months ago
-    const past = new Date();
-    past.setMonth(past.getMonth() - 3);
-    url.searchParams.set('timeMin', past.toISOString());
-  }
+  const finalTimeMin = timeMin || past.toISOString();
+  const finalTimeMax = timeMax || future.toISOString();
 
-  if (timeMax) {
-    url.searchParams.set('timeMax', timeMax);
-  }
+  // 1. Discover all active calendars in the user's Google account
+  let targetCalendars: { id: string; summary?: string }[] = [{ id: 'primary', summary: 'Principal' }];
+  try {
+    const listRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      // Clear token if invalid/expired
+    if (listRes.ok) {
+      const listData = await listRes.json();
+      if (listData.items && Array.isArray(listData.items) && listData.items.length > 0) {
+        const found = listData.items
+          .filter((c: any) => c.selected !== false && !c.deleted)
+          .map((c: any) => ({ id: c.id, summary: c.summary }));
+        if (found.length > 0) {
+          targetCalendars = found;
+        }
+      }
+    } else if (listRes.status === 401) {
       cachedGCalToken = null;
       throw new Error('Token expirado. Por favor, reautorize a conexão.');
     }
-    const errText = await response.text();
-    throw new Error(`Erro na API do Google Calendar: ${errText}`);
+  } catch (err: any) {
+    if (err.message?.includes('Token expirado')) throw err;
+    console.warn('Could not list all calendars, falling back to primary:', err);
   }
 
-  const data = await response.json();
-  return (data.items || []) as GoogleCalendarEvent[];
+  // 2. Fetch events from all discovered calendars in parallel
+  const allEventsMap = new Map<string, GoogleCalendarEvent>();
+
+  await Promise.all(
+    targetCalendars.map(async (cal) => {
+      try {
+        const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events`);
+        url.searchParams.set('singleEvents', 'true');
+        url.searchParams.set('orderBy', 'startTime');
+        url.searchParams.set('maxResults', '250');
+        url.searchParams.set('timeMin', finalTimeMin);
+        url.searchParams.set('timeMax', finalTimeMax);
+
+        const response = await fetch(url.toString(), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.items && Array.isArray(data.items)) {
+            for (const item of data.items) {
+              if (item.id && !item.status?.includes('cancelled')) {
+                allEventsMap.set(item.id, {
+                  ...item,
+                  calendarId: cal.id,
+                  calendarTitle: cal.summary,
+                });
+              }
+            }
+          }
+        } else if (response.status === 401) {
+          cachedGCalToken = null;
+          throw new Error('Token expirado. Por favor, reautorize a conexão.');
+        }
+      } catch (calErr: any) {
+        if (calErr.message?.includes('Token expirado')) throw calErr;
+        console.warn(`Error fetching events for calendar ${cal.id}:`, calErr);
+      }
+    })
+  );
+
+  return Array.from(allEventsMap.values());
 };
 
 /**

@@ -18,10 +18,12 @@ import { Collaborator, CollaboratorPermissions } from '../types';
 export interface UserProfile {
   uid: string;
   email: string;
+  name?: string;
   role: 'admin' | 'user';
   status: 'active' | 'pending' | 'inactive';
   subscriptionDueDate?: string;
   createdAt?: string;
+  notes?: string;
   // Collaboration fields
   inviteCode?: string;
   joinedOwnerUid?: string;

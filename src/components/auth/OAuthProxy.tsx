@@ -61,9 +61,23 @@ export const OAuthProxy: React.FC = () => {
 
     // Cache locally
     try {
+      localStorage.setItem('office_gcal_token', token);
+      sessionStorage.setItem('office_gcal_token', token);
       localStorage.setItem('office_gcal_synced', 'true');
       localStorage.setItem('office_gcal_email', email);
     } catch {}
+
+    // Persist to Firestore system_integrations doc for permanent cross-session recovery
+    try {
+      await setDoc(doc(db, 'system_integrations', 'google_calendar'), {
+        token,
+        email,
+        updatedAt: Date.now(),
+        synced: true,
+      }, { merge: true });
+    } catch (fsErr) {
+      console.warn('Erro ao salvar no system_integrations:', fsErr);
+    }
 
     // Auto-close popup after 2 seconds
     setTimeout(() => {
@@ -109,7 +123,7 @@ export const OAuthProxy: React.FC = () => {
         const client = (window as any).google.accounts.oauth2.initTokenClient({
           client_id: '720818316004-uhuvk0752n3nrqff0j96ja8cbgf8eqre.apps.googleusercontent.com',
           scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email',
-          prompt: 'consent',
+          prompt: '',
           callback: async (response: any) => {
             if (response.error) {
               console.error('GIS Error:', response);
@@ -143,7 +157,6 @@ export const OAuthProxy: React.FC = () => {
       provider.addScope('https://www.googleapis.com/auth/calendar.events');
       provider.addScope('https://www.googleapis.com/auth/userinfo.email');
       provider.setCustomParameters({ 
-        prompt: 'consent',
         login_hint: 'lfquadrosdecorativos@gmail.com'
       });
 

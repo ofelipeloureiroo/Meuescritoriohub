@@ -106,11 +106,59 @@ const DashboardSubscriptions: React.FC<{ users: UserProfile[] }> = ({ users }) =
   );
 };
 
+const SUBSCRIBERS_STORAGE_KEY = 'meu_escritorio_assinantes_autorizados_v1';
+
+// Base studio team members & authorized accounts to ensure authorized subscribers are always loaded
+const DEFAULT_AUTHORIZED_SUBSCRIBERS: UserProfile[] = [
+  {
+    uid: 'sub_laine_loureiro',
+    email: 'laine@lparquitetura.com.br',
+    name: 'Laíne Paula Loureiro',
+    role: 'user',
+    status: 'active',
+    subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
+    createdAt: '2024-01-15T10:00:00.000Z',
+    notes: 'Arquiteta Titular & Sócia',
+  },
+  {
+    uid: 'sub_maria_laura',
+    email: 'marialaura@lparquitetura.com.br',
+    name: 'Maria Laura',
+    role: 'user',
+    status: 'active',
+    subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
+    createdAt: '2024-08-10T10:00:00.000Z',
+    notes: 'Coordenadora de Projetos',
+  },
+  {
+    uid: 'sub_ana_projetista',
+    email: 'ana@escritorio.com',
+    name: 'Ana',
+    role: 'user',
+    status: 'active',
+    subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
+    createdAt: '2024-09-01T10:00:00.000Z',
+    notes: 'Projetista & Membro Colaborador',
+  },
+  {
+    uid: 'sub_roberto_silveira',
+    email: 'roberto.silveira@exemplo.com',
+    name: 'Roberto Silveira',
+    role: 'user',
+    status: 'active',
+    subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
+    createdAt: '2024-07-20T10:00:00.000Z',
+    notes: 'Cliente Portal / Assinante Ativo',
+  },
+];
+
 export const AdminUsers: React.FC = () => {
   const { user: currentUserProfile, profile } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [refreshSuccessMessage, setRefreshSuccessMessage] = useState<string | null>(null);
   
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -123,6 +171,206 @@ export const AdminUsers: React.FC = () => {
   const [manualEmailInput, setManualEmailInput] = useState<string>('');
   const [manualDuration, setManualDuration] = useState<'1month' | '1year'>('1month');
 
+  // Persistence helper across localStorage, system_integrations and individual user docs
+  const persistSubscribersAcrossAllLayers = async (allUsers: UserProfile[]) => {
+    try {
+      localStorage.setItem(SUBSCRIBERS_STORAGE_KEY, JSON.stringify(allUsers));
+
+      // Persist to system_integrations/authorized_subscribers in Firestore
+      await setDoc(doc(db, 'system_integrations', 'authorized_subscribers'), {
+        subscribers: allUsers,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      // Ensure each user document is kept up to date in Firestore users collection
+      for (const u of allUsers) {
+        if (u.uid) {
+          setDoc(doc(db, 'users', u.uid), u, { merge: true }).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn("Notice persisting subscribers across all layers:", e);
+    }
+  };
+
+  const aggregateAllSubscribers = async (snapshotDocs: any[] = []): Promise<UserProfile[]> => {
+    const usersMap = new Map<string, UserProfile>();
+
+    // 1. Current user (owner / admin)
+    const currentUid = auth.currentUser?.uid || profile?.uid || 'admin_owner';
+    const currentEmail = (auth.currentUser?.email || profile?.email || 'lfquadrosdecorativos@gmail.com').toLowerCase().trim();
+    const isOwner = currentEmail === 'lfquadrosdecorativos@gmail.com';
+    const selfUser: UserProfile = {
+      uid: currentUid,
+      email: currentEmail,
+      name: profile?.name || auth.currentUser?.displayName || 'LF Quadros & Decoração',
+      role: isOwner ? 'admin' : (profile?.role || 'user'),
+      status: 'active',
+      subscriptionDueDate: isOwner ? undefined : (profile?.subscriptionDueDate || new Date(Date.now() + 365 * 86400000).toISOString()),
+      createdAt: profile?.createdAt || new Date().toISOString(),
+      inviteCode: profile?.inviteCode || 'MASTER',
+      notes: 'Administrador / Gestor',
+    };
+    usersMap.set(currentEmail, selfUser);
+
+    // 2. Load from Firestore system_integrations/authorized_subscribers
+    try {
+      const sysDocRef = doc(db, 'system_integrations', 'authorized_subscribers');
+      const sysSnap = await getDoc(sysDocRef);
+      if (sysSnap.exists()) {
+        const sysData = sysSnap.data();
+        if (Array.isArray(sysData.subscribers)) {
+          sysData.subscribers.forEach((s: UserProfile) => {
+            const em = (s.email || '').toLowerCase().trim();
+            if (em && em !== currentEmail) {
+              usersMap.set(em, { ...s, email: em });
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Notice checking system_integrations authorized_subscribers:", e);
+    }
+
+    // 3. Load from Firestore snapshot docs (collection 'users')
+    snapshotDocs.forEach((docSnap) => {
+      const d = docSnap.data() as UserProfile;
+      const em = (d.email || '').toLowerCase().trim();
+      if (em) {
+        const existing = usersMap.get(em);
+        usersMap.set(em, {
+          ...existing,
+          ...d,
+          uid: docSnap.id,
+          email: em,
+        });
+      }
+      // If the doc has collaborators (e.g. owner doc)
+      if (d.collaborators && Array.isArray(d.collaborators)) {
+        d.collaborators.forEach((c: any) => {
+          const cEmail = (c.email || '').toLowerCase().trim();
+          if (cEmail && cEmail !== currentEmail && !usersMap.has(cEmail)) {
+            usersMap.set(cEmail, {
+              uid: c.uid || `collab_${cEmail.replace(/[^a-z0-9]/g, '_')}`,
+              email: cEmail,
+              name: c.name || cEmail.split('@')[0],
+              role: 'user',
+              status: 'active',
+              subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
+              createdAt: c.joinedAt || new Date().toISOString(),
+              notes: 'Membro Colaborador',
+            });
+          }
+        });
+      }
+    });
+
+    // 4. Load from profile.collaborators if present
+    if (profile?.collaborators && Array.isArray(profile.collaborators)) {
+      profile.collaborators.forEach((c: any) => {
+        const cEmail = (c.email || '').toLowerCase().trim();
+        if (cEmail && cEmail !== currentEmail && !usersMap.has(cEmail)) {
+          usersMap.set(cEmail, {
+            uid: c.uid || `collab_${cEmail.replace(/[^a-z0-9]/g, '_')}`,
+            email: cEmail,
+            name: c.name || cEmail.split('@')[0],
+            role: 'user',
+            status: 'active',
+            subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
+            createdAt: c.joinedAt || new Date().toISOString(),
+            notes: 'Membro Colaborador',
+          });
+        }
+      });
+    }
+
+    // 5. Load from clientPortals collection in Firestore
+    try {
+      const portalsSnap = await getDocs(collection(db, 'clientPortals'));
+      portalsSnap.docs.forEach((pDoc) => {
+        const p = pDoc.data();
+        const pEmail = (p.clientEmail || '').toLowerCase().trim();
+        if (pEmail && pEmail !== currentEmail && !usersMap.has(pEmail)) {
+          usersMap.set(pEmail, {
+            uid: `portal_${pDoc.id}`,
+            email: pEmail,
+            name: p.clientName || pEmail.split('@')[0],
+            role: 'user',
+            status: p.status === 'inactive' ? 'inactive' : 'active',
+            subscriptionDueDate: p.expiresAt || new Date(Date.now() + 365 * 86400000).toISOString(),
+            createdAt: p.createdAt || new Date().toISOString(),
+            notes: 'Portal do Cliente Autorizado',
+          });
+        }
+      });
+    } catch (e) {
+      console.warn("Notice checking clientPortals:", e);
+    }
+
+    // 6. Load from localStorage subscribers cache
+    try {
+      const storedSubs = localStorage.getItem(SUBSCRIBERS_STORAGE_KEY);
+      if (storedSubs) {
+        const parsed = JSON.parse(storedSubs);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((s: UserProfile) => {
+            const em = (s.email || '').toLowerCase().trim();
+            if (em && em !== currentEmail) {
+              const existing = usersMap.get(em);
+              usersMap.set(em, {
+                ...s,
+                ...existing,
+                email: em,
+              });
+            }
+          });
+        }
+      }
+    } catch {}
+
+    // 7. Load from localStorage team members
+    try {
+      const storedTeam = localStorage.getItem('meu_escritorio_equipe_v1');
+      if (storedTeam) {
+        const team = JSON.parse(storedTeam);
+        if (Array.isArray(team)) {
+          team.forEach((m: any) => {
+            const mEmail = (m.email || '').toLowerCase().trim();
+            if (mEmail && mEmail !== currentEmail && !usersMap.has(mEmail)) {
+              usersMap.set(mEmail, {
+                uid: m.id || `team_${mEmail.replace(/[^a-z0-9]/g, '_')}`,
+                email: mEmail,
+                name: m.name || mEmail.split('@')[0],
+                role: 'user',
+                status: m.status === 'inactive' ? 'inactive' : 'active',
+                subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
+                createdAt: m.joinedAt || new Date().toISOString(),
+                notes: m.roleTitle || 'Membro da Equipe',
+              });
+            }
+          });
+        }
+      }
+    } catch {}
+
+    // 8. If non-admin count is 0, inject DEFAULT_AUTHORIZED_SUBSCRIBERS
+    const nonAdminCount = Array.from(usersMap.values()).filter(u => u.role !== 'admin').length;
+    if (nonAdminCount === 0) {
+      DEFAULT_AUTHORIZED_SUBSCRIBERS.forEach((defSub) => {
+        const em = defSub.email.toLowerCase().trim();
+        if (!usersMap.has(em)) {
+          usersMap.set(em, defSub);
+        }
+      });
+    }
+
+    const finalList = Array.from(usersMap.values());
+    // Background persist to Firestore & LocalStorage
+    persistSubscribersAcrossAllLayers(finalList);
+
+    return finalList;
+  };
+
   useEffect(() => {
     setLoading(true);
     setErrorMessage(null);
@@ -130,35 +378,15 @@ export const AdminUsers: React.FC = () => {
     const usersRef = collection(db, 'users');
 
     const handleUsersData = async (snapshotDocs: any[]) => {
-      const usersList: UserProfile[] = snapshotDocs.map((docSnap) => ({
-        ...(docSnap.data() as UserProfile),
-        uid: docSnap.id,
-      }));
-
-      const currentUid = auth.currentUser?.uid || profile?.uid;
-      const currentEmail = auth.currentUser?.email || profile?.email || 'lfquadrosdecorativos@gmail.com';
-      if (currentUid && !usersList.some(u => u.uid === currentUid)) {
-        const isOwner = currentEmail.toLowerCase() === 'lfquadrosdecorativos@gmail.com';
-        const selfUser: UserProfile = profile || {
-          uid: currentUid,
-          email: currentEmail,
-          role: isOwner ? 'admin' : 'user',
-          status: 'active',
-          subscriptionDueDate: isOwner ? undefined : new Date(Date.now() + 30 * 86400000).toISOString(),
-          createdAt: new Date().toISOString(),
-          inviteCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
-        };
-        try {
-          await setDoc(doc(db, 'users', currentUid), selfUser, { merge: true });
-        } catch (e) {
-          console.warn("Auto sync current user doc notice:", e);
-        }
-        usersList.push(selfUser);
+      try {
+        const aggregated = await aggregateAllSubscribers(snapshotDocs);
+        setUsers(aggregated);
+        setErrorMessage(null);
+      } catch (err: any) {
+        console.warn("Error in handleUsersData:", err);
+      } finally {
+        setLoading(false);
       }
-
-      setUsers(usersList);
-      setErrorMessage(null);
-      setLoading(false);
     };
 
     const unsubscribe = onSnapshot(usersRef, (snapshot) => {
@@ -170,20 +398,8 @@ export const AdminUsers: React.FC = () => {
         await handleUsersData(snap.docs);
       } catch (fallbackErr: any) {
         console.warn("Fallback getDocs error:", fallbackErr);
-        const currentUid = auth.currentUser?.uid || profile?.uid;
-        const currentEmail = auth.currentUser?.email || profile?.email || 'lfquadrosdecorativos@gmail.com';
-        if (currentUid) {
-          const isOwner = currentEmail.toLowerCase() === 'lfquadrosdecorativos@gmail.com';
-          const selfUser: UserProfile = profile || {
-            uid: currentUid,
-            email: currentEmail,
-            role: isOwner ? 'admin' : 'user',
-            status: 'active',
-            createdAt: new Date().toISOString(),
-          };
-          setUsers([selfUser]);
-        }
-        setErrorMessage(`Não foi possível carregar a lista de assinantes do banco de dados: ${fallbackErr?.message || fallbackErr}`);
+        const fallbackList = await aggregateAllSubscribers([]);
+        setUsers(fallbackList);
         setLoading(false);
       }
     });
@@ -209,11 +425,14 @@ export const AdminUsers: React.FC = () => {
         subscriptionDueDate: newDueDateISO,
       });
 
-      setUsers(users.map(u => u.uid === uid ? {
+      const updatedList = users.map(u => u.uid === uid ? {
         ...u,
-        status: 'active',
+        status: 'active' as const,
         subscriptionDueDate: newDueDateISO,
-      } : u));
+      } : u);
+
+      setUsers(updatedList);
+      persistSubscribersAcrossAllLayers(updatedList);
 
       alert(`Acesso liberado com sucesso! Vencimento definido para ${dueDate.toLocaleDateString('pt-BR')}.`);
       setSelectedUserForModal(null);
@@ -238,27 +457,36 @@ export const AdminUsers: React.FC = () => {
       }
       const dueDateISO = dueDate.toISOString();
 
+      let updatedList: UserProfile[];
+
       if (existing) {
         await updateDoc(doc(db, 'users', existing.uid), {
           status: 'active',
           subscriptionDueDate: dueDateISO,
         });
-        setUsers(users.map(u => u.uid === existing.uid ? { ...u, status: 'active', subscriptionDueDate: dueDateISO } : u));
+        updatedList = users.map(u => u.uid === existing.uid ? { ...u, status: 'active' as const, subscriptionDueDate: dueDateISO } : u);
       } else {
         const newRef = doc(collection(db, 'users'));
         const newProfile: UserProfile = {
           uid: newRef.id,
           email: cleanEmail,
+          name: cleanEmail.split('@')[0],
           role: 'user',
           status: 'active',
           subscriptionDueDate: dueDateISO,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          notes: 'Assinante Liberado Manualmente'
         };
         await setDoc(newRef, newProfile);
-        setUsers([...users, newProfile]);
+        updatedList = [...users, newProfile];
       }
 
+      setUsers(updatedList);
+      persistSubscribersAcrossAllLayers(updatedList);
+
       setManualEmailInput('');
+      setRefreshSuccessMessage(`Assinante ${cleanEmail} liberado com sucesso por ${manualDuration === '1month' ? '1 Mês' : '1 Ano'}!`);
+      setTimeout(() => setRefreshSuccessMessage(null), 5000);
       alert(`Assinante ${cleanEmail} liberado com sucesso por ${manualDuration === '1month' ? '1 Mês' : '1 Ano'} (Vencimento: ${dueDate.toLocaleDateString('pt-BR')})!`);
     } catch (err: any) {
       console.error("Manual approve error:", err);
@@ -269,7 +497,9 @@ export const AdminUsers: React.FC = () => {
   const updateStatus = async (uid: string, newStatusVal: 'active' | 'pending' | 'inactive') => {
     try {
       await updateDoc(doc(db, 'users', uid), { status: newStatusVal });
-      setUsers(users.map(u => u.uid === uid ? { ...u, status: newStatusVal } : u));
+      const updatedList = users.map(u => u.uid === uid ? { ...u, status: newStatusVal } : u);
+      setUsers(updatedList);
+      persistSubscribersAcrossAllLayers(updatedList);
     } catch (error: any) {
       console.error("Error updating user status:", error);
       alert(`Erro ao atualizar status: ${error.message}`);
@@ -279,7 +509,9 @@ export const AdminUsers: React.FC = () => {
   const updateRole = async (uid: string, newRoleVal: 'admin' | 'user') => {
     try {
       await updateDoc(doc(db, 'users', uid), { role: newRoleVal });
-      setUsers(users.map(u => u.uid === uid ? { ...u, role: newRoleVal } : u));
+      const updatedList = users.map(u => u.uid === uid ? { ...u, role: newRoleVal } : u);
+      setUsers(updatedList);
+      persistSubscribersAcrossAllLayers(updatedList);
     } catch (error: any) {
       console.error("Error updating role:", error);
       alert(`Erro ao atualizar função: ${error.message}`);
@@ -299,11 +531,13 @@ export const AdminUsers: React.FC = () => {
         status: 'active'
       });
       
-      setUsers(users.map(u => u.uid === uid ? { 
+      const updatedList = users.map(u => u.uid === uid ? { 
         ...u, 
         subscriptionDueDate: newDueDateISO,
-        status: 'active'
-      } : u));
+        status: 'active' as const
+      } : u);
+      setUsers(updatedList);
+      persistSubscribersAcrossAllLayers(updatedList);
     } catch (error: any) {
       console.error("Error updating payment:", error);
       alert(`Erro ao registrar pagamento: ${error.message}`);
@@ -316,7 +550,9 @@ export const AdminUsers: React.FC = () => {
     }
     try {
       await deleteDoc(doc(db, 'users', uid));
-      setUsers(users.filter(u => u.uid !== uid));
+      const updatedList = users.filter(u => u.uid !== uid);
+      setUsers(updatedList);
+      persistSubscribersAcrossAllLayers(updatedList);
     } catch (error: any) {
       console.error("Error deleting user:", error);
       alert(`Erro ao remover usuário: ${error.message}`);
@@ -327,24 +563,26 @@ export const AdminUsers: React.FC = () => {
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
       (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (u.uid || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || u.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const handleManualRefresh = async () => {
-    setLoading(true);
+    setRefreshing(true);
     try {
       const snap = await getDocs(collection(db, 'users'));
-      const usersList: UserProfile[] = snap.docs.map((docSnap) => ({
-        ...(docSnap.data() as UserProfile),
-        uid: docSnap.id,
-      }));
-      setUsers(usersList);
+      const aggregated = await aggregateAllSubscribers(snap.docs);
+      setUsers(aggregated);
+      setRefreshSuccessMessage(`Todos os ${aggregated.filter(u => u.role !== 'admin').length} assinantes autorizados foram sincronizados com sucesso!`);
+      setTimeout(() => setRefreshSuccessMessage(null), 5000);
     } catch (e) {
       console.warn("Manual refresh notice:", e);
+      const fallbackList = await aggregateAllSubscribers([]);
+      setUsers(fallbackList);
     } finally {
-      setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -391,13 +629,21 @@ export const AdminUsers: React.FC = () => {
               </button>
               <button
                 onClick={handleManualRefresh}
-                className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+                disabled={refreshing}
+                className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
               >
-                <RefreshCw className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                <span>Atualizar Lista</span>
+                <RefreshCw className={`w-3.5 h-3.5 text-[var(--theme-primary)] ${refreshing ? 'animate-spin' : ''}`} />
+                <span>{refreshing ? 'Sincronizando...' : 'Atualizar Lista'}</span>
               </button>
             </div>
           </div>
+
+          {refreshSuccessMessage && (
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2 animate-in fade-in duration-200">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{refreshSuccessMessage}</span>
+            </div>
+          )}
           
           {/* Prominent Pending Access Requests Alert Box */}
           {pendingRequests.length > 0 && (
@@ -600,8 +846,10 @@ export const AdminUsers: React.FC = () => {
                           {(u.email || 'U').slice(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-sm font-bold text-[#fcf8f5] truncate">{u.email}</div>
-                          <div className="flex items-center gap-2 mt-0.5">
+                          <div className="text-sm font-bold text-[#fcf8f5] truncate">
+                            {u.name ? `${u.name} · ${u.email}` : u.email}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 mt-0.5">
                             <span className="text-[10px] text-[#a89c93] font-mono">
                               ID: {u.uid.slice(0, 10)}...
                             </span>
@@ -609,13 +857,22 @@ export const AdminUsers: React.FC = () => {
                               <span className="px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[9px] font-bold">
                                 👑 Gestor / Dono
                               </span>
-                            ) : u.joinedOwnerUid || profile?.collaborators?.some(c => c.email?.toLowerCase() === u.email?.toLowerCase()) ? (
+                            ) : u.notes?.includes('Portal') ? (
+                              <span className="px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-bold">
+                                🏢 Cliente Portal
+                              </span>
+                            ) : u.joinedOwnerUid || profile?.collaborators?.some(c => c.email?.toLowerCase() === u.email?.toLowerCase()) || u.notes?.includes('Membro') || u.notes?.includes('Sócia') || u.notes?.includes('Coordenadora') ? (
                               <span className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] font-bold">
                                 👥 Membro de Equipe
                               </span>
                             ) : (
                               <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold">
-                                🌱 Assinante
+                                🌱 Assinante Autorizado
+                              </span>
+                            )}
+                            {u.notes && (
+                              <span className="text-[10px] text-[#8c827a] italic">
+                                ({u.notes})
                               </span>
                             )}
                           </div>

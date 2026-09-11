@@ -27,6 +27,7 @@ import {
   Info,
   ArrowUpRight,
   DollarSign,
+  RefreshCw,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -41,6 +42,7 @@ import {
   updateGoogleEvent,
   deleteGoogleEvent,
   getGoogleAccessToken,
+  restoreGoogleTokenFromCloud,
   getGoogleUserEmail,
   isGoogleCalendarEnabled,
   GoogleCalendarEvent,
@@ -110,7 +112,7 @@ export const TodayTab: React.FC = () => {
     setIsSyncingCalendar(true);
     setSyncMessage(null);
     try {
-      if (isGoogleSynced) {
+      if (isGoogleSynced && !tokenExpired) {
         disconnectGoogleCalendar();
         setIsGoogleSynced(false);
         setGoogleEmail(null);
@@ -127,6 +129,7 @@ export const TodayTab: React.FC = () => {
         try {
           const events = await fetchGoogleEvents();
           setGoogleEvents(events);
+          setSyncMessage(`${events.length} evento(s) sincronizados com o Google Agenda.`);
         } catch (e) {
           console.error("Initial sync fetch warning:", e);
         }
@@ -140,10 +143,45 @@ export const TodayTab: React.FC = () => {
     }
   };
 
+  const handleRefreshGoogleEvents = async () => {
+    if (!isGoogleSynced) {
+      handleSyncGoogleCalendar();
+      return;
+    }
+    setIsSyncingCalendar(true);
+    setSyncMessage(null);
+    try {
+      let token = getGoogleAccessToken();
+      if (!token) {
+        token = await restoreGoogleTokenFromCloud();
+      }
+      if (!token) {
+        setTokenExpired(true);
+        setSyncMessage('Sessão expirada. Clique para reautorizar.');
+        return;
+      }
+      const events = await fetchGoogleEvents();
+      setGoogleEvents(events);
+      setTokenExpired(false);
+      setSyncMessage(`Agenda atualizada: ${events.length} evento(s) carregados.`);
+    } catch (err: any) {
+      if (err.message?.includes('Token expirado') || err.message?.includes('expirada')) {
+        setTokenExpired(true);
+      }
+      setSyncMessage(err.message || 'Erro ao atualizar eventos do Google.');
+    } finally {
+      setIsSyncingCalendar(false);
+      setTimeout(() => setSyncMessage(null), 5000);
+    }
+  };
+
   useEffect(() => {
     const initFetch = async () => {
+      let token = getGoogleAccessToken();
+      if (!token && isGoogleSynced) {
+        token = await restoreGoogleTokenFromCloud();
+      }
       if (isGoogleSynced) {
-        const token = getGoogleAccessToken();
         if (!token) {
           setTokenExpired(true);
         } else {
@@ -152,9 +190,11 @@ export const TodayTab: React.FC = () => {
           try {
             const events = await fetchGoogleEvents();
             setGoogleEvents(events);
-          } catch (err) {
+          } catch (err: any) {
             console.error("Auto fetch error:", err);
-            setTokenExpired(true);
+            if (err.message?.includes('Token expirado') || err.message?.includes('expirada')) {
+              setTokenExpired(true);
+            }
           } finally {
             setIsSyncingCalendar(false);
           }
@@ -162,7 +202,29 @@ export const TodayTab: React.FC = () => {
       }
     };
     initFetch();
-  }, [isGoogleSynced]);
+
+    // Auto-refresh when tab gains focus or on interval
+    const onFocus = () => {
+      if (isGoogleSynced) {
+        fetchGoogleEvents()
+          .then((evts) => setGoogleEvents(evts))
+          .catch(() => {});
+      }
+    };
+    window.addEventListener('focus', onFocus);
+    const interval = setInterval(() => {
+      if (isGoogleSynced && !tokenExpired) {
+        fetchGoogleEvents()
+          .then((evts) => setGoogleEvents(evts))
+          .catch(() => {});
+      }
+    }, 45000);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      clearInterval(interval);
+    };
+  }, [isGoogleSynced, tokenExpired]);
 
   useEffect(() => {
     localStorage.setItem('today_scratchpad', dailyNote);
@@ -184,22 +246,32 @@ export const TodayTab: React.FC = () => {
     if (!isGoogleSynced || googleEvents.length === 0) return [];
     
     return googleEvents.map((evt) => {
-      const startVal = evt.start.dateTime || evt.start.date || '';
-      const evtDateStr = startVal.split('T')[0];
-      const startTime = evt.start.dateTime
-        ? new Date(evt.start.dateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-        : undefined;
+      let evtDateStr = '';
+      let startTime: string | undefined = undefined;
+
+      if (evt.start.dateTime) {
+        const d = new Date(evt.start.dateTime);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        evtDateStr = `${yyyy}-${mm}-${dd}`;
+        startTime = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      } else if (evt.start.date) {
+        evtDateStr = evt.start.date;
+      }
+
+      const summaryText = evt.summary && evt.summary.trim() ? evt.summary.trim() : 'Compromisso Google Agenda';
 
       const act: AppAction = {
         id: `gcal-${evt.id}`,
         type: 'Google Agenda',
         area: 'Operação',
         origin: 'Interna',
-        description: evt.summary || '(Sem título)',
+        description: summaryText,
         date: evtDateStr,
         time: startTime,
         status: 'pending',
-        notes: evt.description || '',
+        notes: evt.description || (evt.calendarTitle ? `Agenda: ${evt.calendarTitle}` : ''),
         createdAt: new Date().toISOString(),
         isAppointment: true,
         gcalEventId: evt.id,
@@ -1098,7 +1170,7 @@ export const TodayTab: React.FC = () => {
               </div>
             </div>
 
-            {/* Area Filter & Search */}
+            {/* Area Filter, Google Sync & Search */}
             <div className="flex flex-wrap items-center gap-2.5">
               <div className="flex items-center gap-1 bg-[#221c18] p-1 rounded-xl border border-[#3d342f] text-xs">
                 {(['all', 'Comercial', 'Operação', 'Financeiro'] as const).map((area) => (
@@ -1116,6 +1188,31 @@ export const TodayTab: React.FC = () => {
                 ))}
               </div>
 
+              {/* Sync Google Calendar Button inside Calendar View */}
+              <button
+                onClick={handleRefreshGoogleEvents}
+                disabled={isSyncingCalendar}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                  tokenExpired
+                    ? 'bg-amber-950/40 border-amber-500/40 text-amber-300 hover:bg-amber-900/40'
+                    : isGoogleSynced
+                    ? 'bg-sky-950/30 border-sky-500/30 text-sky-300 hover:bg-sky-900/40 hover:border-sky-400/50'
+                    : 'bg-[#221c18] border-[#3d342f] text-[#d8cec5] hover:text-[#fcf8f5] hover:border-[#c58a4b]'
+                }`}
+                title={isGoogleSynced ? "Clique para atualizar eventos do Google Agenda" : "Conectar Google Agenda"}
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCalendar ? 'animate-spin text-sky-400' : 'text-sky-400'}`} />
+                <span>
+                  {isSyncingCalendar
+                    ? 'Sincronizando...'
+                    : tokenExpired
+                    ? 'Reautorizar Google'
+                    : isGoogleSynced
+                    ? 'Atualizar Google Agenda'
+                    : 'Conectar Google'}
+                </span>
+              </button>
+
               <div className="relative">
                 <Search className="w-3.5 h-3.5 text-[#73655c] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
@@ -1128,6 +1225,16 @@ export const TodayTab: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Sync Message Alert if any */}
+          {syncMessage && (
+            <div className="px-4 py-2 rounded-xl bg-sky-950/40 border border-sky-500/30 text-sky-200 text-xs flex items-center justify-between">
+              <span>{syncMessage}</span>
+              <button onClick={() => setSyncMessage(null)} className="text-sky-400 hover:text-white cursor-pointer ml-2">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* Weekday Columns */}
           <div className="grid grid-cols-7 gap-1 text-center border-b border-[#2d2520] pb-2 text-[11px] font-bold text-[#8c827a] uppercase tracking-wider">
@@ -1193,8 +1300,9 @@ export const TodayTab: React.FC = () => {
                   {/* Actions / Deadlines Chips */}
                   <div className="flex-1 flex flex-col gap-1 overflow-hidden">
                     {/* Action chips */}
-                    {dayActions.slice(0, 3).map((act) => {
+                    {dayActions.slice(0, 4).map((act) => {
                       const isCompleted = act.status === 'completed';
+                      const isGoogle = !!act.gcalEventId;
                       return (
                         <div
                           key={act.id}
@@ -1202,17 +1310,20 @@ export const TodayTab: React.FC = () => {
                             e.stopPropagation();
                             handleOpenEditAction(act);
                           }}
-                          className={`text-[9px] px-1.5 py-0.5 rounded truncate font-medium flex items-center gap-1 border transition-colors ${
+                          className={`text-[9px] px-1.5 py-0.5 rounded truncate font-medium flex items-center gap-1 border transition-all cursor-pointer ${
                             isCompleted
                               ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300 line-through'
                               : act.status === 'in_progress'
                               ? 'bg-indigo-950/40 border-indigo-500/30 text-indigo-300'
+                              : isGoogle
+                              ? 'bg-sky-950/50 border-sky-500/40 text-sky-200 hover:border-sky-400 hover:bg-sky-900/50'
                               : 'bg-[#241e1b] border-[#3d342f] text-[#ded5cc] hover:border-[#c58a4b]'
                           }`}
-                          title={`${act.time ? act.time + ' - ' : ''}${act.type}: ${act.description}`}
+                          title={`${act.time ? act.time + ' - ' : ''}${isGoogle ? '[Google Agenda] ' : ''}${act.description || act.type}`}
                         >
-                          {act.time && <span className="text-[#c58a4b] font-bold">{act.time}</span>}
-                          <span className="truncate">{act.type}</span>
+                          {isGoogle && <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />}
+                          {act.time && <span className={isGoogle ? "text-sky-300 font-bold" : "text-[#c58a4b] font-bold"}>{act.time}</span>}
+                          <span className="truncate font-semibold">{act.description || act.type}</span>
                         </div>
                       );
                     })}
@@ -1242,9 +1353,9 @@ export const TodayTab: React.FC = () => {
                     ))}
 
                     {/* More count */}
-                    {dayActions.length > 3 && (
+                    {dayActions.length > 4 && (
                       <span className="text-[8px] text-[#a89c93] font-bold text-center mt-0.5">
-                        +{dayActions.length - 3} mais
+                        +{dayActions.length - 4} mais
                       </span>
                     )}
                   </div>
@@ -1297,7 +1408,7 @@ export const TodayTab: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             {next7Days.map((day) => {
-              const dayActions = actions.filter((a) => a.date === day.iso);
+              const dayActions = filteredActions.filter((a) => a.date === day.iso);
               const dayMilestones = projectMilestones.filter((m) => m.dueDate === day.iso);
               const isToday = day.iso === todayStr;
 
@@ -1327,20 +1438,35 @@ export const TodayTab: React.FC = () => {
                         </span>
                       ) : (
                         <>
-                          {dayActions.map((act) => (
-                            <div
-                              key={act.id}
-                              onClick={() => handleOpenEditAction(act)}
-                              className="p-2 rounded-lg bg-[#221c18] border border-[#3d342f] hover:border-[#c58a4b]/50 cursor-pointer transition-all text-left"
-                            >
-                              <div className="text-[10px] font-bold text-[#fcf8f5] truncate">
-                                {act.time && `${act.time} - `}{act.type}
+                          {dayActions.map((act) => {
+                            const isGoogle = !!act.gcalEventId;
+                            return (
+                              <div
+                                key={act.id}
+                                onClick={() => handleOpenEditAction(act)}
+                                className={`p-2 rounded-lg border hover:border-[#c58a4b]/50 cursor-pointer transition-all text-left ${
+                                  isGoogle
+                                    ? 'bg-sky-950/30 border-sky-500/30 hover:bg-sky-900/40'
+                                    : 'bg-[#221c18] border-[#3d342f]'
+                                }`}
+                              >
+                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#fcf8f5] truncate">
+                                  {isGoogle && <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />}
+                                  {act.time && <span className={isGoogle ? "text-sky-300" : "text-[#c58a4b]"}>{act.time}</span>}
+                                  <span className="truncate">{act.description || act.type}</span>
+                                </div>
+                                {isGoogle ? (
+                                  <div className="text-[9px] text-sky-400/90 font-medium truncate mt-0.5">
+                                    {act.notes || 'Google Agenda'}
+                                  </div>
+                                ) : (
+                                  <div className="text-[9px] text-[#a89c93] truncate mt-0.5">
+                                    {act.description}
+                                  </div>
+                                )}
                               </div>
-                              <div className="text-[9px] text-[#a89c93] truncate mt-0.5">
-                                {act.description}
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
 
                           {dayMilestones.map((m) => (
                             <div
