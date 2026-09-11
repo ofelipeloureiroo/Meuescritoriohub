@@ -628,6 +628,8 @@ export interface AppAction {
   createdAt: string;
   isAppointment?: boolean;
   gcalEventId?: string;
+  gcalTaskId?: string;
+  gcalTaskListId?: string;
 }
 
 // ==========================================

@@ -26,6 +26,19 @@ export interface GoogleCalendarEvent {
   htmlLink?: string;
 }
 
+export interface GoogleTaskItem {
+  id: string;
+  title: string;
+  notes?: string;
+  status: 'needsAction' | 'completed';
+  due?: string; // RFC 3339 timestamp (e.g. 2026-09-11T00:00:00.000Z)
+  completed?: string;
+  updated?: string;
+  listId?: string;
+  listTitle?: string;
+  webViewLink?: string;
+}
+
 /**
  * Returns the cached token if available, checking session/local storage across page refreshes
  */
@@ -513,5 +526,231 @@ export const deleteGoogleEvent = async (eventId: string): Promise<void> => {
   if (!response.ok && response.status !== 404) {
     const errText = await response.text();
     throw new Error(`Erro ao excluir evento no Google: ${errText}`);
+  }
+};
+
+// ==========================================
+// GOOGLE TASKS API INTEGRATION
+// ==========================================
+
+/**
+ * Fetches tasks across all Google Task Lists for the user
+ */
+export const fetchGoogleTasks = async (): Promise<GoogleTaskItem[]> => {
+  let token = getGoogleAccessToken();
+  if (!token) {
+    token = await restoreGoogleTokenFromCloud();
+  }
+  if (!token) {
+    return [];
+  }
+
+  const taskListMap = new Map<string, string>();
+  taskListMap.set('@default', 'Minhas Tarefas');
+
+  // 1. Discover all task lists
+  try {
+    const listsRes = await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (listsRes.ok) {
+      const listsData = await listsRes.json();
+      if (listsData.items && Array.isArray(listsData.items)) {
+        listsData.items.forEach((l: any) => {
+          if (l.id) {
+            taskListMap.set(l.id, l.title || 'Tarefas');
+          }
+        });
+      }
+    } else if (listsRes.status === 401) {
+      cachedGCalToken = null;
+      throw new Error('Token expirado. Por favor, reautorize a conexão.');
+    } else if (listsRes.status === 403) {
+      console.warn('Google Tasks scope may not be granted on this token yet.');
+    }
+  } catch (err: any) {
+    if (err.message?.includes('Token expirado')) throw err;
+    console.warn('Could not list Google Task lists:', err);
+  }
+
+  const allTasks: GoogleTaskItem[] = [];
+  const listEntries = Array.from(taskListMap.entries());
+
+  // 2. Fetch tasks from all discovered lists
+  await Promise.all(
+    listEntries.map(async ([listId, listTitle]) => {
+      try {
+        let pageToken: string | undefined = undefined;
+        let count = 0;
+
+        do {
+          const url = new URL(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(listId)}/tasks`);
+          url.searchParams.set('showCompleted', 'true');
+          url.searchParams.set('showHidden', 'true');
+          url.searchParams.set('maxResults', '100');
+          if (pageToken) {
+            url.searchParams.set('pageToken', pageToken);
+          }
+
+          const res = await fetch(url.toString(), {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.items && Array.isArray(data.items)) {
+              for (const item of data.items) {
+                if (item.id && !item.deleted && (item.title || item.notes)) {
+                  allTasks.push({
+                    id: item.id,
+                    title: item.title || 'Tarefa sem título',
+                    notes: item.notes,
+                    status: item.status === 'completed' ? 'completed' : 'needsAction',
+                    due: item.due,
+                    completed: item.completed,
+                    updated: item.updated,
+                    listId,
+                    listTitle,
+                    webViewLink: item.webViewLink,
+                  });
+                }
+              }
+            }
+            pageToken = data.nextPageToken;
+            count++;
+          } else if (res.status === 401) {
+            cachedGCalToken = null;
+            throw new Error('Token expirado. Por favor, reautorize a conexão.');
+          } else {
+            break;
+          }
+        } while (pageToken && count < 5);
+      } catch (err: any) {
+        if (err.message?.includes('Token expirado')) throw err;
+        console.warn(`Error fetching tasks for list ${listId}:`, err);
+      }
+    })
+  );
+
+  try {
+    localStorage.setItem('office_cached_gtasks', JSON.stringify(allTasks));
+  } catch {}
+
+  return allTasks;
+};
+
+/**
+ * Creates a new task in Google Tasks
+ */
+export const createGoogleTask = async (
+  title: string,
+  notes?: string,
+  dueDateStr?: string,
+  listId = '@default'
+): Promise<GoogleTaskItem | null> => {
+  let token = getGoogleAccessToken();
+  if (!token) token = await restoreGoogleTokenFromCloud();
+  if (!token) throw new Error('Sessão do Google expirada. Reautorize para sincronizar.');
+
+  const body: any = {
+    title,
+    notes: notes ? `${notes}\n\n[Criado via Meu Escritório Online]` : '[Criado via Meu Escritório Online]',
+  };
+
+  if (dueDateStr) {
+    // Google Tasks expects RFC 3339 formatted date timestamp (e.g. 2026-09-11T00:00:00.000Z)
+    body.due = `${dueDateStr}T00:00:00.000Z`;
+  }
+
+  const response = await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(listId)}/tasks`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.warn(`Erro ao criar tarefa no Google Tasks: ${errText}`);
+    return null;
+  }
+
+  const data = await response.json();
+  return {
+    id: data.id,
+    title: data.title,
+    notes: data.notes,
+    status: data.status === 'completed' ? 'completed' : 'needsAction',
+    due: data.due,
+    completed: data.completed,
+    updated: data.updated,
+    listId,
+  };
+};
+
+/**
+ * Updates the completion status of a task in Google Tasks
+ */
+export const updateGoogleTaskStatus = async (
+  taskId: string,
+  isCompleted: boolean,
+  listId = '@default'
+): Promise<void> => {
+  let token = getGoogleAccessToken();
+  if (!token) token = await restoreGoogleTokenFromCloud();
+  if (!token) return;
+
+  const body: any = isCompleted
+    ? { status: 'completed' }
+    : { status: 'needsAction', completed: null };
+
+  try {
+    const res = await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(listId)}/tasks/${encodeURIComponent(taskId)}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn('Erro ao atualizar status da tarefa no Google:', errText);
+    }
+  } catch (err) {
+    console.warn('Erro ao conectar com Google Tasks:', err);
+  }
+};
+
+/**
+ * Deletes a task from Google Tasks
+ */
+export const deleteGoogleTask = async (
+  taskId: string,
+  listId = '@default'
+): Promise<void> => {
+  let token = getGoogleAccessToken();
+  if (!token) token = await restoreGoogleTokenFromCloud();
+  if (!token) return;
+
+  try {
+    await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(listId)}/tasks/${encodeURIComponent(taskId)}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (err) {
+    console.warn('Erro ao excluir tarefa do Google:', err);
   }
 };

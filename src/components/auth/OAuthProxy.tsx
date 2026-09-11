@@ -122,7 +122,7 @@ export const OAuthProxy: React.FC = () => {
       try {
         const client = (window as any).google.accounts.oauth2.initTokenClient({
           client_id: '720818316004-uhuvk0752n3nrqff0j96ja8cbgf8eqre.apps.googleusercontent.com',
-          scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email',
+          scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/userinfo.email',
           prompt: '',
           callback: async (response: any) => {
             if (response.error) {
@@ -155,6 +155,7 @@ export const OAuthProxy: React.FC = () => {
       const provider = new GoogleAuthProvider();
       provider.addScope('https://www.googleapis.com/auth/calendar');
       provider.addScope('https://www.googleapis.com/auth/calendar.events');
+      provider.addScope('https://www.googleapis.com/auth/tasks');
       provider.addScope('https://www.googleapis.com/auth/userinfo.email');
       provider.setCustomParameters({ 
         login_hint: 'lfquadrosdecorativos@gmail.com'
@@ -194,6 +195,7 @@ export const OAuthProxy: React.FC = () => {
       const provider = new GoogleAuthProvider();
       provider.addScope('https://www.googleapis.com/auth/calendar');
       provider.addScope('https://www.googleapis.com/auth/calendar.events');
+      provider.addScope('https://www.googleapis.com/auth/tasks');
       provider.addScope('https://www.googleapis.com/auth/userinfo.email');
       provider.setCustomParameters({ prompt: 'consent' });
 
