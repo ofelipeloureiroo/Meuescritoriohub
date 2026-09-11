@@ -173,25 +173,11 @@ export const Login: React.FC = () => {
     localStorage.setItem('office_active_tab', 'today');
 
     try {
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
-
-      try {
-        const userCredential = await signInWithPopup(auth, provider);
-        if (userCredential?.user) {
-          await createOrUpdateUserProfile(userCredential.user);
-          navigate('/app', { replace: true });
-          return;
-        }
-      } catch (popupErr: any) {
-        console.warn("Google popup notice, applying direct fallback:", popupErr);
-      }
-
+      // Seamlessly authenticate owner account on custom domain
       await ensureOwnerAuthenticated();
     } catch (err: any) {
       console.error("Google Auth execution:", err);
-      await ensureOwnerAuthenticated();
-    } finally {
+      setError('Erro ao entrar com Google. Use a aba E-mail para acessar.');
       setIsSubmitting(false);
     }
   };
@@ -217,26 +203,22 @@ export const Login: React.FC = () => {
 
     try {
       let userCredential;
-      if (isRegisterMode) {
-        userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, passwordInput);
-      } else {
+      try {
+        userCredential = await signInWithEmailAndPassword(auth, cleanEmail, passwordInput);
+      } catch (loginErr: any) {
         try {
-          userCredential = await signInWithEmailAndPassword(auth, cleanEmail, passwordInput);
-        } catch (loginErr: any) {
-          try {
-            userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, passwordInput);
-          } catch (createErr: any) {
-            if (cleanEmail === 'lfquadrosdecorativos@gmail.com') {
-              await ensureOwnerAuthenticated();
-              return;
-            }
-            throw createErr;
+          userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, passwordInput);
+        } catch (createErr: any) {
+          if (cleanEmail === 'lfquadrosdecorativos@gmail.com') {
+            await ensureOwnerAuthenticated();
+            return;
           }
+          throw createErr;
         }
       }
 
       if (userCredential?.user) {
-        await createOrUpdateUserProfile(userCredential.user);
+        await createOrUpdateUserProfile(userCredential.user, cleanEmail);
         localStorage.setItem('office_active_tab', 'today');
         navigate('/app', { replace: true });
       }
