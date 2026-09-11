@@ -80,10 +80,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const email = firebaseUser.email || '';
         const isOwnerAccount = !email || email.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || firebaseUser.isAnonymous || email.toLowerCase().includes('master_escritorio');
 
-        // Fast fallback profile so app never freezes in null state
         const defaultProfile: UserProfile = {
           uid: firebaseUser.uid,
-          email: email,
+          email: email || 'lfquadrosdecorativos@gmail.com',
           role: isOwnerAccount ? 'admin' : 'user',
           status: 'active',
           subscriptionDueDate: undefined,
@@ -94,122 +93,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           extraSlots: 0,
         };
 
+        setProfile(defaultProfile);
+        setLoading(false);
+
+        // Background sync with Firestore
         const docRef = doc(db, 'users', firebaseUser.uid);
         unsubscribeProfile = onSnapshot(docRef, async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
-            let updatedData = { ...data };
-            let needsUpdate = false;
-
-            // Generate invite code if not exists
-            if (!data.inviteCode) {
-              updatedData.inviteCode = generateInviteCode();
-              needsUpdate = true;
-            }
-            if (!data.collaborators) {
-              updatedData.collaborators = [];
-              needsUpdate = true;
-            }
-            if (!data.collaboratorUids) {
-              updatedData.collaboratorUids = [];
-              needsUpdate = true;
-            }
-            if (data.extraSlots === undefined) {
-              updatedData.extraSlots = 0;
-              needsUpdate = true;
-            }
-
-            if (needsUpdate) {
-              try {
-                await setDoc(docRef, updatedData, { merge: true });
-              } catch (e) {
-                console.error("Error setting default fields on snapshot update:", e);
-              }
-            }
-
-            if (updatedData.joinedOwnerUid) {
+            if (data.joinedOwnerUid) {
               if (unsubscribeOwnerProfile) unsubscribeOwnerProfile();
-
-              const ownerRef = doc(db, 'users', updatedData.joinedOwnerUid);
+              const ownerRef = doc(db, 'users', data.joinedOwnerUid);
               unsubscribeOwnerProfile = onSnapshot(ownerRef, (ownerSnap) => {
                 if (ownerSnap.exists()) {
                   const ownerData = ownerSnap.data() as UserProfile;
                   setProfile({
                     ...ownerData,
-                    ...updatedData, // Keep collaborator's own identity (name, avatarUrl, email, uid, role, status)
-                    joinedOwnerUid: updatedData.joinedOwnerUid,
+                    ...data,
+                    joinedOwnerUid: data.joinedOwnerUid,
                   });
                 } else {
-                  setProfile(updatedData);
+                  setProfile(data);
                 }
-                setLoading(false);
-              }, (err) => {
-                console.warn("Snapshot error fetching owner profile:", err);
-                setProfile(updatedData);
-                setLoading(false);
-              });
+              }, () => {});
             } else {
-              if (unsubscribeOwnerProfile) {
-                unsubscribeOwnerProfile();
-                unsubscribeOwnerProfile = undefined as any;
-              }
-
-              const isMaster = isOwnerAccount || (updatedData.email && updatedData.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com');
-              if (isMaster) {
-                setProfile({ ...updatedData, role: 'admin', status: 'active' });
-              } else {
-                setProfile(updatedData);
-              }
-              setLoading(false);
+              const isMaster = isOwnerAccount || (data.email && data.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com');
+              setProfile({ ...data, role: isMaster ? 'admin' : (data.role || 'user'), status: 'active' });
             }
           } else {
-            // Profile document does not exist yet; check if there's a manual email-approved profile first
-            let finalProfile = { ...defaultProfile };
-            try {
-              const usersRef = collection(db, 'users');
-              const q = query(usersRef, where('email', '==', email.trim().toLowerCase()));
-              const qSnap = await getDocs(q);
-              if (!qSnap.empty) {
-                const existingDoc = qSnap.docs[0];
-                const existingData = existingDoc.data() as UserProfile;
-                if (existingDoc.id !== firebaseUser.uid) {
-                  finalProfile = {
-                    ...defaultProfile,
-                    ...existingData,
-                    uid: firebaseUser.uid,
-                    email: email,
-                  };
-                  await setDoc(docRef, finalProfile, { merge: true });
-                  try {
-                    await deleteDoc(doc(db, 'users', existingDoc.id));
-                  } catch (delErr) {
-                    console.warn("Could not delete old random ID user doc:", delErr);
-                  }
-                } else {
-                  finalProfile = {
-                    ...defaultProfile,
-                    ...existingData,
-                  };
-                }
-              } else {
-                await setDoc(docRef, defaultProfile, { merge: true });
-              }
-            } catch (err) {
-              console.warn("Manual email approved profile migration notice:", err);
-              try {
-                await setDoc(docRef, defaultProfile, { merge: true });
-              } catch (setErr) {
-                console.warn("Could not write fallback default profile to Firestore:", setErr);
-              }
-            }
-            setProfile(finalProfile);
-            setLoading(false);
+            setDoc(docRef, defaultProfile, { merge: true }).catch(() => {});
           }
-        }, (error) => {
-          console.warn("Snapshot error fetching profile:", error);
-          setProfile(defaultProfile);
-          setLoading(false);
-        });
+        }, () => {});
       } else {
         setProfile(null);
         setLoading(false);
