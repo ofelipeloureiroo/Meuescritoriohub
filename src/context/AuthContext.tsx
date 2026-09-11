@@ -19,6 +19,8 @@ export interface UserProfile {
   uid: string;
   email: string;
   name?: string;
+  photoUrl?: string;
+  companyName?: string;
   role: 'admin' | 'user';
   status: 'active' | 'pending' | 'inactive';
   subscriptionDueDate?: string;

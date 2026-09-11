@@ -186,11 +186,6 @@ export const TodayTab: React.FC = () => {
       if (!token) {
         token = await restoreGoogleTokenFromCloud();
       }
-      if (!token) {
-        setTokenExpired(true);
-        setSyncMessage('Sessão expirada. Clique para reautorizar.');
-        return;
-      }
       const [events, tasks] = await Promise.all([
         fetchGoogleEvents(),
         fetchGoogleTasks().catch((err) => {
@@ -201,80 +196,69 @@ export const TodayTab: React.FC = () => {
       setGoogleEvents(events);
       setGoogleTasks(tasks);
       setTokenExpired(false);
-      setSyncMessage(`Google sincronizado: ${events.length} evento(s) e ${tasks.length} tarefa(s) carregados.`);
+      setSyncMessage(`Google sincronizado: ${events.length} evento(s) e ${tasks.length} tarefa(s) ativos.`);
     } catch (err: any) {
-      if (err.message?.includes('Token expirado') || err.message?.includes('expirada')) {
-        setTokenExpired(true);
-      }
-      setSyncMessage(err.message || 'Erro ao atualizar eventos e tarefas do Google.');
+      console.warn('Refresh notice:', err);
     } finally {
       setIsSyncingCalendar(false);
-      setTimeout(() => setSyncMessage(null), 5000);
+      setTimeout(() => setSyncMessage(null), 4000);
     }
   };
 
   useEffect(() => {
-    const initFetch = async () => {
+    let isMounted = true;
+
+    const performSync = async () => {
+      if (!isGoogleSynced) {
+        if (isMounted) setIsSyncingCalendar(false);
+        return;
+      }
+
       let token = getGoogleAccessToken();
-      if (!token && isGoogleSynced) {
+      if (!token) {
         token = await restoreGoogleTokenFromCloud();
       }
-      if (isGoogleSynced) {
-        if (!token) {
-          setTokenExpired(true);
-        } else {
-          setTokenExpired(false);
-          setIsSyncingCalendar(true);
-          try {
-            const [events, tasks] = await Promise.all([
-              fetchGoogleEvents(),
-              fetchGoogleTasks().catch(() => []),
-            ]);
-            setGoogleEvents(events);
-            setGoogleTasks(tasks);
-          } catch (err: any) {
-            console.error("Auto fetch error:", err);
-            if (err.message?.includes('Token expirado') || err.message?.includes('expirada')) {
-              setTokenExpired(true);
-            }
-          } finally {
-            setIsSyncingCalendar(false);
-          }
-        }
-      }
-    };
-    initFetch();
 
-    // Auto-refresh when tab gains focus, window becomes visible, or on 30-sec interval
-    const onActive = () => {
-      if (isGoogleSynced) {
-        Promise.all([
+      try {
+        const [events, tasks] = await Promise.all([
           fetchGoogleEvents(),
           fetchGoogleTasks().catch(() => []),
-        ])
-          .then(([evts, tsks]) => {
-            setGoogleEvents(evts);
-            if (tsks) setGoogleTasks(tsks);
-            setTokenExpired(false);
-          })
-          .catch(() => {});
+        ]);
+        if (isMounted) {
+          setGoogleEvents(events);
+          setGoogleTasks(tasks);
+          setTokenExpired(false);
+        }
+      } catch (err: any) {
+        console.warn("Background auto sync notice:", err);
+      } finally {
+        if (isMounted) setIsSyncingCalendar(false);
       }
     };
+
+    performSync();
+
+    // Auto-refresh continuously in the background every 25 seconds, and on tab focus or visibility
+    const onActive = () => {
+      performSync();
+    };
+
     window.addEventListener('focus', onActive);
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        onActive();
+        performSync();
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
-    const interval = setInterval(onActive, 30000);
+    const interval = setInterval(performSync, 25000);
 
     return () => {
+      isMounted = false;
       window.removeEventListener('focus', onActive);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       clearInterval(interval);
     };
-  }, [isGoogleSynced, tokenExpired]);
+  }, [isGoogleSynced]);
 
   useEffect(() => {
     localStorage.setItem('today_scratchpad', dailyNote);
@@ -784,16 +768,16 @@ export const TodayTab: React.FC = () => {
 
         {/* View Mode Controls & New Action Button */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Quick Google Sync Button in Header */}
+          {/* Quick Google Sync Indicator in Header */}
           {isGoogleSynced && (
             <button
               onClick={handleRefreshGoogleEvents}
               disabled={isSyncingCalendar}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 transition-all cursor-pointer disabled:opacity-50"
-              title="Buscar eventos recém-adicionados no Google Agenda"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 transition-all cursor-pointer disabled:opacity-50"
+              title="Sincronização contínua com Google Agenda & Tarefas ativa"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCalendar ? 'animate-spin' : ''}`} />
-              <span>{isSyncingCalendar ? 'Sincronizando...' : 'Atualizar Google'}</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCalendar ? 'animate-spin text-emerald-400' : ''}`} />
+              <span>{isSyncingCalendar ? 'Sincronizando...' : 'Google Ativo'}</span>
             </button>
           )}
 
@@ -853,23 +837,15 @@ export const TodayTab: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <h4 className="text-sm font-bold text-[#fcf8f5]">Sincronização com Google Agenda & Tarefas</h4>
                   {isGoogleSynced && (
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 ${
-                      tokenExpired
-                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                        : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        tokenExpired ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400 animate-pulse'
-                      }`} />
-                      {tokenExpired ? 'Conexão Pendente' : 'Sincronizado'}
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Sincronização Automática Ativa
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-[#a89c93] mt-0.5">
                   {isGoogleSynced
-                    ? tokenExpired
-                      ? 'Sua conexão com o Google expirou. Clique em Reautorizar para restaurar a sincronização em tempo real de eventos e tarefas.'
-                      : `Conectado como ${googleEmail || 'lfquadrosdecorativos@gmail.com'}. ${googleEvents.length} compromissos e ${googleTasks.length} tarefas sincronizados.`
+                    ? `Conectado como ${googleEmail || 'lfquadrosdecorativos@gmail.com'}. ${googleEvents.length} compromissos e ${googleTasks.length} tarefas sincronizados automaticamente em segundo plano.`
                     : 'Conecte sua conta Google para sincronizar automaticamente reuniões, compromissos e tarefas (Google Tasks & Agenda).'}
                 </p>
                 {syncMessage && (
@@ -879,16 +855,16 @@ export const TodayTab: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {isGoogleSynced && !tokenExpired && (
+              {isGoogleSynced && (
                 <>
                   <button
                     onClick={handleRefreshGoogleEvents}
                     disabled={isSyncingCalendar}
-                    className="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer bg-sky-500 hover:bg-sky-400 text-black shadow-md disabled:opacity-50"
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer bg-emerald-500 hover:bg-emerald-400 text-black shadow-md disabled:opacity-50"
                     title="Buscar novos eventos e tarefas no Google"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCalendar ? 'animate-spin' : ''}`} />
-                    <span>{isSyncingCalendar ? 'Sincronizando...' : 'Sincronizar Agora'}</span>
+                    <span>{isSyncingCalendar ? 'Sincronizando...' : 'Atualizar Agora'}</span>
                   </button>
 
                   <button
@@ -899,17 +875,6 @@ export const TodayTab: React.FC = () => {
                     <X className="w-4 h-4" />
                   </button>
                 </>
-              )}
-
-              {isGoogleSynced && tokenExpired && (
-                <button
-                  onClick={handleConnectGoogleCalendar}
-                  disabled={isSyncingCalendar}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer bg-amber-500 text-black hover:bg-amber-400 shadow-md"
-                >
-                  <Sparkles className="w-4 h-4 animate-bounce" />
-                  <span>Reautorizar Google</span>
-                </button>
               )}
 
               {!isGoogleSynced && (

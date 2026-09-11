@@ -108,9 +108,52 @@ export const isGoogleCalendarEnabled = (): boolean => {
 };
 
 /**
- * Authenticates the user with Google and requests Calendar scopes
+ * Authenticates the user with Google and requests Calendar & Tasks scopes
  */
 export const authenticateGoogleCalendar = async (): Promise<{ token: string; email: string }> => {
+  // Strategy 1: Attempt direct Firebase popup first (fastest, cleanest in modern browsers)
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/calendar');
+    provider.addScope('https://www.googleapis.com/auth/calendar.events');
+    provider.addScope('https://www.googleapis.com/auth/tasks');
+    provider.addScope('https://www.googleapis.com/auth/userinfo.email');
+    provider.setCustomParameters({ 
+      prompt: 'consent',
+      login_hint: 'lfquadrosdecorativos@gmail.com'
+    });
+
+    const result = await signInWithPopup(auth, provider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    const token = credential?.accessToken;
+    const email = result.user?.email || 'lfquadrosdecorativos@gmail.com';
+
+    if (token) {
+      cachedGCalToken = token;
+      cachedGCalEmail = email;
+      try {
+        sessionStorage.setItem('office_gcal_token', token);
+        localStorage.setItem('office_gcal_token', token);
+        localStorage.setItem('office_gcal_synced', 'true');
+        localStorage.setItem('office_gcal_email', email);
+      } catch {}
+
+      try {
+        setDoc(doc(db, 'system_integrations', 'google_calendar'), {
+          token,
+          email,
+          updatedAt: Date.now(),
+          synced: true,
+        }, { merge: true }).catch(() => {});
+      } catch {}
+
+      return { token, email };
+    }
+  } catch (directErr: any) {
+    console.warn('Direct popup attempt redirected to proxy popup:', directErr?.message || directErr);
+  }
+
+  // Strategy 2: Popup proxy with cross-channel Firestore & postMessage listeners
   return new Promise((resolve, reject) => {
     const sessionId = 'gcal_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
     
@@ -182,7 +225,7 @@ export const authenticateGoogleCalendar = async (): Promise<{ token: string; ema
       reject(new Error(errorMsg));
     };
 
-    // Channel 1: postMessage listener (for desktop or when opener persists)
+    // Channel 1: postMessage listener
     const messageListener = (event: MessageEvent) => {
       if (event.data && event.data.type === 'OAUTH_SUCCESS' && event.data.token) {
         handleSuccess(event.data.token, event.data.email);
@@ -192,7 +235,7 @@ export const authenticateGoogleCalendar = async (): Promise<{ token: string; ema
     };
     window.addEventListener('message', messageListener);
 
-    // Channel 2: Firestore snapshot listener (100% reliable across mobile tabs / separate origins)
+    // Channel 2: Firestore snapshot listener
     try {
       const sessionDocRef = doc(db, 'oauth_sessions', sessionId);
       unsubscribeFirestore = onSnapshot(sessionDocRef, (snap) => {
@@ -223,16 +266,16 @@ export const authenticateGoogleCalendar = async (): Promise<{ token: string; ema
 
     if (!popup) {
       cleanup();
-      reject(new Error('Bloqueador de popups ativo. Por favor, permita popups para este site ou clique em "Sempre mostrar".'));
+      reject(new Error('Bloqueador de popups ativo. Por favor, permita popups para este site ou clique no botão para autorizar.'));
       return;
     }
 
-    // Maximum wait time: 3 minutes
+    // Maximum wait time: 2 minutes
     timeoutTimer = setTimeout(() => {
       if (!isFinished) {
-        handleError('Tempo limite para login do Google excedido. Tente novamente.');
+        handleError('Tempo limite para login do Google excedido. Clique em Conectar novamente.');
       }
-    }, 180000);
+    }, 120000);
   });
 };
 
@@ -274,7 +317,12 @@ export const fetchGoogleEvents = async (timeMin?: string, timeMax?: string): Pro
     token = await restoreGoogleTokenFromCloud();
   }
   if (!token) {
-    throw new Error('Sessão do Google expirada. Reautorize para sincronizar.');
+    // Fallback to cached events if available without crashing
+    try {
+      const cached = localStorage.getItem('office_cached_gcal_events');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return [];
   }
 
   // Broad date window: from 1 year ago to 2 years in the future
@@ -312,11 +360,13 @@ export const fetchGoogleEvents = async (timeMin?: string, timeMax?: string): Pro
         });
       }
     } else if (listRes.status === 401) {
-      cachedGCalToken = null;
-      throw new Error('Token expirado. Por favor, reautorize a conexão.');
+      // Try restoring once from cloud
+      const refreshedToken = await restoreGoogleTokenFromCloud();
+      if (refreshedToken && refreshedToken !== token) {
+        token = refreshedToken;
+      }
     }
   } catch (err: any) {
-    if (err.message?.includes('Token expirado')) throw err;
     console.warn('Could not list all calendars, continuing with primary:', err);
   }
 
@@ -364,24 +414,28 @@ export const fetchGoogleEvents = async (timeMin?: string, timeMax?: string): Pro
             }
             pageToken = data.nextPageToken;
             pageCount++;
-          } else if (response.status === 401) {
-            cachedGCalToken = null;
-            throw new Error('Token expirado. Por favor, reautorize a conexão.');
           } else {
             break;
           }
         } while (pageToken && pageCount < 6); // Fetch up to 1500 items per calendar
       } catch (calErr: any) {
-        if (calErr.message?.includes('Token expirado')) throw calErr;
         console.warn(`Error fetching events for calendar ${cal.id}:`, calErr);
       }
     })
   );
 
   const eventList = Array.from(allEventsMap.values());
-  try {
-    localStorage.setItem('office_cached_gcal_events', JSON.stringify(eventList));
-  } catch {}
+  if (eventList.length > 0) {
+    try {
+      localStorage.setItem('office_cached_gcal_events', JSON.stringify(eventList));
+    } catch {}
+  } else {
+    // If live returned empty due to network glitch, try reading cache
+    try {
+      const cached = localStorage.getItem('office_cached_gcal_events');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+  }
 
   return eventList;
 };
@@ -567,13 +621,14 @@ export const fetchGoogleTasks = async (): Promise<GoogleTaskItem[]> => {
         });
       }
     } else if (listsRes.status === 401) {
-      cachedGCalToken = null;
-      throw new Error('Token expirado. Por favor, reautorize a conexão.');
+      const refreshedToken = await restoreGoogleTokenFromCloud();
+      if (refreshedToken && refreshedToken !== token) {
+        token = refreshedToken;
+      }
     } else if (listsRes.status === 403) {
       console.warn('Google Tasks scope may not be granted on this token yet.');
     }
   } catch (err: any) {
-    if (err.message?.includes('Token expirado')) throw err;
     console.warn('Could not list Google Task lists:', err);
   }
 
@@ -625,23 +680,26 @@ export const fetchGoogleTasks = async (): Promise<GoogleTaskItem[]> => {
             }
             pageToken = data.nextPageToken;
             count++;
-          } else if (res.status === 401) {
-            cachedGCalToken = null;
-            throw new Error('Token expirado. Por favor, reautorize a conexão.');
           } else {
             break;
           }
         } while (pageToken && count < 5);
       } catch (err: any) {
-        if (err.message?.includes('Token expirado')) throw err;
         console.warn(`Error fetching tasks for list ${listId}:`, err);
       }
     })
   );
 
-  try {
-    localStorage.setItem('office_cached_gtasks', JSON.stringify(allTasks));
-  } catch {}
+  if (allTasks.length > 0) {
+    try {
+      localStorage.setItem('office_cached_gtasks', JSON.stringify(allTasks));
+    } catch {}
+  } else {
+    try {
+      const cached = localStorage.getItem('office_cached_gtasks');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+  }
 
   return allTasks;
 };

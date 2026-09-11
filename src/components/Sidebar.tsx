@@ -275,8 +275,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="flex items-center gap-3 text-left group cursor-pointer hover:opacity-95 transition-opacity"
           title="Ir para Meu Dia & Agenda"
         >
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md bg-[var(--theme-primary)] text-black shrink-0 group-hover:bg-[var(--theme-primary-hover)] transition-colors">
-            <Building2 className="w-5 h-5 text-black" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shadow-md bg-[var(--theme-primary)] text-black shrink-0 group-hover:opacity-90 transition-all border border-[var(--theme-primary)]/40">
+            {architectProfile?.photoUrl ? (
+              <img
+                src={architectProfile.photoUrl}
+                alt="Logo / Foto"
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <Building2 className="w-5 h-5 text-black" />
+            )}
           </div>
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5 min-w-0">

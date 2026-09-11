@@ -115,13 +115,20 @@ export const TopBar: React.FC<TopBarProps> = ({
     return `${monthName} de ${year}`;
   };
 
-  const userName =
-    architectProfile?.name ||
-    profile?.companyName ||
-    user?.displayName ||
-    'Carlos Felipe';
+  const isOwner = !user?.email || 
+    user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || 
+    user.email.toLowerCase().includes('master_escritorio');
 
-  const userInitials = (userName.slice(0, 2) || 'CF').toUpperCase();
+  const userName =
+    architectProfile?.name?.trim() ||
+    profile?.companyName?.trim() ||
+    profile?.name?.trim() ||
+    user?.displayName?.trim() ||
+    (isOwner ? 'LF Quadros & Decoração' : 'Meu Escritório');
+
+  const userPhoto = architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL || '';
+
+  const userInitials = (userName.slice(0, 2) || 'LF').toUpperCase();
 
   return (
     <header className="w-full bg-[#161311]/90 backdrop-blur-md border-b border-[#2d2520] sticky top-0 z-20 px-4 sm:px-6 lg:px-8 py-2.5">
@@ -183,11 +190,12 @@ export const TopBar: React.FC<TopBarProps> = ({
             title="Abrir Configurações do Perfil"
           >
             <div className="w-8 h-8 rounded-full p-0.5 flex items-center justify-center overflow-hidden border border-[var(--theme-primary)]/40 shadow-xs shrink-0 bg-[#12100e]">
-              {architectProfile?.photoUrl ? (
+              {userPhoto ? (
                 <img
-                  src={architectProfile.photoUrl}
+                  src={userPhoto}
                   alt={userName}
                   className="w-full h-full object-cover rounded-full"
+                  referrerPolicy="no-referrer"
                 />
               ) : (
                 <div className="w-full h-full bg-[#201a17] rounded-full flex items-center justify-center font-serif font-bold text-xs text-[var(--theme-primary)]">

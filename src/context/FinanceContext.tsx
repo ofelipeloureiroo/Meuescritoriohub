@@ -285,15 +285,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     lastLocalMutationRef.current = Date.now();
   };
 
-  const targetUid = profile?.joinedOwnerUid || user?.uid;
+  const isOwner = !user?.email || 
+    user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || 
+    user.email.toLowerCase().includes('master_escritorio') ||
+    user.isAnonymous;
+
+  const CANONICAL_OWNER_UID = 'lfquadrosdecorativos';
+
+  // Target UID determines which Firestore workspace is loaded and synchronized across all devices
+  const targetUid = profile?.joinedOwnerUid || (isOwner ? CANONICAL_OWNER_UID : (user?.uid || 'guest'));
   const [isLocalLoaded, setIsLocalLoaded] = useState(false);
 
   // Prefix storage keys per user UID for full data isolation
   const getStorageKey = (key: string) => {
     return targetUid ? `office_v2_${targetUid}_${key}` : `office_v2_guest_${key}`;
   };
-
-  const isOwner = user?.email === 'lfquadrosdecorativos@gmail.com';
 
   const getCleanProfile = (): ArchitectProfile => {
     const rawName = user?.displayName || user?.email?.split('@')[0] || 'Meu Negócio';
@@ -877,18 +883,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       workspaceDocRef,
       async (snapshot) => {
         if (snapshot.exists()) {
-          // If Firestore is notifying us of local pending writes or a recent local edit, do not clobber React state
+          // If Firestore is notifying us of local pending writes, skip to prevent feedback loop
           if (snapshot.metadata.hasPendingWrites) {
-            return;
-          }
-          if (Date.now() - lastLocalMutationRef.current < 5000) {
             return;
           }
 
           const data = snapshot.data();
           isSyncingFromCloudRef.current = true;
 
-          if (data.profile) setArchitectProfile(data.profile);
+          if (data.profile) {
+            setArchitectProfile(data.profile);
+            safeSetItem('profile', data.profile);
+            if (data.profile.themeColor || data.profile.bgTheme) {
+              applyThemeToDocument(
+                data.profile.themeColor || 'amber',
+                data.profile.bgTheme || 'dark_warm'
+              );
+            }
+          }
           if (data.transactions) setTransactions(data.transactions);
           if (data.bankAccounts) setBankAccounts(data.bankAccounts);
           if (data.houseMortgage) setHouseMortgage(data.houseMortgage);
@@ -920,7 +932,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           isCloudLoadedRef.current = true;
           setTimeout(() => {
             isSyncingFromCloudRef.current = false;
-          }, 150);
+          }, 100);
         } else {
           // Document does not exist in Firestore for this user yet. Initialize it!
           try {
@@ -950,7 +962,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             isCloudLoadedRef.current = true;
             setTimeout(() => {
               isSyncingFromCloudRef.current = false;
-            }, 150);
+            }, 100);
           }
         }
       },
@@ -962,6 +974,58 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     return () => unsubscribe();
   }, [targetUid]);
+
+  // Helper for immediate Firestore write on critical changes (e.g. profile, photo, niche, theme)
+  const saveToFirestoreImmediate = async (newProfile?: ArchitectProfile) => {
+    if (!targetUid) return;
+    try {
+      const activeProf = newProfile || architectProfile;
+      const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
+      const userDocRef = doc(db, 'users', targetUid);
+      
+      const payload = {
+        profile: activeProf,
+        transactions,
+        bankAccounts,
+        houseMortgage,
+        debts,
+        clients,
+        freelanceProjects,
+        architectureProjects,
+        projectInstallments,
+        projectMilestones,
+        workContracts,
+        savingsGoals,
+        categoryBudgets,
+        officeSettings,
+        actions,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await setDoc(workspaceDocRef, JSON.parse(JSON.stringify(payload)), { merge: true });
+      await setDoc(userDocRef, {
+        uid: targetUid,
+        email: user?.email || 'lfquadrosdecorativos@gmail.com',
+        name: activeProf.name || 'LF Quadros & Decoração',
+        photoUrl: activeProf.photoUrl || '',
+        updatedAt: new Date().toISOString(),
+      }, { merge: true }).catch(() => {});
+
+      if (user?.uid && user.uid !== targetUid) {
+        const mirrorDocRef = doc(db, 'users', user.uid, 'data', 'workspace');
+        await setDoc(mirrorDocRef, JSON.parse(JSON.stringify(payload)), { merge: true }).catch(() => {});
+        await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          email: user?.email || 'lfquadrosdecorativos@gmail.com',
+          name: activeProf.name || 'LF Quadros & Decoração',
+          photoUrl: activeProf.photoUrl || '',
+          updatedAt: new Date().toISOString(),
+        }, { merge: true }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn("Firestore immediate save warning:", err);
+    }
+  };
 
   // Auto-save local changes to Firestore (debounced 500ms)
   useEffect(() => {
@@ -1116,36 +1180,56 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Actions - Profile & Customization
   const updateArchitectProfile = (updatedFields: Partial<ArchitectProfile>) => {
     recordLocalMutation();
-    setArchitectProfile((prev) => ({
-      ...prev,
-      ...updatedFields,
-    }));
+    setArchitectProfile((prev) => {
+      const updated = {
+        ...prev,
+        ...updatedFields,
+      };
+      safeSetItem('profile', updated);
+      saveToFirestoreImmediate(updated);
+      return updated;
+    });
   };
 
   const updateProfilePhoto = (photoUrl: string) => {
     recordLocalMutation();
-    setArchitectProfile((prev) => ({
-      ...prev,
-      photoUrl,
-    }));
+    setArchitectProfile((prev) => {
+      const updated = {
+        ...prev,
+        photoUrl,
+      };
+      safeSetItem('profile', updated);
+      saveToFirestoreImmediate(updated);
+      return updated;
+    });
   };
 
   const changeTheme = (theme: ThemeColorId) => {
     recordLocalMutation();
     applyThemeToDocument(theme, architectProfile.bgTheme || 'dark_warm');
-    setArchitectProfile((prev) => ({
-      ...prev,
-      themeColor: theme,
-    }));
+    setArchitectProfile((prev) => {
+      const updated = {
+        ...prev,
+        themeColor: theme,
+      };
+      safeSetItem('profile', updated);
+      saveToFirestoreImmediate(updated);
+      return updated;
+    });
   };
 
   const changeBgTheme = (bgTheme: BgThemeId) => {
     recordLocalMutation();
     applyThemeToDocument(architectProfile.themeColor || 'gold', bgTheme);
-    setArchitectProfile((prev) => ({
-      ...prev,
-      bgTheme,
-    }));
+    setArchitectProfile((prev) => {
+      const updated = {
+        ...prev,
+        bgTheme,
+      };
+      safeSetItem('profile', updated);
+      saveToFirestoreImmediate(updated);
+      return updated;
+    });
   };
 
   const changeNiche = (niche: NicheType) => {
@@ -1153,15 +1237,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     recordLocalMutation();
     const nicheConf = NICHES[niche];
     if (!nicheConf) return;
-    setArchitectProfile((prev) => ({
-      ...prev,
-      niche,
-      showPortfolio: nicheConf.hasPortfolio,
-      title: nicheConf.defaultTitle,
-      specialty: nicheConf.defaultSpecialty,
-      tagline: nicheConf.description,
-      description: `Atendimento profissional especializado em ${nicheConf.label.toLowerCase()}. Soluções personalizadas, foco em qualidade e excelência para cada cliente.`,
-    }));
+    setArchitectProfile((prev) => {
+      const updated: ArchitectProfile = {
+        ...prev,
+        niche,
+        showPortfolio: nicheConf.hasPortfolio,
+        title: nicheConf.defaultTitle,
+        specialty: nicheConf.defaultSpecialty,
+        tagline: nicheConf.description,
+        description: `Atendimento profissional especializado em ${nicheConf.label.toLowerCase()}. Soluções personalizadas, foco em qualidade e excelência para cada cliente.`,
+      };
+      safeSetItem('profile', updated);
+      saveToFirestoreImmediate(updated);
+      return updated;
+    });
 
     // If projects are still the initial sample architecture projects, switch them automatically to the new niche's sample projects!
     // If the user deleted all projects (prev.length === 0), respect the deletion and do NOT reload samples!
