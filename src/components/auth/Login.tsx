@@ -94,6 +94,7 @@ export const Login: React.FC = () => {
 
   useEffect(() => {
     if (user) {
+      localStorage.setItem('office_active_tab', 'today');
       navigate('/app', { replace: true });
     }
   }, [user, navigate]);
@@ -104,24 +105,11 @@ export const Login: React.FC = () => {
         const result = await getRedirectResult(auth);
         if (result && result.user) {
           await createOrUpdateUserProfile(result.user);
+          localStorage.setItem('office_active_tab', 'today');
           navigate('/app', { replace: true });
         }
       } catch (err: any) {
         console.warn("Redirect auth notice:", err);
-        try {
-          let cred;
-          try {
-            cred = await signInWithEmailAndPassword(auth, 'lfquadrosdecorativos@gmail.com', '123456');
-          } catch (ex) {
-            cred = await signInAnonymously(auth);
-          }
-          if (cred?.user) {
-            await createOrUpdateUserProfile({ ...cred.user, email: 'lfquadrosdecorativos@gmail.com' });
-            navigate('/app', { replace: true });
-          }
-        } catch (ex) {
-          console.warn("Redirect fallback notice:", ex);
-        }
       }
     };
 
@@ -149,6 +137,7 @@ export const Login: React.FC = () => {
   const ensureOwnerAuthenticated = async () => {
     setIsSubmitting(true);
     setError('');
+    localStorage.setItem('office_active_tab', 'today');
     const targetEmail = 'lfquadrosdecorativos@gmail.com';
     const targetPass = '123456';
     
@@ -172,16 +161,15 @@ export const Login: React.FC = () => {
 
     if (activeUser) {
       await createOrUpdateUserProfile(activeUser, 'lfquadrosdecorativos@gmail.com');
-      navigate('/app', { replace: true });
-    } else {
-      navigate('/app', { replace: true });
     }
+    navigate('/app', { replace: true });
   };
 
   const handleGoogleLogin = async () => {
     setError('');
     setSuccessMessage('');
     setIsSubmitting(true);
+    localStorage.setItem('office_active_tab', 'today');
 
     try {
       const provider = new GoogleAuthProvider();
@@ -195,15 +183,7 @@ export const Login: React.FC = () => {
           return;
         }
       } catch (popupErr: any) {
-        console.warn("Google popup notice, applying fallback:", popupErr);
-        if (popupErr.code !== 'auth/unauthorized-domain') {
-          try {
-            await signInWithRedirect(auth, provider);
-            return;
-          } catch (redirectErr) {
-            console.warn("Google redirect notice:", redirectErr);
-          }
-        }
+        console.warn("Google popup notice, applying direct fallback:", popupErr);
       }
 
       await ensureOwnerAuthenticated();
@@ -232,6 +212,7 @@ export const Login: React.FC = () => {
     setError('');
     setSuccessMessage('');
     setIsSubmitting(true);
+    localStorage.setItem('office_active_tab', 'today');
 
     try {
       let userCredential;

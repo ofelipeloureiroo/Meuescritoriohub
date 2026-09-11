@@ -15,7 +15,7 @@ export const AuthGuard: React.FC<{ children: React.ReactNode; requireAdmin?: boo
   }
 
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   const isSuperAdmin = isOwner || (isAdmin && user?.email?.toLowerCase() === 'lfquadrosdecorativos@gmail.com');
