@@ -25,24 +25,44 @@ export interface GoogleCalendarEvent {
 }
 
 /**
- * Returns the cached token if available
+ * Returns the cached token if available, checking session/local storage across page refreshes
  */
 export const getGoogleAccessToken = (): string | null => {
-  return cachedGCalToken;
+  if (cachedGCalToken) return cachedGCalToken;
+  try {
+    const stored = sessionStorage.getItem('office_gcal_token') || localStorage.getItem('office_gcal_token');
+    if (stored) {
+      cachedGCalToken = stored;
+      return stored;
+    }
+  } catch {}
+  return null;
 };
 
 /**
  * Returns the connected Google email if available
  */
 export const getGoogleUserEmail = (): string | null => {
-  return cachedGCalEmail || localStorage.getItem('office_gcal_email');
+  if (cachedGCalEmail) return cachedGCalEmail;
+  try {
+    const stored = sessionStorage.getItem('office_gcal_email') || localStorage.getItem('office_gcal_email');
+    if (stored) {
+      cachedGCalEmail = stored;
+      return stored;
+    }
+  } catch {}
+  return null;
 };
 
 /**
  * Checks if Google Calendar integration is enabled by the user
  */
 export const isGoogleCalendarEnabled = (): boolean => {
-  return localStorage.getItem('office_gcal_synced') === 'true';
+  try {
+    return localStorage.getItem('office_gcal_synced') === 'true';
+  } catch {
+    return false;
+  }
 };
 
 /**
@@ -84,8 +104,12 @@ export const authenticateGoogleCalendar = async (): Promise<{ token: string; ema
 
       cachedGCalToken = token;
       cachedGCalEmail = email || 'lfquadrosdecorativos@gmail.com';
-      localStorage.setItem('office_gcal_synced', 'true');
-      localStorage.setItem('office_gcal_email', cachedGCalEmail);
+      try {
+        sessionStorage.setItem('office_gcal_token', token);
+        localStorage.setItem('office_gcal_token', token);
+        localStorage.setItem('office_gcal_synced', 'true');
+        localStorage.setItem('office_gcal_email', cachedGCalEmail);
+      } catch {}
 
       if (popup && !popup.closed) {
         try { popup.close(); } catch {}
@@ -166,8 +190,12 @@ export const authenticateGoogleCalendar = async (): Promise<{ token: string; ema
 export const disconnectGoogleCalendar = () => {
   cachedGCalToken = null;
   cachedGCalEmail = null;
-  localStorage.removeItem('office_gcal_synced');
-  localStorage.removeItem('office_gcal_email');
+  try {
+    sessionStorage.removeItem('office_gcal_token');
+    localStorage.removeItem('office_gcal_token');
+    localStorage.removeItem('office_gcal_synced');
+    localStorage.removeItem('office_gcal_email');
+  } catch {}
 };
 
 /**
