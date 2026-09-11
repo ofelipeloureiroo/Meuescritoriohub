@@ -83,7 +83,7 @@ const AppContent: React.FC = () => {
     setIsNewTxModalOpen(true);
   };
 
-  const { user, profile } = useAuth();
+  const { user, profile, logout } = useAuth();
   const isCollaborator = !!profile?.joinedOwnerUid;
   const collaboratorObj = isCollaborator
     ? profile?.collaborators?.find((c) => c.uid === user?.uid)
@@ -198,6 +198,7 @@ const AppContent: React.FC = () => {
 };
 
 const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { logout } = useAuth();
   return (
     <div className="min-h-screen bg-[#12100e] text-[#fcf8f5] flex flex-col font-sans antialiased">
       <header className="bg-[#1a1614] border-b border-[#3d342f] sticky top-0 z-40">
@@ -216,7 +217,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 Voltar ao App
               </Link>
               <button
-                onClick={() => signOut(auth)}
+                onClick={logout}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#3d342f] text-[#a89c93] hover:text-red-400 hover:border-red-500/30 transition-colors text-sm cursor-pointer"
               >
                 <LogOut className="w-4 h-4" /> Sair

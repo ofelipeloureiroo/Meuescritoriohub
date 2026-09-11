@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
+import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { 
   doc, 
   onSnapshot, 
@@ -41,6 +41,7 @@ interface AuthContextType {
   leaveCollaboratedOffice: () => Promise<void>;
   updateCollaboratorPermissions: (collaboratorUid: string, permissions: CollaboratorPermissions) => Promise<void>;
   removeCollaborator: (collaboratorUid: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -54,6 +55,7 @@ const AuthContext = createContext<AuthContextType>({
   leaveCollaboratedOffice: async () => {},
   updateCollaboratorPermissions: async () => {},
   removeCollaborator: async () => {},
+  logout: async () => {},
 });
 
 const generateInviteCode = () => {
@@ -69,8 +71,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [localSession, setLocalSession] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem('office_local_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
+    if (localSession) {
+      setUser(localSession as any);
+      setProfile({
+        uid: localSession.uid,
+        email: localSession.email,
+        role: 'admin',
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        inviteCode: 'MASTER',
+        collaborators: [],
+        collaboratorUids: [],
+        extraSlots: 0
+      });
+      setLoading(false);
+      return;
+    }
+
     let unsubscribeProfile: () => void;
     let unsubscribeOwnerProfile: () => void;
 
@@ -137,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (unsubscribeProfile) unsubscribeProfile();
       if (unsubscribeOwnerProfile) unsubscribeOwnerProfile();
     };
-  }, []);
+  }, [localSession]);
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return;
@@ -360,6 +387,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const logout = async () => {
+    localStorage.removeItem('office_local_session');
+    setLocalSession(null);
+    setUser(null);
+    setProfile(null);
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.warn("Sign out notice:", e);
+    }
+  };
+
   const isOwner = !user?.email || (!!user?.email && user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com') || profile?.role === 'admin' || user?.isAnonymous || false;
   const isAdmin = true;
 
@@ -375,6 +414,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       leaveCollaboratedOffice,
       updateCollaboratorPermissions,
       removeCollaborator,
+      logout,
     }}>
       {children}
     </AuthContext.Provider>

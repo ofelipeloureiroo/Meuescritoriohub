@@ -88,7 +88,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     joinWithInviteCode, 
     leaveCollaboratedOffice, 
     updateCollaboratorPermissions, 
-    removeCollaborator 
+    removeCollaborator,
+    logout
   } = useAuth();
   const navigate = useNavigate();
 
@@ -267,7 +268,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   };
 
   const handleLogout = async () => {
-    await signOut(auth);
+    await logout();
     onClose();
   };
 
