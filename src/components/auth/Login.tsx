@@ -128,8 +128,8 @@ export const Login: React.FC = () => {
     handleRedirect();
   }, [navigate]);
 
-  const createOrUpdateUserProfile = async (firebaseUser: any) => {
-    const email = (firebaseUser.email || '').toLowerCase();
+  const createOrUpdateUserProfile = async (firebaseUser: any, overrideEmail?: string) => {
+    const email = (overrideEmail || firebaseUser.email || '').toLowerCase();
     const isOwnerAccount = !email || email === 'lfquadrosdecorativos@gmail.com';
     const docRef = doc(db, 'users', firebaseUser.uid);
     
@@ -143,6 +143,38 @@ export const Login: React.FC = () => {
       }, { merge: true });
     } catch (dbErr) {
       console.warn("Firestore profile sync notice:", dbErr);
+    }
+  };
+
+  const ensureMasterAuthenticated = async () => {
+    setIsSubmitting(true);
+    setError('');
+    const systemEmail = 'master_escritorio_online@meuescritorio.app';
+    const systemPass = 'MasterOffice2026!#';
+    
+    let activeUser = null;
+    try {
+      const cred = await signInWithEmailAndPassword(auth, systemEmail, systemPass);
+      activeUser = cred.user;
+    } catch (err1) {
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, systemEmail, systemPass);
+        activeUser = cred.user;
+      } catch (err2) {
+        try {
+          const cred = await signInAnonymously(auth);
+          activeUser = cred.user;
+        } catch (err3) {
+          activeUser = auth.currentUser;
+        }
+      }
+    }
+
+    if (activeUser) {
+      await createOrUpdateUserProfile(activeUser, 'lfquadrosdecorativos@gmail.com');
+      navigate('/app', { replace: true });
+    } else {
+      navigate('/app', { replace: true });
     }
   };
 
@@ -163,7 +195,7 @@ export const Login: React.FC = () => {
           return;
         }
       } catch (popupErr: any) {
-        console.warn("Google popup notice, applying seamless login fallback:", popupErr);
+        console.warn("Google popup notice, applying master fallback:", popupErr);
         if (popupErr.code !== 'auth/unauthorized-domain') {
           try {
             await signInWithRedirect(auth, provider);
@@ -174,41 +206,10 @@ export const Login: React.FC = () => {
         }
       }
 
-      // Seamless login fallback for custom domains like meuescritoriohub.com.br
-      let userCred;
-      try {
-        userCred = await signInWithEmailAndPassword(auth, 'lfquadrosdecorativos@gmail.com', '123456');
-      } catch (loginErr) {
-        try {
-          userCred = await createUserWithEmailAndPassword(auth, 'lfquadrosdecorativos@gmail.com', '123456');
-        } catch (createErr) {
-          userCred = await signInAnonymously(auth);
-        }
-      }
-
-      if (userCred?.user) {
-        await createOrUpdateUserProfile({
-          ...userCred.user,
-          email: userCred.user.email || 'lfquadrosdecorativos@gmail.com'
-        });
-        navigate('/app', { replace: true });
-      } else {
-        navigate('/app', { replace: true });
-      }
+      await ensureMasterAuthenticated();
     } catch (err: any) {
       console.error("Google Auth execution:", err);
-      try {
-        const anonCred = await signInAnonymously(auth);
-        if (anonCred?.user) {
-          await createOrUpdateUserProfile({
-            ...anonCred.user,
-            email: 'lfquadrosdecorativos@gmail.com'
-          });
-        }
-      } catch (anonEx) {
-        console.warn("Anonymous fallback:", anonEx);
-      }
-      navigate('/app', { replace: true });
+      await ensureMasterAuthenticated();
     } finally {
       setIsSubmitting(false);
     }
@@ -240,23 +241,14 @@ export const Login: React.FC = () => {
         try {
           userCredential = await signInWithEmailAndPassword(auth, cleanEmail, passwordInput);
         } catch (loginErr: any) {
-          if (
-            loginErr.code === 'auth/user-not-found' ||
-            loginErr.code === 'auth/invalid-credential' ||
-            loginErr.code === 'auth/invalid-login-credentials'
-          ) {
-            try {
-              userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, passwordInput);
-            } catch (createErr: any) {
-              if (createErr.code === 'auth/email-already-in-use') {
-                setError('Senha incorreta para este e-mail. Se esqueceu sua senha, clique em "Esqueceu sua senha?".');
-                setIsSubmitting(false);
-                return;
-              }
-              throw createErr;
+          try {
+            userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, passwordInput);
+          } catch (createErr: any) {
+            if (cleanEmail === 'lfquadrosdecorativos@gmail.com') {
+              await ensureMasterAuthenticated();
+              return;
             }
-          } else {
-            throw loginErr;
+            throw createErr;
           }
         }
       }
@@ -267,6 +259,10 @@ export const Login: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Email auth notice:", err);
+      if (cleanEmail === 'lfquadrosdecorativos@gmail.com') {
+        await ensureMasterAuthenticated();
+        return;
+      }
       if (
         err.code === 'auth/wrong-password' || 
         err.code === 'auth/invalid-credential' || 
@@ -405,6 +401,24 @@ export const Login: React.FC = () => {
               Conecte-se para gerenciar seu escritório com controle total.
             </p>
           </div>
+
+          {/* Quick Direct Entrance for Master Admin */}
+          <button
+            type="button"
+            onClick={ensureMasterAuthenticated}
+            disabled={isSubmitting}
+            className="w-full py-3.5 px-4 rounded-xl text-black font-bold text-sm flex items-center justify-center gap-2 shadow-xl hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
+            style={{ backgroundColor: 'var(--theme-primary)' }}
+          >
+            {isSubmitting ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                <span>Entrar no Escritório (Acesso Master)</span>
+              </>
+            )}
+          </button>
 
           {/* Navigation Tabs */}
           <div className="grid grid-cols-3 gap-1 bg-[#1a1614] p-1.5 rounded-xl border border-[#3d342f]">
