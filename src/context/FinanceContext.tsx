@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 import {
@@ -323,62 +323,43 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const [architectProfile, setArchitectProfile] = useState<ArchitectProfile>(() => {
-    const saved = localStorage.getItem(getStorageKey('profile'));
-    if (saved) {
+    // 1. Direct storage retrieval
+    const direct =
+      localStorage.getItem(getStorageKey('profile')) ||
+      localStorage.getItem('office_v2_lfquadrosdecorativos_profile');
+    if (direct) {
       try {
-        const parsed: ArchitectProfile = JSON.parse(saved);
-        // Clean migration: if profile still has legacy hardcoded "Laíne Paula" or "Arquitetura e Interiores"
-        if (parsed.name === 'Laíne Paula' && isOwner) {
-          parsed.name = 'LF Quadros & Decoração';
-          parsed.title = 'Arte, Decoração & Vendas';
-          parsed.specialty = 'Quadros decorativos, telas canvas e mostruário';
-          parsed.niche = 'arte_decoracao';
-          parsed.showPortfolio = true;
-        } else if (parsed.name === 'Laíne Paula') {
-          parsed.name = user?.displayName || 'Meu Escritório';
-          parsed.title = 'Gestão Comercial & Serviços';
+        const parsed: ArchitectProfile = JSON.parse(direct);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
         }
-        if (parsed.niche && parsed.niche !== 'arquitetura') {
-          const n = NICHES[parsed.niche];
-          if (n) {
-            if (
-              !parsed.title ||
-              parsed.title === 'Arquitetura e Interiores' ||
-              parsed.title === 'Arquitetura & Interiores' ||
-              parsed.title === 'Arquiteta & Urbanista' ||
-              parsed.title.toLowerCase().includes('arquitetura')
-            ) {
-              parsed.title = n.defaultTitle;
-            }
-            if (
-              !parsed.specialty ||
-              parsed.specialty.toLowerCase().includes('interiores residenciais') ||
-              parsed.specialty.toLowerCase().includes('arquitetura')
-            ) {
-              parsed.specialty = n.defaultSpecialty;
-            }
-            if (parsed.showPortfolio === undefined) {
-              parsed.showPortfolio = n.hasPortfolio;
-            }
-          }
-        } else if (parsed.title === 'Arquitetura e Interiores' || parsed.title === 'Arquitetura & Interiores') {
-          parsed.title = 'Gestão, Projetos & Vendas';
-        }
-        if (parsed.showPortfolio === undefined) {
-          const n = NICHES[parsed.niche || 'vendas'];
-          parsed.showPortfolio = n?.hasPortfolio ?? true;
-        }
-        return parsed;
       } catch (e) {
         console.error(e);
       }
     }
-    // If owner without saved profile, start with personalized multi-segment profile
+
+    // 2. Scan all localStorage keys for any saved office profile with custom photo or customizations
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('office_v2_') && k.endsWith('_profile')) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && (parsed.photoUrl || (parsed.name && parsed.name !== 'Meu Negócio'))) {
+              return parsed;
+            }
+          }
+        }
+      }
+    } catch {}
+
+    // 3. If owner without saved profile, start with personalized multi-segment profile
     if (isOwner) {
       return {
         name: 'LF Quadros & Decoração',
         title: 'Arte, Decoração & Vendas',
-        photoUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=400&q=80',
+        photoUrl: '',
         location: 'Brasil • Atendimento Nacional',
         specialty: 'Quadros sob medida, telas canvas e composições de parede',
         tagline: 'Arte que transforma ambientes com estilo e sofisticação.',
@@ -877,13 +858,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     isCloudLoadedRef.current = false;
-    const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
+    const primaryUid = 'lfquadrosdecorativos';
+    const workspaceDocRef = doc(db, 'users', primaryUid, 'data', 'workspace');
 
+    // First attempt quick load from primary canonical or targetUid
     const unsubscribe = onSnapshot(
       workspaceDocRef,
       async (snapshot) => {
         if (snapshot.exists()) {
-          // If Firestore is notifying us of local pending writes, skip to prevent feedback loop
           if (snapshot.metadata.hasPendingWrites) {
             return;
           }
@@ -894,6 +876,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (data.profile) {
             setArchitectProfile(data.profile);
             safeSetItem('profile', data.profile);
+            localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(data.profile));
             if (data.profile.themeColor || data.profile.bgTheme) {
               applyThemeToDocument(
                 data.profile.themeColor || 'amber',
@@ -901,63 +884,81 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
               );
             }
           }
-          if (data.transactions) setTransactions(data.transactions);
-          if (data.bankAccounts) setBankAccounts(data.bankAccounts);
+          if (Array.isArray(data.transactions)) setTransactions(data.transactions);
+          if (Array.isArray(data.bankAccounts)) setBankAccounts(data.bankAccounts);
           if (data.houseMortgage) setHouseMortgage(data.houseMortgage);
-          if (data.debts) setDebts(data.debts);
-          if (data.clients) {
-            const cloudClients = Array.isArray(data.clients) ? data.clients : [];
-            setClients(cloudClients);
-          }
-          if (data.freelanceProjects) setFreelanceProjects(Array.isArray(data.freelanceProjects) ? data.freelanceProjects : []);
-          if (data.architectureProjects) {
-            const cloudProjects = Array.isArray(data.architectureProjects) ? data.architectureProjects : [];
-            const filteredProjects = cloudProjects.filter((p: any) => p.id !== 'proj-bfe' && p.id !== 'proj-1');
+          if (Array.isArray(data.debts)) setDebts(data.debts);
+          if (Array.isArray(data.clients)) setClients(data.clients);
+          if (Array.isArray(data.freelanceProjects)) setFreelanceProjects(data.freelanceProjects);
+          if (Array.isArray(data.architectureProjects)) {
+            const filteredProjects = data.architectureProjects.filter((p: any) => p.id !== 'proj-bfe' && p.id !== 'proj-1');
             setArchitectureProjects(filteredProjects);
           }
-          if (data.projectInstallments) {
-            const cloudInst = Array.isArray(data.projectInstallments) ? data.projectInstallments : [];
-            setProjectInstallments(cloudInst);
-          }
-          if (data.projectMilestones) setProjectMilestones(Array.isArray(data.projectMilestones) ? data.projectMilestones : []);
-          if (data.workContracts) {
-            const cloudContracts = Array.isArray(data.workContracts) ? data.workContracts : [];
-            setWorkContracts(cloudContracts);
-          }
-          if (data.savingsGoals) setSavingsGoals(data.savingsGoals);
-          if (data.categoryBudgets) setCategoryBudgets(data.categoryBudgets);
+          if (Array.isArray(data.projectInstallments)) setProjectInstallments(data.projectInstallments);
+          if (Array.isArray(data.projectMilestones)) setProjectMilestones(data.projectMilestones);
+          if (Array.isArray(data.workContracts)) setWorkContracts(data.workContracts);
+          if (Array.isArray(data.savingsGoals)) setSavingsGoals(data.savingsGoals);
+          if (Array.isArray(data.categoryBudgets)) setCategoryBudgets(data.categoryBudgets);
           if (data.officeSettings) setOfficeSettings(data.officeSettings);
-          if (data.actions) setActions(data.actions);
+          if (Array.isArray(data.actions)) setActions(data.actions);
 
           isCloudLoadedRef.current = true;
           setTimeout(() => {
             isSyncingFromCloudRef.current = false;
           }, 100);
         } else {
-          // Document does not exist in Firestore for this user yet. Initialize it!
+          // If canonical doc doesn't exist yet, check targetUid or user doc before initializing
           try {
             isSyncingFromCloudRef.current = true;
-            const payload = {
-              profile: architectProfile,
-              transactions,
-              bankAccounts,
-              houseMortgage,
-              debts,
-              clients,
-              freelanceProjects,
-              architectureProjects,
-              projectInstallments,
-              projectMilestones,
-              workContracts,
-              savingsGoals,
-              categoryBudgets,
-              officeSettings: INITIAL_OFFICE_SETTINGS,
-              actions,
-              updatedAt: new Date().toISOString(),
-            };
-            await setDoc(workspaceDocRef, JSON.parse(JSON.stringify(payload)), { merge: true });
+            let existingData: any = null;
+            if (targetUid !== primaryUid) {
+              const altDoc = await getDoc(doc(db, 'users', targetUid, 'data', 'workspace'));
+              if (altDoc.exists()) {
+                existingData = altDoc.data();
+              }
+            }
+            if (!existingData && user?.uid && user.uid !== primaryUid) {
+              const userAltDoc = await getDoc(doc(db, 'users', user.uid, 'data', 'workspace'));
+              if (userAltDoc.exists()) {
+                existingData = userAltDoc.data();
+              }
+            }
+
+            if (existingData) {
+              if (existingData.profile) setArchitectProfile(existingData.profile);
+              if (Array.isArray(existingData.transactions)) setTransactions(existingData.transactions);
+              if (Array.isArray(existingData.bankAccounts)) setBankAccounts(existingData.bankAccounts);
+              if (Array.isArray(existingData.clients)) setClients(existingData.clients);
+              if (Array.isArray(existingData.architectureProjects)) setArchitectureProjects(existingData.architectureProjects);
+              if (Array.isArray(existingData.projectInstallments)) setProjectInstallments(existingData.projectInstallments);
+              if (Array.isArray(existingData.projectMilestones)) setProjectMilestones(existingData.projectMilestones);
+              if (Array.isArray(existingData.actions)) setActions(existingData.actions);
+              
+              // Seed canonical doc
+              await setDoc(workspaceDocRef, existingData, { merge: true });
+            } else {
+              const payload = {
+                profile: architectProfile,
+                transactions,
+                bankAccounts,
+                houseMortgage,
+                debts,
+                clients,
+                freelanceProjects,
+                architectureProjects,
+                projectInstallments,
+                projectMilestones,
+                workContracts,
+                savingsGoals,
+                categoryBudgets,
+                officeSettings: INITIAL_OFFICE_SETTINGS,
+                actions,
+                updatedAt: new Date().toISOString(),
+              };
+              await setDoc(workspaceDocRef, JSON.parse(JSON.stringify(payload)), { merge: true });
+            }
           } catch (err) {
-            handleFirestoreError(err, OperationType.WRITE, `users/${targetUid}/data/workspace`);
+            handleFirestoreError(err, OperationType.WRITE, `users/${primaryUid}/data/workspace`);
           } finally {
             isCloudLoadedRef.current = true;
             setTimeout(() => {
@@ -967,7 +968,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       },
       (error) => {
-        handleFirestoreError(error, OperationType.GET, `users/${targetUid}/data/workspace`);
+        handleFirestoreError(error, OperationType.GET, `users/${primaryUid}/data/workspace`);
         isCloudLoadedRef.current = true;
       }
     );
@@ -977,11 +978,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Helper for immediate Firestore write on critical changes (e.g. profile, photo, niche, theme)
   const saveToFirestoreImmediate = async (newProfile?: ArchitectProfile) => {
-    if (!targetUid) return;
     try {
       const activeProf = newProfile || architectProfile;
-      const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
-      const userDocRef = doc(db, 'users', targetUid);
+      const canonicalUid = 'lfquadrosdecorativos';
+      const canonicalWorkspaceRef = doc(db, 'users', canonicalUid, 'data', 'workspace');
+      const canonicalUserRef = doc(db, 'users', canonicalUid);
       
       const payload = {
         profile: activeProf,
@@ -1002,18 +1003,31 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updatedAt: new Date().toISOString(),
       };
 
-      await setDoc(workspaceDocRef, JSON.parse(JSON.stringify(payload)), { merge: true });
-      await setDoc(userDocRef, {
-        uid: targetUid,
+      const sanitized = JSON.parse(JSON.stringify(payload));
+      await setDoc(canonicalWorkspaceRef, sanitized, { merge: true });
+      await setDoc(canonicalUserRef, {
+        uid: canonicalUid,
         email: user?.email || 'lfquadrosdecorativos@gmail.com',
         name: activeProf.name || 'LF Quadros & Decoração',
         photoUrl: activeProf.photoUrl || '',
         updatedAt: new Date().toISOString(),
       }, { merge: true }).catch(() => {});
 
-      if (user?.uid && user.uid !== targetUid) {
+      if (targetUid && targetUid !== canonicalUid) {
+        const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
+        await setDoc(workspaceDocRef, sanitized, { merge: true }).catch(() => {});
+        await setDoc(doc(db, 'users', targetUid), {
+          uid: targetUid,
+          email: user?.email || 'lfquadrosdecorativos@gmail.com',
+          name: activeProf.name || 'LF Quadros & Decoração',
+          photoUrl: activeProf.photoUrl || '',
+          updatedAt: new Date().toISOString(),
+        }, { merge: true }).catch(() => {});
+      }
+
+      if (user?.uid && user.uid !== canonicalUid && user.uid !== targetUid) {
         const mirrorDocRef = doc(db, 'users', user.uid, 'data', 'workspace');
-        await setDoc(mirrorDocRef, JSON.parse(JSON.stringify(payload)), { merge: true }).catch(() => {});
+        await setDoc(mirrorDocRef, sanitized, { merge: true }).catch(() => {});
         await setDoc(doc(db, 'users', user.uid), {
           uid: user.uid,
           email: user?.email || 'lfquadrosdecorativos@gmail.com',
@@ -1029,13 +1043,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Auto-save local changes to Firestore (debounced 500ms)
   useEffect(() => {
-    if (!targetUid || !isCloudLoadedRef.current || isSyncingFromCloudRef.current) {
+    if (!isCloudLoadedRef.current || isSyncingFromCloudRef.current) {
       return;
     }
 
     const timer = setTimeout(async () => {
       try {
-        const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
+        const canonicalUid = 'lfquadrosdecorativos';
+        const canonicalWorkspaceRef = doc(db, 'users', canonicalUid, 'data', 'workspace');
         const payload = {
           profile: architectProfile,
           transactions,
@@ -1054,9 +1069,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           actions,
           updatedAt: new Date().toISOString(),
         };
-        await setDoc(workspaceDocRef, JSON.parse(JSON.stringify(payload)), { merge: true });
+        const sanitized = JSON.parse(JSON.stringify(payload));
+        await setDoc(canonicalWorkspaceRef, sanitized, { merge: true });
+
+        if (targetUid && targetUid !== canonicalUid) {
+          const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
+          await setDoc(workspaceDocRef, sanitized, { merge: true }).catch(() => {});
+        }
+        if (user?.uid && user.uid !== canonicalUid && user.uid !== targetUid) {
+          const userWorkspaceRef = doc(db, 'users', user.uid, 'data', 'workspace');
+          await setDoc(userWorkspaceRef, sanitized, { merge: true }).catch(() => {});
+        }
       } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, `users/${targetUid}/data/workspace`);
+        handleFirestoreError(err, OperationType.WRITE, `users/lfquadrosdecorativos/data/workspace`);
       }
     }, 500);
 
@@ -1079,103 +1104,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     officeSettings,
     actions,
   ]);
-
-  // One-time automatic reset for requested modules: Financeiro, Projetos, Equipe, Fornecedores
-  useEffect(() => {
-    const migrationKey = getStorageKey('reset_requested_modules_v3');
-    const migrated = localStorage.getItem(migrationKey);
-    if (!migrated) {
-      recordLocalMutation();
-      // Zero out Finance
-      setTransactions([]);
-      setBankAccounts(EMPTY_BANK_ACCOUNTS);
-      setHouseMortgage(EMPTY_HOUSE_MORTGAGE);
-      setDebts([]);
-      setProjectInstallments([]);
-      setWorkContracts([]);
-      setSavingsGoals([]);
-      setActions([]);
-
-      // Zero out Projects
-      setArchitectureProjects([]);
-      setFreelanceProjects([]);
-      setProjectMilestones([]);
-
-      // Zero out Suppliers in localStorage
-      try {
-        localStorage.setItem('meu_escritorio_fornecedores_v1', JSON.stringify([]));
-        window.dispatchEvent(new CustomEvent('suppliers_updated'));
-      } catch {}
-
-      // Reset Team to only the current owner in localStorage
-      try {
-        const ownerAdminMember: TeamMember = {
-          id: 'member_owner',
-          name: architectProfile.name || user?.displayName || 'LF Quadros & Decoração',
-          email: user?.email || 'lfquadrosdecorativos@gmail.com',
-          role: 'admin',
-          roleTitle: 'Administrador / Gestor',
-          initials: 'LF',
-          color: '#b8a38b',
-          isCurrentUser: true,
-          status: 'active',
-          accessibleModulesCount: 9,
-          permissions: {
-            projects: true,
-            actions: true,
-            clients: true,
-            suppliers: true,
-            finance: true,
-            deadlines: true,
-            goals: true,
-            budget: true,
-            team: true,
-          },
-          joinedAt: new Date().toISOString().split('T')[0],
-        };
-        localStorage.setItem('meu_escritorio_equipe_v1', JSON.stringify([ownerAdminMember]));
-        window.dispatchEvent(new CustomEvent('team_updated'));
-      } catch {}
-
-      // Save empty modules to user-scoped localStorage
-      safeSetItem('transactions', []);
-      safeSetItem('accounts', EMPTY_BANK_ACCOUNTS);
-      safeSetItem('mortgage', EMPTY_HOUSE_MORTGAGE);
-      safeSetItem('debts', []);
-      safeSetItem('installments', []);
-      safeSetItem('work_contracts', []);
-      safeSetItem('goals', []);
-      safeSetItem('actions', []);
-      safeSetItem('architecture_projects', []);
-      safeSetItem('projects', []);
-      safeSetItem('milestones', []);
-
-      localStorage.setItem(migrationKey, 'true');
-
-      // Also persist clean state to Firestore
-      if (targetUid) {
-        const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
-        setDoc(
-          workspaceDocRef,
-          {
-            transactions: [],
-            bankAccounts: EMPTY_BANK_ACCOUNTS,
-            houseMortgage: EMPTY_HOUSE_MORTGAGE,
-            debts: [],
-            projectInstallments: [],
-            workContracts: [],
-            savingsGoals: [],
-            actions: [],
-            architectureProjects: [],
-            freelanceProjects: [],
-            projectMilestones: [],
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true }
-        ).catch(console.error);
-      }
-    }
-  }, [targetUid]);
 
   // Actions - Profile & Customization
   const updateArchitectProfile = (updatedFields: Partial<ArchitectProfile>) => {

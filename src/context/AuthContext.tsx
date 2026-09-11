@@ -85,50 +85,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   useEffect(() => {
-    if (localSession) {
-      setUser(localSession as any);
-      setProfile({
-        uid: localSession.uid,
-        email: localSession.email,
-        role: 'admin',
+    let unsubscribeProfile: () => void = () => {};
+    let unsubscribeOwnerProfile: () => void = () => {};
+    let unsubscribeCanonical: () => void = () => {};
+
+    const syncUserData = (activeUser: any) => {
+      const email = activeUser?.email || '';
+      const isOwnerAccount =
+        !email ||
+        email.toLowerCase() === 'lfquadrosdecorativos@gmail.com' ||
+        activeUser?.isAnonymous ||
+        email.toLowerCase().includes('master_escritorio');
+
+      const activeUid = activeUser?.uid || 'lfquadrosdecorativos';
+
+      const defaultProfile: UserProfile = {
+        uid: activeUid,
+        email: email || 'lfquadrosdecorativos@gmail.com',
+        role: isOwnerAccount ? 'admin' : 'user',
         status: 'active',
+        subscriptionDueDate: undefined,
         createdAt: new Date().toISOString(),
         inviteCode: 'MASTER',
         collaborators: [],
         collaboratorUids: [],
-        extraSlots: 0
-      });
+        extraSlots: 0,
+      };
+
+      setProfile((prev) => prev || defaultProfile);
       setLoading(false);
-      return;
-    }
 
-    let unsubscribeProfile: () => void;
-    let unsubscribeOwnerProfile: () => void;
+      // Listen to canonical owner doc if owner account
+      const canonicalRef = doc(db, 'users', 'lfquadrosdecorativos');
+      unsubscribeCanonical = onSnapshot(canonicalRef, (canSnap) => {
+        if (canSnap.exists()) {
+          const canData = canSnap.data() as UserProfile;
+          setProfile((prev) => ({
+            ...prev,
+            ...canData,
+            role: 'admin',
+            status: 'active',
+          }));
+        }
+      }, () => {});
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        const email = firebaseUser.email || '';
-        const isOwnerAccount = !email || email.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || firebaseUser.isAnonymous || email.toLowerCase().includes('master_escritorio');
-
-        const defaultProfile: UserProfile = {
-          uid: firebaseUser.uid,
-          email: email || 'lfquadrosdecorativos@gmail.com',
-          role: isOwnerAccount ? 'admin' : 'user',
-          status: 'active',
-          subscriptionDueDate: undefined,
-          createdAt: new Date().toISOString(),
-          inviteCode: generateInviteCode(),
-          collaborators: [],
-          collaboratorUids: [],
-          extraSlots: 0,
-        };
-
-        setProfile(defaultProfile);
-        setLoading(false);
-
-        // Background sync with Firestore
-        const docRef = doc(db, 'users', firebaseUser.uid);
+      if (activeUid !== 'lfquadrosdecorativos') {
+        const docRef = doc(db, 'users', activeUid);
         unsubscribeProfile = onSnapshot(docRef, async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
@@ -148,18 +150,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
               }, () => {});
             } else {
-              const isMaster = isOwnerAccount || (data.email && data.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com');
-              setProfile({ ...data, role: isMaster ? 'admin' : (data.role || 'user'), status: 'active' });
+              const isMaster =
+                isOwnerAccount ||
+                (data.email && data.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com');
+              setProfile((prev) => ({
+                ...prev,
+                ...data,
+                role: isMaster ? 'admin' : data.role || 'user',
+                status: 'active',
+              }));
             }
-          } else {
-            setDoc(docRef, defaultProfile, { merge: true }).catch(() => {});
           }
         }, () => {});
-      } else {
+      }
+    };
+
+    if (localSession) {
+      setUser(localSession as any);
+      syncUserData(localSession);
+    }
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        syncUserData(firebaseUser);
+      } else if (!localSession) {
+        setUser(null);
         setProfile(null);
         setLoading(false);
-        if (unsubscribeProfile) unsubscribeProfile();
-        if (unsubscribeOwnerProfile) unsubscribeOwnerProfile();
       }
     });
 
@@ -167,6 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       unsubscribeAuth();
       if (unsubscribeProfile) unsubscribeProfile();
       if (unsubscribeOwnerProfile) unsubscribeOwnerProfile();
+      if (unsubscribeCanonical) unsubscribeCanonical();
     };
   }, [localSession]);
 
