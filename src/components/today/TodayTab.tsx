@@ -536,50 +536,62 @@ export const TodayTab: React.FC = () => {
     }, 3500);
   };
 
-  // Safe Deletion wrapper to handle local actions, Google Calendar events, and Google Tasks
+  // Safe Deletion wrapper to handle local actions, Google Calendar events, and Google Tasks with immediate UI update
   const handleDeleteActionWrapper = async (id: string) => {
-    const act = actions.find((a) => a.id === id);
-    if (act && act.gcalEventId && isGoogleSynced && getGoogleAccessToken()) {
-      try {
-        await deleteGoogleEvent(act.gcalEventId);
-      } catch (err) {
-        console.warn("Google Calendar deletion error:", err);
-      }
-    } else if (act && act.gcalTaskId && isGoogleSynced && getGoogleAccessToken()) {
-      try {
-        await deleteGoogleTask(act.gcalTaskId, act.gcalTaskListId);
-        setGoogleTasks((prev) => prev.filter((t) => t.id !== act.gcalTaskId));
-      } catch (err) {
-        console.warn("Google Task deletion error:", err);
-      }
-    } else if (id.startsWith('gcal-')) {
-      // It's a Google Calendar event from the live list
-      const cleanId = id.replace('gcal-', '');
-      if (isGoogleSynced && getGoogleAccessToken()) {
-        try {
-          await deleteGoogleEvent(cleanId);
-          const events = await fetchGoogleEvents();
-          setGoogleEvents(events);
-          return;
-        } catch (err) {
-          console.warn("Google Calendar live event deletion error:", err);
-        }
-      }
+    let targetGcalId: string | null = null;
+    let targetGtaskId: string | null = null;
+    let targetGtaskListId = '@default';
+
+    if (id.startsWith('gcal-')) {
+      targetGcalId = id.replace('gcal-', '');
     } else if (id.startsWith('gtask-')) {
-      // It's a Google Task from the live list
-      const cleanId = id.replace('gtask-', '');
-      if (isGoogleSynced && getGoogleAccessToken()) {
-        try {
-          const found = googleTasks.find((t) => t.id === cleanId);
-          await deleteGoogleTask(cleanId, found?.listId || '@default');
-          setGoogleTasks((prev) => prev.filter((t) => t.id !== cleanId));
-          return;
-        } catch (err) {
-          console.warn("Google Task live task deletion error:", err);
-        }
+      targetGtaskId = id.replace('gtask-', '');
+    }
+
+    const localAct = actions.find((a) => a.id === id);
+    if (localAct) {
+      if (localAct.gcalEventId) targetGcalId = localAct.gcalEventId;
+      if (localAct.gcalTaskId) {
+        targetGtaskId = localAct.gcalTaskId;
+        targetGtaskListId = localAct.gcalTaskListId || '@default';
       }
     }
+
+    // 1. Optimistic removal from in-memory Google lists immediately
+    if (targetGcalId) {
+      setGoogleEvents((prev) => prev.filter((e) => e.id !== targetGcalId));
+    }
+    if (targetGtaskId) {
+      setGoogleTasks((prev) => prev.filter((t) => t.id !== targetGtaskId));
+    }
+
+    // 2. Remove from local actions database & any duplicated records
     deleteAppAction(id);
+    if (targetGcalId) {
+      const related = actions.filter((a) => a.gcalEventId === targetGcalId && a.id !== id);
+      related.forEach((r) => deleteAppAction(r.id));
+    }
+    if (targetGtaskId) {
+      const related = actions.filter((a) => a.gcalTaskId === targetGtaskId && a.id !== id);
+      related.forEach((r) => deleteAppAction(r.id));
+    }
+
+    // 3. Asynchronously trigger Google API deletion in background
+    if (targetGcalId && isGoogleSynced) {
+      try {
+        await deleteGoogleEvent(targetGcalId);
+      } catch (err) {
+        console.warn("Google Calendar deletion notice:", err);
+      }
+    }
+    if (targetGtaskId && isGoogleSynced) {
+      try {
+        const found = googleTasks.find((t) => t.id === targetGtaskId);
+        await deleteGoogleTask(targetGtaskId, found?.listId || targetGtaskListId);
+      } catch (err) {
+        console.warn("Google Task deletion notice:", err);
+      }
+    }
   };
 
   // Calendar Helpers
@@ -844,15 +856,13 @@ export const TodayTab: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Quick Google Sync Indicator in Header */}
           {isGoogleSynced && (
-            <button
-              onClick={handleRefreshGoogleEvents}
-              disabled={isSyncingCalendar}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 transition-all cursor-pointer disabled:opacity-50"
-              title="Sincronização contínua com Google Agenda & Tarefas ativa"
+            <div
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-xs"
+              title="Sincronização contínua com Google Agenda & Tarefas ativa em segundo plano"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCalendar ? 'animate-spin text-emerald-400' : ''}`} />
-              <span>{isSyncingCalendar ? 'Sincronizando...' : 'Google Ativo'}</span>
-            </button>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Google Sincronizado</span>
+            </div>
           )}
 
           <div className="flex bg-[#181513] p-1 rounded-xl border border-[#3d342f] shadow-sm">
@@ -930,25 +940,14 @@ export const TodayTab: React.FC = () => {
 
             <div className="flex items-center gap-2 shrink-0">
               {isGoogleSynced && (
-                <>
-                  <button
-                    onClick={handleRefreshGoogleEvents}
-                    disabled={isSyncingCalendar}
-                    className="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer bg-emerald-500 hover:bg-emerald-400 text-black shadow-md disabled:opacity-50"
-                    title="Buscar novos eventos e tarefas no Google"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCalendar ? 'animate-spin' : ''}`} />
-                    <span>{isSyncingCalendar ? 'Sincronizando...' : 'Atualizar Agora'}</span>
-                  </button>
-
-                  <button
-                    onClick={handleDisconnectGoogleCalendar}
-                    className="p-2.5 rounded-xl text-xs font-bold text-[#a89c93] hover:text-red-400 hover:bg-red-500/10 border border-[#3d342f] transition-all cursor-pointer"
-                    title="Desconectar do Google"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </>
+                <button
+                  onClick={handleDisconnectGoogleCalendar}
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[#a89c93] hover:text-red-400 hover:bg-red-500/10 border border-[#3d342f] transition-all cursor-pointer flex items-center gap-1.5"
+                  title="Desconectar conta do Google"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Desconectar</span>
+                </button>
               )}
 
               {!isGoogleSynced && (
@@ -2029,13 +2028,30 @@ export const TodayTab: React.FC = () => {
 
               {/* Footer */}
               <div className="p-4 px-6 border-t border-[#2d2520] flex items-center justify-between bg-[#161311]">
-                <button
-                  type="button"
-                  onClick={() => setIsActionModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-[#ded5cc] bg-[#221c18] border border-[#3d342f] hover:bg-[#2c241f] transition-all cursor-pointer"
-                >
-                  Cancelar
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsActionModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-[#ded5cc] bg-[#221c18] border border-[#3d342f] hover:bg-[#2c241f] transition-all cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+
+                  {editingAction && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleDeleteActionWrapper(editingAction.id);
+                        setIsActionModalOpen(false);
+                      }}
+                      className="px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 hover:text-rose-300 transition-all cursor-pointer flex items-center gap-1.5"
+                      title="Excluir este compromisso permanentemente"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Excluir</span>
+                    </button>
+                  )}
+                </div>
 
                 <button
                   type="submit"

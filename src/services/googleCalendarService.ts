@@ -565,7 +565,10 @@ export const updateGoogleEvent = async (
  * Deletes an event from the Google Calendar
  */
 export const deleteGoogleEvent = async (eventId: string): Promise<void> => {
-  const token = getGoogleAccessToken();
+  let token = getGoogleAccessToken();
+  if (!token) {
+    token = await restoreGoogleTokenFromCloud();
+  }
   if (!token) {
     throw new Error('Sessão do Google expirada. Reautorize para sincronizar.');
   }
@@ -577,7 +580,7 @@ export const deleteGoogleEvent = async (eventId: string): Promise<void> => {
     },
   });
 
-  if (!response.ok && response.status !== 404) {
+  if (!response.ok && response.status !== 404 && response.status !== 410) {
     const errText = await response.text();
     throw new Error(`Erro ao excluir evento no Google: ${errText}`);
   }
