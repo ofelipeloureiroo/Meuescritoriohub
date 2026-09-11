@@ -93,6 +93,7 @@ export const Login: React.FC = () => {
   };
 
   useEffect(() => {
+    console.log("Login user effect:", user);
     if (user) {
       localStorage.setItem('office_active_tab', 'today');
       navigate('/app', { replace: true });
@@ -236,6 +237,7 @@ export const Login: React.FC = () => {
 
       if (userCredential?.user) {
         await createOrUpdateUserProfile(userCredential.user);
+        localStorage.setItem('office_active_tab', 'today');
         navigate('/app', { replace: true });
       }
     } catch (err: any) {

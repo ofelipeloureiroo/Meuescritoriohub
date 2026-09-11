@@ -46,7 +46,9 @@ import { SubscriptionGuard } from './components/auth/SubscriptionGuard';
 const AppContent: React.FC = () => {
   // Default to 'Meu Dia & Agenda'
   const [activeTab, setActiveTab] = useState<string>(() => {
-    return localStorage.getItem('office_active_tab') || 'today';
+    const tab = localStorage.getItem('office_active_tab') || 'today';
+    console.log("AppContent activeTab init:", tab);
+    return tab;
   });
 
   useEffect(() => {
