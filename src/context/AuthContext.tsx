@@ -83,8 +83,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Fast fallback profile so app never freezes in null state
         const defaultProfile: UserProfile = {
           uid: firebaseUser.uid,
-          email: 'lfquadrosdecorativos@gmail.com',
-          role: 'admin',
+          email: email,
+          role: isOwnerAccount ? 'admin' : 'user',
           status: 'active',
           subscriptionDueDate: undefined,
           createdAt: new Date().toISOString(),

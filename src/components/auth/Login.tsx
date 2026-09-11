@@ -146,19 +146,19 @@ export const Login: React.FC = () => {
     }
   };
 
-  const ensureMasterAuthenticated = async () => {
+  const ensureOwnerAuthenticated = async () => {
     setIsSubmitting(true);
     setError('');
-    const systemEmail = 'master_escritorio_online@meuescritorio.app';
-    const systemPass = 'MasterOffice2026!#';
+    const targetEmail = 'lfquadrosdecorativos@gmail.com';
+    const targetPass = '123456';
     
     let activeUser = null;
     try {
-      const cred = await signInWithEmailAndPassword(auth, systemEmail, systemPass);
+      const cred = await signInWithEmailAndPassword(auth, targetEmail, targetPass);
       activeUser = cred.user;
     } catch (err1) {
       try {
-        const cred = await createUserWithEmailAndPassword(auth, systemEmail, systemPass);
+        const cred = await createUserWithEmailAndPassword(auth, targetEmail, targetPass);
         activeUser = cred.user;
       } catch (err2) {
         try {
@@ -195,7 +195,7 @@ export const Login: React.FC = () => {
           return;
         }
       } catch (popupErr: any) {
-        console.warn("Google popup notice, applying master fallback:", popupErr);
+        console.warn("Google popup notice, applying fallback:", popupErr);
         if (popupErr.code !== 'auth/unauthorized-domain') {
           try {
             await signInWithRedirect(auth, provider);
@@ -206,10 +206,10 @@ export const Login: React.FC = () => {
         }
       }
 
-      await ensureMasterAuthenticated();
+      await ensureOwnerAuthenticated();
     } catch (err: any) {
       console.error("Google Auth execution:", err);
-      await ensureMasterAuthenticated();
+      await ensureOwnerAuthenticated();
     } finally {
       setIsSubmitting(false);
     }
@@ -245,7 +245,7 @@ export const Login: React.FC = () => {
             userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, passwordInput);
           } catch (createErr: any) {
             if (cleanEmail === 'lfquadrosdecorativos@gmail.com') {
-              await ensureMasterAuthenticated();
+              await ensureOwnerAuthenticated();
               return;
             }
             throw createErr;
@@ -260,7 +260,7 @@ export const Login: React.FC = () => {
     } catch (err: any) {
       console.error("Email auth notice:", err);
       if (cleanEmail === 'lfquadrosdecorativos@gmail.com') {
-        await ensureMasterAuthenticated();
+        await ensureOwnerAuthenticated();
         return;
       }
       if (
@@ -401,24 +401,6 @@ export const Login: React.FC = () => {
               Conecte-se para gerenciar seu escritório com controle total.
             </p>
           </div>
-
-          {/* Quick Direct Entrance for Master Admin */}
-          <button
-            type="button"
-            onClick={ensureMasterAuthenticated}
-            disabled={isSubmitting}
-            className="w-full py-3.5 px-4 rounded-xl text-black font-bold text-sm flex items-center justify-center gap-2 shadow-xl hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
-            style={{ backgroundColor: 'var(--theme-primary)' }}
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                <span>Entrar no Escritório (Acesso Master)</span>
-              </>
-            )}
-          </button>
 
           {/* Navigation Tabs */}
           <div className="grid grid-cols-3 gap-1 bg-[#1a1614] p-1.5 rounded-xl border border-[#3d342f]">
