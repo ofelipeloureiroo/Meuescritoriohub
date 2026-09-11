@@ -8,6 +8,71 @@ import { db } from '../lib/firebase';
 let cachedGCalToken: string | null = null;
 let cachedGCalEmail: string | null = null;
 
+// ==========================================
+// TOMBSTONES FOR DELETED GOOGLE ITEMS
+// Prevents deleted events/tasks from reappearing after sync or cache reload
+// ==========================================
+const GCAL_DELETED_KEY = 'office_deleted_gcal_ids';
+const GTASK_DELETED_KEY = 'office_deleted_gtask_ids';
+
+export const getDeletedGcalIds = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem(GCAL_DELETED_KEY);
+    if (raw) return new Set(JSON.parse(raw));
+  } catch {}
+  return new Set();
+};
+
+export const addDeletedGcalId = (id: string) => {
+  if (!id) return;
+  try {
+    const cleanId = id.replace(/^gcal-/, '');
+    const set = getDeletedGcalIds();
+    set.add(cleanId);
+    set.add(id);
+    localStorage.setItem(GCAL_DELETED_KEY, JSON.stringify(Array.from(set)));
+
+    // Clean from cached events in localStorage
+    const cachedRaw = localStorage.getItem('office_cached_gcal_events');
+    if (cachedRaw) {
+      const cached = JSON.parse(cachedRaw);
+      if (Array.isArray(cached)) {
+        const filtered = cached.filter((e: any) => e.id !== cleanId && e.id !== id);
+        localStorage.setItem('office_cached_gcal_events', JSON.stringify(filtered));
+      }
+    }
+  } catch {}
+};
+
+export const getDeletedGtaskIds = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem(GTASK_DELETED_KEY);
+    if (raw) return new Set(JSON.parse(raw));
+  } catch {}
+  return new Set();
+};
+
+export const addDeletedGtaskId = (id: string) => {
+  if (!id) return;
+  try {
+    const cleanId = id.replace(/^gtask-/, '');
+    const set = getDeletedGtaskIds();
+    set.add(cleanId);
+    set.add(id);
+    localStorage.setItem(GTASK_DELETED_KEY, JSON.stringify(Array.from(set)));
+
+    // Clean from cached tasks in localStorage
+    const cachedRaw = localStorage.getItem('office_cached_gtasks');
+    if (cachedRaw) {
+      const cached = JSON.parse(cachedRaw);
+      if (Array.isArray(cached)) {
+        const filtered = cached.filter((t: any) => t.id !== cleanId && t.id !== id);
+        localStorage.setItem('office_cached_gtasks', JSON.stringify(filtered));
+      }
+    }
+  } catch {}
+};
+
 export interface GoogleCalendarEvent {
   id: string;
   summary: string;
@@ -402,8 +467,9 @@ export const fetchGoogleEvents = async (timeMin?: string, timeMax?: string): Pro
           if (response.ok) {
             const data = await response.json();
             if (data.items && Array.isArray(data.items)) {
+              const deletedGcalIds = getDeletedGcalIds();
               for (const item of data.items) {
-                if (item.id && item.status !== 'cancelled') {
+                if (item.id && item.status !== 'cancelled' && !deletedGcalIds.has(item.id)) {
                   allEventsMap.set(item.id, {
                     ...item,
                     calendarId: cal.id,
@@ -424,7 +490,8 @@ export const fetchGoogleEvents = async (timeMin?: string, timeMax?: string): Pro
     })
   );
 
-  const eventList = Array.from(allEventsMap.values());
+  const deletedIds = getDeletedGcalIds();
+  const eventList = Array.from(allEventsMap.values()).filter(e => !deletedIds.has(e.id));
   if (eventList.length > 0) {
     try {
       localStorage.setItem('office_cached_gcal_events', JSON.stringify(eventList));
@@ -433,7 +500,12 @@ export const fetchGoogleEvents = async (timeMin?: string, timeMax?: string): Pro
     // If live returned empty due to network glitch, try reading cache
     try {
       const cached = localStorage.getItem('office_cached_gcal_events');
-      if (cached) return JSON.parse(cached);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((e: any) => !deletedIds.has(e.id));
+        }
+      }
     } catch {}
   }
 
@@ -564,25 +636,38 @@ export const updateGoogleEvent = async (
 /**
  * Deletes an event from the Google Calendar
  */
-export const deleteGoogleEvent = async (eventId: string): Promise<void> => {
+export const deleteGoogleEvent = async (eventId: string, calendarId = 'primary'): Promise<void> => {
+  if (!eventId) return;
+  const cleanId = eventId.replace(/^gcal-/, '');
+  addDeletedGcalId(cleanId);
+
   let token = getGoogleAccessToken();
   if (!token) {
     token = await restoreGoogleTokenFromCloud();
   }
   if (!token) {
-    throw new Error('Sessão do Google expirada. Reautorize para sincronizar.');
+    return;
   }
 
-  const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`, {
-    method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const calIdToUse = calendarId || 'primary';
+  try {
+    const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calIdToUse)}/events/${encodeURIComponent(cleanId)}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  if (!response.ok && response.status !== 404 && response.status !== 410) {
-    const errText = await response.text();
-    throw new Error(`Erro ao excluir evento no Google: ${errText}`);
+    if (!response.ok && response.status !== 404 && response.status !== 410 && calIdToUse !== 'primary') {
+      await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(cleanId)}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    }
+  } catch (err) {
+    console.warn('Erro ao excluir evento no Google Agenda:', err);
   }
 };
 
@@ -693,18 +778,26 @@ export const fetchGoogleTasks = async (): Promise<GoogleTaskItem[]> => {
     })
   );
 
-  if (allTasks.length > 0) {
+  const deletedTaskIds = getDeletedGtaskIds();
+  const filteredTasks = allTasks.filter(item => item.id && !deletedTaskIds.has(item.id));
+
+  if (filteredTasks.length > 0) {
     try {
-      localStorage.setItem('office_cached_gtasks', JSON.stringify(allTasks));
+      localStorage.setItem('office_cached_gtasks', JSON.stringify(filteredTasks));
     } catch {}
   } else {
     try {
       const cached = localStorage.getItem('office_cached_gtasks');
-      if (cached) return JSON.parse(cached);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((t: any) => !deletedTaskIds.has(t.id));
+        }
+      }
     } catch {}
   }
 
-  return allTasks;
+  return filteredTasks;
 };
 
 /**
@@ -800,17 +893,31 @@ export const deleteGoogleTask = async (
   taskId: string,
   listId = '@default'
 ): Promise<void> => {
+  if (!taskId) return;
+  const cleanId = taskId.replace(/^gtask-/, '');
+  addDeletedGtaskId(cleanId);
+
   let token = getGoogleAccessToken();
   if (!token) token = await restoreGoogleTokenFromCloud();
   if (!token) return;
 
+  const targetList = listId || '@default';
   try {
-    await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(listId)}/tasks/${encodeURIComponent(taskId)}`, {
+    const res = await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(targetList)}/tasks/${encodeURIComponent(cleanId)}`, {
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
+
+    if (!res.ok && res.status !== 404 && targetList !== '@default') {
+      await fetch(`https://tasks.googleapis.com/tasks/v1/lists/@default/tasks/${encodeURIComponent(cleanId)}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    }
   } catch (err) {
     console.warn('Erro ao excluir tarefa do Google:', err);
   }

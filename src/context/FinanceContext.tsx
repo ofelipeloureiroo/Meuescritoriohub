@@ -53,6 +53,7 @@ import {
 import { applyThemeToDocument, NICHES, THEMES } from '../utils/theme';
 import { getNicheSampleProjects } from '../utils/nicheSampleData';
 import { deleteClientPortalsForClient } from '../services/clientPortalService';
+import { deleteGoogleEvent, deleteGoogleTask, addDeletedGcalId, addDeletedGtaskId } from '../services/googleCalendarService';
 
 interface FinanceContextType {
   architectProfile: ArchitectProfile;
@@ -2204,6 +2205,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteAppAction = (id: string) => {
     recordLocalMutation();
+    const target = actions.find((a) => a.id === id);
+    if (target) {
+      if (target.gcalEventId) {
+        addDeletedGcalId(target.gcalEventId);
+        deleteGoogleEvent(target.gcalEventId).catch((e) => console.warn("Google Event deletion notice:", e));
+      }
+      if (target.gcalTaskId) {
+        addDeletedGtaskId(target.gcalTaskId);
+        deleteGoogleTask(target.gcalTaskId, target.gcalTaskListId || '@default').catch((e) => console.warn("Google Task deletion notice:", e));
+      }
+    } else {
+      if (id.startsWith('gcal-')) {
+        const cleanId = id.replace(/^gcal-/, '');
+        addDeletedGcalId(cleanId);
+        deleteGoogleEvent(cleanId).catch((e) => console.warn("Google Event deletion notice:", e));
+      } else if (id.startsWith('gtask-')) {
+        const cleanId = id.replace(/^gtask-/, '');
+        addDeletedGtaskId(cleanId);
+        deleteGoogleTask(cleanId).catch((e) => console.warn("Google Task deletion notice:", e));
+      }
+    }
     setActions((prev) => prev.filter((a) => a.id !== id));
   };
 
