@@ -1,6 +1,9 @@
 import { GoogleAuthProvider, signInWithPopup, linkWithPopup, reauthenticateWithPopup } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+
 // In-memory cache for the Google Calendar OAuth Access Token and Email
 let cachedGCalToken: string | null = null;
 let cachedGCalEmail: string | null = null;
@@ -47,60 +50,114 @@ export const isGoogleCalendarEnabled = (): boolean => {
  */
 export const authenticateGoogleCalendar = async (): Promise<{ token: string; email: string }> => {
   return new Promise((resolve, reject) => {
-    // We use the AI Studio preview URL because it's authorized in Firebase console
-    const proxyUrl = 'https://ais-pre-su4zqshj47o55562to2iuv-729561127771.us-east1.run.app/oauth-proxy';
+    const sessionId = 'gcal_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
     
-    // Check if we are ALREADY on the authorized domain
-    if (window.location.hostname.includes('ais-pre-') || window.location.hostname.includes('localhost') || window.location.hostname.includes('ais-dev-')) {
-       openProxy(`${window.location.origin}/oauth-proxy`, resolve, reject);
-    } else {
-       openProxy(proxyUrl, resolve, reject);
-    }
-  });
-};
+    // Choose proxy base domain
+    const isLocalOrPreview = window.location.hostname.includes('ais-pre-') || 
+                             window.location.hostname.includes('localhost') || 
+                             window.location.hostname.includes('ais-dev-');
 
-const openProxy = (url: string, resolve: any, reject: any) => {
+    const baseOrigin = isLocalOrPreview 
+      ? window.location.origin 
+      : 'https://ais-pre-su4zqshj47o55562to2iuv-729561127771.us-east1.run.app';
+
+    const proxyUrl = `${baseOrigin}/oauth-proxy?session=${sessionId}`;
+
+    let isFinished = false;
+    let unsubscribeFirestore: (() => void) | null = null;
+    let timeoutTimer: any = null;
+
+    const cleanup = () => {
+      if (unsubscribeFirestore) {
+        try { unsubscribeFirestore(); } catch {}
+      }
+      if (timeoutTimer) {
+        clearTimeout(timeoutTimer);
+      }
+      window.removeEventListener('message', messageListener);
+    };
+
+    const handleSuccess = (token: string, email: string) => {
+      if (isFinished) return;
+      isFinished = true;
+      cleanup();
+
+      cachedGCalToken = token;
+      cachedGCalEmail = email || 'lfquadrosdecorativos@gmail.com';
+      localStorage.setItem('office_gcal_synced', 'true');
+      localStorage.setItem('office_gcal_email', cachedGCalEmail);
+
+      if (popup && !popup.closed) {
+        try { popup.close(); } catch {}
+      }
+
+      resolve({ token, email: cachedGCalEmail });
+    };
+
+    const handleError = (errorMsg: string) => {
+      if (isFinished) return;
+      isFinished = true;
+      cleanup();
+
+      if (popup && !popup.closed) {
+        try { popup.close(); } catch {}
+      }
+
+      reject(new Error(errorMsg));
+    };
+
+    // Channel 1: postMessage listener (for desktop or when opener persists)
+    const messageListener = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'OAUTH_SUCCESS' && event.data.token) {
+        handleSuccess(event.data.token, event.data.email);
+      } else if (event.data && event.data.type === 'OAUTH_ERROR') {
+        handleError(event.data.error || 'Falha na autenticação do Google.');
+      }
+    };
+    window.addEventListener('message', messageListener);
+
+    // Channel 2: Firestore snapshot listener (100% reliable across mobile tabs / separate origins)
+    try {
+      const sessionDocRef = doc(db, 'oauth_sessions', sessionId);
+      unsubscribeFirestore = onSnapshot(sessionDocRef, (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.status === 'success' && data.token) {
+            handleSuccess(data.token, data.email);
+          } else if (data.status === 'error') {
+            handleError(data.error || 'Erro na autenticação.');
+          }
+        }
+      });
+    } catch (fsErr) {
+      console.warn('Firestore snapshot listener failed to attach:', fsErr);
+    }
+
+    // Open popup directly within the click event
     const width = 500;
     const height = 650;
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
-    
+
     const popup = window.open(
-      url,
+      proxyUrl,
       'GoogleOAuthPopup',
       `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`
     );
 
     if (!popup) {
-      reject(new Error('Bloqueador de popups ativo. Por favor, permita popups para este site.'));
+      cleanup();
+      reject(new Error('Bloqueador de popups ativo. Por favor, permita popups para este site ou clique em "Sempre mostrar".'));
       return;
     }
 
-    const messageListener = (event: MessageEvent) => {
-      // Validate that it's an expected oauth message
-      if (event.data && event.data.type === 'OAUTH_SUCCESS') {
-        window.removeEventListener('message', messageListener);
-        cachedGCalToken = event.data.token;
-        cachedGCalEmail = event.data.email || 'lfquadrosdecorativos@gmail.com';
-        localStorage.setItem('office_gcal_synced', 'true');
-        localStorage.setItem('office_gcal_email', cachedGCalEmail);
-        resolve({ token: event.data.token, email: cachedGCalEmail });
-      } else if (event.data && event.data.type === 'OAUTH_ERROR') {
-        window.removeEventListener('message', messageListener);
-        reject(new Error(event.data.error));
+    // Maximum wait time: 3 minutes
+    timeoutTimer = setTimeout(() => {
+      if (!isFinished) {
+        handleError('Tempo limite para login do Google excedido. Tente novamente.');
       }
-    };
-    
-    window.addEventListener('message', messageListener);
-    
-    // Fallback polling to detect if user closed the popup early
-    const pollInterval = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(pollInterval);
-        window.removeEventListener('message', messageListener);
-        reject(new Error('Conexão cancelada pelo usuário.'));
-      }
-    }, 500);
+    }, 180000);
+  });
 };
 
 /**
