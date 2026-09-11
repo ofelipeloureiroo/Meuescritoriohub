@@ -26,7 +26,6 @@ export const Login: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [emailInput, setEmailInput] = useState('');
-  const [googleEmailInput, setGoogleEmailInput] = useState('lfquadrosdecorativos@gmail.com');
   const [passwordInput, setPasswordInput] = useState('');
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [guestNameInput, setGuestNameInput] = useState('');
@@ -64,13 +63,10 @@ export const Login: React.FC = () => {
         } catch (popupErr: any) {
           console.warn("Google OAuth notice during invite join:", popupErr);
           try {
-            const anonCred = await signInAnonymously(auth);
-            activeUser = anonCred.user;
-          } catch (anonErr) {
-            const randomGuestPass = `conv_${Math.random().toString(36).slice(2, 10)}_$#`;
-            const guestEmail = `convidado_${cleanCode.toLowerCase()}_${Date.now()}@meuescritorio.app`;
-            const cred = await createUserWithEmailAndPassword(auth, guestEmail, randomGuestPass);
-            activeUser = cred.user;
+            await signInWithRedirect(auth, provider);
+            return;
+          } catch (redirectErr) {
+            console.error("Redirect invite login error:", redirectErr);
           }
         }
       }
@@ -112,6 +108,11 @@ export const Login: React.FC = () => {
         }
       } catch (err: any) {
         console.error("Redirect auth error:", err);
+        if (err.code === 'auth/unauthorized-domain') {
+          setError('O domínio "meuescritoriohub.com.br" precisa ser adicionado aos Domínios Autorizados no Firebase Console (Authentication -> Configurações -> Domínios autorizados).');
+        } else if (err.code !== 'auth/popup-closed-by-user') {
+          setError(err.message || 'Erro ao concluir o login do Google.');
+        }
       }
     };
 
@@ -119,14 +120,15 @@ export const Login: React.FC = () => {
   }, [navigate]);
 
   const createOrUpdateUserProfile = async (firebaseUser: any) => {
-    const email = firebaseUser.email || 'lfquadrosdecorativos@gmail.com';
+    const email = (firebaseUser.email || '').toLowerCase();
+    const isOwnerAccount = !email || email === 'lfquadrosdecorativos@gmail.com';
     const docRef = doc(db, 'users', firebaseUser.uid);
     
     try {
       await setDoc(docRef, {
         uid: firebaseUser.uid,
-        email: email,
-        role: 'admin',
+        email: email || 'lfquadrosdecorativos@gmail.com',
+        role: isOwnerAccount ? 'admin' : 'user',
         status: 'active',
         createdAt: new Date().toISOString()
       }, { merge: true });
@@ -135,52 +137,10 @@ export const Login: React.FC = () => {
     }
   };
 
-  const handleMasterDirectLogin = async () => {
-    setError('');
-    setIsSubmitting(true);
-    try {
-      let userCred;
-      try {
-        userCred = await signInWithEmailAndPassword(auth, 'lfquadrosdecorativos@gmail.com', '123456');
-      } catch (loginErr) {
-        try {
-          userCred = await createUserWithEmailAndPassword(auth, 'lfquadrosdecorativos@gmail.com', '123456');
-        } catch (createErr) {
-          userCred = await signInAnonymously(auth);
-        }
-      }
-      if (userCred?.user) {
-        await createOrUpdateUserProfile(userCred.user);
-        navigate('/app', { replace: true });
-      } else {
-        const anonCred = await signInAnonymously(auth);
-        if (anonCred?.user) {
-          await createOrUpdateUserProfile(anonCred.user);
-          navigate('/app', { replace: true });
-        }
-      }
-    } catch (err: any) {
-      console.error("Direct login notice:", err);
-      try {
-        const anonCred = await signInAnonymously(auth);
-        if (anonCred?.user) {
-          await createOrUpdateUserProfile(anonCred.user);
-          navigate('/app', { replace: true });
-        }
-      } catch (ex) {
-        setError('Não foi possível realizar o login automático. Tente novamente.');
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleGoogleLogin = async (explicitEmail?: string) => {
+  const handleGoogleLogin = async () => {
     setError('');
     setSuccessMessage('');
     setIsSubmitting(true);
-
-    const emailToUse = (explicitEmail || googleEmailInput || 'lfquadrosdecorativos@gmail.com').trim().toLowerCase();
 
     try {
       const provider = new GoogleAuthProvider();
@@ -194,40 +154,34 @@ export const Login: React.FC = () => {
           return;
         }
       } catch (popupErr: any) {
-        console.warn("Google popup notice (applying instant session login):", popupErr);
-      }
+        console.warn("Google popup error:", popupErr);
 
-      // If popup was blocked or unauthorized domain in current preview container, log in seamlessly as Google account
-      let userCred;
-      try {
-        userCred = await signInWithEmailAndPassword(auth, emailToUse, '123456');
-      } catch (loginErr) {
-        try {
-          userCred = await createUserWithEmailAndPassword(auth, emailToUse, '123456');
-        } catch (createErr) {
-          userCred = await signInAnonymously(auth);
+        if (popupErr.code === 'auth/unauthorized-domain') {
+          setError('O domínio "meuescritoriohub.com.br" precisa ser liberado no Firebase Console (Authentication -> Configurações -> Domínios Autorizados). Para logar enquanto isso, use a aba E-mail.');
+          setIsSubmitting(false);
+          return;
         }
-      }
 
-      if (userCred?.user) {
-        await createOrUpdateUserProfile({
-          ...userCred.user,
-          email: emailToUse
-        });
-        navigate('/app', { replace: true });
-      } else {
-        const anonCred = await signInAnonymously(auth);
-        if (anonCred?.user) {
-          await createOrUpdateUserProfile({
-            ...anonCred.user,
-            email: emailToUse
-          });
-          navigate('/app', { replace: true });
+        // On mobile or popup blocked, trigger redirect flow
+        try {
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redirectErr: any) {
+          console.error("Google redirect error:", redirectErr);
+          if (redirectErr.code === 'auth/unauthorized-domain') {
+            setError('O domínio "meuescritoriohub.com.br" precisa ser adicionado aos Domínios Autorizados no Firebase Console.');
+          } else {
+            setError(redirectErr.message || 'Não foi possível autenticar com o Google.');
+          }
         }
       }
     } catch (err: any) {
-      console.error("Google Auth execution:", err);
-      navigate('/app', { replace: true });
+      console.error("Google Auth error:", err);
+      if (err.code === 'auth/unauthorized-domain') {
+        setError('O domínio "meuescritoriohub.com.br" precisa ser adicionado aos Domínios Autorizados no Firebase Console.');
+      } else {
+        setError(err.message || 'Erro ao conectar com a conta Google.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -241,33 +195,64 @@ export const Login: React.FC = () => {
       setError('Por favor, informe seu e-mail.');
       return;
     }
+
+    if (!passwordInput) {
+      setError('Por favor, informe sua senha.');
+      return;
+    }
+
     setError('');
     setSuccessMessage('');
     setIsSubmitting(true);
 
     try {
       let userCredential;
-      const pwd = passwordInput || '123456';
-      
-      try {
-        userCredential = await signInWithEmailAndPassword(auth, cleanEmail, pwd);
-      } catch (loginErr: any) {
+      if (isRegisterMode) {
+        userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, passwordInput);
+      } else {
         try {
-          userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, pwd);
-        } catch (createErr) {
-          userCredential = await signInAnonymously(auth);
+          userCredential = await signInWithEmailAndPassword(auth, cleanEmail, passwordInput);
+        } catch (loginErr: any) {
+          if (
+            loginErr.code === 'auth/user-not-found' ||
+            loginErr.code === 'auth/invalid-credential' ||
+            loginErr.code === 'auth/invalid-login-credentials'
+          ) {
+            try {
+              userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, passwordInput);
+            } catch (createErr: any) {
+              if (createErr.code === 'auth/email-already-in-use') {
+                setError('Senha incorreta para este e-mail. Se esqueceu sua senha, clique em "Esqueceu sua senha?".');
+                setIsSubmitting(false);
+                return;
+              }
+              throw createErr;
+            }
+          } else {
+            throw loginErr;
+          }
         }
       }
 
       if (userCredential?.user) {
         await createOrUpdateUserProfile(userCredential.user);
         navigate('/app', { replace: true });
-      } else {
-        await handleMasterDirectLogin();
       }
     } catch (err: any) {
       console.error("Email auth notice:", err);
-      await handleMasterDirectLogin();
+      if (
+        err.code === 'auth/wrong-password' || 
+        err.code === 'auth/invalid-credential' || 
+        err.code === 'auth/invalid-login-credentials'
+      ) {
+        setError('E-mail ou senha incorretos. Verifique seus dados ou clique em "Esqueceu sua senha?".');
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError('Este e-mail já está cadastrado. Digite sua senha correta para entrar.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('A senha deve conter no mínimo 6 caracteres.');
+      } else {
+        setError(err.message || 'Erro ao realizar login por e-mail.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -393,24 +378,6 @@ export const Login: React.FC = () => {
               Conecte-se para gerenciar seu escritório com controle total.
             </p>
           </div>
-
-          {/* Quick Direct Entrance for Master Admin */}
-          <button
-            type="button"
-            onClick={handleMasterDirectLogin}
-            disabled={isSubmitting}
-            className="w-full py-3.5 px-4 rounded-xl text-black font-bold text-sm flex items-center justify-center gap-2 shadow-xl hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
-            style={{ backgroundColor: 'var(--theme-primary)' }}
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                <span>Entrar Direto no Escritório (Acesso Master)</span>
-              </>
-            )}
-          </button>
 
           {/* Navigation Tabs */}
           <div className="grid grid-cols-3 gap-1 bg-[#1a1614] p-1.5 rounded-xl border border-[#3d342f]">
@@ -600,17 +567,17 @@ export const Login: React.FC = () => {
           {authTab === 'google' && (
             <div className="space-y-4">
               <div className="p-3 bg-[#1a1614] border border-[#3d342f] rounded-xl text-xs text-[#a89c93] leading-relaxed">
-                Acesse o escritório com sua conta Google instantaneamente.
+                Conecte-se com sua conta do Google para acessar seu escritório com praticidade e segurança.
               </div>
 
               <button
                 type="button"
-                onClick={() => handleGoogleLogin()}
+                onClick={handleGoogleLogin}
                 disabled={isSubmitting}
                 className="w-full flex items-center justify-center gap-3 bg-[#fcf8f5] hover:bg-white text-black font-bold py-3.5 px-4 rounded-xl transition-all shadow-[0_0_20px_rgba(252,248,245,0.08)] hover:shadow-[0_0_25px_rgba(252,248,245,0.15)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isSubmitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin text-black" />
                 ) : (
                   <>
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -632,41 +599,13 @@ export const Login: React.FC = () => {
                       />
                       <path d="M1 1h22v22H1z" fill="none" />
                     </svg>
-                    Entrar com o Google (Pop-up)
+                    <span>Entrar com o Google</span>
                   </>
                 )}
               </button>
 
-              <div className="relative my-4 flex items-center justify-center">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[#3d342f]" />
-                </div>
-                <span className="relative bg-[#241e1b] px-3 text-[11px] text-[#a89c93] uppercase tracking-wider font-semibold">
-                  ou confirme seu e-mail google
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                <input
-                  type="email"
-                  value={googleEmailInput}
-                  onChange={(e) => setGoogleEmailInput(e.target.value)}
-                  placeholder="exemplo@gmail.com"
-                  className="w-full bg-[#1a1614] border border-[#3d342f] rounded-xl px-4 py-3 text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b] transition-colors text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleGoogleLogin(googleEmailInput)}
-                  disabled={isSubmitting || !googleEmailInput.trim()}
-                  className="w-full py-3 px-4 rounded-xl text-black font-bold text-xs flex items-center justify-center gap-2 bg-[#c58a4b] hover:bg-[#d49454] transition-all cursor-pointer shadow-md"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Entrar com E-mail Google ({googleEmailInput.split('@')[0] || 'Master'})</span>
-                </button>
-              </div>
-
               <p className="text-center text-xs text-[#a89c93] pt-1">
-                Preferir senha? Acesse a aba <button type="button" onClick={() => setAuthTab('email')} className="text-[#c58a4b] underline cursor-pointer">E-mail</button>.
+                Preferir entrar com e-mail e senha? Acesse a aba <button type="button" onClick={() => setAuthTab('email')} className="text-[#c58a4b] underline cursor-pointer">E-mail</button>.
               </p>
             </div>
           )}
