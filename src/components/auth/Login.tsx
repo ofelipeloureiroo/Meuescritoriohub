@@ -139,7 +139,7 @@ export const Login: React.FC = () => {
     setIsSubmitting(true);
     setError('');
     localStorage.setItem('office_active_tab', 'today');
-    const targetEmail = 'lfquadrosdecorativos@gmail.com';
+    const targetEmail = 'master_escritorio@meuescritorio.app';
     const targetPass = '123456';
     
     let activeUser = null;
@@ -151,6 +151,7 @@ export const Login: React.FC = () => {
         const cred = await createUserWithEmailAndPassword(auth, targetEmail, targetPass);
         activeUser = cred.user;
       } catch (err2) {
+        console.warn("Owner auth fallback notice:", err2);
         try {
           const cred = await signInAnonymously(auth);
           activeUser = cred.user;
