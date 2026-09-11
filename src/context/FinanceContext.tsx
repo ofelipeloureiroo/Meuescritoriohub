@@ -633,27 +633,33 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Sync to user-scoped localStorage
   useEffect(() => {
+    if (!targetUid || !isCloudLoadedRef.current) return;
     localStorage.setItem(getStorageKey('office_settings'), JSON.stringify(officeSettings));
   }, [officeSettings, targetUid]);
 
   // Sync to user-scoped localStorage
   useEffect(() => {
+    if (!targetUid || !isCloudLoadedRef.current) return;
     localStorage.setItem(getStorageKey('transactions'), JSON.stringify(transactions));
   }, [transactions, targetUid]);
 
   useEffect(() => {
+    if (!targetUid || !isCloudLoadedRef.current) return;
     localStorage.setItem(getStorageKey('accounts'), JSON.stringify(bankAccounts));
   }, [bankAccounts, targetUid]);
 
   useEffect(() => {
+    if (!targetUid || !isCloudLoadedRef.current) return;
     localStorage.setItem(getStorageKey('mortgage'), JSON.stringify(houseMortgage));
   }, [houseMortgage, targetUid]);
 
   useEffect(() => {
+    if (!targetUid || !isCloudLoadedRef.current) return;
     localStorage.setItem(getStorageKey('debts'), JSON.stringify(debts));
   }, [debts, targetUid]);
 
   const safeSetItem = (key: string, data: any) => {
+    if (!targetUid || !isCloudLoadedRef.current) return;
     try {
       localStorage.setItem(getStorageKey(key), JSON.stringify(data));
     } catch (err) {
