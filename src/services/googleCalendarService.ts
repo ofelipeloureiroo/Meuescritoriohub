@@ -46,53 +46,61 @@ export const isGoogleCalendarEnabled = (): boolean => {
  * Authenticates the user with Google and requests Calendar scopes
  */
 export const authenticateGoogleCalendar = async (): Promise<{ token: string; email: string }> => {
-  const provider = new GoogleAuthProvider();
-  // Request full calendar management scopes as configured in Google Developer Console / IA Studio
-  provider.addScope('https://www.googleapis.com/auth/calendar');
-  provider.addScope('https://www.googleapis.com/auth/calendar.events');
-
-  try {
-    let result: any;
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-      const isGoogleLinked = currentUser.providerData.some(p => p.providerId === 'google.com');
-      if (isGoogleLinked) {
-        try {
-          result = await reauthenticateWithPopup(currentUser, provider);
-        } catch (reauthErr) {
-          console.warn('Reautenticação falhou, tentando login direto:', reauthErr);
-          result = await signInWithPopup(auth, provider);
-        }
-      } else {
-        try {
-          result = await linkWithPopup(currentUser, provider);
-        } catch (linkErr: any) {
-          console.warn('Link falhou, tentando login direto:', linkErr);
-          result = await signInWithPopup(auth, provider);
-        }
-      }
-    } else {
-      result = await signInWithPopup(auth, provider);
-    }
-
-    const credential = GoogleAuthProvider.credentialFromResult(result);
+  return new Promise((resolve, reject) => {
+    // We use the AI Studio preview URL because it's authorized in Firebase console
+    const proxyUrl = 'https://ais-pre-su4zqshj47o55562to2iuv-729561127771.us-east1.run.app/oauth-proxy';
     
-    if (!credential?.accessToken) {
-      throw new Error('Não foi possível obter o token de acesso do Google.');
+    // Check if we are ALREADY on the authorized domain
+    if (window.location.hostname.includes('ais-pre-') || window.location.hostname.includes('localhost') || window.location.hostname.includes('ais-dev-')) {
+       openProxy(`${window.location.origin}/oauth-proxy`, resolve, reject);
+    } else {
+       openProxy(proxyUrl, resolve, reject);
+    }
+  });
+};
+
+const openProxy = (url: string, resolve: any, reject: any) => {
+    const width = 500;
+    const height = 650;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+    
+    const popup = window.open(
+      url,
+      'GoogleOAuthPopup',
+      `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`
+    );
+
+    if (!popup) {
+      reject(new Error('Bloqueador de popups ativo. Por favor, permita popups para este site.'));
+      return;
     }
 
-    cachedGCalToken = credential.accessToken;
-    cachedGCalEmail = result.user.email || currentUser?.email || 'lfquadrosdecorativos@gmail.com';
-
-    // Persist active integration flags and the connected email (non-sensitive info)
-    localStorage.setItem('office_gcal_synced', 'true');
-    localStorage.setItem('office_gcal_email', cachedGCalEmail);
-
-    return { token: cachedGCalToken, email: cachedGCalEmail };
-  } catch (error) {
-    console.error('Erro na autenticação do Google Calendar:', error);
-    throw error;
-  }
+    const messageListener = (event: MessageEvent) => {
+      // Validate that it's an expected oauth message
+      if (event.data && event.data.type === 'OAUTH_SUCCESS') {
+        window.removeEventListener('message', messageListener);
+        cachedGCalToken = event.data.token;
+        cachedGCalEmail = event.data.email || 'lfquadrosdecorativos@gmail.com';
+        localStorage.setItem('office_gcal_synced', 'true');
+        localStorage.setItem('office_gcal_email', cachedGCalEmail);
+        resolve({ token: event.data.token, email: cachedGCalEmail });
+      } else if (event.data && event.data.type === 'OAUTH_ERROR') {
+        window.removeEventListener('message', messageListener);
+        reject(new Error(event.data.error));
+      }
+    };
+    
+    window.addEventListener('message', messageListener);
+    
+    // Fallback polling to detect if user closed the popup early
+    const pollInterval = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(pollInterval);
+        window.removeEventListener('message', messageListener);
+        reject(new Error('Conexão cancelada pelo usuário.'));
+      }
+    }, 500);
 };
 
 /**

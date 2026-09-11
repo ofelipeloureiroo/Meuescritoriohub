@@ -9,6 +9,7 @@ import { SalesLandingPage } from './components/landing/SalesLandingPage';
 import { CheckoutPage } from './components/checkout/CheckoutPage';
 import { ClientLogin } from './components/portal/ClientLogin';
 import { ClientPortalDashboard } from './components/portal/ClientPortalDashboard';
+import { OAuthProxy } from './components/auth/OAuthProxy';
 
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
@@ -267,6 +268,7 @@ export default function App() {
 
             {/* Authentication Route */}
             <Route path="/login" element={<Login />} />
+            <Route path="/oauth-proxy" element={<OAuthProxy />} />
 
             {/* Client Portal Routes (Dedicated Client Login & Real-time Isolated Dashboard) */}
             <Route path="/cliente/login" element={<ClientLogin />} />

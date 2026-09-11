@@ -286,6 +286,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const targetUid = profile?.joinedOwnerUid || user?.uid;
+  const [isLocalLoaded, setIsLocalLoaded] = useState(false);
 
   // Prefix storage keys per user UID for full data isolation
   const getStorageKey = (key: string) => {
@@ -633,33 +634,33 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Sync to user-scoped localStorage
   useEffect(() => {
-    if (!targetUid || !isCloudLoadedRef.current) return;
+    if (!targetUid || !isLocalLoaded) return;
     localStorage.setItem(getStorageKey('office_settings'), JSON.stringify(officeSettings));
-  }, [officeSettings, targetUid]);
+  }, [officeSettings, targetUid, isLocalLoaded]);
 
   // Sync to user-scoped localStorage
   useEffect(() => {
-    if (!targetUid || !isCloudLoadedRef.current) return;
+    if (!targetUid || !isLocalLoaded) return;
     localStorage.setItem(getStorageKey('transactions'), JSON.stringify(transactions));
-  }, [transactions, targetUid]);
+  }, [transactions, targetUid, isLocalLoaded]);
 
   useEffect(() => {
-    if (!targetUid || !isCloudLoadedRef.current) return;
+    if (!targetUid || !isLocalLoaded) return;
     localStorage.setItem(getStorageKey('accounts'), JSON.stringify(bankAccounts));
-  }, [bankAccounts, targetUid]);
+  }, [bankAccounts, targetUid, isLocalLoaded]);
 
   useEffect(() => {
-    if (!targetUid || !isCloudLoadedRef.current) return;
+    if (!targetUid || !isLocalLoaded) return;
     localStorage.setItem(getStorageKey('mortgage'), JSON.stringify(houseMortgage));
-  }, [houseMortgage, targetUid]);
+  }, [houseMortgage, targetUid, isLocalLoaded]);
 
   useEffect(() => {
-    if (!targetUid || !isCloudLoadedRef.current) return;
+    if (!targetUid || !isLocalLoaded) return;
     localStorage.setItem(getStorageKey('debts'), JSON.stringify(debts));
-  }, [debts, targetUid]);
+  }, [debts, targetUid, isLocalLoaded]);
 
   const safeSetItem = (key: string, data: any) => {
-    if (!targetUid || !isCloudLoadedRef.current) return;
+    if (!targetUid || !isLocalLoaded) return;
     try {
       localStorage.setItem(getStorageKey(key), JSON.stringify(data));
     } catch (err) {
@@ -669,48 +670,49 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     safeSetItem('clients', clients);
-  }, [clients, targetUid]);
+  }, [clients, targetUid, isLocalLoaded]);
 
   useEffect(() => {
     safeSetItem('projects', freelanceProjects);
-  }, [freelanceProjects, targetUid]);
+  }, [freelanceProjects, targetUid, isLocalLoaded]);
 
   useEffect(() => {
     safeSetItem('architecture_projects', architectureProjects);
-  }, [architectureProjects, targetUid]);
+  }, [architectureProjects, targetUid, isLocalLoaded]);
 
   useEffect(() => {
     safeSetItem('installments', projectInstallments);
-  }, [projectInstallments, targetUid]);
+  }, [projectInstallments, targetUid, isLocalLoaded]);
 
   useEffect(() => {
     safeSetItem('milestones', projectMilestones);
-  }, [projectMilestones, targetUid]);
+  }, [projectMilestones, targetUid, isLocalLoaded]);
 
   useEffect(() => {
     safeSetItem('work_contracts', workContracts);
-  }, [workContracts, targetUid]);
+  }, [workContracts, targetUid, isLocalLoaded]);
 
   useEffect(() => {
     safeSetItem('goals', savingsGoals);
-  }, [savingsGoals, targetUid]);
+  }, [savingsGoals, targetUid, isLocalLoaded]);
 
   useEffect(() => {
     safeSetItem('budgets', categoryBudgets);
-  }, [categoryBudgets, targetUid]);
+  }, [categoryBudgets, targetUid, isLocalLoaded]);
 
   useEffect(() => {
     safeSetItem('profile', architectProfile);
-  }, [architectProfile, targetUid]);
+  }, [architectProfile, targetUid, isLocalLoaded]);
 
   useEffect(() => {
     safeSetItem('actions', actions);
-  }, [actions, targetUid]);
+  }, [actions, targetUid, isLocalLoaded]);
 
   // Load and synchronize states from local storage whenever targetUid changes
   useEffect(() => {
     if (!targetUid) return;
 
+    setIsLocalLoaded(false);
     // Reset cloud loaded reference as we are switching/starting a new authenticated session
     isCloudLoadedRef.current = false;
 
@@ -857,6 +859,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } else {
       setActions([]);
     }
+    
+    setIsLocalLoaded(true);
   }, [targetUid]);
 
   // Real-time Cloud Sync from Firestore
@@ -883,48 +887,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
           const data = snapshot.data();
           isSyncingFromCloudRef.current = true;
-
-          // Detect if Firestore contains old demo projects or demo transactions
-          const hasLegacyDemo =
-            (data.architectureProjects && data.architectureProjects.some((p: any) => p.id === 'proj-bfe' || p.id === 'proj-1')) ||
-            (data.transactions && data.transactions.some((t: any) => t.id === 'tx-1' || t.id === 'tx-freela-1')) ||
-            (data.bankAccounts && data.bankAccounts.some((a: any) => a.id === 'bank-nubank' && a.balance > 1000));
-
-          if (hasLegacyDemo) {
-            const cleanedPayload = {
-              transactions: [],
-              bankAccounts: EMPTY_BANK_ACCOUNTS,
-              houseMortgage: EMPTY_HOUSE_MORTGAGE,
-              debts: [],
-              architectureProjects: [CONNECTED_PORTAL_PROJECT_1, CONNECTED_PORTAL_PROJECT_2],
-              freelanceProjects: [],
-              projectInstallments: CONNECTED_PORTAL_INSTALLMENTS,
-              projectMilestones: [],
-              workContracts: [CONNECTED_PORTAL_CONTRACT_1],
-              clients: [CONNECTED_PORTAL_CLIENT],
-              savingsGoals: [],
-              actions: [],
-              updatedAt: new Date().toISOString(),
-            };
-            setDoc(workspaceDocRef, cleanedPayload, { merge: true }).catch(console.error);
-            setTransactions([]);
-            setBankAccounts(EMPTY_BANK_ACCOUNTS);
-            setHouseMortgage(EMPTY_HOUSE_MORTGAGE);
-            setDebts([]);
-            setArchitectureProjects([CONNECTED_PORTAL_PROJECT_1, CONNECTED_PORTAL_PROJECT_2]);
-            setFreelanceProjects([]);
-            setProjectInstallments(CONNECTED_PORTAL_INSTALLMENTS);
-            setProjectMilestones([]);
-            setWorkContracts([CONNECTED_PORTAL_CONTRACT_1]);
-            setClients([CONNECTED_PORTAL_CLIENT]);
-            setSavingsGoals([]);
-            setActions([]);
-            isCloudLoadedRef.current = true;
-            setTimeout(() => {
-              isSyncingFromCloudRef.current = false;
-            }, 150);
-            return;
-          }
 
           if (data.profile) setArchitectProfile(data.profile);
           if (data.transactions) setTransactions(data.transactions);
