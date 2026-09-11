@@ -15,6 +15,7 @@ import {
   Home,
   Package,
   ChevronDown,
+  LogOut,
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
@@ -94,7 +95,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenSettings,
 }) => {
   const { architectProfile, selectedMonth, setSelectedMonth } = useFinance();
-  const { user, profile } = useAuth();
+  const { user, profile, logout } = useAuth();
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   const currentTabInfo = TAB_TITLES[activeTab] || {
@@ -234,6 +235,16 @@ export const TopBar: React.FC<TopBarProps> = ({
             title="Configurações do Escritório"
           >
             <Settings className="w-4 h-4" />
+          </button>
+
+          {/* Top Button to Leave the Office / Sair do Escritório */}
+          <button
+            onClick={logout}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/25 hover:bg-red-900/40 border border-red-500/30 hover:border-red-500/50 text-red-300 hover:text-red-100 text-xs font-semibold transition-all shadow-xs cursor-pointer shrink-0"
+            title="Sair do Escritório e encerrar sessão"
+          >
+            <LogOut className="w-3.5 h-3.5 text-red-400" />
+            <span className="hidden sm:inline">Sair</span>
           </button>
         </div>
       </div>

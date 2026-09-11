@@ -612,6 +612,25 @@ export const TodayTab: React.FC = () => {
     return [...localFiltered, ...googleFiltered, ...googleTasksFiltered];
   }, [actions, mappedGoogleEvents, mappedGoogleTasks, selectedArea, searchQuery]);
 
+  // Selected date items for Mini Calendar interactive day preview
+  const miniDateItems = useMemo(() => {
+    const target = selectedCalendarDate || todayStr;
+    const evts = mappedGoogleEvents.filter((g) => g.date === target);
+    const tasks = mappedGoogleTasks.filter((t) => t.date === target);
+    const acts = actions.filter((a) => {
+      if (!a.date) return false;
+      if (a.date === target) return true;
+      if (a.date.includes('/')) {
+        const [d, m, y] = a.date.split('/');
+        if (d && m && y) {
+          return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}` === target;
+        }
+      }
+      return false;
+    });
+    return [...evts, ...tasks, ...acts].sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+  }, [selectedCalendarDate, todayStr, mappedGoogleEvents, mappedGoogleTasks, actions]);
+
   // Modal State for Creating / Editing Actions
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [editingAction, setEditingAction] = useState<AppAction | null>(null);
@@ -1267,41 +1286,139 @@ export const TodayTab: React.FC = () => {
 
                     const dayHasGCal = mappedGoogleEvents.some((g) => g.date === checkDateStr);
                     const dayHasGTask = mappedGoogleTasks.some((t) => t.date === checkDateStr && t.status !== 'completed');
-                    const dayHasActions = actions.some((a) => a.date === checkDateStr);
+                    const dayHasActions = actions.some((a) => {
+                      if (!a.date) return false;
+                      if (a.date === checkDateStr) return true;
+                      if (a.date.includes('/')) {
+                        const [d, m, y] = a.date.split('/');
+                        return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}` === checkDateStr;
+                      }
+                      return false;
+                    });
                     const hasAnyEvent = dayHasActions || dayHasGCal || dayHasGTask;
                     const isToday = checkDateStr === todayStr;
+                    const isSelected = checkDateStr === selectedCalendarDate;
 
                     return (
                       <button
                         key={`mini-day-${dayNum}`}
                         onClick={() => {
                           setSelectedCalendarDate(checkDateStr);
-                          setViewMode('calendar');
                         }}
                         className={`h-7 rounded-lg text-xs font-semibold flex flex-col items-center justify-center relative transition-all cursor-pointer ${
                           isToday
-                            ? 'bg-[#c58a4b] text-[#12100e] font-bold'
+                            ? 'bg-[#c58a4b] text-[#12100e] font-bold shadow-xs ring-1 ring-[#c58a4b]'
+                            : isSelected
+                            ? 'bg-[#2e2621] text-[#fcf8f5] font-bold border border-[#c58a4b]/60'
                             : 'text-[#ded5cc] hover:bg-[#241e1b] hover:text-[#fcf8f5]'
                         }`}
-                        title={`${checkDateStr} - Clique para ver o calendário${dayHasGCal ? ' (possui compromisso Google)' : dayHasGTask ? ' (possui tarefa Google)' : ''}`}
+                        title={`${checkDateStr} - Clique para ver itens deste dia${dayHasGCal ? ' • Google Agenda' : ''}${dayHasGTask ? ' • Google Tarefa' : ''}${dayHasActions ? ' • Ação Escritório' : ''}`}
                       >
                         <span>{dayNum}</span>
                         {hasAnyEvent && !isToday && (
-                          <span className={`w-1.5 h-1.5 rounded-full absolute bottom-0.5 ${
-                            dayHasGCal ? 'bg-sky-400' : dayHasGTask ? 'bg-emerald-400' : 'bg-[#c58a4b]'
-                          }`} />
+                          <div className="flex items-center gap-0.5 absolute bottom-0.5">
+                            {dayHasGCal && <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />}
+                            {dayHasGTask && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                            {dayHasActions && !dayHasGCal && !dayHasGTask && <span className="w-1.5 h-1.5 rounded-full bg-[#c58a4b]" />}
+                          </div>
                         )}
                       </button>
                     );
                   })}
                 </div>
 
-                <button
-                  onClick={() => setViewMode('calendar')}
-                  className="w-full mt-2 py-2 rounded-xl bg-[#221c18] hover:bg-[#2c241f] border border-[#3d342f] text-xs font-bold text-[#c58a4b] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <CalendarDays className="w-3.5 h-3.5" /> Acessar Calendário Completo
-                </button>
+                {/* Selected Day Quick Preview & Actions */}
+                <div className="mt-3 pt-3 border-t border-[#2d2520] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-[#fcf8f5] flex items-center gap-1.5">
+                      <Clock className="w-3 h-3 text-[#c58a4b]" />
+                      {selectedCalendarDate === todayStr ? 'Hoje' : selectedCalendarDate.split('-').reverse().join('/')}:
+                    </span>
+                    <span className="text-[10px] text-[#a89c93]">
+                      {miniDateItems.length} {miniDateItems.length === 1 ? 'item' : 'itens'}
+                    </span>
+                  </div>
+
+                  {miniDateItems.length === 0 ? (
+                    <div className="p-2.5 rounded-xl bg-[#221c18]/60 border border-[#2d2520] text-center">
+                      <p className="text-[11px] text-[#73655c] italic">Nenhum evento ou tarefa neste dia.</p>
+                      <button
+                        onClick={() => handleOpenCreateAction(selectedCalendarDate)}
+                        className="mt-1 text-[10px] font-bold text-[#c58a4b] hover:underline cursor-pointer"
+                      >
+                        + Criar ação para este dia
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-0.5">
+                      {miniDateItems.map((item) => {
+                        const isGoogleEvent = !!item.gcalEventId;
+                        const isGoogleTask = !!item.gcalTaskId || item.id.startsWith('gtask-');
+                        const isCompleted = item.status === 'completed';
+
+                        return (
+                          <div
+                            key={item.id}
+                            className={`p-2 rounded-xl border transition-all flex items-start gap-2 text-left ${
+                              isGoogleTask
+                                ? 'bg-emerald-950/20 border-emerald-500/30'
+                                : isGoogleEvent
+                                ? 'bg-sky-950/20 border-sky-500/30'
+                                : 'bg-[#221c18] border-[#3d342f]'
+                            }`}
+                          >
+                            {isGoogleTask ? (
+                              <button
+                                onClick={() => handleToggleTaskStatus(item)}
+                                className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
+                                  isCompleted
+                                    ? 'bg-emerald-500 border-emerald-400 text-black'
+                                    : 'border-emerald-500/50 hover:border-emerald-400 text-transparent'
+                                }`}
+                                title={isCompleted ? "Marcar como pendente" : "Marcar como concluída no Google Tarefas"}
+                              >
+                                <Check className="w-3 h-3" />
+                              </button>
+                            ) : (
+                              <span className={`w-2 h-2 rounded-full mt-1 shrink-0 ${
+                                isGoogleEvent ? 'bg-sky-400' : 'bg-[#c58a4b]'
+                              }`} />
+                            )}
+
+                            <div className="flex-1 min-w-0" onClick={() => handleOpenEditAction(item)}>
+                              <div className="flex items-center gap-1">
+                                {item.time && (
+                                  <span className={`text-[10px] font-bold ${
+                                    isGoogleEvent ? 'text-sky-300' : 'text-[#c58a4b]'
+                                  }`}>
+                                    {item.time}
+                                  </span>
+                                )}
+                                <span className={`text-xs font-semibold truncate ${
+                                  isCompleted ? 'line-through text-[#73655c]' : 'text-[#fcf8f5]'
+                                }`}>
+                                  {item.description || item.type}
+                                </span>
+                              </div>
+                              <span className={`text-[9px] font-medium block truncate mt-0.5 ${
+                                isGoogleTask ? 'text-emerald-400/80' : isGoogleEvent ? 'text-sky-400/80' : 'text-[#a89c93]'
+                              }`}>
+                                {isGoogleTask ? 'Google Tarefa' : isGoogleEvent ? 'Google Agenda' : item.type}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => setViewMode('calendar')}
+                    className="w-full mt-2 py-2 rounded-xl bg-[#221c18] hover:bg-[#2c241f] border border-[#3d342f] text-xs font-bold text-[#c58a4b] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <CalendarDays className="w-3.5 h-3.5" /> Acessar Calendário Completo
+                  </button>
+                </div>
               </div>
 
               {/* Quick daily Notepad scratchpad */}

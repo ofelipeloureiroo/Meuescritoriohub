@@ -156,8 +156,17 @@ const DEFAULT_AUTHORIZED_SUBSCRIBERS: UserProfile[] = [
 
 export const AdminUsers: React.FC = () => {
   const { user: currentUserProfile, profile } = useAuth();
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<UserProfile[]>(() => {
+    try {
+      const stored = localStorage.getItem(SUBSCRIBERS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_AUTHORIZED_SUBSCRIBERS;
+  });
+  const [loading, setLoading] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshSuccessMessage, setRefreshSuccessMessage] = useState<string | null>(null);
@@ -225,6 +234,15 @@ export const AdminUsers: React.FC = () => {
     }
   };
 
+  // Helper with fast timeout to prevent network stalls from blocking the UI
+  const fetchWithTimeout = async <T,>(promise: Promise<T>, timeoutMs = 2000, fallback: T): Promise<T> => {
+    let timer: any;
+    const timeoutPromise = new Promise<T>((resolve) => {
+      timer = setTimeout(() => resolve(fallback), timeoutMs);
+    });
+    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
+  };
+
   const aggregateAllSubscribers = async (snapshotDocs: any[] = []): Promise<UserProfile[]> => {
     const usersMap = new Map<string, UserProfile>();
     const blacklist = getBlacklistedEmails();
@@ -246,101 +264,7 @@ export const AdminUsers: React.FC = () => {
     };
     usersMap.set(currentEmail, selfUser);
 
-    // 2. Load from Firestore system_integrations/authorized_subscribers
-    try {
-      const sysDocRef = doc(db, 'system_integrations', 'authorized_subscribers');
-      const sysSnap = await getDoc(sysDocRef);
-      if (sysSnap.exists()) {
-        const sysData = sysSnap.data();
-        if (Array.isArray(sysData.subscribers)) {
-          sysData.subscribers.forEach((s: UserProfile) => {
-            const em = (s.email || '').toLowerCase().trim();
-            if (em && em !== currentEmail && !blacklist.has(em)) {
-              usersMap.set(em, { ...s, email: em });
-            }
-          });
-        }
-      }
-    } catch (e) {
-      console.warn("Notice checking system_integrations authorized_subscribers:", e);
-    }
-
-    // 3. Load from Firestore snapshot docs (collection 'users')
-    snapshotDocs.forEach((docSnap) => {
-      const d = docSnap.data() as UserProfile;
-      const em = (d.email || '').toLowerCase().trim();
-      if (em && !blacklist.has(em)) {
-        const existing = usersMap.get(em);
-        usersMap.set(em, {
-          ...existing,
-          ...d,
-          uid: docSnap.id,
-          email: em,
-        });
-      }
-      // If the doc has collaborators (e.g. owner doc)
-      if (d.collaborators && Array.isArray(d.collaborators)) {
-        d.collaborators.forEach((c: any) => {
-          const cEmail = (c.email || '').toLowerCase().trim();
-          if (cEmail && cEmail !== currentEmail && !blacklist.has(cEmail) && !usersMap.has(cEmail)) {
-            usersMap.set(cEmail, {
-              uid: c.uid || `collab_${cEmail.replace(/[^a-z0-9]/g, '_')}`,
-              email: cEmail,
-              name: c.name || cEmail.split('@')[0],
-              role: 'user',
-              status: 'active',
-              subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
-              createdAt: c.joinedAt || new Date().toISOString(),
-              notes: 'Membro Colaborador',
-            });
-          }
-        });
-      }
-    });
-
-    // 4. Load from profile.collaborators if present
-    if (profile?.collaborators && Array.isArray(profile.collaborators)) {
-      profile.collaborators.forEach((c: any) => {
-        const cEmail = (c.email || '').toLowerCase().trim();
-        if (cEmail && cEmail !== currentEmail && !blacklist.has(cEmail) && !usersMap.has(cEmail)) {
-          usersMap.set(cEmail, {
-            uid: c.uid || `collab_${cEmail.replace(/[^a-z0-9]/g, '_')}`,
-            email: cEmail,
-            name: c.name || cEmail.split('@')[0],
-            role: 'user',
-            status: 'active',
-            subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
-            createdAt: c.joinedAt || new Date().toISOString(),
-            notes: 'Membro Colaborador',
-          });
-        }
-      });
-    }
-
-    // 5. Load from clientPortals collection in Firestore
-    try {
-      const portalsSnap = await getDocs(collection(db, 'clientPortals'));
-      portalsSnap.docs.forEach((pDoc) => {
-        const p = pDoc.data();
-        const pEmail = (p.clientEmail || '').toLowerCase().trim();
-        if (pEmail && pEmail !== currentEmail && !blacklist.has(pEmail) && !usersMap.has(pEmail)) {
-          usersMap.set(pEmail, {
-            uid: `portal_${pDoc.id}`,
-            email: pEmail,
-            name: p.clientName || pEmail.split('@')[0],
-            role: 'user',
-            status: p.status === 'inactive' ? 'inactive' : 'active',
-            subscriptionDueDate: p.expiresAt || new Date(Date.now() + 365 * 86400000).toISOString(),
-            createdAt: p.createdAt || new Date().toISOString(),
-            notes: 'Portal do Cliente Autorizado',
-          });
-        }
-      });
-    } catch (e) {
-      console.warn("Notice checking clientPortals:", e);
-    }
-
-    // 6. Load from localStorage subscribers cache
+    // 2. Load from localStorage subscribers cache FIRST (instant)
     try {
       const storedSubs = localStorage.getItem(SUBSCRIBERS_STORAGE_KEY);
       if (storedSubs) {
@@ -349,19 +273,14 @@ export const AdminUsers: React.FC = () => {
           parsed.forEach((s: UserProfile) => {
             const em = (s.email || '').toLowerCase().trim();
             if (em && em !== currentEmail && !blacklist.has(em)) {
-              const existing = usersMap.get(em);
-              usersMap.set(em, {
-                ...s,
-                ...existing,
-                email: em,
-              });
+              usersMap.set(em, { ...s, email: em });
             }
           });
         }
       }
     } catch {}
 
-    // 7. Load from localStorage team members
+    // 3. Load from localStorage team members (instant)
     try {
       const storedTeam = localStorage.getItem('meu_escritorio_equipe_v1');
       if (storedTeam) {
@@ -386,7 +305,100 @@ export const AdminUsers: React.FC = () => {
       }
     } catch {}
 
-    // 8. If non-admin count is 0, inject DEFAULT_AUTHORIZED_SUBSCRIBERS
+    // 4. Concurrently fetch Firestore integrations with timeout (non-blocking)
+    try {
+      const [sysSnap, portalsSnap] = await Promise.all([
+        fetchWithTimeout(getDoc(doc(db, 'system_integrations', 'authorized_subscribers')), 1500, null),
+        fetchWithTimeout(getDocs(collection(db, 'clientPortals')), 1500, null),
+      ]);
+
+      if (sysSnap && sysSnap.exists && sysSnap.exists()) {
+        const sysData = sysSnap.data();
+        if (Array.isArray(sysData?.subscribers)) {
+          sysData.subscribers.forEach((s: UserProfile) => {
+            const em = (s.email || '').toLowerCase().trim();
+            if (em && em !== currentEmail && !blacklist.has(em)) {
+              const existing = usersMap.get(em);
+              usersMap.set(em, { ...s, ...existing, email: em });
+            }
+          });
+        }
+      }
+
+      if (portalsSnap && portalsSnap.docs) {
+        portalsSnap.docs.forEach((pDoc: any) => {
+          const p = pDoc.data();
+          const pEmail = (p.clientEmail || '').toLowerCase().trim();
+          if (pEmail && pEmail !== currentEmail && !blacklist.has(pEmail) && !usersMap.has(pEmail)) {
+            usersMap.set(pEmail, {
+              uid: `portal_${pDoc.id}`,
+              email: pEmail,
+              name: p.clientName || pEmail.split('@')[0],
+              role: 'user',
+              status: p.status === 'inactive' ? 'inactive' : 'active',
+              subscriptionDueDate: p.expiresAt || new Date(Date.now() + 365 * 86400000).toISOString(),
+              createdAt: p.createdAt || new Date().toISOString(),
+              notes: 'Portal do Cliente Autorizado',
+            });
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("Notice checking system_integrations/portals:", e);
+    }
+
+    // 5. Load from Firestore snapshot docs (collection 'users')
+    snapshotDocs.forEach((docSnap) => {
+      const d = docSnap.data() as UserProfile;
+      const em = (d.email || '').toLowerCase().trim();
+      if (em && !blacklist.has(em)) {
+        const existing = usersMap.get(em);
+        usersMap.set(em, {
+          ...existing,
+          ...d,
+          uid: docSnap.id,
+          email: em,
+        });
+      }
+      if (d.collaborators && Array.isArray(d.collaborators)) {
+        d.collaborators.forEach((c: any) => {
+          const cEmail = (c.email || '').toLowerCase().trim();
+          if (cEmail && cEmail !== currentEmail && !blacklist.has(cEmail) && !usersMap.has(cEmail)) {
+            usersMap.set(cEmail, {
+              uid: c.uid || `collab_${cEmail.replace(/[^a-z0-9]/g, '_')}`,
+              email: cEmail,
+              name: c.name || cEmail.split('@')[0],
+              role: 'user',
+              status: 'active',
+              subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
+              createdAt: c.joinedAt || new Date().toISOString(),
+              notes: 'Membro Colaborador',
+            });
+          }
+        });
+      }
+    });
+
+    // 6. Load from profile.collaborators if present
+    if (profile?.collaborators && Array.isArray(profile.collaborators)) {
+      profile.collaborators.forEach((c: any) => {
+        const cEmail = (c.email || '').toLowerCase().trim();
+        if (cEmail && cEmail !== currentEmail && !blacklist.has(cEmail) && !usersMap.has(cEmail)) {
+          usersMap.set(cEmail, {
+            uid: c.uid || `collab_${cEmail.replace(/[^a-z0-9]/g, '_')}`,
+            email: cEmail,
+            name: c.name || cEmail.split('@')[0],
+            role: 'user',
+            status: 'active',
+            subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
+            createdAt: c.joinedAt || new Date().toISOString(),
+            notes: 'Membro Colaborador',
+          });
+        }
+      });
+    }
+
+    // 7. If non-admin count is 0, inject DEFAULT_AUTHORIZED_SUBSCRIBERS
     const nonAdminCount = Array.from(usersMap.values()).filter(u => u.role !== 'admin').length;
     if (nonAdminCount === 0) {
       DEFAULT_AUTHORIZED_SUBSCRIBERS.forEach((defSub) => {
