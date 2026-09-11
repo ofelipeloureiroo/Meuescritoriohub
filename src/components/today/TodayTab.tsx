@@ -103,36 +103,34 @@ export const TodayTab: React.FC = () => {
   // Google Calendar Integration State
   const [isGoogleSynced, setIsGoogleSynced] = useState<boolean>(() => isGoogleCalendarEnabled());
   const [googleEmail, setGoogleEmail] = useState<string | null>(() => getGoogleUserEmail());
-  const [googleEvents, setGoogleEvents] = useState<GoogleCalendarEvent[]>([]);
+  const [googleEvents, setGoogleEvents] = useState<GoogleCalendarEvent[]>(() => {
+    try {
+      const cached = localStorage.getItem('office_cached_gcal_events');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [tokenExpired, setTokenExpired] = useState<boolean>(false);
   const [isSyncingCalendar, setIsSyncingCalendar] = useState<boolean>(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
-  const handleSyncGoogleCalendar = async () => {
+  const handleConnectGoogleCalendar = async () => {
     setIsSyncingCalendar(true);
     setSyncMessage(null);
     try {
-      if (isGoogleSynced && !tokenExpired) {
-        disconnectGoogleCalendar();
-        setIsGoogleSynced(false);
-        setGoogleEmail(null);
-        setGoogleEvents([]);
-        setTokenExpired(false);
-        setSyncMessage('Sincronização com o Google Agenda desativada.');
-      } else {
-        const res = await authenticateGoogleCalendar();
-        setIsGoogleSynced(true);
-        setGoogleEmail(res.email);
-        setTokenExpired(false);
-        setSyncMessage(`Conectado com sucesso à conta: ${res.email}`);
-        
-        try {
-          const events = await fetchGoogleEvents();
-          setGoogleEvents(events);
-          setSyncMessage(`${events.length} evento(s) sincronizados com o Google Agenda.`);
-        } catch (e) {
-          console.error("Initial sync fetch warning:", e);
-        }
+      const res = await authenticateGoogleCalendar();
+      setIsGoogleSynced(true);
+      setGoogleEmail(res.email);
+      setTokenExpired(false);
+      setSyncMessage(`Conectado à conta: ${res.email}`);
+      
+      try {
+        const events = await fetchGoogleEvents();
+        setGoogleEvents(events);
+        setSyncMessage(`${events.length} evento(s) sincronizados com sucesso.`);
+      } catch (e) {
+        console.error("Initial sync fetch warning:", e);
       }
     } catch (err: any) {
       console.error(err);
@@ -143,9 +141,19 @@ export const TodayTab: React.FC = () => {
     }
   };
 
+  const handleDisconnectGoogleCalendar = () => {
+    disconnectGoogleCalendar();
+    setIsGoogleSynced(false);
+    setGoogleEmail(null);
+    setGoogleEvents([]);
+    setTokenExpired(false);
+    setSyncMessage('Sincronização com o Google Agenda desativada.');
+    setTimeout(() => setSyncMessage(null), 4000);
+  };
+
   const handleRefreshGoogleEvents = async () => {
     if (!isGoogleSynced) {
-      handleSyncGoogleCalendar();
+      handleConnectGoogleCalendar();
       return;
     }
     setIsSyncingCalendar(true);
@@ -163,7 +171,7 @@ export const TodayTab: React.FC = () => {
       const events = await fetchGoogleEvents();
       setGoogleEvents(events);
       setTokenExpired(false);
-      setSyncMessage(`Agenda atualizada: ${events.length} evento(s) carregados.`);
+      setSyncMessage(`Agenda sincronizada: ${events.length} evento(s) carregados.`);
     } catch (err: any) {
       if (err.message?.includes('Token expirado') || err.message?.includes('expirada')) {
         setTokenExpired(true);
@@ -203,25 +211,29 @@ export const TodayTab: React.FC = () => {
     };
     initFetch();
 
-    // Auto-refresh when tab gains focus or on interval
-    const onFocus = () => {
+    // Auto-refresh when tab gains focus, window becomes visible, or on 30-sec interval
+    const onActive = () => {
       if (isGoogleSynced) {
         fetchGoogleEvents()
-          .then((evts) => setGoogleEvents(evts))
+          .then((evts) => {
+            setGoogleEvents(evts);
+            setTokenExpired(false);
+          })
           .catch(() => {});
       }
     };
-    window.addEventListener('focus', onFocus);
-    const interval = setInterval(() => {
-      if (isGoogleSynced && !tokenExpired) {
-        fetchGoogleEvents()
-          .then((evts) => setGoogleEvents(evts))
-          .catch(() => {});
+    window.addEventListener('focus', onActive);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        onActive();
       }
-    }, 45000);
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    const interval = setInterval(onActive, 30000);
 
     return () => {
-      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('focus', onActive);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       clearInterval(interval);
     };
   }, [isGoogleSynced, tokenExpired]);
@@ -249,15 +261,27 @@ export const TodayTab: React.FC = () => {
       let evtDateStr = '';
       let startTime: string | undefined = undefined;
 
-      if (evt.start.dateTime) {
-        const d = new Date(evt.start.dateTime);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        evtDateStr = `${yyyy}-${mm}-${dd}`;
-        startTime = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      } else if (evt.start.date) {
-        evtDateStr = evt.start.date;
+      if (evt.start?.dateTime) {
+        // Splitting by 'T' extracts the calendar date directly to avoid timezone day shifts
+        const parts = evt.start.dateTime.split('T');
+        if (parts[0] && /^\d{4}-\d{2}-\d{2}$/.test(parts[0])) {
+          evtDateStr = parts[0];
+        } else {
+          const d = new Date(evt.start.dateTime);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          evtDateStr = `${yyyy}-${mm}-${dd}`;
+        }
+
+        if (parts[1]) {
+          startTime = parts[1].slice(0, 5);
+        } else {
+          const d = new Date(evt.start.dateTime);
+          startTime = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+      } else if (evt.start?.date) {
+        evtDateStr = evt.start.date.split('T')[0];
       }
 
       const summaryText = evt.summary && evt.summary.trim() ? evt.summary.trim() : 'Compromisso Google Agenda';
@@ -436,14 +460,13 @@ export const TodayTab: React.FC = () => {
     });
 
     const googleFiltered = mappedGoogleEvents.filter((evt) => {
-      if (selectedArea !== 'all' && selectedArea !== 'Operação') {
-        return false; // Show Google events under Operação filter or when all
-      }
+      // In office calendar view, Google commitments are relevant across all areas
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchDesc = evt.description?.toLowerCase().includes(q);
         const matchType = evt.type?.toLowerCase().includes(q);
-        if (!matchDesc && !matchType) return false;
+        const matchNotes = evt.notes?.toLowerCase().includes(q);
+        if (!matchDesc && !matchType && !matchNotes) return false;
       }
       return true;
     });
@@ -623,6 +646,19 @@ export const TodayTab: React.FC = () => {
 
         {/* View Mode Controls & New Action Button */}
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Quick Google Sync Button in Header */}
+          {isGoogleSynced && (
+            <button
+              onClick={handleRefreshGoogleEvents}
+              disabled={isSyncingCalendar}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 transition-all cursor-pointer disabled:opacity-50"
+              title="Buscar eventos recém-adicionados no Google Agenda"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCalendar ? 'animate-spin' : ''}`} />
+              <span>{isSyncingCalendar ? 'Sincronizando...' : 'Atualizar Google'}</span>
+            </button>
+          )}
+
           <div className="flex bg-[#181513] p-1 rounded-xl border border-[#3d342f] shadow-sm">
             <button
               onClick={() => setViewMode('today')}
@@ -695,7 +731,7 @@ export const TodayTab: React.FC = () => {
                   {isGoogleSynced
                     ? tokenExpired
                       ? 'Sua conexão com o Google Agenda expirou. Clique em Reautorizar para restaurar a sincronização em tempo real.'
-                      : `Conectado como ${googleEmail || 'lfquadrosdecorativos@gmail.com'}. Seus compromissos do escritório e prazos estão sincronizados.`
+                      : `Conectado como ${googleEmail || 'lfquadrosdecorativos@gmail.com'}. ${googleEvents.length} compromissos sincronizados.`
                     : 'Conecte sua conta Google para sincronizar automaticamente reuniões, prazos e compromissos do escritório.'}
                 </p>
                 {syncMessage && (
@@ -704,41 +740,51 @@ export const TodayTab: React.FC = () => {
               </div>
             </div>
 
-            <button
-              onClick={handleSyncGoogleCalendar}
-              disabled={isSyncingCalendar}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-                isGoogleSynced
-                  ? tokenExpired
-                    ? 'bg-amber-500 text-black hover:bg-amber-400 shadow-md'
-                    : 'bg-[#2a221d] hover:bg-[#382d27] text-amber-300 border border-amber-500/40'
-                  : 'bg-[var(--theme-primary)] hover:brightness-110 text-black shadow-md'
-              }`}
-            >
-              {isSyncingCalendar ? (
+            <div className="flex items-center gap-2 shrink-0">
+              {isGoogleSynced && !tokenExpired && (
                 <>
-                  <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  <span>Sincronizando...</span>
-                </>
-              ) : isGoogleSynced ? (
-                tokenExpired ? (
-                  <>
-                    <Sparkles className="w-4 h-4 animate-bounce" />
-                    <span>Reautorizar Google</span>
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4 text-emerald-400" />
-                    <span>Desconectar Agenda</span>
-                  </>
-                )
-              ) : (
-                <>
-                  <CalendarDays className="w-4 h-4" />
-                  <span>Conectar Google Agenda</span>
+                  <button
+                    onClick={handleRefreshGoogleEvents}
+                    disabled={isSyncingCalendar}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer bg-sky-500 hover:bg-sky-400 text-black shadow-md disabled:opacity-50"
+                    title="Buscar novos eventos e compromissos no Google Agenda"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCalendar ? 'animate-spin' : ''}`} />
+                    <span>{isSyncingCalendar ? 'Sincronizando...' : 'Sincronizar Agora'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleDisconnectGoogleCalendar}
+                    className="p-2.5 rounded-xl text-xs font-bold text-[#a89c93] hover:text-red-400 hover:bg-red-500/10 border border-[#3d342f] transition-all cursor-pointer"
+                    title="Desconectar do Google Agenda"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </>
               )}
-            </button>
+
+              {isGoogleSynced && tokenExpired && (
+                <button
+                  onClick={handleConnectGoogleCalendar}
+                  disabled={isSyncingCalendar}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer bg-amber-500 text-black hover:bg-amber-400 shadow-md"
+                >
+                  <Sparkles className="w-4 h-4 animate-bounce" />
+                  <span>Reautorizar Google</span>
+                </button>
+              )}
+
+              {!isGoogleSynced && (
+                <button
+                  onClick={handleConnectGoogleCalendar}
+                  disabled={isSyncingCalendar}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer bg-[var(--theme-primary)] hover:brightness-110 text-black shadow-md"
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  <span>Conectar Google Agenda</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Welcome Banner */}
@@ -1050,7 +1096,9 @@ export const TodayTab: React.FC = () => {
                     const formattedMonth = month + 1 < 10 ? `0${month + 1}` : `${month + 1}`;
                     const checkDateStr = `${year}-${formattedMonth}-${formattedDay}`;
 
+                    const dayHasGCal = mappedGoogleEvents.some((g) => g.date === checkDateStr);
                     const dayHasActions = actions.some((a) => a.date === checkDateStr);
+                    const hasAnyEvent = dayHasActions || dayHasGCal;
                     const isToday = checkDateStr === todayStr;
 
                     return (
@@ -1065,11 +1113,13 @@ export const TodayTab: React.FC = () => {
                             ? 'bg-[#c58a4b] text-[#12100e] font-bold'
                             : 'text-[#ded5cc] hover:bg-[#241e1b] hover:text-[#fcf8f5]'
                         }`}
-                        title={`${checkDateStr} - Clique para ver o calendário`}
+                        title={`${checkDateStr} - Clique para ver o calendário${dayHasGCal ? ' (possui compromisso Google)' : ''}`}
                       >
                         <span>{dayNum}</span>
-                        {dayHasActions && !isToday && (
-                          <span className="w-1 h-1 rounded-full bg-[#c58a4b] absolute bottom-0.5" />
+                        {hasAnyEvent && !isToday && (
+                          <span className={`w-1.5 h-1.5 rounded-full absolute bottom-0.5 ${
+                            dayHasGCal ? 'bg-sky-400' : 'bg-[#c58a4b]'
+                          }`} />
                         )}
                       </button>
                     );

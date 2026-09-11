@@ -252,7 +252,7 @@ const formatDateTimeISO = (dateStr: string, timeStr?: string): string => {
 
 /**
  * Fetches events across ALL user calendars (Primary + Secondary/Team calendars)
- * using a broad date range (past year to next 2 years by default).
+ * using a comprehensive date range and proper pagination so no events are lost.
  */
 export const fetchGoogleEvents = async (timeMin?: string, timeMax?: string): Promise<GoogleCalendarEvent[]> => {
   let token = getGoogleAccessToken();
@@ -274,7 +274,13 @@ export const fetchGoogleEvents = async (timeMin?: string, timeMax?: string): Pro
   const finalTimeMax = timeMax || future.toISOString();
 
   // 1. Discover all active calendars in the user's Google account
-  let targetCalendars: { id: string; summary?: string }[] = [{ id: 'primary', summary: 'Principal' }];
+  const calendarMap = new Map<string, { id: string; summary?: string }>();
+  // Always include primary calendar
+  calendarMap.set('primary', { id: 'primary', summary: 'Principal' });
+  if (cachedGCalEmail) {
+    calendarMap.set(cachedGCalEmail, { id: cachedGCalEmail, summary: 'Principal' });
+  }
+
   try {
     const listRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader', {
       headers: {
@@ -286,12 +292,11 @@ export const fetchGoogleEvents = async (timeMin?: string, timeMax?: string): Pro
     if (listRes.ok) {
       const listData = await listRes.json();
       if (listData.items && Array.isArray(listData.items) && listData.items.length > 0) {
-        const found = listData.items
-          .filter((c: any) => c.selected !== false && !c.deleted)
-          .map((c: any) => ({ id: c.id, summary: c.summary }));
-        if (found.length > 0) {
-          targetCalendars = found;
-        }
+        listData.items.forEach((c: any) => {
+          if (c.id && !c.deleted) {
+            calendarMap.set(c.id, { id: c.id, summary: c.summary || c.id });
+          }
+        });
       }
     } else if (listRes.status === 401) {
       cachedGCalToken = null;
@@ -299,46 +304,60 @@ export const fetchGoogleEvents = async (timeMin?: string, timeMax?: string): Pro
     }
   } catch (err: any) {
     if (err.message?.includes('Token expirado')) throw err;
-    console.warn('Could not list all calendars, falling back to primary:', err);
+    console.warn('Could not list all calendars, continuing with primary:', err);
   }
 
-  // 2. Fetch events from all discovered calendars in parallel
+  const targetCalendars = Array.from(calendarMap.values());
+
+  // 2. Fetch events from all discovered calendars in parallel with pagination
   const allEventsMap = new Map<string, GoogleCalendarEvent>();
 
   await Promise.all(
     targetCalendars.map(async (cal) => {
       try {
-        const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events`);
-        url.searchParams.set('singleEvents', 'true');
-        url.searchParams.set('orderBy', 'startTime');
-        url.searchParams.set('maxResults', '250');
-        url.searchParams.set('timeMin', finalTimeMin);
-        url.searchParams.set('timeMax', finalTimeMax);
+        let pageToken: string | undefined = undefined;
+        let pageCount = 0;
 
-        const response = await fetch(url.toString(), {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        do {
+          const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events`);
+          url.searchParams.set('singleEvents', 'true');
+          url.searchParams.set('orderBy', 'startTime');
+          url.searchParams.set('maxResults', '250');
+          url.searchParams.set('timeMin', finalTimeMin);
+          url.searchParams.set('timeMax', finalTimeMax);
+          if (pageToken) {
+            url.searchParams.set('pageToken', pageToken);
+          }
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.items && Array.isArray(data.items)) {
-            for (const item of data.items) {
-              if (item.id && !item.status?.includes('cancelled')) {
-                allEventsMap.set(item.id, {
-                  ...item,
-                  calendarId: cal.id,
-                  calendarTitle: cal.summary,
-                });
+          const response = await fetch(url.toString(), {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.items && Array.isArray(data.items)) {
+              for (const item of data.items) {
+                if (item.id && item.status !== 'cancelled') {
+                  allEventsMap.set(item.id, {
+                    ...item,
+                    calendarId: cal.id,
+                    calendarTitle: cal.summary,
+                  });
+                }
               }
             }
+            pageToken = data.nextPageToken;
+            pageCount++;
+          } else if (response.status === 401) {
+            cachedGCalToken = null;
+            throw new Error('Token expirado. Por favor, reautorize a conexão.');
+          } else {
+            break;
           }
-        } else if (response.status === 401) {
-          cachedGCalToken = null;
-          throw new Error('Token expirado. Por favor, reautorize a conexão.');
-        }
+        } while (pageToken && pageCount < 6); // Fetch up to 1500 items per calendar
       } catch (calErr: any) {
         if (calErr.message?.includes('Token expirado')) throw calErr;
         console.warn(`Error fetching events for calendar ${cal.id}:`, calErr);
@@ -346,7 +365,12 @@ export const fetchGoogleEvents = async (timeMin?: string, timeMax?: string): Pro
     })
   );
 
-  return Array.from(allEventsMap.values());
+  const eventList = Array.from(allEventsMap.values());
+  try {
+    localStorage.setItem('office_cached_gcal_events', JSON.stringify(eventList));
+  } catch {}
+
+  return eventList;
 };
 
 /**

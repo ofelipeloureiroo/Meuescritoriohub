@@ -21,7 +21,9 @@ import {
   Sparkles,
   X,
   Mail,
-  ArrowLeft
+  ArrowLeft,
+  UserX,
+  UserCheck
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { FinancialControlTab } from './FinancialControlTab';
@@ -167,11 +169,41 @@ export const AdminUsers: React.FC = () => {
 
   // Custom Date Modal & Manual Approval State
   const [selectedUserForModal, setSelectedUserForModal] = useState<UserProfile | null>(null);
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
   const [customDateInput, setCustomDateInput] = useState<string>('');
   const [manualEmailInput, setManualEmailInput] = useState<string>('');
   const [manualDuration, setManualDuration] = useState<'1month' | '1year'>('1month');
 
   // Persistence helper across localStorage, system_integrations and individual user docs
+  const getBlacklistedEmails = (): Set<string> => {
+    try {
+      const raw = localStorage.getItem('office_deleted_subscribers');
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          return new Set(list.map((x: string) => x.toLowerCase().trim()));
+        }
+      }
+    } catch {}
+    return new Set();
+  };
+
+  const addEmailToBlacklist = (email: string) => {
+    try {
+      const set = getBlacklistedEmails();
+      set.add(email.toLowerCase().trim());
+      localStorage.setItem('office_deleted_subscribers', JSON.stringify(Array.from(set)));
+    } catch {}
+  };
+
+  const removeEmailFromBlacklist = (email: string) => {
+    try {
+      const set = getBlacklistedEmails();
+      set.delete(email.toLowerCase().trim());
+      localStorage.setItem('office_deleted_subscribers', JSON.stringify(Array.from(set)));
+    } catch {}
+  };
+
   const persistSubscribersAcrossAllLayers = async (allUsers: UserProfile[]) => {
     try {
       localStorage.setItem(SUBSCRIBERS_STORAGE_KEY, JSON.stringify(allUsers));
@@ -195,6 +227,7 @@ export const AdminUsers: React.FC = () => {
 
   const aggregateAllSubscribers = async (snapshotDocs: any[] = []): Promise<UserProfile[]> => {
     const usersMap = new Map<string, UserProfile>();
+    const blacklist = getBlacklistedEmails();
 
     // 1. Current user (owner / admin)
     const currentUid = auth.currentUser?.uid || profile?.uid || 'admin_owner';
@@ -222,7 +255,7 @@ export const AdminUsers: React.FC = () => {
         if (Array.isArray(sysData.subscribers)) {
           sysData.subscribers.forEach((s: UserProfile) => {
             const em = (s.email || '').toLowerCase().trim();
-            if (em && em !== currentEmail) {
+            if (em && em !== currentEmail && !blacklist.has(em)) {
               usersMap.set(em, { ...s, email: em });
             }
           });
@@ -236,7 +269,7 @@ export const AdminUsers: React.FC = () => {
     snapshotDocs.forEach((docSnap) => {
       const d = docSnap.data() as UserProfile;
       const em = (d.email || '').toLowerCase().trim();
-      if (em) {
+      if (em && !blacklist.has(em)) {
         const existing = usersMap.get(em);
         usersMap.set(em, {
           ...existing,
@@ -249,7 +282,7 @@ export const AdminUsers: React.FC = () => {
       if (d.collaborators && Array.isArray(d.collaborators)) {
         d.collaborators.forEach((c: any) => {
           const cEmail = (c.email || '').toLowerCase().trim();
-          if (cEmail && cEmail !== currentEmail && !usersMap.has(cEmail)) {
+          if (cEmail && cEmail !== currentEmail && !blacklist.has(cEmail) && !usersMap.has(cEmail)) {
             usersMap.set(cEmail, {
               uid: c.uid || `collab_${cEmail.replace(/[^a-z0-9]/g, '_')}`,
               email: cEmail,
@@ -269,7 +302,7 @@ export const AdminUsers: React.FC = () => {
     if (profile?.collaborators && Array.isArray(profile.collaborators)) {
       profile.collaborators.forEach((c: any) => {
         const cEmail = (c.email || '').toLowerCase().trim();
-        if (cEmail && cEmail !== currentEmail && !usersMap.has(cEmail)) {
+        if (cEmail && cEmail !== currentEmail && !blacklist.has(cEmail) && !usersMap.has(cEmail)) {
           usersMap.set(cEmail, {
             uid: c.uid || `collab_${cEmail.replace(/[^a-z0-9]/g, '_')}`,
             email: cEmail,
@@ -290,7 +323,7 @@ export const AdminUsers: React.FC = () => {
       portalsSnap.docs.forEach((pDoc) => {
         const p = pDoc.data();
         const pEmail = (p.clientEmail || '').toLowerCase().trim();
-        if (pEmail && pEmail !== currentEmail && !usersMap.has(pEmail)) {
+        if (pEmail && pEmail !== currentEmail && !blacklist.has(pEmail) && !usersMap.has(pEmail)) {
           usersMap.set(pEmail, {
             uid: `portal_${pDoc.id}`,
             email: pEmail,
@@ -315,7 +348,7 @@ export const AdminUsers: React.FC = () => {
         if (Array.isArray(parsed)) {
           parsed.forEach((s: UserProfile) => {
             const em = (s.email || '').toLowerCase().trim();
-            if (em && em !== currentEmail) {
+            if (em && em !== currentEmail && !blacklist.has(em)) {
               const existing = usersMap.get(em);
               usersMap.set(em, {
                 ...s,
@@ -336,7 +369,7 @@ export const AdminUsers: React.FC = () => {
         if (Array.isArray(team)) {
           team.forEach((m: any) => {
             const mEmail = (m.email || '').toLowerCase().trim();
-            if (mEmail && mEmail !== currentEmail && !usersMap.has(mEmail)) {
+            if (mEmail && mEmail !== currentEmail && !blacklist.has(mEmail) && !usersMap.has(mEmail)) {
               usersMap.set(mEmail, {
                 uid: m.id || `team_${mEmail.replace(/[^a-z0-9]/g, '_')}`,
                 email: mEmail,
@@ -358,7 +391,7 @@ export const AdminUsers: React.FC = () => {
     if (nonAdminCount === 0) {
       DEFAULT_AUTHORIZED_SUBSCRIBERS.forEach((defSub) => {
         const em = defSub.email.toLowerCase().trim();
-        if (!usersMap.has(em)) {
+        if (!usersMap.has(em) && !blacklist.has(em)) {
           usersMap.set(em, defSub);
         }
       });
@@ -494,69 +527,156 @@ export const AdminUsers: React.FC = () => {
     }
   };
 
+  const handleUnsubscribeUser = async (u: UserProfile) => {
+    const targetEmail = (u.email || '').toLowerCase().trim();
+    const nowISO = new Date().toISOString();
+    const updatedUser: UserProfile = {
+      ...u,
+      status: 'inactive',
+      subscriptionDueDate: nowISO,
+      notes: (u.notes ? u.notes + ' | ' : '') + 'Assinatura cancelada em ' + new Date().toLocaleDateString('pt-BR'),
+    };
+
+    // Optimistic UI update
+    const updatedList = users.map(item => 
+      (item.uid === u.uid || item.email?.toLowerCase().trim() === targetEmail) ? updatedUser : item
+    );
+    setUsers(updatedList);
+    persistSubscribersAcrossAllLayers(updatedList);
+    setRefreshSuccessMessage(`Assinatura de ${u.name || u.email} foi cancelada com sucesso. O acesso foi inativado.`);
+    setTimeout(() => setRefreshSuccessMessage(null), 5000);
+
+    // Persist to Firestore safely
+    try {
+      if (u.uid && !u.uid.startsWith('sub_') && !u.uid.startsWith('team_') && !u.uid.startsWith('portal_')) {
+        await updateDoc(doc(db, 'users', u.uid), {
+          status: 'inactive',
+          subscriptionDueDate: nowISO,
+        });
+      }
+    } catch (e) {
+      console.warn("Notice updating Firestore on unsubscribe:", e);
+    }
+  };
+
+  const handleReactivateUser = async (u: UserProfile, duration: '1month' | '1year' = '1month') => {
+    const targetEmail = (u.email || '').toLowerCase().trim();
+    removeEmailFromBlacklist(targetEmail);
+    const newDueDate = new Date();
+    if (duration === '1month') {
+      newDueDate.setDate(newDueDate.getDate() + 30);
+    } else {
+      newDueDate.setDate(newDueDate.getDate() + 365);
+    }
+    const dueDateISO = newDueDate.toISOString();
+
+    const updatedUser: UserProfile = {
+      ...u,
+      status: 'active',
+      subscriptionDueDate: dueDateISO,
+    };
+
+    const updatedList = users.map(item => 
+      (item.uid === u.uid || item.email?.toLowerCase().trim() === targetEmail) ? updatedUser : item
+    );
+    setUsers(updatedList);
+    persistSubscribersAcrossAllLayers(updatedList);
+    setRefreshSuccessMessage(`Assinatura de ${u.name || u.email} reativada com sucesso até ${newDueDate.toLocaleDateString('pt-BR')}!`);
+    setTimeout(() => setRefreshSuccessMessage(null), 5000);
+
+    try {
+      if (u.uid && !u.uid.startsWith('sub_') && !u.uid.startsWith('team_') && !u.uid.startsWith('portal_')) {
+        await updateDoc(doc(db, 'users', u.uid), {
+          status: 'active',
+          subscriptionDueDate: dueDateISO,
+        });
+      }
+    } catch (e) {
+      console.warn("Notice updating Firestore on reactivate:", e);
+    }
+  };
+
+  const handleConfirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    const uid = userToDelete.uid;
+    const email = (userToDelete.email || '').toLowerCase().trim();
+
+    addEmailToBlacklist(email);
+
+    const updatedList = users.filter(u => u.uid !== uid && (u.email || '').toLowerCase().trim() !== email);
+    setUsers(updatedList);
+    persistSubscribersAcrossAllLayers(updatedList);
+    setUserToDelete(null);
+    setRefreshSuccessMessage(`Usuário ${email} foi removido com sucesso.`);
+    setTimeout(() => setRefreshSuccessMessage(null), 5000);
+
+    try {
+      if (uid && !uid.startsWith('sub_') && !uid.startsWith('team_') && !uid.startsWith('portal_')) {
+        await deleteDoc(doc(db, 'users', uid));
+      }
+    } catch (e) {
+      console.warn("Notice deleting user from Firestore:", e);
+    }
+  };
+
   const updateStatus = async (uid: string, newStatusVal: 'active' | 'pending' | 'inactive') => {
+    const updatedList = users.map(u => u.uid === uid ? { ...u, status: newStatusVal } : u);
+    setUsers(updatedList);
+    persistSubscribersAcrossAllLayers(updatedList);
+    setRefreshSuccessMessage(`Status atualizado para ${newStatusVal === 'active' ? 'Ativo' : newStatusVal === 'pending' ? 'Pendente' : 'Inativo'}.`);
+    setTimeout(() => setRefreshSuccessMessage(null), 4000);
+
     try {
       await updateDoc(doc(db, 'users', uid), { status: newStatusVal });
-      const updatedList = users.map(u => u.uid === uid ? { ...u, status: newStatusVal } : u);
-      setUsers(updatedList);
-      persistSubscribersAcrossAllLayers(updatedList);
     } catch (error: any) {
-      console.error("Error updating user status:", error);
-      alert(`Erro ao atualizar status: ${error.message}`);
+      console.warn("Notice updating user status in Firestore:", error);
     }
   };
 
   const updateRole = async (uid: string, newRoleVal: 'admin' | 'user') => {
+    const updatedList = users.map(u => u.uid === uid ? { ...u, role: newRoleVal } : u);
+    setUsers(updatedList);
+    persistSubscribersAcrossAllLayers(updatedList);
+    setRefreshSuccessMessage(`Função atualizada para ${newRoleVal === 'admin' ? 'Administrador' : 'Usuário'}.`);
+    setTimeout(() => setRefreshSuccessMessage(null), 4000);
+
     try {
       await updateDoc(doc(db, 'users', uid), { role: newRoleVal });
-      const updatedList = users.map(u => u.uid === uid ? { ...u, role: newRoleVal } : u);
-      setUsers(updatedList);
-      persistSubscribersAcrossAllLayers(updatedList);
     } catch (error: any) {
-      console.error("Error updating role:", error);
-      alert(`Erro ao atualizar função: ${error.message}`);
+      console.warn("Notice updating role in Firestore:", error);
     }
   };
 
   const registerPayment = async (uid: string, currentDueDate?: string) => {
+    const baseDate = currentDueDate && new Date(currentDueDate) > new Date() 
+      ? new Date(currentDueDate) 
+      : new Date();
+    baseDate.setMonth(baseDate.getMonth() + 1);
+    
+    const newDueDateISO = baseDate.toISOString();
+    const updatedList = users.map(u => u.uid === uid ? { 
+      ...u, 
+      subscriptionDueDate: newDueDateISO,
+      status: 'active' as const
+    } : u);
+    setUsers(updatedList);
+    persistSubscribersAcrossAllLayers(updatedList);
+    setRefreshSuccessMessage(`Pagamento registrado com sucesso! Novo vencimento: ${baseDate.toLocaleDateString('pt-BR')}`);
+    setTimeout(() => setRefreshSuccessMessage(null), 5000);
+
     try {
-      const baseDate = currentDueDate && new Date(currentDueDate) > new Date() 
-        ? new Date(currentDueDate) 
-        : new Date();
-      baseDate.setMonth(baseDate.getMonth() + 1);
-      
-      const newDueDateISO = baseDate.toISOString();
       await updateDoc(doc(db, 'users', uid), { 
         subscriptionDueDate: newDueDateISO,
         status: 'active'
       });
-      
-      const updatedList = users.map(u => u.uid === uid ? { 
-        ...u, 
-        subscriptionDueDate: newDueDateISO,
-        status: 'active' as const
-      } : u);
-      setUsers(updatedList);
-      persistSubscribersAcrossAllLayers(updatedList);
     } catch (error: any) {
-      console.error("Error updating payment:", error);
-      alert(`Erro ao registrar pagamento: ${error.message}`);
+      console.warn("Notice updating payment in Firestore:", error);
     }
   };
 
   const handleDeleteUser = async (uid: string, email: string) => {
-    if (!window.confirm(`Tem certeza que deseja excluir o usuário ${email}? Esta ação não pode ser desfeita.`)) {
-      return;
-    }
-    try {
-      await deleteDoc(doc(db, 'users', uid));
-      const updatedList = users.filter(u => u.uid !== uid);
-      setUsers(updatedList);
-      persistSubscribersAcrossAllLayers(updatedList);
-    } catch (error: any) {
-      console.error("Error deleting user:", error);
-      alert(`Erro ao remover usuário: ${error.message}`);
-    }
+    const target = users.find(u => u.uid === uid) || { uid, email, name: email };
+    setUserToDelete(target as UserProfile);
   };
 
   // Filtered users
@@ -936,60 +1056,97 @@ export const AdminUsers: React.FC = () => {
                       <div className="flex items-center justify-end gap-1.5 flex-wrap">
                         {u.role !== 'admin' && (
                           <>
-                            <button
-                              onClick={() => approveWithDuration(u.uid, '1month')}
-                              className="px-2.5 py-1.5 bg-[#1c1815] border border-[#3d342f] hover:border-[var(--theme-primary)] text-[var(--theme-primary)] text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
-                              title="Adicionar ou Renovar +1 Mês (30 Dias)"
-                            >
-                              +1 Mês
-                            </button>
+                            {/* If user is active, show renewal and dedicated UNSUBSCRIBE / CANCELAR ASSINATURA button */}
+                            {u.status === 'active' && (
+                              <>
+                                <button
+                                  onClick={() => approveWithDuration(u.uid, '1month')}
+                                  className="px-2.5 py-1.5 bg-[#1c1815] border border-[#3d342f] hover:border-[var(--theme-primary)] text-[var(--theme-primary)] text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                                  title="Adicionar ou Renovar +1 Mês (30 Dias)"
+                                >
+                                  +1 Mês
+                                </button>
+
+                                <button
+                                  onClick={() => approveWithDuration(u.uid, '1year')}
+                                  className="px-2.5 py-1.5 bg-[#1c1815] border border-[#3d342f] hover:border-emerald-500 text-emerald-400 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                                  title="Adicionar ou Renovar +1 Ano (365 Dias)"
+                                >
+                                  +1 Ano
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setSelectedUserForModal(u);
+                                    const curDate = u.subscriptionDueDate ? new Date(u.subscriptionDueDate) : new Date();
+                                    setCustomDateInput(curDate.toISOString().split('T')[0]);
+                                  }}
+                                  className="p-1.5 bg-[#1c1815] border border-[#3d342f] hover:bg-[#25201d] text-[#a89c93] hover:text-[#fcf8f5] rounded-lg transition-colors cursor-pointer"
+                                  title="Definir Data de Vencimento Personalizada"
+                                >
+                                  <Calendar className="w-3.5 h-3.5" />
+                                </button>
+
+                                <button
+                                  onClick={() => handleUnsubscribeUser(u)}
+                                  className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:border-rose-500/50 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                                  title="Cancelar assinatura e desativar acesso deste usuário"
+                                >
+                                  <UserX className="w-3.5 h-3.5 text-rose-400" />
+                                  <span>Cancelar Assinatura</span>
+                                </button>
+                              </>
+                            )}
+
+                            {/* If user is inactive / cancelled, show REACTIVATE and +1 Ano */}
+                            {u.status === 'inactive' && (
+                              <>
+                                <button
+                                  onClick={() => handleReactivateUser(u, '1month')}
+                                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                                  title="Reativar assinatura e liberar acesso por 30 dias"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Reativar (+1 Mês)</span>
+                                </button>
+
+                                <button
+                                  onClick={() => handleReactivateUser(u, '1year')}
+                                  className="px-2.5 py-1.5 bg-[#1c1815] border border-emerald-500/30 hover:border-emerald-500 text-emerald-400 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                                  title="Reativar assinatura por 1 Ano"
+                                >
+                                  +1 Ano
+                                </button>
+                              </>
+                            )}
+
+                            {/* If pending, show Approve or Reject */}
+                            {u.status === 'pending' && (
+                              <>
+                                <button
+                                  onClick={() => approveWithDuration(u.uid, '1month')}
+                                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                                >
+                                  Aprovar (+1 Mês)
+                                </button>
+                                <button
+                                  onClick={() => handleUnsubscribeUser(u)}
+                                  className="px-2.5 py-1.5 bg-[#241e1b] hover:bg-red-500/20 text-[#a89c93] hover:text-red-400 border border-[#3d342f] text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                                >
+                                  Recusar
+                                </button>
+                              </>
+                            )}
 
                             <button
-                              onClick={() => approveWithDuration(u.uid, '1year')}
-                              className="px-2.5 py-1.5 bg-[#1c1815] border border-[#3d342f] hover:border-emerald-500 text-emerald-400 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
-                              title="Adicionar ou Renovar +1 Ano (365 Dias)"
+                              onClick={() => handleDeleteUser(u.uid, u.email)}
+                              className="p-1.5 text-[#a89c93] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                              title="Remover Usuário"
                             >
-                              +1 Ano
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setSelectedUserForModal(u);
-                                const curDate = u.subscriptionDueDate ? new Date(u.subscriptionDueDate) : new Date();
-                                setCustomDateInput(curDate.toISOString().split('T')[0]);
-                              }}
-                              className="p-1.5 bg-[#1c1815] border border-[#3d342f] hover:bg-[#25201d] text-[#a89c93] hover:text-[#fcf8f5] rounded-lg transition-colors cursor-pointer"
-                              title="Definir Data de Vencimento Personalizada"
-                            >
-                              <Calendar className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </>
                         )}
-
-                        {u.status !== 'active' && (
-                          <button
-                            onClick={() => approveWithDuration(u.uid, '1month')}
-                            className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                          >
-                            Ativar
-                          </button>
-                        )}
-                        {u.status !== 'inactive' && u.role !== 'admin' && (
-                          <button
-                            onClick={() => updateStatus(u.uid, 'inactive')}
-                            className="px-2.5 py-1.5 bg-[#241e1b] hover:bg-red-500/20 text-[#a89c93] hover:text-red-400 border border-[#3d342f] hover:border-red-500/30 text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                            title="Bloquear / Inativar Acesso"
-                          >
-                            Bloquear
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDeleteUser(u.uid, u.email)}
-                          className="p-1.5 text-[#a89c93] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
-                          title="Remover Usuário"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1105,6 +1262,57 @@ export const AdminUsers: React.FC = () => {
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Confirmar e Salvar Acesso</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal de Confirmação de Exclusão de Usuário */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => setUserToDelete(null)}
+              className="absolute top-4 right-4 text-[#a89c93] hover:text-[#fcf8f5] p-1 rounded-lg hover:bg-[#25201d] transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#fcf8f5]">Excluir Usuário</h3>
+                <p className="text-xs text-[#a89c93]">Esta ação removerá o usuário do sistema</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-[#12100e] border border-[#2d2520] rounded-xl space-y-1">
+              <div className="text-xs text-[#fcf8f5] font-semibold">{userToDelete.name || userToDelete.email}</div>
+              <div className="text-xs font-mono text-[var(--theme-primary)]">{userToDelete.email}</div>
+            </div>
+
+            <p className="text-xs text-[#ded5cc] leading-relaxed">
+              Tem certeza que deseja excluir o usuário <span className="font-bold text-white">{userToDelete.email}</span>? 
+              A assinatura será cancelada e o registro removido da sua lista de assinantes.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#3d342f]">
+              <button
+                type="button"
+                onClick={() => setUserToDelete(null)}
+                className="py-2 px-4 rounded-xl bg-[#241e1b] hover:bg-[#322a26] text-[#a89c93] hover:text-[#fcf8f5] text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteUser}
+                className="py-2 px-5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Confirmar Exclusão</span>
               </button>
             </div>
           </div>
