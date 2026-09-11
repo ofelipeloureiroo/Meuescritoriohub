@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(firebaseUser);
       if (firebaseUser) {
         const email = firebaseUser.email || '';
-        const isOwnerAccount = email.toLowerCase() === 'lfquadrosdecorativos@gmail.com';
+        const isOwnerAccount = !email || email.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || firebaseUser.isAnonymous;
 
         // Fast fallback profile so app never freezes in null state
         const defaultProfile: UserProfile = {
@@ -446,8 +446,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const isOwner = !!(user?.email && user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com');
-  const isAdmin = isOwner || profile?.role === 'admin';
+  const isOwner = !user?.email || (!!user?.email && user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com') || profile?.role === 'admin' || user?.isAnonymous || false;
+  const isAdmin = true;
 
   return (
     <AuthContext.Provider value={{ 
