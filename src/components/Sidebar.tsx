@@ -276,9 +276,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           title="Ir para Meu Dia & Agenda"
         >
           <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shadow-md bg-[var(--theme-primary)] text-black shrink-0 group-hover:opacity-90 transition-all border border-[var(--theme-primary)]/40">
-            {architectProfile?.photoUrl ? (
+            {architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL ? (
               <img
-                src={architectProfile.photoUrl}
+                src={architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL}
                 alt="Logo / Foto"
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"

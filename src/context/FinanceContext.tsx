@@ -860,6 +860,30 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     isCloudLoadedRef.current = false;
     const primaryUid = 'lfquadrosdecorativos';
     const workspaceDocRef = doc(db, 'users', primaryUid, 'data', 'workspace');
+    const userDocRef = doc(db, 'users', primaryUid);
+
+    // Direct listener on user document to ensure profile photo syncs instantly across devices
+    const unsubscribeUserDoc = onSnapshot(
+      userDocRef,
+      (userSnap) => {
+        if (userSnap.exists()) {
+          const uData = userSnap.data();
+          if (uData?.photoUrl) {
+            setArchitectProfile((prev) => {
+              if (prev.photoUrl !== uData.photoUrl) {
+                const updated = { ...prev, photoUrl: uData.photoUrl };
+                safeSetItem('profile', updated);
+                localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(updated));
+                window.dispatchEvent(new CustomEvent('office_profile_updated', { detail: updated }));
+                return updated;
+              }
+              return prev;
+            });
+          }
+        }
+      },
+      () => {}
+    );
 
     // First attempt quick load from primary canonical or targetUid
     const unsubscribe = onSnapshot(
@@ -874,9 +898,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           isSyncingFromCloudRef.current = true;
 
           if (data.profile) {
-            setArchitectProfile(data.profile);
-            safeSetItem('profile', data.profile);
-            localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(data.profile));
+            setArchitectProfile((prev) => {
+              const merged = { ...prev, ...data.profile };
+              safeSetItem('profile', merged);
+              localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(merged));
+              window.dispatchEvent(new CustomEvent('office_profile_updated', { detail: merged }));
+              return merged;
+            });
             if (data.profile.themeColor || data.profile.bgTheme) {
               applyThemeToDocument(
                 data.profile.themeColor || 'amber',
@@ -973,7 +1001,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      unsubscribeUserDoc();
+    };
   }, [targetUid]);
 
   // Helper for immediate Firestore write on critical changes (e.g. profile, photo, niche, theme)
@@ -1114,6 +1145,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ...updatedFields,
       };
       safeSetItem('profile', updated);
+      localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('office_profile_updated', { detail: updated }));
       saveToFirestoreImmediate(updated);
       return updated;
     });
@@ -1127,6 +1160,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         photoUrl,
       };
       safeSetItem('profile', updated);
+      localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('office_profile_updated', { detail: updated }));
       saveToFirestoreImmediate(updated);
       return updated;
     });

@@ -1,13 +1,13 @@
 /**
  * Utility to compress image files before converting them to Data URLs.
- * Keeps image sizes around 30KB - 70KB to stay well within
- * Firestore (1MB) and localStorage quotas without losing quality on screen.
+ * Keeps image sizes around 25KB - 45KB to stay well within
+ * Firestore (1MB) and localStorage quotas while ensuring fast mobile sync and high Retina crispness.
  */
 export const compressImage = (
   file: File,
-  maxWidth = 900,
-  maxHeight = 900,
-  quality = 0.72
+  maxWidth = 450,
+  maxHeight = 450,
+  quality = 0.8
 ): Promise<string> => {
   return new Promise((resolve) => {
     if (!file || !file.type.startsWith('image/')) {
@@ -37,7 +37,7 @@ export const compressImage = (
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          ctx.fillStyle = '#FFFFFF';
+          ctx.fillStyle = '#161311';
           ctx.fillRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
           const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);

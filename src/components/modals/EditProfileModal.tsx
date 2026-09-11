@@ -167,15 +167,17 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     const finalHandle = cleanInstagramHandle(formData.instagramHandle);
     const finalUrl = buildInstagramUrl(formData.instagramHandle, formData.instagramUrl);
     const finalFollowers = formatFollowersCount(formData.followersCount);
+    const finalPhoto = previewPhoto || formData.photoUrl || architectProfile.photoUrl || '';
     const updatedProfile = {
       ...formData,
+      photoUrl: finalPhoto,
       instagramHandle: finalHandle,
       instagramUrl: finalUrl,
       followersCount: finalFollowers,
     };
     updateArchitectProfile(updatedProfile);
-    if (previewPhoto) {
-      updateProfilePhoto(previewPhoto);
+    if (finalPhoto) {
+      updateProfilePhoto(finalPhoto);
     }
     if (formData.themeColor) {
       changeTheme(formData.themeColor);

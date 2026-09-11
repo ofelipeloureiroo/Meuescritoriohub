@@ -275,92 +275,119 @@ export const TodayTab: React.FC = () => {
     return new Date().toLocaleDateString('pt-BR', options);
   }, []);
 
-  // Map Google Calendar Events into the AppAction model schema for unified display
+  // Helper to normalize strings for robust deduplication & title extraction
+  const normalizeActionText = (str?: string) =>
+    (str || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/^ação:\s*/i, '')
+      .replace(/^compromisso:\s*/i, '')
+      .replace(/^tarefa:\s*/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  // Map Google Calendar Events into the AppAction model schema for unified display (with deduplication against local actions)
   const mappedGoogleEvents = useMemo(() => {
     if (!isGoogleSynced || googleEvents.length === 0) return [];
     
-    return googleEvents.map((evt) => {
-      let evtDateStr = '';
-      let startTime: string | undefined = undefined;
+    // Set of IDs already bound to local actions
+    const boundGcalEventIds = new Set(
+      actions.map((a) => a.gcalEventId).filter((id): id is string => Boolean(id))
+    );
 
-      if (evt.start?.dateTime) {
-        // Splitting by 'T' extracts the calendar date directly to avoid timezone day shifts
-        const parts = evt.start.dateTime.split('T');
-        if (parts[0] && /^\d{4}-\d{2}-\d{2}$/.test(parts[0])) {
-          evtDateStr = parts[0];
-        } else {
-          const d = new Date(evt.start.dateTime);
-          const yyyy = d.getFullYear();
-          const mm = String(d.getMonth() + 1).padStart(2, '0');
-          const dd = String(d.getDate()).padStart(2, '0');
-          evtDateStr = `${yyyy}-${mm}-${dd}`;
+    return googleEvents
+      .filter((evt) => !boundGcalEventIds.has(evt.id))
+      .map((evt) => {
+        let evtDateStr = '';
+        let startTime: string | undefined = undefined;
+
+        if (evt.start?.dateTime) {
+          // Splitting by 'T' extracts the calendar date directly to avoid timezone day shifts
+          const parts = evt.start.dateTime.split('T');
+          if (parts[0] && /^\d{4}-\d{2}-\d{2}$/.test(parts[0])) {
+            evtDateStr = parts[0];
+          } else {
+            const d = new Date(evt.start.dateTime);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            evtDateStr = `${yyyy}-${mm}-${dd}`;
+          }
+
+          if (parts[1]) {
+            startTime = parts[1].slice(0, 5);
+          } else {
+            const d = new Date(evt.start.dateTime);
+            startTime = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          }
+        } else if (evt.start?.date) {
+          evtDateStr = evt.start.date.split('T')[0];
         }
 
-        if (parts[1]) {
-          startTime = parts[1].slice(0, 5);
-        } else {
-          const d = new Date(evt.start.dateTime);
-          startTime = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        }
-      } else if (evt.start?.date) {
-        evtDateStr = evt.start.date.split('T')[0];
-      }
+        const rawSummary = evt.summary && evt.summary.trim() ? evt.summary.trim() : 'Compromisso Google Agenda';
+        const cleanSummary = rawSummary.replace(/^ação:\s*/i, '').trim() || 'Compromisso Google Agenda';
 
-      const summaryText = evt.summary && evt.summary.trim() ? evt.summary.trim() : 'Compromisso Google Agenda';
+        const act: AppAction = {
+          id: `gcal-${evt.id}`,
+          type: cleanSummary,
+          area: 'Operação',
+          origin: 'Interna',
+          description: evt.description || cleanSummary,
+          date: evtDateStr,
+          time: startTime,
+          status: 'pending',
+          notes: evt.description || (evt.calendarTitle ? `Agenda: ${evt.calendarTitle}` : ''),
+          createdAt: new Date().toISOString(),
+          isAppointment: true,
+          gcalEventId: evt.id,
+        };
+        return act;
+      });
+  }, [googleEvents, isGoogleSynced, actions]);
 
-      const act: AppAction = {
-        id: `gcal-${evt.id}`,
-        type: 'Google Agenda',
-        area: 'Operação',
-        origin: 'Interna',
-        description: summaryText,
-        date: evtDateStr,
-        time: startTime,
-        status: 'pending',
-        notes: evt.description || (evt.calendarTitle ? `Agenda: ${evt.calendarTitle}` : ''),
-        createdAt: new Date().toISOString(),
-        isAppointment: true,
-        gcalEventId: evt.id,
-      };
-      return act;
-    });
-  }, [googleEvents, isGoogleSynced]);
-
-  // Map Google Tasks into the AppAction model schema for unified display
+  // Map Google Tasks into the AppAction model schema for unified display (with deduplication against local actions)
   const mappedGoogleTasks = useMemo(() => {
     if (!isGoogleSynced || googleTasks.length === 0) return [];
 
-    return googleTasks.map((task) => {
-      let taskDateStr = todayStr;
-      if (task.due) {
-        const parts = task.due.split('T');
-        if (parts[0] && /^\d{4}-\d{2}-\d{2}$/.test(parts[0])) {
-          taskDateStr = parts[0];
+    const boundGcalTaskIds = new Set(
+      actions.map((a) => a.gcalTaskId).filter((id): id is string => Boolean(id))
+    );
+
+    return googleTasks
+      .filter((task) => !boundGcalTaskIds.has(task.id))
+      .map((task) => {
+        let taskDateStr = todayStr;
+        if (task.due) {
+          const parts = task.due.split('T');
+          if (parts[0] && /^\d{4}-\d{2}-\d{2}$/.test(parts[0])) {
+            taskDateStr = parts[0];
+          }
         }
-      }
 
-      const summaryText = task.title && task.title.trim() ? task.title.trim() : 'Tarefa Google';
+        const rawSummary = task.title && task.title.trim() ? task.title.trim() : 'Tarefa Google';
+        const cleanSummary = rawSummary.replace(/^tarefa:\s*/i, '').trim() || 'Tarefa Google';
 
-      const act: AppAction = {
-        id: `gtask-${task.id}`,
-        type: 'Google Tarefa',
-        area: 'Operação',
-        origin: 'Interna',
-        description: summaryText,
-        date: taskDateStr,
-        status: task.status === 'completed' ? 'completed' : 'pending',
-        notes: task.notes || (task.listTitle ? `Lista: ${task.listTitle}` : ''),
-        createdAt: task.updated || new Date().toISOString(),
-        completedAt: task.completed,
-        isAppointment: false,
-        gcalTaskId: task.id,
-        gcalTaskListId: task.listId || '@default',
-      };
-      return act;
-    });
-  }, [googleTasks, isGoogleSynced, todayStr]);
+        const act: AppAction = {
+          id: `gtask-${task.id}`,
+          type: cleanSummary,
+          area: 'Operação',
+          origin: 'Interna',
+          description: cleanSummary,
+          date: taskDateStr,
+          status: task.status === 'completed' ? 'completed' : 'pending',
+          notes: task.notes || (task.listTitle ? `Lista: ${task.listTitle}` : ''),
+          createdAt: task.updated || new Date().toISOString(),
+          completedAt: task.completed,
+          isAppointment: false,
+          gcalTaskId: task.id,
+          gcalTaskListId: task.listId || '@default',
+        };
+        return act;
+      });
+  }, [googleTasks, isGoogleSynced, todayStr, actions]);
 
-  // Today's actions sorted by time (Combining local database events, Google Calendar events, and Google Tasks)
+  // Today's actions sorted by time (Combining local database events, Google Calendar events, and Google Tasks with strict deduplication)
   const todayActions = useMemo(() => {
     const localToday = actions.filter((a) => {
       if (!a.date) return false;
@@ -379,8 +406,31 @@ export const TodayTab: React.FC = () => {
       (a) => a.date === todayStr || (!googleTasks.find((t) => `gtask-${t.id}` === a.id)?.due && a.status === 'pending')
     );
 
-    return [...localToday, ...googleToday, ...googleTasksToday]
-      .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+    const combined = [...localToday, ...googleToday, ...googleTasksToday];
+
+    // Deduplicate any overlapping entries (matching Google IDs or matching date + time + normalized text)
+    const seenKeys = new Set<string>();
+    const deduplicated: AppAction[] = [];
+
+    for (const item of combined) {
+      const gcalKey = item.gcalEventId ? `gcal:${item.gcalEventId}` : null;
+      const gtaskKey = item.gcalTaskId ? `gtask:${item.gcalTaskId}` : null;
+      const normDesc = normalizeActionText(item.description);
+      const normType = normalizeActionText(item.type);
+      const contentSignature = `${item.date || todayStr}_${(item.time || '').slice(0, 5)}_${normType || normDesc}`;
+
+      if (gcalKey && seenKeys.has(gcalKey)) continue;
+      if (gtaskKey && seenKeys.has(gtaskKey)) continue;
+      if (contentSignature && seenKeys.has(contentSignature)) continue;
+
+      if (gcalKey) seenKeys.add(gcalKey);
+      if (gtaskKey) seenKeys.add(gtaskKey);
+      if (contentSignature) seenKeys.add(contentSignature);
+
+      deduplicated.push(item);
+    }
+
+    return deduplicated.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
   }, [actions, mappedGoogleEvents, mappedGoogleTasks, googleTasks, todayStr]);
 
   // Completed today counter
@@ -593,7 +643,31 @@ export const TodayTab: React.FC = () => {
       return true;
     });
 
-    return [...localFiltered, ...googleFiltered, ...googleTasksFiltered];
+    const combined = [...localFiltered, ...googleFiltered, ...googleTasksFiltered];
+
+    // Deduplicate overlapping Google Events & Local Actions in calendar views
+    const seenKeys = new Set<string>();
+    const deduplicated: AppAction[] = [];
+
+    for (const item of combined) {
+      const gcalKey = item.gcalEventId ? `gcal:${item.gcalEventId}` : null;
+      const gtaskKey = item.gcalTaskId ? `gtask:${item.gcalTaskId}` : null;
+      const normDesc = normalizeActionText(item.description);
+      const normType = normalizeActionText(item.type);
+      const contentSignature = `${item.date}_${(item.time || '').slice(0, 5)}_${normType || normDesc}`;
+
+      if (gcalKey && seenKeys.has(gcalKey)) continue;
+      if (gtaskKey && seenKeys.has(gtaskKey)) continue;
+      if (contentSignature && seenKeys.has(contentSignature)) continue;
+
+      if (gcalKey) seenKeys.add(gcalKey);
+      if (gtaskKey) seenKeys.add(gtaskKey);
+      if (contentSignature) seenKeys.add(contentSignature);
+
+      deduplicated.push(item);
+    }
+
+    return deduplicated;
   }, [actions, mappedGoogleEvents, mappedGoogleTasks, selectedArea, searchQuery]);
 
   // Modal State for Creating / Editing Actions
