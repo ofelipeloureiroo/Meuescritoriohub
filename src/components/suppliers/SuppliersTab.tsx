@@ -341,14 +341,20 @@ export const SuppliersTab: React.FC = () => {
     setEditingSupplier(null);
   };
 
+  const [deletingSupplierId, setDeletingSupplierId] = useState<string | null>(null);
+
   const handleDeleteSupplier = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este fornecedor?')) {
-      setSuppliers((prev) => prev.filter((s) => s.id !== id));
-      if (editingSupplier?.id === id) {
-        setIsModalOpen(false);
-        setEditingSupplier(null);
-      }
+    setDeletingSupplierId(id);
+  };
+
+  const confirmDeleteSupplier = () => {
+    if (!deletingSupplierId) return;
+    setSuppliers((prev) => prev.filter((s) => s.id !== deletingSupplierId));
+    if (editingSupplier?.id === deletingSupplierId) {
+      setIsModalOpen(false);
+      setEditingSupplier(null);
     }
+    setDeletingSupplierId(null);
   };
 
   const handleToggleFavorite = (id: string) => {
@@ -882,6 +888,47 @@ export const SuppliersTab: React.FC = () => {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DELETE SUPPLIER MODAL */}
+      {deletingSupplierId && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1c1815] border border-rose-500/30 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-[#fcf8f5] text-base">
+                  Excluir fornecedor
+                </h3>
+                <p className="text-xs text-rose-400/80 mt-0.5 font-medium">
+                  Esta ação não pode ser desfeita
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#fcf8f5] leading-relaxed bg-[#12100e] p-3.5 rounded-xl border border-[#302722]">
+              Tem certeza que deseja excluir permanentemente este fornecedor?
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#302722]">
+              <button
+                onClick={() => setDeletingSupplierId(null)}
+                className="px-4 py-2 rounded-xl border border-[#3d342f] text-xs font-bold text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#25201d] transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDeleteSupplier}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-rose-900/30"
+              >
+                <Trash2 className="w-4 h-4" />
+                Confirmar exclusão
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -487,6 +487,32 @@ export interface ProjectMilestone {
   createdAt: string;
 }
 
+export interface TemplateTask {
+  id: string;
+  name: string;
+  description?: string;
+  estimatedDays?: number;
+  dayType?: 'business' | 'calendar';
+  predecessorTaskId?: string;
+  startMode?: 'automatic' | 'manual';
+}
+
+export interface TemplateStage {
+  id: string;
+  name: string;
+  items: TemplateTask[];
+}
+
+export interface ProjectTemplate {
+  id: string;
+  name: string;
+  type: string;
+  date: string;
+  isSystem?: boolean;
+  isArchived?: boolean;
+  stages: (TemplateStage | string)[];
+}
+
 export interface OfficeSettings {
   financialCategories: {
     receitas: string[];
@@ -513,14 +539,7 @@ export interface OfficeSettings {
   lossReasons: string[];
   acquisitionChannels: string[];
   tags: string[];
-  projectTemplates?: {
-    id: string;
-    name: string;
-    type: string;
-    date: string;
-    isSystem?: boolean;
-    stages: string[];
-  }[];
+  projectTemplates?: ProjectTemplate[];
   projectTypes?: string[];
   projectStatuses?: {
     name: string;

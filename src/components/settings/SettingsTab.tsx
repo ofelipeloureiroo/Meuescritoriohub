@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { ProjectTemplatesManager } from './ProjectTemplatesManager';
 import { motion } from 'motion/react';
 import {
   Settings,
@@ -1507,157 +1508,13 @@ export const SettingsTab: React.FC = () => {
                 </div>
               </div>
 
-              {/* CARD 1: Templates de Projeto */}
-              <div className="bg-[#1c1815] border border-[#302722] rounded-2xl p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-[#302722] pb-3">
-                  <div>
-                    <h3 className="font-serif font-bold text-[#fcf8f5] text-sm">Templates de Projeto</h3>
-                    <p className="text-[11px] text-[#a89c93]">Padronize as etapas dos projetos criados no escritório</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const nameVal = prompt('Nome do novo template de projeto:');
-                      if (!nameVal) return;
-                      const list = [...projectTemplates];
-                      list.push({
-                        id: 'tpl-' + Date.now(),
-                        name: nameVal.trim(),
-                        type: 'Projeto Arquitetônico',
-                        date: new Date().toLocaleDateString('pt-BR'),
-                        isSystem: false,
-                        stages: ['Estudo Preliminar', 'Anteprojeto', 'Projeto Executivo']
-                      });
-                      updateOfficeSettings({ projectTemplates: list });
-                    }}
-                    className="px-3 py-1.5 rounded-lg border border-[#3d342f] text-[11px] font-bold text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#25201d] transition-all cursor-pointer"
-                  >
-                    + Novo template
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[250px]">
-                  
-                  {/* Left sidebar select */}
-                  <div className="lg:col-span-4 border-r border-[#302722] pr-4 space-y-3">
-                    <span className="text-[9px] uppercase font-bold text-zinc-500 block tracking-widest">TEMPLATES DA EMPRESA</span>
-                    
-                    {projectTemplates.filter(t => !t.isSystem).length === 0 ? (
-                      <div className="p-3 bg-zinc-950/20 border border-dashed border-zinc-800 rounded-xl text-[10px] text-zinc-500 text-center">
-                        Nenhum template personalizado criado ainda. Crie um novo acima.
-                      </div>
-                    ) : (
-                      projectTemplates.filter(t => !t.isSystem).map(t => (
-                        <button
-                          key={t.id}
-                          onClick={() => setSelectedTemplateId(t.id)}
-                          className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all flex flex-col gap-0.5 cursor-pointer ${
-                            selectedTemplateId === t.id 
-                              ? 'bg-[#28221e] border-[#302722] text-[var(--theme-primary)]' 
-                              : 'bg-transparent border-transparent text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#12100e]/40'
-                          }`}
-                        >
-                          <span className="font-bold text-xs">{t.name}</span>
-                          <span className="text-[9px] opacity-70">Criado em {t.date}</span>
-                        </button>
-                      ))
-                    )}
-
-                    <span className="text-[9px] uppercase font-bold text-zinc-500 block tracking-widest pt-3">PADRÃO DO SISTEMA</span>
-                    <div className="space-y-1.5">
-                      {projectTemplates.filter(t => t.isSystem).map(t => (
-                        <button
-                          key={t.id}
-                          onClick={() => setSelectedTemplateId(t.id)}
-                          className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all flex flex-col gap-0.5 cursor-pointer ${
-                            selectedTemplateId === t.id 
-                              ? 'bg-[#28221e] border-[#302722] text-[var(--theme-primary)]' 
-                              : 'bg-transparent border-transparent text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#12100e]/40'
-                          }`}
-                        >
-                          <span className="font-bold text-xs">{t.name}</span>
-                          <span className="text-[9px] opacity-70">Template global • {t.date}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Right Detail view */}
-                  <div className="lg:col-span-8 space-y-4 flex flex-col justify-between">
-                    {(() => {
-                      const selectedTpl = projectTemplates.find(t => t.id === selectedTemplateId) || projectTemplates[0];
-                      if (!selectedTpl) {
-                        return <div className="text-[#a89c93] text-center italic py-20 text-xs">Selecione um template para visualizar</div>;
-                      }
-                      return (
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-bold text-[#fcf8f5] text-sm">{selectedTpl.name}</h4>
-                              <p className="text-[10px] text-[#a89c93] mt-0.5">Tipo recomendado: {selectedTpl.type}</p>
-                            </div>
-                            {!selectedTpl.isSystem && (
-                              <button
-                                onClick={() => {
-                                  const updated = projectTemplates.filter(t => t.id !== selectedTpl.id);
-                                  updateOfficeSettings({ projectTemplates: updated });
-                                  setSelectedTemplateId(projectTemplates[0].id);
-                                }}
-                                className="p-1 text-rose-400 hover:bg-rose-500/10 rounded cursor-pointer"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-
-                          <div className="space-y-2">
-                            <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block">Etapas Sincronizadas do Fluxo ({selectedTpl.stages.length}):</span>
-                            <div className="space-y-1.5 max-h-[220px] overflow-y-auto no-scrollbar">
-                              {selectedTpl.stages.map((stage, sIdx) => (
-                                <div key={stage} className="flex items-center gap-2.5 p-2 bg-[#12100e] border border-[#302722] rounded-xl text-xs font-semibold text-[#fcf8f5]">
-                                  <span className="w-5 h-5 rounded-full bg-[#1c1815] text-[10px] font-bold flex items-center justify-center border border-[#3d342f] text-[var(--theme-primary)]">
-                                    {sIdx + 1}
-                                  </span>
-                                  <span>{stage}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                </div>
-              </div>
-
-              {/* CARD 2: Template por Tipo de Projeto */}
-              <div className="bg-[#1c1815] border border-[#302722] rounded-2xl p-5 space-y-4">
-                <div>
-                  <h3 className="font-serif font-bold text-[#fcf8f5] text-sm">Template por Tipo de Projeto</h3>
-                  <p className="text-[11px] text-[#a89c93]">Vincule um template padrão a cada tipo. Será aplicado automaticamente ao criar projetos.</p>
-                </div>
-
-                <div className="space-y-2.5">
-                  {projectTypes.map(type => {
-                    const currentTplId = templateBindings[type] || '';
-                    return (
-                      <div key={type} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-[#12100e] border border-[#302722] rounded-2xl text-xs">
-                        <span className="font-bold text-[#fcf8f5]">{type}</span>
-                        <select
-                          value={currentTplId}
-                          onChange={(e) => handleUpdateTemplateBinding(type, e.target.value)}
-                          className="px-3 py-1.5 rounded-lg bg-[#1c1815] border border-[#3d342f] text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] text-xs font-semibold cursor-pointer max-w-xs"
-                        >
-                          <option value="">Sem template padrão</option>
-                          {projectTemplates.map(tpl => (
-                            <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <ProjectTemplatesManager
+                officeSettings={officeSettings}
+                updateOfficeSettings={updateOfficeSettings}
+                projectTypes={projectTypes}
+                templateBindings={templateBindings}
+                handleUpdateTemplateBinding={handleUpdateTemplateBinding}
+              />
 
               {/* CARD 3 & 4 SIDE BY SIDE: Tipos de Projeto & Status de Projeto */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
