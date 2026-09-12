@@ -20,11 +20,16 @@ import {
   Settings,
   TrendingUp,
   AlertCircle,
+  AlertTriangle,
   CheckSquare,
   CreditCard,
   User,
   Users,
   KeyRound,
+  Target,
+  Zap,
+  BarChart3,
+  ListChecks,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { ArchitectureProject, ProjectInstallment, ProjectMilestone } from '../../types';
@@ -49,6 +54,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
     architectureProjects,
     projectInstallments,
     projectMilestones,
+    actions,
     addProjectMilestone,
     toggleProjectMilestone,
     deleteProjectMilestone,
@@ -58,6 +64,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
     bankAccounts,
   } = useFinance();
 
+  const [activeSubTab, setActiveSubTab] = useState<'visao_geral' | 'central_atrasos'>('visao_geral');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -100,18 +107,87 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
     return matchesStatus && matchesCategory && matchesSearch;
   });
 
-  // Financial Stats for Management
-  const totalContractedAmount = architectureProjects.reduce((sum, p) => sum + (p.honorarios || 0), 0);
-  const activeProjectsCount = architectureProjects.filter(p => p.status !== 'entregue').length;
-  
-  // Calculate paid & pending amounts
-  const totalPaidAmount = projectInstallments
-    .filter(inst => inst.status === 'paid')
-    .reduce((sum, inst) => sum + (inst.paidAmount || inst.amount), 0);
+  const todayStr = new Date().toISOString().split('T')[0];
 
-  const totalPendingAmount = projectInstallments
-    .filter(inst => inst.status === 'pending' || inst.status === 'overdue')
-    .reduce((sum, inst) => sum + inst.amount, 0);
+  // Projects categorization
+  const activeProjects = architectureProjects.filter(
+    (p) => p.status !== 'entregue' && p.status !== 'concluido' && p.status !== 'cancelado'
+  );
+  const activeProjectsCount = activeProjects.length;
+
+  const completedProjects = architectureProjects.filter(
+    (p) => p.status === 'entregue' || p.status === 'concluido'
+  );
+  const completedProjectsCount = completedProjects.length;
+
+  // Build detailed overdue breakdown across active projects
+  const delayedProjectsDetails = activeProjects.map((p) => {
+    const pStages = p.stages && p.stages.length > 0 ? p.stages : DEFAULT_PROJECT_STAGES;
+
+    const overdueTasks = pStages
+      .flatMap((s) => (s.tasks || []).map((t) => ({ ...t, stageName: s.name })))
+      .filter((t) => t.status !== 'completed' && t.dueDate && t.dueDate < todayStr);
+
+    const overdueMils = projectMilestones.filter(
+      (m) => m.projectId === p.id && !m.completed && m.dueDate && m.dueDate < todayStr
+    );
+
+    const overdueInsts = projectInstallments.filter(
+      (i) => i.projectId === p.id && (i.status === 'overdue' || (i.status === 'pending' && i.dueDate < todayStr))
+    );
+
+    const overdueActs = (actions || []).filter(
+      (a) =>
+        (a.relatedId === p.id || a.relatedTitle === p.title) &&
+        a.status !== 'completed' &&
+        a.status !== 'cancelled' &&
+        a.date &&
+        a.date < todayStr
+    );
+
+    const isProjectDeadlineOverdue = Boolean(p.endDate && p.endDate < todayStr);
+
+    const totalDelayedItems =
+      overdueTasks.length + overdueMils.length + overdueInsts.length + overdueActs.length + (isProjectDeadlineOverdue ? 1 : 0);
+
+    return {
+      project: p,
+      overdueTasks,
+      overdueMils,
+      overdueInsts,
+      overdueActs,
+      isProjectDeadlineOverdue,
+      totalDelayedItems,
+    };
+  });
+
+  const delayedProjects = delayedProjectsDetails.filter((item) => item.totalDelayedItems > 0);
+  const projectsWithDelaysCount = delayedProjects.length;
+
+  const overdueTasksCount = delayedProjectsDetails.reduce(
+    (sum, item) => sum + item.overdueTasks.length + item.overdueMils.length + item.overdueActs.length,
+    0
+  );
+
+  const dueTodayCount = activeProjects.reduce((sum, p) => {
+    const pStages = p.stages && p.stages.length > 0 ? p.stages : DEFAULT_PROJECT_STAGES;
+    const stageDue = pStages
+      .flatMap((s) => s.tasks || [])
+      .filter((t) => t.status !== 'completed' && t.dueDate === todayStr).length;
+
+    const milsDue = projectMilestones.filter(
+      (m) => m.projectId === p.id && !m.completed && m.dueDate === todayStr
+    ).length;
+
+    const actsDue = (actions || []).filter(
+      (a) =>
+        (a.relatedId === p.id || a.relatedTitle === p.title) &&
+        a.status !== 'completed' &&
+        a.date === todayStr
+    ).length;
+
+    return sum + stageDue + milsDue + actsDue;
+  }, 0);
 
   const handleOpenAddProject = () => {
     setIsNewContractModalOpen(true);
@@ -233,18 +309,8 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
             <Layers className="w-5 h-5 text-orange-400" />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-[#a89c93] block">Projetos Ativos</span>
-            <span className="text-xl font-serif font-bold text-[#fcf8f5]">{activeProjectsCount} contratos</span>
-          </div>
-        </div>
-
-        <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
-          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/15">
-            <DollarSign className="w-5 h-5 text-amber-400" />
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-[#a89c93] block">Valor Contratado</span>
-            <span className="text-xl font-serif font-bold text-amber-300">{formatCurrency(totalContractedAmount)}</span>
+            <span className="text-2xl font-serif font-bold text-[#fcf8f5] block leading-none">{activeProjectsCount}</span>
+            <span className="text-[11px] font-medium text-[#a89c93] mt-1 block">Ativos</span>
           </div>
         </div>
 
@@ -253,23 +319,111 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-[#a89c93] block">Total Recebido</span>
-            <span className="text-xl font-serif font-bold text-emerald-400">{formatCurrency(totalPaidAmount)}</span>
+            <span className="text-2xl font-serif font-bold text-emerald-400 block leading-none">{completedProjectsCount}</span>
+            <span className="text-[11px] font-medium text-emerald-400/90 mt-1 block">Concluídos</span>
           </div>
         </div>
 
         <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
           <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/15">
-            <TrendingUp className="w-5 h-5 text-rose-400" />
+            <AlertTriangle className="w-5 h-5 text-rose-400" />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-[#a89c93] block">A Receber / Saldo</span>
-            <span className="text-xl font-serif font-bold text-rose-400">{formatCurrency(totalPendingAmount)}</span>
+            <span className="text-2xl font-serif font-bold text-rose-400 block leading-none">{projectsWithDelaysCount}</span>
+            <span className="text-[11px] font-medium text-rose-400/90 mt-1 block">Com atraso</span>
+          </div>
+        </div>
+
+        <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/15">
+            <ListChecks className="w-5 h-5 text-amber-400" />
+          </div>
+          <div>
+            <span className="text-2xl font-serif font-bold text-amber-300 block leading-none">{overdueTasksCount}</span>
+            <span className="text-[11px] font-medium text-amber-400/90 mt-1 block">Pendências atrasadas</span>
           </div>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* Card Execução Operacional */}
+      <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-5 space-y-4 shadow-sm">
+        <div className="flex items-center gap-2 text-sm font-bold text-[#fcf8f5]">
+          <Target className="w-4 h-4 text-[var(--theme-primary)]" />
+          <span>Execução Operacional</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#3d342f] pt-1">
+          <div className="px-2 sm:px-4 py-2.5 sm:py-0 first:pl-0">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[#a89c93]">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>VENCEM HOJE</span>
+            </div>
+            <div className="text-2xl font-serif font-bold text-[#fcf8f5] mt-1.5">
+              {dueTodayCount}
+            </div>
+            <p className="text-[11px] text-[#a89c93] mt-0.5">tarefas vencem hoje</p>
+          </div>
+
+          <div className="px-2 sm:px-4 py-2.5 sm:py-0">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[#a89c93]">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+              <span>ATRASADOS</span>
+            </div>
+            <div className="text-2xl font-serif font-bold text-[#fcf8f5] mt-1.5">
+              {overdueTasksCount}
+            </div>
+            <p className="text-[11px] text-[#a89c93] mt-0.5">tarefas com prazo vencido</p>
+          </div>
+
+          <div className="px-2 sm:px-4 py-2.5 sm:py-0 last:pr-0">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[#a89c93]">
+              <Zap className="w-3.5 h-3.5 text-rose-400" />
+              <span>EM RISCO</span>
+            </div>
+            <div className="text-2xl font-serif font-bold text-rose-400 mt-1.5">
+              {projectsWithDelaysCount}
+            </div>
+            <p className="text-[11px] text-[#a89c93] mt-0.5">projetos com atrasos</p>
+          </div>
+        </div>
+      </div>
+
+      {/* SubTabs Navigation */}
+      <div className="flex items-center justify-start gap-2 border-b border-[#3d342f]/60 pb-3">
+        <button
+          onClick={() => setActiveSubTab('visao_geral')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeSubTab === 'visao_geral'
+              ? 'bg-[#241e1b] text-[#fcf8f5] border border-[#3d342f] shadow-sm'
+              : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1c1815]'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4 text-[var(--theme-primary)]" />
+          <span>Visão Geral</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('central_atrasos')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeSubTab === 'central_atrasos'
+              ? 'bg-[#241e1b] text-[#fcf8f5] border border-[#3d342f] shadow-sm'
+              : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1c1815]'
+          }`}
+        >
+          <AlertTriangle className="w-4 h-4 text-amber-400" />
+          <span>Central de Atrasos</span>
+          {projectsWithDelaysCount > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-extrabold text-[10px] border border-rose-500/30 ml-0.5">
+              {projectsWithDelaysCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* SubTab Content */}
+      {activeSubTab === 'visao_geral' ? (
+        <div className="space-y-6">
+          {/* Filter and Search Bar */}
       <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
         {/* Search */}
         <div className="relative w-full md:max-w-md">
@@ -682,6 +836,142 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+  ) : (
+        /* Central de Atrasos SubTab */
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {delayedProjects.length === 0 ? (
+            <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-16 text-center space-y-3 shadow-sm">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+              </div>
+              <h3 className="font-bold text-base text-[#fcf8f5]">Sem atrasos!</h3>
+              <p className="text-xs text-[#a89c93]">Todos os projetos estão em dia</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[#fcf8f5] flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-400" />
+                  <span>Projetos com Pendências Atrasadas ({delayedProjects.length})</span>
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {delayedProjects.map(({ project: p, overdueTasks, overdueMils, overdueInsts, overdueActs, isProjectDeadlineOverdue }) => (
+                  <div
+                    key={p.id}
+                    className="bg-[#1c1815] border border-rose-500/30 rounded-2xl p-5 space-y-4 shadow-sm"
+                  >
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#3d342f]/60 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wide text-rose-400 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20">
+                            {p.category.toUpperCase().replace('_', ' ')}
+                          </span>
+                          <span className="text-xs text-[#a89c93]">
+                            Cliente: <strong className="text-[#fcf8f5]">{p.clientName}</strong>
+                          </span>
+                        </div>
+                        <h4 className="text-base font-serif font-bold text-[#fcf8f5] mt-1">{p.title}</h4>
+                      </div>
+
+                      <button
+                        onClick={() => setSelectedProjectForDetail(p)}
+                        className="px-3.5 py-1.5 rounded-xl bg-[#241e1b] hover:bg-[#3d342f]/60 border border-[#3d342f] text-xs font-bold text-[#fcf8f5] flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+                        <span>Ver Projeto</span>
+                      </button>
+                    </div>
+
+                    {/* List of delayed items */}
+                    <div className="space-y-2 text-xs">
+                      {isProjectDeadlineOverdue && (
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300">
+                          <span className="font-semibold flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-rose-400" />
+                            Prazo Final do Contrato Vencido
+                          </span>
+                          <span className="text-[11px] font-bold">Previsto para: {formatDate(p.endDate!)}</span>
+                        </div>
+                      )}
+
+                      {overdueTasks.map((t) => (
+                        <div key={t.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[#14110f] border border-[#3d342f]">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                            <div className="min-w-0">
+                              <span className="font-semibold text-[#fcf8f5] block truncate">{t.title}</span>
+                              <span className="text-[10px] text-[#a89c93] block">Etapa: {t.stageName}</span>
+                            </div>
+                          </div>
+                          <span className="text-rose-400 font-bold text-[11px] shrink-0 ml-2">Vencido em {formatDate(t.dueDate)}</span>
+                        </div>
+                      ))}
+
+                      {overdueMils.map((m) => (
+                        <div key={m.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[#14110f] border border-[#3d342f]">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <div className="min-w-0">
+                              <span className="font-semibold text-[#fcf8f5] block truncate">Marco: {m.title}</span>
+                              <span className="text-[10px] text-[#a89c93] block">Fase: {m.stage}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            <span className="text-amber-400 font-bold text-[11px]">Vencido em {formatDate(m.dueDate)}</span>
+                            <button
+                              onClick={() => toggleProjectMilestone(m.id)}
+                              className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 font-bold text-[10px] cursor-pointer"
+                            >
+                              Concluir
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {overdueInsts.map((i) => (
+                        <div key={i.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[#14110f] border border-[#3d342f]">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <CreditCard className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                            <div className="min-w-0">
+                              <span className="font-semibold text-[#fcf8f5] block truncate">Parcela: {i.description}</span>
+                              <span className="text-[10px] text-[#a89c93] block">Valor: {formatCurrency(i.amount)}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            <span className="text-rose-400 font-bold text-[11px]">Vencido em {formatDate(i.dueDate)}</span>
+                            <button
+                              onClick={() => handleMarkInstallmentAsPaid(i.id)}
+                              className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 font-bold text-[10px] cursor-pointer"
+                            >
+                              Dar Baixa
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {overdueActs.map((a) => (
+                        <div key={a.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[#14110f] border border-[#3d342f]">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <CheckSquare className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <div className="min-w-0">
+                              <span className="font-semibold text-[#fcf8f5] block truncate">{a.description}</span>
+                              <span className="text-[10px] text-[#a89c93] block">Ação do Projeto</span>
+                            </div>
+                          </div>
+                          <span className="text-amber-400 font-bold text-[11px] shrink-0 ml-2">Vencido em {formatDate(a.date)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
