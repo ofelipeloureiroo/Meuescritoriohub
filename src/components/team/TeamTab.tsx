@@ -302,8 +302,12 @@ export const TeamTab: React.FC = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('meu_escritorio_equipe_v1', JSON.stringify(members));
-      window.dispatchEvent(new CustomEvent('team_updated'));
+      const serialized = JSON.stringify(members);
+      const currentSaved = localStorage.getItem('meu_escritorio_equipe_v1');
+      if (currentSaved !== serialized) {
+        localStorage.setItem('meu_escritorio_equipe_v1', serialized);
+        window.dispatchEvent(new CustomEvent('team_updated'));
+      }
     } catch (e) {
       console.error('Failed to persist team members', e);
     }
@@ -314,7 +318,13 @@ export const TeamTab: React.FC = () => {
       try {
         const saved = localStorage.getItem('meu_escritorio_equipe_v1');
         if (saved) {
-          setMembers(JSON.parse(saved));
+          const parsed = JSON.parse(saved);
+          setMembers((prev) => {
+            if (JSON.stringify(prev) === saved) {
+              return prev;
+            }
+            return parsed;
+          });
         }
       } catch {
         // fallback

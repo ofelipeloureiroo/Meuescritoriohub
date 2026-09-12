@@ -224,7 +224,12 @@ export const SuppliersTab: React.FC = () => {
   useEffect(() => {
     if (!targetUid) return;
     try {
-      localStorage.setItem(getStorageKey('suppliers'), JSON.stringify(suppliers));
+      const serialized = JSON.stringify(suppliers);
+      const storageKey = getStorageKey('suppliers');
+      if (localStorage.getItem(storageKey) !== serialized) {
+        localStorage.setItem(storageKey, serialized);
+        window.dispatchEvent(new CustomEvent('suppliers_updated'));
+      }
     } catch (e) {
       console.error('Failed to persist suppliers', e);
     }
@@ -236,12 +241,18 @@ export const SuppliersTab: React.FC = () => {
       try {
         const saved = localStorage.getItem(getStorageKey('suppliers'));
         if (saved) {
-          setSuppliers(JSON.parse(saved));
+          const parsed = JSON.parse(saved);
+          setSuppliers((prev) => {
+            if (JSON.stringify(prev) === saved) {
+              return prev;
+            }
+            return parsed;
+          });
         } else {
-          setSuppliers([]);
+          setSuppliers((prev) => (prev.length === 0 ? prev : []));
         }
       } catch {
-        setSuppliers([]);
+        setSuppliers((prev) => (prev.length === 0 ? prev : []));
       }
     };
     window.addEventListener('suppliers_updated', handleSuppliersUpdated);

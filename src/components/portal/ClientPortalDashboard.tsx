@@ -153,15 +153,18 @@ export const ClientPortalDashboard: React.FC = () => {
   }, [portal?.id, isAdminMode, navigate]);
 
   // Set default active project based on effectivePortal
+  const projectIdsKey = (effectivePortal.projects || []).map((p) => p.id).join(',');
+  const firstProjectId = effectivePortal.projects?.[0]?.id || '';
+
   useEffect(() => {
     if (effectivePortal.projects && effectivePortal.projects.length > 0) {
       if (!activeProjectId || !effectivePortal.projects.some((p) => p.id === activeProjectId)) {
-        setActiveProjectId(effectivePortal.projects[0].id);
+        setActiveProjectId(firstProjectId);
       }
-    } else {
+    } else if (activeProjectId !== '') {
       setActiveProjectId('');
     }
-  }, [effectivePortal.projects, activeProjectId]);
+  }, [projectIdsKey, firstProjectId, activeProjectId]);
 
   const handleLogout = () => {
     sessionStorage.removeItem('client_portal_session');

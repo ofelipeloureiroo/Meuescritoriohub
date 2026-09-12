@@ -77,10 +77,16 @@ export function useTeamMembers(): {
 
   useEffect(() => {
     const handleUpdate = () => {
-      setMembers(getMembersFromStorage());
+      const next = getMembersFromStorage();
+      setMembers((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(next)) {
+          return prev;
+        }
+        return next;
+      });
     };
 
-    setMembers(getMembersFromStorage());
+    handleUpdate();
 
     window.addEventListener('team_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
