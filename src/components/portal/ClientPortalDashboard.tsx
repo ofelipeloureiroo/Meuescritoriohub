@@ -884,7 +884,7 @@ export const ClientPortalDashboard: React.FC = () => {
       {/* Footer */}
       <footer className="border-t border-[#3d342f]/40 py-6 text-center text-xs text-[#a89c93] mt-12">
         <p>
-          {effectivePortal.officeName || 'Meu Escritório Online'} • Radar da Cliente • Acompanhamento em Tempo Real
+          {effectivePortal.officeName || 'Meu Escritório Online'} • Radar do Cliente • Acompanhamento em Tempo Real
         </p>
       </footer>
 

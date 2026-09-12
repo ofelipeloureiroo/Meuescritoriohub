@@ -435,7 +435,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                           setIsPortalModalOpen(true);
                         }}
                         className="p-1.5 rounded-lg text-[var(--theme-primary)] hover:text-black hover:bg-[var(--theme-primary)] border border-[var(--theme-primary)]/40 transition-colors cursor-pointer"
-                        title="Gerenciar Radar da Cliente (Acesso, Fases & Mensagens)"
+                        title="Gerenciar Radar do Cliente (Acesso, Fases & Mensagens)"
                       >
                         <KeyRound className="w-3.5 h-3.5" />
                       </button>

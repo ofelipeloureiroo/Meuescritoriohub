@@ -659,7 +659,7 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-[#fcf8f5]">
-                {initialPortal ? 'Gerenciar Radar da Cliente' : 'Criar Novo Acesso ao Radar'}
+                {initialPortal ? 'Gerenciar Radar do Cliente' : 'Criar Novo Acesso ao Radar'}
               </h2>
               <p className="text-xs text-[#a89c93]">
                 Configure os dados de acesso, etapas e pranchas visíveis para o cliente

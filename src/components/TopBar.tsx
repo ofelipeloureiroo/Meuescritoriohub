@@ -43,7 +43,7 @@ const TAB_TITLES: Record<string, { label: string; icon: React.ElementType; descr
   suppliers: { label: 'Fornecedores', icon: Package, description: 'Catálogo de parceiros, lojas e contatos técnicos' },
   team: { label: 'Equipe & Colaboradores', icon: Users, description: 'Membros, funções, permissões e convites' },
   freelance: { label: 'Clientes & Contratos', icon: Briefcase, description: 'Cadastro de clientes, contratos e propostas' },
-  portal_cliente: { label: 'Radar da Cliente', icon: KeyRound, description: 'Acessos exclusivos, acompanhamento de etapas e transparência' },
+  portal_cliente: { label: 'Radar do Cliente', icon: KeyRound, description: 'Acessos exclusivos, acompanhamento de etapas e transparência' },
   deadlines: { label: 'Prazos & Cobranças', icon: Clock, description: 'Controle de parcelas a vencer e etapas críticas' },
   banks: { label: 'Financeiro & Bancos', icon: WalletIcon, description: 'Contas, extrato, conciliação e fluxo de caixa' },
   dashboard: { label: 'Saúde do Negócio', icon: TrendingUp, description: 'Métricas financeiras, lucratividade e DRE' },

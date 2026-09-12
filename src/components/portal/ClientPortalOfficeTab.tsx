@@ -120,7 +120,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
   const handleCopyCredentials = (p: ClientPortalAccess) => {
     const origin = window.location.origin;
     const directUrl = `${origin}/cliente/login?email=${encodeURIComponent(p.clientEmail)}&code=${encodeURIComponent(p.accessCode)}`;
-    const text = `*Radar da Cliente - ${p.officeName || 'Meu Escritório'}*\n\nOlá, ${p.clientName}!\nVocê pode acompanhar todas as etapas, prazos, arquivos e falar com a equipe pelo seu portal exclusivo:\n\n🔗 *Acesso Direto:* ${directUrl}\n📧 *E-mail:* ${p.clientEmail}\n🔑 *Senha/Código de Acesso:* ${p.accessCode}\n\nQualquer dúvida, estamos à disposição!`;
+    const text = `*Radar do Cliente - ${p.officeName || 'Meu Escritório'}*\n\nOlá, ${p.clientName}!\nVocê pode acompanhar todas as etapas, prazos, arquivos e falar com a equipe pelo seu portal exclusivo:\n\n🔗 *Acesso Direto:* ${directUrl}\n📧 *E-mail:* ${p.clientEmail}\n🔑 *Senha/Código de Acesso:* ${p.accessCode}\n\nQualquer dúvida, estamos à disposição!`;
     navigator.clipboard.writeText(text);
     setCopiedId(p.id + '-text');
     setTimeout(() => setCopiedId(null), 2500);
@@ -129,7 +129,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
   const handleOpenWhatsApp = (p: ClientPortalAccess) => {
     const origin = window.location.origin;
     const directUrl = `${origin}/cliente/login?email=${encodeURIComponent(p.clientEmail)}&code=${encodeURIComponent(p.accessCode)}`;
-    const text = `Olá, ${p.clientName}! Aqui está o seu link de acesso ao Radar da Cliente para acompanhar o projeto em tempo real:\n\n${directUrl}\n\nE-mail: ${p.clientEmail}\nCódigo de Acesso: ${p.accessCode}`;
+    const text = `Olá, ${p.clientName}! Aqui está o seu link de acesso ao Radar do Cliente para acompanhar o projeto em tempo real:\n\n${directUrl}\n\nE-mail: ${p.clientEmail}\nCódigo de Acesso: ${p.accessCode}`;
     const rawPhone = (p.clientPhone || '').replace(/\D/g, '');
     const phoneWithDDI = rawPhone.length <= 11 ? `55${rawPhone}` : rawPhone;
     window.open(`https://wa.me/${phoneWithDDI}?text=${encodeURIComponent(text)}`, '_blank');
@@ -184,7 +184,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
               <span>Painel de Gestão do Escritório</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#fcf8f5] tracking-tight">
-              Radar da Cliente & Transparência
+              Radar do Cliente & Transparência
             </h1>
             <p className="text-xs sm:text-sm text-[#a89c93] leading-relaxed">
               Crie acessos exclusivos para os clientes acompanharem as etapas dos projetos, baixarem plantas e documentos aprovados, e trocarem mensagens com sua equipe de forma centralizada.
@@ -333,7 +333,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
               </h3>
               <p className="text-xs sm:text-sm text-[#a89c93] leading-relaxed">
                 {clients.length === 0
-                  ? 'O Radar da Cliente exibe e sincroniza os acessos dos clientes cadastrados no seu escritório. Cadastre seus clientes e vincule projetos para liberar o acompanhamento exclusivo em tempo real.'
+                  ? 'O Radar do Cliente exibe e sincroniza os acessos dos clientes cadastrados no seu escritório. Cadastre seus clientes e vincule projetos para liberar o acompanhamento exclusivo em tempo real.'
                   : 'Tente alterar os termos da busca ou os filtros de status acima.'}
               </p>
             </div>
@@ -646,7 +646,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
       <div className="bg-[#161311] border border-[#3d342f] rounded-2xl p-6 space-y-4">
         <div className="flex items-center gap-2 text-sm font-bold text-[#fcf8f5]">
           <Sparkles className="w-4 h-4 text-[var(--theme-primary)]" />
-          <span>Como funciona a segurança e o isolamento do Radar da Cliente?</span>
+          <span>Como funciona a segurança e o isolamento do Radar do Cliente?</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-[#a89c93]">
           <div className="space-y-1.5 p-3.5 rounded-xl bg-[#1c1815] border border-[#3d342f]/60">
