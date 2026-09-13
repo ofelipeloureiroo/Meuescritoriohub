@@ -38,6 +38,8 @@ import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { AppAction, ArchitectureProject, Client, TeamMember } from '../../types';
+import { db } from '../../lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 export interface TeamProjectAllocation {
   memberId: string;
@@ -63,53 +65,6 @@ const DEFAULT_SECTORS_CONFIG = {
   construction: true,
   crm_followup: true,
 };
-
-const INITIAL_TEAM_ALLOCATIONS: TeamProjectAllocation[] = [
-  {
-    memberId: 'member_1',
-    memberName: 'Laíne Paula Loureiro',
-    roleTitle: 'Arquiteta Titular & Sócia',
-    initials: 'LP',
-    color: '#c58a4b',
-    currentProjectTitle: 'Residência Alphaville',
-    currentStage: 'Projeto Executivo',
-    taskDetail: 'Revisão final do Projeto Executivo e Aprovação de Marcenaria',
-    deadline: '2026-09-25',
-  },
-  {
-    memberId: 'member_2',
-    memberName: 'Maria Laura',
-    roleTitle: 'Coordenadora de Projetos',
-    initials: 'ML',
-    color: '#8c7456',
-    currentProjectTitle: 'Apartamento Jardins 302',
-    currentStage: 'Modelagem 3D & Render',
-    taskDetail: 'Modelagem da Cozinha Gourmet Integrada e Renders no Lumion',
-    deadline: '2026-09-30',
-  },
-  {
-    memberId: 'member_3',
-    memberName: 'Carlos Eduardo',
-    roleTitle: 'Arquiteto Desenvolvedor',
-    initials: 'CE',
-    color: '#4f7a61',
-    currentProjectTitle: 'Clínica Dermatológica Harmonia',
-    currentStage: 'Detalhamento Executivo',
-    taskDetail: 'Detalhamento de paginação de piso, forro e pontos elétricos',
-    deadline: '2026-10-05',
-  },
-  {
-    memberId: 'member_4',
-    memberName: 'Beatriz Vasconcelos',
-    roleTitle: 'Estagiária de Arquitetura',
-    initials: 'BV',
-    color: '#7b6194',
-    currentProjectTitle: 'Consultório Dr. Marcelo',
-    currentStage: 'Estudo Preliminar & Medição',
-    taskDetail: 'Levantamento métrico cadastral e conferência de pontos in loco',
-    deadline: '2026-09-20',
-  },
-];
 
 interface BusinessDashboardTabProps {
   onNavigateTab?: (tab: string) => void;
@@ -171,23 +126,198 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
     }
   };
 
-  // 2. Team Members & Project Allocations (persisted and synced with office projects)
-  const [teamAllocations, setTeamAllocations] = useState<TeamProjectAllocation[]>(() => {
+  // 2. Team Members & Project Allocations (Strictly real office team members)
+  const [realMembers, setRealMembers] = useState<TeamMember[]>([]);
+  const [allocationsMap, setAllocationsMap] = useState<Record<string, Partial<TeamProjectAllocation>>>(() => {
     try {
-      const saved = localStorage.getItem('meu_escritorio_team_allocations_v2');
-      return saved ? JSON.parse(saved) : INITIAL_TEAM_ALLOCATIONS;
+      const saved = localStorage.getItem('meu_escritorio_team_alloc_map_v1');
+      return saved ? JSON.parse(saved) : {};
     } catch {
-      return INITIAL_TEAM_ALLOCATIONS;
+      return {};
     }
   });
 
+  // Sync real office team members
   useEffect(() => {
-    try {
-      localStorage.setItem('meu_escritorio_team_allocations_v2', JSON.stringify(teamAllocations));
-    } catch (e) {
-      console.warn('Could not save team allocations', e);
+    const ownerMember: TeamMember = {
+      id: user?.uid || 'member_owner',
+      name: architectProfile?.name || profile?.companyName || user?.displayName || 'Administrador',
+      email: user?.email || '',
+      role: 'admin',
+      roleTitle: architectProfile?.title || 'Arquiteto Titular / Gestor',
+      initials: (architectProfile?.name || user?.displayName || user?.email || 'ME')
+        .substring(0, 2)
+        .toUpperCase(),
+      color: '#c58a4b',
+      isCurrentUser: true,
+      status: 'active',
+      accessibleModulesCount: 12,
+      permissions: {
+        today: true,
+        actions: true,
+        leads: true,
+        projects: true,
+        suppliers: true,
+        team: true,
+        clients: true,
+        deadlines: true,
+        finance: true,
+        health: true,
+        goals: true,
+        budget: true,
+      },
+      joinedAt: new Date().toISOString().split('T')[0],
+    };
+
+    const currentList: TeamMember[] = [ownerMember];
+
+    // Add collaborators from profile.collaborators if present
+    if (profile?.collaborators && Array.isArray(profile.collaborators)) {
+      profile.collaborators.forEach((collab) => {
+        if (!collab.email) return;
+        const exists = currentList.some(
+          (m) => m.id === collab.uid || (m.email && m.email.toLowerCase() === collab.email.toLowerCase())
+        );
+        if (!exists) {
+          currentList.push({
+            id: collab.uid || `collab_${collab.email}`,
+            name: collab.name || collab.email.split('@')[0],
+            email: collab.email,
+            roleTitle: collab.roleTitle || 'Membro Colaborador',
+            role: 'member',
+            initials: (collab.name || collab.email).substring(0, 2).toUpperCase(),
+            color: '#8c7456',
+            isCurrentUser: collab.uid === user?.uid,
+            status: 'active',
+            accessibleModulesCount: Object.values(collab.permissions || {}).filter(Boolean).length,
+            permissions: {
+              today: true,
+              actions: true,
+              leads: true,
+              projects: true,
+              suppliers: true,
+              team: true,
+              clients: true,
+              deadlines: true,
+              finance: false,
+              health: false,
+              goals: true,
+              budget: false,
+              ...(collab.permissions || {}),
+            },
+            joinedAt: collab.joinedAt || new Date().toISOString().split('T')[0],
+          });
+        }
+      });
     }
-  }, [teamAllocations]);
+
+    setRealMembers(currentList);
+
+    // Also listen to users collection where joinedOwnerUid equals owner
+    const ownerUid = user?.uid;
+    if (!ownerUid) return;
+
+    try {
+      const q = query(collection(db, 'users'), where('joinedOwnerUid', '==', ownerUid));
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          setRealMembers((prev) => {
+            const list = [...prev];
+            snapshot.docs.forEach((docSnap) => {
+              const uData = docSnap.data();
+              const email = uData.email;
+              if (!email) return;
+
+              const existingIdx = list.findIndex(
+                (m) => m.id === docSnap.id || (m.email && m.email.toLowerCase() === email.toLowerCase())
+              );
+
+              if (existingIdx >= 0) {
+                list[existingIdx] = {
+                  ...list[existingIdx],
+                  id: docSnap.id,
+                  email: email,
+                  name: uData.name || email.split('@')[0],
+                };
+              } else {
+                list.push({
+                  id: docSnap.id,
+                  name: uData.name || email.split('@')[0],
+                  email: email,
+                  roleTitle: uData.roleTitle || 'Membro Colaborador',
+                  role: 'member',
+                  initials: (uData.name || email).substring(0, 2).toUpperCase(),
+                  color: '#4f7a61',
+                  isCurrentUser: false,
+                  status: 'active',
+                  accessibleModulesCount: 8,
+                  permissions: {
+                    today: true,
+                    actions: true,
+                    leads: true,
+                    projects: true,
+                    suppliers: true,
+                    team: true,
+                    clients: true,
+                    deadlines: true,
+                    finance: false,
+                    health: false,
+                    goals: true,
+                    budget: false,
+                  },
+                  joinedAt: uData.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+                });
+              }
+            });
+            return list;
+          });
+        },
+        (err) => {
+          console.warn('Could not query team users from Firestore', err);
+        }
+      );
+
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn('Firestore subscription error', e);
+    }
+  }, [user, profile, architectProfile]);
+
+  // Derived team allocations based on real members
+  const teamAllocations: TeamProjectAllocation[] = useMemo(() => {
+    return realMembers.map((member) => {
+      const saved = allocationsMap[member.id];
+      const assignedProj = architectureProjects.find((p) => p.id === saved?.assignedProjectId);
+
+      const firstActiveProj = architectureProjects.find((p) => p.status !== 'entregue');
+
+      return {
+        memberId: member.id,
+        memberName: member.name,
+        roleTitle: member.roleTitle || (member.role === 'admin' ? 'Administrador' : 'Colaborador'),
+        initials: member.initials || member.name.substring(0, 2).toUpperCase(),
+        color: member.color || '#c58a4b',
+        assignedProjectId: saved?.assignedProjectId || assignedProj?.id,
+        currentProjectTitle:
+          saved?.currentProjectTitle ||
+          assignedProj?.title ||
+          (firstActiveProj ? firstActiveProj.title : 'Nenhum projeto vinculado'),
+        currentStage:
+          saved?.currentStage ||
+          assignedProj?.currentStage ||
+          assignedProj?.status ||
+          'Em Desenvolvimento',
+        taskDetail:
+          saved?.taskDetail ||
+          (assignedProj
+            ? `Atuando no desenvolvimento de ${assignedProj.title}`
+            : 'Clique em "Alterar Projeto" para vincular um projeto a este colaborador.'),
+        deadline: saved?.deadline || assignedProj?.deliveryDate,
+        lastUpdated: saved?.lastUpdated,
+      };
+    });
+  }, [realMembers, allocationsMap, architectureProjects]);
 
   // Modal to change which project a member is working on
   const [editingAllocation, setEditingAllocation] = useState<TeamProjectAllocation | null>(null);
@@ -220,20 +350,24 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
       }
     }
 
-    const updated = teamAllocations.map((m) =>
-      m.memberId === editingAllocation.memberId
-        ? {
-            ...m,
-            assignedProjectId: selectedProjectId || undefined,
-            currentProjectTitle: projectTitle || 'Geral do Escritório',
-            currentStage: stage,
-            taskDetail: customTaskDetail.trim() || 'Desenvolvimento de projetos do escritório',
-            lastUpdated: new Date().toISOString(),
-          }
-        : m
-    );
+    const newMap = {
+      ...allocationsMap,
+      [editingAllocation.memberId]: {
+        assignedProjectId: selectedProjectId || undefined,
+        currentProjectTitle: projectTitle || 'Geral do Escritório',
+        currentStage: stage,
+        taskDetail: customTaskDetail.trim() || 'Desenvolvimento de projetos do escritório',
+        lastUpdated: new Date().toISOString(),
+      },
+    };
 
-    setTeamAllocations(updated);
+    setAllocationsMap(newMap);
+    try {
+      localStorage.setItem('meu_escritorio_team_alloc_map_v1', JSON.stringify(newMap));
+    } catch (e) {
+      console.warn('Could not save allocations map', e);
+    }
+
     setEditingAllocation(null);
   };
 
@@ -800,6 +934,28 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
                     </div>
                   );
                 })}
+
+                {/* If there's only the owner or few members, provide a quick invite card */}
+                {teamAllocations.length === 1 && (
+                  <div className="p-5 rounded-2xl bg-[#12100e]/70 border border-dashed border-[#3d342f] flex flex-col justify-between items-center text-center p-6 space-y-3">
+                    <div className="w-10 h-10 rounded-xl bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] border border-[var(--theme-primary)]/20 flex items-center justify-center">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-[#fcf8f5]">Adicionar Membro à Equipe</h4>
+                      <p className="text-xs text-[#a89c93] mt-1 max-w-xs">
+                        Convide estagiários, arquitetos parceiros ou coordenadores para gerenciar projetos juntos.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleNav('team')}
+                      className="px-4 py-2 rounded-xl bg-[var(--theme-primary)] hover:opacity-90 text-black text-xs font-bold flex items-center gap-2 cursor-pointer transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Convidar na Gestão de Equipe</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
