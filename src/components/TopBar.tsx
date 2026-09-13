@@ -38,7 +38,6 @@ const ALL_QUICK_ACTIONS = [
   { id: 'today', label: 'Meu Dia & Agenda', shortLabel: 'Meu Dia', icon: Calendar },
   { id: 'actions', label: 'Central de Ações', shortLabel: 'Ações', icon: Clock },
   { id: 'projects', label: 'Gestão de Projetos', shortLabel: 'Projetos', icon: FolderOpen },
-  { id: 'consultoria_expressa', label: 'Consultoria IA', shortLabel: 'Consultoria IA', icon: Sparkles, isNew: true },
   { id: 'leads', label: 'Leads & Comercial', shortLabel: 'Leads', icon: Users },
   { id: 'freelance', label: 'Clientes & Contratos', shortLabel: 'Clientes', icon: Briefcase },
   { id: 'banks', label: 'Financeiro & Bancos', shortLabel: 'Financeiro', icon: DollarSign },
@@ -51,11 +50,10 @@ const ALL_QUICK_ACTIONS = [
 ];
 
 const DESKTOP_QUICK_ACTIONS = [
-  { id: 'dashboard', label: 'Painel', fullLabel: 'Painel do Escritório', icon: LayoutDashboard },
-  { id: 'today', label: 'Meu Dia', fullLabel: 'Meu Dia & Agenda', icon: Calendar },
-  { id: 'actions', label: 'Ações', fullLabel: 'Central de Ações', icon: Clock },
-  { id: 'projects', label: 'Projetos', fullLabel: 'Gestão de Projetos', icon: FolderOpen },
-  { id: 'consultoria_expressa', label: 'Consultoria IA', fullLabel: 'Consultoria Expressa IA', icon: Sparkles, isNew: true },
+  { id: 'dashboard', label: 'Painel do Escritório', icon: LayoutDashboard },
+  { id: 'today', label: 'Meu Dia & Agenda', icon: Calendar },
+  { id: 'actions', label: 'Central de Ações', icon: Clock },
+  { id: 'projects', label: 'Gestão de Projetos', icon: FolderOpen },
 ];
 
 const TAB_TITLES: Record<string, { label: string; icon: React.ElementType; description: string }> = {
@@ -199,8 +197,8 @@ export const TopBar: React.FC<TopBarProps> = ({
           </div>
         </div>
 
-        {/* Center: Quick Navigation Buttons (visible on wider screens) */}
-        <nav className="hidden xl:flex items-center gap-1 bg-[#12100e] p-1 rounded-xl border border-[#2d2520] shadow-inner shrink-0">
+        {/* Center: Quick Navigation Buttons (visible on larger screens) */}
+        <nav className="hidden lg:flex items-center gap-1.5 bg-[#12100e] p-1.5 rounded-xl border border-[#2d2520] shadow-inner shrink-0">
           {DESKTOP_QUICK_ACTIONS.map((item) => {
             const ItemIcon = item.icon;
             const isActive = activeTab === item.id;
@@ -208,20 +206,15 @@ export const TopBar: React.FC<TopBarProps> = ({
               <button
                 key={item.id}
                 onClick={() => setActiveTab?.(item.id)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'bg-[var(--theme-primary)]/15 text-[var(--theme-primary)] border border-[var(--theme-primary)]/40 shadow-xs font-bold'
+                    ? 'bg-[var(--theme-primary)]/20 text-[var(--theme-primary)] border border-[var(--theme-primary)]/50 shadow-xs font-bold'
                     : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#201a17] border border-transparent'
                 }`}
-                title={`Ir para ${item.fullLabel}`}
+                title={`Ir para ${item.label}`}
               >
-                <ItemIcon className={`w-3.5 h-3.5 ${isActive ? 'text-[var(--theme-primary)]' : 'text-[#8c827a]'}`} />
+                <ItemIcon className={`w-4 h-4 ${isActive ? 'text-[var(--theme-primary)]' : 'text-[#8c827a]'}`} />
                 <span>{item.label}</span>
-                {item.isNew && (
-                  <span className="px-1 py-0.2 text-[8px] font-bold uppercase bg-[var(--theme-primary)] text-black rounded leading-none">
-                    Novo
-                  </span>
-                )}
               </button>
             );
           })}
@@ -330,15 +323,6 @@ export const TopBar: React.FC<TopBarProps> = ({
               >
                 <ItemIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-black' : 'text-[var(--theme-primary)]'}`} />
                 <span>{item.shortLabel}</span>
-                {item.isNew && (
-                  <span
-                    className={`px-1 py-0.2 text-[8px] font-bold uppercase rounded leading-none ${
-                      isActive ? 'bg-black text-[var(--theme-primary)]' : 'bg-[var(--theme-primary)] text-black'
-                    }`}
-                  >
-                    Novo
-                  </span>
-                )}
               </button>
             );
           })}
