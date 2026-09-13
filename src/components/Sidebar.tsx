@@ -124,12 +124,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       title: 'Comercial & Produtividade',
       items: [
         {
-          id: 'dashboard',
-          label: 'Painel do Escritório',
-          icon: LayoutDashboard,
-          visible: !isCollaborator || !permissions || permissions.health !== false,
-        },
-        {
           id: 'today',
           label: 'Meu Dia & Agenda',
           icon: Calendar,
@@ -345,6 +339,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Navigation Links Scrollable */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 scrollbar-thin scrollbar-thumb-[#2d2520] scrollbar-track-transparent">
+        {/* Standalone Dashboard Item (Above Comercial & Produtividade, without group header) */}
+        {(!isCollaborator || !permissions || permissions.health !== false) && (
+          <div className="space-y-0.5">
+            <button
+              onClick={() => handleNavClick('dashboard')}
+              className={`w-full flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer text-left border ${
+                activeTab === 'dashboard'
+                  ? 'bg-[#241e1b] border-[rgba(var(--theme-primary-rgb),0.55)] text-[var(--theme-primary)] font-bold shadow-xs'
+                  : 'bg-transparent border-transparent hover:bg-[#201a17] text-[#a89c93] hover:text-[#fcf8f5]'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <LayoutDashboard
+                  className="w-4 h-4 shrink-0 transition-colors"
+                  style={{
+                    color: activeTab === 'dashboard' ? 'var(--theme-primary)' : '#8c7e73',
+                  }}
+                />
+                <span className="truncate text-xs">Painel do Escritório</span>
+              </div>
+            </button>
+          </div>
+        )}
+
         {navGroups.map((group, groupIdx) => {
           const visibleItems = group.items.filter((item) => item.visible);
           if (visibleItems.length === 0) return null;
