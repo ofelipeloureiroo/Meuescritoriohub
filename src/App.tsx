@@ -24,12 +24,15 @@ import { SavingsGoalsTab } from './components/goals/SavingsGoalsTab';
 import { BudgetAndReportsTab } from './components/budget/BudgetAndReportsTab';
 import { BusinessDashboardTab } from './components/dashboard/BusinessDashboardTab';
 import { ActionsTab } from './components/actions/ActionsTab';
+import { ListsTab } from './components/actions/ListsTab';
+import { InstagramTab } from './components/marketing/InstagramTab';
 import { LeadsTab } from './components/leads/LeadsTab';
 import { TodayTab } from './components/today/TodayTab';
 import { TeamTab } from './components/team/TeamTab';
 import { SuppliersTab } from './components/suppliers/SuppliersTab';
 import { SettingsTab } from './components/settings/SettingsTab';
 import { ClientPortalOfficeTab } from './components/portal/ClientPortalOfficeTab';
+import { ExpressConsultingTab } from './components/projects/ExpressConsultingTab';
 import { NewTransactionModal } from './components/modals/NewTransactionModal';
 import { TransactionStructure } from './types';
 import { AmortizationModal } from './components/modals/AmortizationModal';
@@ -95,6 +98,7 @@ const AppContent: React.FC = () => {
     if (!isCollaborator || !permissions) return true;
     switch (tab) {
       case 'today': return permissions.today !== false;
+      case 'listas':
       case 'actions': return permissions.actions !== false;
       case 'leads': return permissions.leads !== false;
       case 'home':
@@ -103,7 +107,9 @@ const AppContent: React.FC = () => {
       case 'team': return permissions.team !== false;
       case 'portal_cliente':
       case 'freelance': return permissions.clients !== false;
+      case 'recebimentos':
       case 'deadlines': return permissions.deadlines !== false;
+      case 'financeiro':
       case 'banks': return permissions.finance !== false;
       case 'dashboard': return permissions.health !== false && permissions.finance !== false;
       case 'goals': return permissions.goals !== false;
@@ -135,16 +141,21 @@ const AppContent: React.FC = () => {
 
     switch (activeTab) {
       case 'today': return <TodayTab />;
+      case 'instagram': return <InstagramTab />;
       case 'actions': return <ActionsTab />;
+      case 'listas': return <ListsTab />;
       case 'leads': return <LeadsTab />;
       case 'dashboard': return <BusinessDashboardTab />;
       case 'home': return <HomeProjectsTab onNavigateTab={setActiveTab} onOpenNewTxModal={handleOpenNewTx} />;
       case 'projects': return <ProjectsManagementTab onNavigateTab={setActiveTab} />;
+      case 'consultoria_expressa': return <ExpressConsultingTab onExit={() => setActiveTab('projects')} />;
       case 'suppliers': return <SuppliersTab />;
       case 'team': return <TeamTab />;
+      case 'recebimentos':
       case 'deadlines': return <DeadlinesAndInstallmentsTab />;
       case 'freelance': return <FreelanceClientsTab />;
       case 'portal_cliente': return <ClientPortalOfficeTab onNavigateTab={setActiveTab} />;
+      case 'financeiro':
       case 'banks': return <BanksAndCashTab onOpenTransferModal={() => setIsTransferModalOpen(true)} onOpenCashModal={() => setIsCashModalOpen(true)} onOpenNewTxModal={handleOpenNewTx} />;
       case 'goals': return <SavingsGoalsTab />;
       case 'budget': return <BudgetAndReportsTab />;
@@ -152,6 +163,15 @@ const AppContent: React.FC = () => {
       default: return <TodayTab />;
     }
   };
+
+  if (activeTab === 'consultoria_expressa') {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#12100e] text-[#fcf8f5] overflow-y-auto w-full h-full font-sans antialiased selection:bg-[#c58a4b]/30">
+        <ExpressConsultingTab onExit={() => setActiveTab('projects')} />
+        <SupportChatWidget />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg-body)] text-[var(--text-main)] flex flex-col lg:flex-row selection:bg-[var(--theme-primary)]/30 selection:text-[#fcf8f5] font-sans antialiased">

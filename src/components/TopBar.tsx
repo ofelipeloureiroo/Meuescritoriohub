@@ -16,6 +16,10 @@ import {
   Package,
   ChevronDown,
   LogOut,
+  DollarSign,
+  ListChecks,
+  Instagram,
+  Sparkles,
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
@@ -40,12 +44,17 @@ const TAB_TITLES: Record<string, { label: string; icon: React.ElementType; descr
   actions: { label: 'Central de Ações', icon: Clock, description: 'Fluxo de tarefas e pendências de projetos' },
   leads: { label: 'Leads & Comercial', icon: Users, description: 'Pipeline de vendas, propostas e captação' },
   projects: { label: 'Gestão de Projetos', icon: FolderOpen, description: 'Acompanhamento de etapas, cronogramas e entregas' },
+  consultoria_expressa: { label: 'Consultoria Expressa', icon: Sparkles, description: 'Propostas ágeis de redesign de ambientes com Inteligência Artificial' },
   suppliers: { label: 'Fornecedores', icon: Package, description: 'Catálogo de parceiros, lojas e contatos técnicos' },
   team: { label: 'Equipe & Colaboradores', icon: Users, description: 'Membros, funções, permissões e convites' },
   freelance: { label: 'Clientes & Contratos', icon: Briefcase, description: 'Cadastro de clientes, contratos e propostas' },
   portal_cliente: { label: 'Radar do Cliente', icon: KeyRound, description: 'Acessos exclusivos, acompanhamento de etapas e transparência' },
   deadlines: { label: 'Prazos & Cobranças', icon: Clock, description: 'Controle de parcelas a vencer e etapas críticas' },
+  recebimentos: { label: 'Recebimentos', icon: DollarSign, description: 'Controle de parcelas a receber, cobranças e entregas' },
   banks: { label: 'Financeiro & Bancos', icon: WalletIcon, description: 'Contas, extrato, conciliação e fluxo de caixa' },
+  financeiro: { label: 'Financeiro', icon: DollarSign, description: 'Gestão financeira, caixas e extrato bancário' },
+  listas: { label: 'Listas & Tarefas', icon: ListChecks, description: 'Listas operacionais e pendências do escritório' },
+  instagram: { label: 'Instagram', icon: Instagram, description: 'Planejamento de conteúdo e calendário editorial' },
   dashboard: { label: 'Saúde do Negócio', icon: TrendingUp, description: 'Métricas financeiras, lucratividade e DRE' },
   goals: { label: 'Metas & Objetivos', icon: Target, description: 'Planejamento financeiro e reservas estratégicas' },
   budget: { label: 'Orçamento Anual', icon: PieChart, description: 'Teto de gastos e planejamento orçamentário' },

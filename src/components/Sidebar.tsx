@@ -23,6 +23,10 @@ import {
   X,
   ChevronRight,
   Headphones,
+  DollarSign,
+  ListChecks,
+  Image as ImageIcon,
+  Sparkles,
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
@@ -35,6 +39,7 @@ interface NavItem {
   badge?: string;
   alertBadge?: boolean;
   visible: boolean;
+  hasChevron?: boolean;
 }
 
 interface NavGroup {
@@ -157,6 +162,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
           visible: !isCollaborator || !permissions || permissions.projects !== false,
         },
         {
+          id: 'consultoria_expressa',
+          label: 'Consultoria Expressa',
+          icon: Sparkles,
+          badge: 'Novo',
+          visible: !isCollaborator || !permissions || permissions.projects !== false,
+        },
+        {
+          id: 'freelance',
+          label: 'Clientes & Contratos',
+          icon: Briefcase,
+          visible: !isCollaborator || !permissions || permissions.clients !== false,
+        },
+        {
+          id: 'portal_cliente',
+          label: 'Radar do Cliente',
+          icon: KeyRound,
+          badge: 'Novo',
+          visible: !isCollaborator || !permissions || permissions.clients !== false,
+        },
+        {
           id: 'suppliers',
           label: 'Fornecedores',
           icon: Package,
@@ -176,37 +201,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
             !permissions ||
             (permissions.team !== undefined ? permissions.team : permissions.projects !== false),
         },
+      ],
+    },
+    {
+      title: 'ADMINISTRATIVO',
+      items: [
         {
-          id: 'freelance',
-          label: 'Clientes & Contratos',
-          icon: Briefcase,
-          visible: !isCollaborator || !permissions || permissions.clients !== false,
+          id: 'banks',
+          label: 'Financeiro',
+          icon: DollarSign,
+          visible: !isCollaborator || !permissions || permissions.finance !== false,
         },
         {
           id: 'deadlines',
-          label: 'Prazos & Cobranças',
-          icon: Clock,
+          label: 'Recebimentos',
+          icon: DollarSign,
           badge: totalDeadlinesAlerts > 0 ? `${totalDeadlinesAlerts} Alertas` : undefined,
           alertBadge: overdueInstallments.length > 0 || dueSoonInstallments.length > 0,
           visible: !isCollaborator || !permissions || permissions.deadlines !== false,
         },
         {
-          id: 'portal_cliente',
-          label: 'Radar do Cliente',
-          icon: KeyRound,
-          badge: 'Novo',
-          visible: !isCollaborator || !permissions || permissions.clients !== false,
-        },
-      ],
-    },
-    {
-      title: 'Financeiro & Estratégico',
-      items: [
-        {
-          id: 'banks',
-          label: 'Financeiro (Bancos)',
-          icon: Wallet,
-          visible: !isCollaborator || !permissions || permissions.finance !== false,
+          id: 'listas',
+          label: 'Listas',
+          icon: ListChecks,
+          hasChevron: true,
+          visible:
+            !isCollaborator ||
+            !permissions ||
+            (permissions.actions !== undefined ? permissions.actions : permissions.projects !== false),
         },
         {
           id: 'dashboard',
@@ -229,16 +251,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon: PieChart,
           visible: !isCollaborator || !permissions || permissions.budget !== false,
         },
-        ...(shouldShowPortfolio
-          ? [
-              {
-                id: 'home',
-                label: 'Portfólio',
-                icon: Home,
-                visible: true,
-              },
-            ]
-          : []),
+      ],
+    },
+    {
+      title: 'MARKETING',
+      items: [
+        {
+          id: 'instagram',
+          label: 'Instagram',
+          icon: Instagram,
+          visible: true,
+        },
+        {
+          id: 'home',
+          label: 'Portfólio',
+          icon: ImageIcon,
+          hasChevron: true,
+          visible: true,
+        },
       ],
     },
     {
@@ -329,7 +359,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="space-y-0.5">
                 {visibleItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = activeTab === item.id;
+                  const isActive =
+                    activeTab === item.id ||
+                    (item.id === 'banks' && activeTab === 'financeiro') ||
+                    (item.id === 'deadlines' && activeTab === 'recebimentos') ||
+                    (item.id === 'actions' && activeTab === 'listas');
 
                   return (
                     <button
@@ -351,32 +385,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <span className="truncate text-xs">{item.label}</span>
                       </div>
 
-                      {item.badge && (
-                        <span
-                          className="px-1.5 py-0.5 rounded-full text-[9px] font-bold border leading-none shrink-0"
-                          style={
-                            item.alertBadge
-                              ? {
-                                  backgroundColor: 'rgba(245, 158, 11, 0.2)',
-                                  color: '#fcd34d',
-                                  borderColor: 'rgba(245, 158, 11, 0.4)',
-                                }
-                              : isActive
-                              ? {
-                                  backgroundColor: 'var(--theme-badge-bg)',
-                                  color: 'var(--theme-badge-text)',
-                                  borderColor: 'var(--theme-badge-border)',
-                                }
-                              : {
-                                  backgroundColor: '#14110f',
-                                  color: '#8c7e73',
-                                  borderColor: '#382f29',
-                                }
-                          }
-                        >
-                          {item.badge}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {item.badge && (
+                          <span
+                            className="px-1.5 py-0.5 rounded-full text-[9px] font-bold border leading-none shrink-0"
+                            style={
+                              item.alertBadge
+                                ? {
+                                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                                    color: '#fcd34d',
+                                    borderColor: 'rgba(245, 158, 11, 0.4)',
+                                  }
+                                : isActive
+                                ? {
+                                    backgroundColor: 'var(--theme-badge-bg)',
+                                    color: 'var(--theme-badge-text)',
+                                    borderColor: 'var(--theme-badge-border)',
+                                  }
+                                : {
+                                    backgroundColor: '#14110f',
+                                    color: '#8c7e73',
+                                    borderColor: '#382f29',
+                                  }
+                            }
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+
+                        {item.hasChevron && (
+                          <ChevronRight
+                            className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                              isActive ? 'text-[var(--theme-primary)]' : 'text-[#73655c]'
+                            }`}
+                          />
+                        )}
+                      </div>
                     </button>
                   );
                 })}
