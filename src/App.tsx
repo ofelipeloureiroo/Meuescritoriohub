@@ -33,6 +33,7 @@ import { SuppliersTab } from './components/suppliers/SuppliersTab';
 import { SettingsTab } from './components/settings/SettingsTab';
 import { ClientPortalOfficeTab } from './components/portal/ClientPortalOfficeTab';
 import { ExpressConsultingTab } from './components/projects/ExpressConsultingTab';
+import { PublicConsultoriaPage } from './components/projects/PublicConsultoriaPage';
 import { NewTransactionModal } from './components/modals/NewTransactionModal';
 import { TransactionStructure } from './types';
 import { AmortizationModal } from './components/modals/AmortizationModal';
@@ -289,6 +290,10 @@ export default function App() {
             {/* Authentication Route */}
             <Route path="/login" element={<Login />} />
             <Route path="/oauth-proxy" element={<OAuthProxy />} />
+
+            {/* Public Presentation Link for Express Consulting */}
+            <Route path="/consultoria/:consultationId" element={<PublicConsultoriaPage />} />
+            <Route path="/consultoria" element={<PublicConsultoriaPage />} />
 
             {/* Client Portal Routes (Dedicated Client Login & Real-time Isolated Dashboard) */}
             <Route path="/cliente/login" element={<ClientLogin />} />

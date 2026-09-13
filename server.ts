@@ -5,6 +5,21 @@ import { createServer as createViteServer } from "vite";
 import Stripe from "stripe";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { GoogleGenAI } from "@google/genai";
+
+// Initialize Gemini Client
+function getGeminiClient(): GoogleGenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
+    },
+  });
+}
 
 // Initialize Firebase Admin (Only if credentials exist)
 const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
@@ -305,8 +320,222 @@ Acesse o painel administrativo: ${baseUrl}/admin
     return { success: true, sentViaSmtp, sentViaWhatsApp, adminEmail, adminPhone, subject };
   }
 
-  // Standard JSON middleware for other routes
-  app.use(express.json());
+  // Standard JSON middleware for other routes with high limit for images
+  app.use(express.json({ limit: '30mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '30mb' }));
+
+  // AI Generation Route: Creates proposal with AI, generating both text rationale and redesigned image
+  app.post('/api/gemini/generate-proposal', async (req, res) => {
+    try {
+      const {
+        prompt,
+        roomType = 'Ambiente',
+        originalImage,
+        referenceImages = [],
+        annoyances = [],
+        changes = [],
+        styles = [],
+        checklist = {},
+      } = req.body;
+
+      const ai = getGeminiClient();
+
+      let generatedRedesignImage: string | null = null;
+      let summary = '';
+      let adjustmentsText = '';
+      let ideas: string[] = [];
+      let directionTags: string[] = [];
+
+      // 1. Generate Proposal Text Analysis with Gemini
+      if (ai) {
+        try {
+          const textPrompt = `
+Você é um arquiteto e consultor sênior de interiores de alto padrão da plataforma "Meu Escritório Online".
+Gere uma análise estruturada para a proposta de Consultoria Expressa baseando-se nos seguintes dados:
+
+- Ambiente: ${roomType}
+- Pontos que limitam o ambiente (incômodos): ${annoyances.join(', ') || 'Visual pesado'}
+- Intervenções desejadas: ${changes.join(', ') || 'Redesign'}
+- Atmosfera e estilo: ${styles.join(', ') || 'Sofisticado'}
+- Checklist de decisões: ${JSON.stringify(checklist)}
+- Referências selecionadas: ${referenceImages.map((r: any) => `${r.title} (${r.tag})`).join(', ') || 'Nenhuma referência adicional'}
+- Prompt técnico gerado: "${prompt}"
+
+Retorne uma resposta JSON com o formato estrito:
+{
+  "summary": "Um parágrafo conciso (2 a 3 frases) com o resumo da proposta técnica, destacando o foco da requalificação e a preservação arquitetônica.",
+  "adjustmentsText": "Um texto analítico e detalhado (1 a 2 parágrafos) no estilo 'O que ajustamos nesta proposta', explicando exatamente o que foi modificado e como a arquitetura original foi respeitada.",
+  "ideas": [
+    "01 Ideia clara e prática para transformar o espaço...",
+    "02 Segunda ideia com foco em acabamento ou materiais...",
+    "03 Terceira ideia preservando a base existente...",
+    "04 Quarta ideia elevando a estética...",
+    "05 Quinta ideia respeitando as instruções de não mexer..."
+  ],
+  "directionTags": ["sofisticado", "marcenaria", "leveza visual", "${roomType.toLowerCase()}", "redesign pontual"]
+}
+          `.trim();
+
+          const textResponse = await ai.models.generateContent({
+            model: 'gemini-3.8-flash',
+            contents: textPrompt,
+            config: {
+              responseMimeType: 'application/json',
+            },
+          });
+
+          const rawText = textResponse.text?.trim() || '{}';
+          const parsed = JSON.parse(rawText);
+          summary = parsed.summary || '';
+          adjustmentsText = parsed.adjustmentsText || '';
+          ideas = Array.isArray(parsed.ideas) ? parsed.ideas.map((id: string) => id.replace(/^\d+\s*/, '').trim()) : [];
+          directionTags = Array.isArray(parsed.directionTags) ? parsed.directionTags : [];
+        } catch (textErr) {
+          console.warn("Gemini text analysis error, using fallback format:", textErr);
+        }
+
+        // 2. Attempt Image Generation or Editing with Gemini Image Model
+        try {
+          const imageParts: any[] = [];
+          if (originalImage && originalImage.startsWith('data:image')) {
+            const matches = originalImage.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+            if (matches) {
+              imageParts.push({
+                inlineData: {
+                  mimeType: matches[1] || 'image/jpeg',
+                  data: matches[2],
+                },
+              });
+            }
+          }
+
+          const imagePrompt = `Photorealistic architectural interior design proposal for ${roomType}. ${prompt}. High-end architectural photography, ultra-detailed textures, realistic warm ambient lighting, elegant materials. Maintain the exact room angle and framing.`;
+          imageParts.push({ text: imagePrompt });
+
+          const imageResponse = await ai.models.generateContent({
+            model: 'gemini-3.1-flash-lite-image',
+            contents: { parts: imageParts },
+            config: {
+              imageConfig: {
+                aspectRatio: '16:9',
+              },
+            },
+          });
+
+          if (imageResponse?.candidates?.[0]?.content?.parts) {
+            for (const part of imageResponse.candidates[0].content.parts) {
+              if (part.inlineData && part.inlineData.data) {
+                const mime = part.inlineData.mimeType || 'image/png';
+                generatedRedesignImage = `data:${mime};base64,${part.inlineData.data}`;
+                break;
+              }
+            }
+          }
+        } catch (imgErr) {
+          console.warn("Gemini image generation attempt info:", imgErr);
+        }
+      }
+
+      // Default fallbacks if text not generated
+      if (!summary) {
+        summary = `A proposta segue uma linha de redesign pontual para ${roomType}, com foco em requalificar os elementos de acabamento, marcenaria e materiais para diminuir a sensação de ${annoyances.join(' e ') || 'peso visual'}. A intenção é trazer um resultado mais ${styles.join(', ').toLowerCase() || 'sofisticado'}, preservando integralmente a arquitetura existente e todos os elementos que não foram indicados para alteração.`;
+      }
+
+      if (!adjustmentsText) {
+        adjustmentsText = `A intervenção se concentra nas soluções solicitadas para o ${roomType.toLowerCase()}, que passa a ser o principal recurso para organizar melhor a leitura do espaço e aliviar o aspecto anterior. Mantêm-se rigorosamente o enquadramento, a perspectiva e a arquitetura original, sem qualquer alteração estrutural fora do que foi solicitado. Com isso, a proposta atua de forma controlada, refinando a ambientação para uma atmosfera mais ${styles.join(', ').toLowerCase() || 'sofisticada'} e elegante, sem descaracterizar o ambiente original.`;
+      }
+
+      if (!ideas || ideas.length === 0) {
+        ideas = [
+          `Revisar a marcenaria e acabamentos para reduzir o peso visual.`,
+          `Preservar a arquitetura original sem alterações estruturais indesejadas.`,
+          `Manter enquadramento e perspectiva exatamente como estão.`,
+          `Valorizar uma atmosfera mais ${styles[0] || 'sofisticada'} e acolhedora.`,
+          `Evitar incluir elementos não previstos na instrução do cliente.`,
+        ];
+      }
+
+      if (!directionTags || directionTags.length === 0) {
+        directionTags = [
+          ...styles.map(s => s.toLowerCase()),
+          ...changes.map(c => c.toLowerCase()),
+          roomType.toLowerCase(),
+          'redesign pontual'
+        ].slice(0, 5);
+      }
+
+      return res.json({
+        success: true,
+        redesignImage: generatedRedesignImage,
+        summary,
+        adjustmentsText,
+        ideas,
+        directionTags,
+      });
+    } catch (error: any) {
+      console.error("Error generating proposal:", error);
+      return res.status(500).json({ error: error.message || "Erro ao gerar proposta com IA." });
+    }
+  });
+
+  // AI Adjustment Route: Refines an existing image or prompt
+  app.post('/api/gemini/adjust-image', async (req, res) => {
+    try {
+      const { adjustmentPrompt, currentImage, roomType = 'Ambiente' } = req.body;
+      const ai = getGeminiClient();
+      let adjustedImageUrl: string | null = null;
+
+      if (ai && adjustmentPrompt) {
+        try {
+          const parts: any[] = [];
+          if (currentImage && currentImage.startsWith('data:image')) {
+            const matches = currentImage.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+            if (matches) {
+              parts.push({
+                inlineData: {
+                  mimeType: matches[1] || 'image/jpeg',
+                  data: matches[2],
+                },
+              });
+            }
+          }
+
+          parts.push({
+            text: `Edit this interior image for ${roomType}. Adjustment instruction: ${adjustmentPrompt}. Keep exact camera angle and architecture.`,
+          });
+
+          const response = await ai.models.generateContent({
+            model: 'gemini-3.1-flash-lite-image',
+            contents: { parts },
+            config: {
+              imageConfig: {
+                aspectRatio: '16:9',
+              },
+            },
+          });
+
+          if (response?.candidates?.[0]?.content?.parts) {
+            for (const part of response.candidates[0].content.parts) {
+              if (part.inlineData && part.inlineData.data) {
+                const mime = part.inlineData.mimeType || 'image/png';
+                adjustedImageUrl = `data:${mime};base64,${part.inlineData.data}`;
+                break;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("Adjustment image error:", err);
+        }
+      }
+
+      return res.json({
+        success: true,
+        adjustedImage: adjustedImageUrl,
+      });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
 
   // Endpoint to notify administrator about a new subscription
   app.post('/api/subscription/notify-new-subscriber', async (req, res) => {

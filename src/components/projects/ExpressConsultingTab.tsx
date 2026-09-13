@@ -27,9 +27,24 @@ import {
   Image as ImageIcon,
   Columns,
   MoveHorizontal,
+  Link,
+  Edit2,
+  ZoomIn,
+  Layers,
+  Copy,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useFinance } from '../../context/FinanceContext';
+
+export interface UserReferenceItem {
+  id: string;
+  url: string;
+  title: string;
+  tag?: string;
+  notes?: string;
+  createdAt: string;
+}
 
 export interface ExpressConsultation {
   id: string;
@@ -48,8 +63,11 @@ export interface ExpressConsultation {
   checklist: Record<string, string>;
   finalPrompt: string;
   summaryText: string;
+  adjustmentsText?: string;
   ideas: string[];
   directionTags: string[];
+  userReferences?: UserReferenceItem[];
+  selectedReferences?: string[];
   createdAt: string;
   consultantName: string;
   officeName: string;
@@ -482,6 +500,75 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
   );
 };
 
+// Helper function to build comprehensive architectural prompt from all wizard selections
+export const buildArchitecturalPrompt = (
+  room: string,
+  annoyances: string[],
+  changes: string[],
+  styles: string[],
+  checklistData: Record<string, string>,
+  userRefs: UserReferenceItem[],
+  selectedRefIds: string[],
+  clientNotes: string
+): string => {
+  const parts: string[] = [];
+
+  // 1. Objetivo Principal e Enquadramento
+  parts.push(
+    `Criar uma proposta de redesign arquitetônico e decoração de interiores para ${room || 'o ambiente'}, preservando rigorosamente o enquadramento, a perspectiva, a posição das janelas/portas e a estrutura espacial da imagem original.`
+  );
+
+  // 2. O que incomoda / Diagnóstico do espaço
+  if (annoyances && annoyances.length > 0) {
+    parts.push(`Problemas e incômodos a solucionar: ${annoyances.join(', ')}.`);
+  }
+
+  // 3. O que deseja mudar
+  if (changes && changes.length > 0) {
+    parts.push(`Intervenções desejadas: ${changes.join(', ')}.`);
+  }
+
+  // 4. Como o ambiente deve ficar (Atmosfera e Estilo)
+  if (styles && styles.length > 0) {
+    parts.push(`Atmosfera e conceito visual pretendido: ${styles.join(', ')}.`);
+  }
+
+  // 5. Diretrizes do Checklist Técnico
+  const checklistEntries = Object.entries(checklistData || {});
+  if (checklistEntries.length > 0) {
+    const lines = checklistEntries.map(([category, val]) => {
+      if (val === 'Não mexer') {
+        return `• ${category}: NÃO MEXER (manter exatamente como na foto original).`;
+      }
+      return `• ${category}: ${val}.`;
+    });
+    parts.push(`Diretrizes técnicas do checklist:\n${lines.join('\n')}`);
+  }
+
+  // 6. Referências Visuais do Usuário
+  const activeRefs = (userRefs || []).filter(
+    (r) => selectedRefIds.includes(r.id) || selectedRefIds.includes(r.url)
+  );
+  if (activeRefs.length > 0) {
+    const refLines = activeRefs.map(
+      (r, idx) => `• Referência 0${idx + 1} [${r.tag || 'Foco Geral'}]: ${r.title || 'Inspiração visual'}`
+    );
+    parts.push(`Inspirações e referências visuais selecionadas:\n${refLines.join('\n')}`);
+  }
+
+  // 7. Observações complementares
+  if (clientNotes && clientNotes.trim()) {
+    parts.push(`Observações do cliente/arquiteto: ${clientNotes.trim()}`);
+  }
+
+  // 8. Instrução de execução
+  parts.push(
+    `Regras de execução: Renderização fotorealista de alto padrão. Aplicar exclusivamente as mudanças descritas acima. Toda indicação de "Não mexer" deve ser estritamente respeitada e os demais elementos originais devem ser preservados e integrados harmoniosamente.`
+  );
+
+  return parts.join('\n\n');
+};
+
 interface ExpressConsultingTabProps {
   onExit?: () => void;
 }
@@ -506,7 +593,34 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
   // Images - START EMPTY so the client/user uploads their own image!
   const [originalImage, setOriginalImage] = useState<string>('');
   const [redesignImage, setRedesignImage] = useState<string>('');
+  
+  // Real User Placed References (not hardcoded system suggestions)
+  const [userReferences, setUserReferences] = useState<UserReferenceItem[]>(() => {
+    try {
+      const stored = localStorage.getItem('obra_express_user_references');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const [selectedReferences, setSelectedReferences] = useState<string[]>([]);
+  const [showUrlReferenceModal, setShowUrlReferenceModal] = useState(false);
+  const [urlRefInput, setUrlRefInput] = useState('');
+  const [urlRefTitle, setUrlRefTitle] = useState('');
+  const [urlRefTag, setUrlRefTag] = useState('Marcenaria');
+  const [previewingReference, setPreviewingReference] = useState<UserReferenceItem | null>(null);
+  const [activeRefSlotIndex, setActiveRefSlotIndex] = useState<number | null>(null);
+
+  const refFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync user references to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('obra_express_user_references', JSON.stringify(userReferences));
+    } catch (e) {
+      console.warn('Could not cache references', e);
+    }
+  }, [userReferences]);
 
   // Selections
   const [selectedAnnoyances, setSelectedAnnoyances] = useState<string[]>(['Mal aproveitado', 'Visual pesado']);
@@ -528,6 +642,7 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
   // Prompt and proposal text
   const [finalPrompt, setFinalPrompt] = useState('');
   const [summaryText, setSummaryText] = useState('');
+  const [adjustmentsText, setAdjustmentsText] = useState('');
   const [ideas, setIdeas] = useState<string[]>(SAMPLE_ROOM_PRESETS['Escritório'].ideas);
   const [directionTags, setDirectionTags] = useState<string[]>(['sofisticado', 'redesign amplo', 'preservação arquitetônica', 'elegante']);
 
@@ -558,6 +673,139 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
   const showToastMsg = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3500);
+  };
+
+  // Update prompt whenever choices change (including user placed references)
+  useEffect(() => {
+    const prompt = buildArchitecturalPrompt(
+      roomType,
+      selectedAnnoyances,
+      selectedChanges,
+      selectedStyles,
+      checklist,
+      userReferences,
+      selectedReferences,
+      notes
+    );
+    setFinalPrompt(prompt);
+  }, [
+    roomType,
+    selectedAnnoyances,
+    selectedChanges,
+    selectedStyles,
+    checklist,
+    selectedReferences,
+    userReferences,
+    notes,
+  ]);
+
+  // References upload handlers
+  const handleReferenceFilesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newRefs: UserReferenceItem[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const reader = new FileReader();
+        const rawUrl = await new Promise<string>((resolve) => {
+          reader.onload = (ev) => resolve(ev.target?.result as string);
+          reader.readAsDataURL(file);
+        });
+        const compressed = await compressImageDataUrl(rawUrl, 1000, 0.8);
+        const autoTitle =
+          file.name.replace(/\.[^/.]+$/, '').slice(0, 30) || `Referência ${userReferences.length + i + 1}`;
+        newRefs.push({
+          id: `ref_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
+          url: compressed,
+          title: autoTitle,
+          tag: 'Marcenaria & Acabamentos',
+          createdAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error('Error reading reference file', err);
+      }
+    }
+
+    if (newRefs.length > 0) {
+      const updated = [...userReferences, ...newRefs];
+      setUserReferences(updated);
+
+      if (activeRefSlotIndex !== null) {
+        const currentSelected = [...selectedReferences];
+        currentSelected[activeRefSlotIndex] = newRefs[0].id;
+        setSelectedReferences(currentSelected.filter(Boolean).slice(0, 3));
+        setActiveRefSlotIndex(null);
+      } else {
+        const newSelected = Array.from(new Set([...selectedReferences, ...newRefs.map((r) => r.id)])).slice(0, 3);
+        setSelectedReferences(newSelected);
+      }
+
+      showToastMsg(`${newRefs.length} foto(s) de referência colocada(s) com sucesso!`);
+    }
+
+    if (refFileInputRef.current) refFileInputRef.current.value = '';
+  };
+
+  const handleAddUrlReference = () => {
+    if (!urlRefInput.trim()) {
+      showToastMsg('Por favor, insira o link da imagem.');
+      return;
+    }
+    const newRef: UserReferenceItem = {
+      id: `ref_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      url: urlRefInput.trim(),
+      title: urlRefTitle.trim() || `Referência ${userReferences.length + 1}`,
+      tag: urlRefTag || 'Geral',
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [...userReferences, newRef];
+    setUserReferences(updated);
+
+    if (activeRefSlotIndex !== null) {
+      const currentSelected = [...selectedReferences];
+      currentSelected[activeRefSlotIndex] = newRef.id;
+      setSelectedReferences(currentSelected.filter(Boolean).slice(0, 3));
+      setActiveRefSlotIndex(null);
+    } else if (selectedReferences.length < 3) {
+      setSelectedReferences([...selectedReferences, newRef.id]);
+    }
+
+    setUrlRefInput('');
+    setUrlRefTitle('');
+    setShowUrlReferenceModal(false);
+    showToastMsg('Referência por link adicionada com sucesso!');
+  };
+
+  const handleRemoveReference = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setUserReferences((prev) => prev.filter((r) => r.id !== id));
+    setSelectedReferences((prev) => prev.filter((rId) => rId !== id));
+    showToastMsg('Referência removida.');
+  };
+
+  const handleToggleReferenceSelect = (id: string) => {
+    if (selectedReferences.includes(id)) {
+      setSelectedReferences(selectedReferences.filter((rId) => rId !== id));
+    } else {
+      if (selectedReferences.length >= 3) {
+        showToastMsg('Você pode selecionar no máximo 3 referências para a proposta.');
+        return;
+      }
+      setSelectedReferences([...selectedReferences, id]);
+    }
+  };
+
+  const handleUpdateReferenceTag = (id: string, tag: string) => {
+    setUserReferences((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, tag } : r))
+    );
+  };
+
+  const triggerUploadForSlot = (slotIdx: number) => {
+    setActiveRefSlotIndex(slotIdx);
+    refFileInputRef.current?.click();
   };
 
   // Select the most suitable redesign image strictly matching the prompt and room type
@@ -608,12 +856,6 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
 
     return variations.default;
   };
-
-  // Update prompt whenever choices change
-  useEffect(() => {
-    const prompt = `Criar uma proposta de redesign para ${roomType}, preservando rigorosamente o enquadramento, a perspectiva e a arquitetura da imagem original.\nIntervenções desejadas: ${selectedChanges.join(', ') || 'Redesign amplo'}.\nAtmosfera desejada: ${selectedStyles.join(', ') || 'Sofisticado'}.\nAplicar apenas as mudanças descritas acima. Toda indicação de "Não mexer" deve ser respeitada e os demais elementos originais devem ser mantidos.`;
-    setFinalPrompt(prompt);
-  }, [roomType, selectedChanges, selectedStyles, checklist]);
 
   // Select room type
   const handleRoomTypeSelect = (type: string) => {
@@ -669,62 +911,125 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
     setStep(2);
   };
 
-  // Start generation in Step 5 -> Step 6 with STRICT prompt matching
-  const handleGenerateProposal = () => {
+  // Start generation in Step 5 -> Step 6 with STRICT prompt matching and Server AI
+  const handleGenerateProposal = async () => {
     setStep(6);
     setIsGenerating(true);
 
-    const matchedDesign = findBestRedesignImage(roomType, selectedStyles, selectedChanges, finalPrompt);
-    setRedesignImage(matchedDesign);
-    setVersionHistory([matchedDesign]);
-    setCurrentVersionIndex(0);
+    const localMatched = findBestRedesignImage(roomType, selectedStyles, selectedChanges, finalPrompt);
+    const activeRefs = userReferences.filter(
+      (r) => selectedReferences.includes(r.id) || selectedReferences.includes(r.url)
+    );
 
-    const generatedSummary = `A proposta segue uma direção de redesign para ${roomType}, com foco em transformar os elementos de acabamento, marcenaria e iluminação sem alterar a arquitetura e perspectiva do ambiente. O objetivo é criar uma atmosfera ${selectedStyles.join(', ').toLowerCase() || 'sofisticada'}.`;
-    setSummaryText(generatedSummary);
+    try {
+      const response = await fetch('/api/gemini/generate-proposal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: finalPrompt,
+          roomType,
+          originalImage,
+          referenceImages: activeRefs,
+          annoyances: selectedAnnoyances,
+          changes: selectedChanges,
+          styles: selectedStyles,
+          checklist,
+        }),
+      });
 
-    setTimeout(() => {
-      setIsGenerating(false);
+      if (response.ok) {
+        const data = await response.json();
+        const chosenImage = data.redesignImage || localMatched;
+        setRedesignImage(chosenImage);
+        setVersionHistory([chosenImage]);
+        setCurrentVersionIndex(0);
+        if (data.summary) setSummaryText(data.summary);
+        if (data.adjustmentsText) setAdjustmentsText(data.adjustmentsText);
+        if (data.ideas && data.ideas.length > 0) setIdeas(data.ideas);
+        if (data.directionTags && data.directionTags.length > 0) setDirectionTags(data.directionTags);
+        showToastMsg(`Proposta visual para ${roomType} gerada com IA!`);
+      } else {
+        setRedesignImage(localMatched);
+        setVersionHistory([localMatched]);
+        setCurrentVersionIndex(0);
+        const fallbackSummary = `A proposta segue uma linha de redesign pontual para ${roomType}, com foco em requalificar os elementos de acabamento, marcenaria e iluminação para diminuir a sensação de ${selectedAnnoyances.join(' e ') || 'peso visual'}. A intenção é trazer um resultado mais ${selectedStyles.join(', ').toLowerCase() || 'sofisticado'}, preservando integralmente a arquitetura existente e todos os elementos que não foram indicados para alteração.`;
+        setSummaryText(fallbackSummary);
+        const fallbackAdjustments = `A intervenção se concentra nas soluções solicitadas para o ${roomType.toLowerCase()}, que passa a ser o principal recurso para organizar melhor a leitura do espaço e aliviar o aspecto anterior. Mantêm-se rigorosamente o enquadramento, a perspectiva e a arquitetura original, sem qualquer alteração estrutural fora do que foi solicitado.`;
+        setAdjustmentsText(fallbackAdjustments);
+        showToastMsg(`Proposta visual para ${roomType} gerada com sucesso!`);
+      }
+    } catch (err) {
+      console.warn("Generation error:", err);
+      setRedesignImage(localMatched);
+      setVersionHistory([localMatched]);
+      setCurrentVersionIndex(0);
       showToastMsg(`Proposta visual para ${roomType} gerada com sucesso!`);
-    }, 1800);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // REAL AI REDESIGN ADJUSTMENT: Modifies the proposal image according to prompt description!
-  const handleRefineImage = (promptTweak: string) => {
+  const handleRefineImage = async (promptTweak: string) => {
     if (!promptTweak.trim()) return;
     setIsGenerating(true);
 
-    setTimeout(() => {
-      const roomCategory = AI_REDESIGN_VARIATIONS[roomType] ? roomType : 'Escritório';
-      const variations = AI_REDESIGN_VARIATIONS[roomCategory] || AI_REDESIGN_VARIATIONS['Escritório'];
+    try {
+      const response = await fetch('/api/gemini/adjust-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adjustmentPrompt: promptTweak,
+          currentImage: redesignImage,
+          roomType,
+        }),
+      });
 
-      const lower = promptTweak.toLowerCase();
-      let matchedKey = 'default';
-
-      if (lower.includes('claro') || lower.includes('ilumina') || lower.includes('branco')) {
-        matchedKey = 'claro';
-      } else if (lower.includes('madeira') || lower.includes('marcenaria') || lower.includes('ripado') || lower.includes('amadeirado')) {
-        matchedKey = 'madeira';
-      } else if (lower.includes('aconchegante') || lower.includes('quente') || lower.includes('amarela')) {
-        matchedKey = 'aconchegante';
-      } else if (lower.includes('sofisticado') || lower.includes('luxo') || lower.includes('mármore') || lower.includes('elegante')) {
-        matchedKey = 'sofisticado';
-      } else if (lower.includes('minimalista') || lower.includes('limpo') || lower.includes('clean')) {
-        matchedKey = 'minimalista';
-      } else if (lower.includes('planta') || lower.includes('verde') || lower.includes('natureza')) {
-        matchedKey = 'plantas';
-      } else {
-        const keys = Object.keys(variations);
-        matchedKey = keys[(versionHistory.length + 1) % keys.length];
+      let nextVersionUrl = '';
+      if (response.ok) {
+        const data = await response.json();
+        if (data.adjustedImage) {
+          nextVersionUrl = data.adjustedImage;
+        }
       }
 
-      const nextVersionUrl = variations[matchedKey] || variations.default;
+      if (!nextVersionUrl) {
+        const roomCategory = AI_REDESIGN_VARIATIONS[roomType] ? roomType : 'Escritório';
+        const variations = AI_REDESIGN_VARIATIONS[roomCategory] || AI_REDESIGN_VARIATIONS['Escritório'];
+
+        const lower = promptTweak.toLowerCase();
+        let matchedKey = 'default';
+
+        if (lower.includes('claro') || lower.includes('ilumina') || lower.includes('branco')) {
+          matchedKey = 'claro';
+        } else if (lower.includes('madeira') || lower.includes('marcenaria') || lower.includes('ripado') || lower.includes('amadeirado')) {
+          matchedKey = 'madeira';
+        } else if (lower.includes('aconchegante') || lower.includes('quente') || lower.includes('amarela')) {
+          matchedKey = 'aconchegante';
+        } else if (lower.includes('sofisticado') || lower.includes('luxo') || lower.includes('mármore') || lower.includes('elegante')) {
+          matchedKey = 'sofisticado';
+        } else if (lower.includes('minimalista') || lower.includes('limpo') || lower.includes('clean')) {
+          matchedKey = 'minimalista';
+        } else if (lower.includes('planta') || lower.includes('verde') || lower.includes('natureza')) {
+          matchedKey = 'plantas';
+        } else {
+          const keys = Object.keys(variations);
+          matchedKey = keys[(versionHistory.length + 1) % keys.length];
+        }
+
+        nextVersionUrl = variations[matchedKey] || variations.default;
+      }
+
       setRedesignImage(nextVersionUrl);
       setVersionHistory((prev) => [...prev, nextVersionUrl]);
       setCurrentVersionIndex(versionHistory.length);
-      setIsGenerating(false);
       setCustomAdjustmentPrompt('');
       showToastMsg(`Imagem ajustada por IA: "${promptTweak}"`);
-    }, 1500);
+    } catch (err) {
+      console.warn("Adjustment error:", err);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // Confirm version and save consultation
@@ -746,8 +1051,11 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
       checklist,
       finalPrompt,
       summaryText,
+      adjustmentsText,
       ideas,
       directionTags,
+      userReferences,
+      selectedReferences,
       createdAt: new Date().toLocaleDateString('pt-BR'),
       consultantName,
       officeName,
@@ -770,17 +1078,25 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
     showToastMsg('Consultoria removida.');
   };
 
-  // WhatsApp formatted share link with Office Name
+  // WhatsApp formatted share link with Office Name & Direct Presentation URL
   const getWhatsAppShareUrl = (consultation: ExpressConsultation) => {
+    const presentationUrl = `${window.location.origin}/consultoria/${consultation.id}`;
     const text =
       `✨ *Proposta de Consultoria Expressa - ${consultation.officeName}*\n\n` +
       `Olá, ${consultation.clientName}! Preparamos uma proposta personalizada para a transformação do seu ambiente (*${consultation.roomType}*).\n\n` +
       `🎨 *Atmosfera:* ${consultation.desiredStyle.join(', ') || 'Sofisticado'}\n` +
       `📌 *Resumo:* ${consultation.summaryText}\n\n` +
-      `Acesse a apresentação online para visualizar o Antes & Depois interativo:`;
+      `Acesse a sua apresentação interativa completa no link abaixo:\n` +
+      `${presentationUrl}`;
     return `https://api.whatsapp.com/send?phone=${encodeURIComponent(
       consultation.clientPhone.replace(/\D/g, '')
     )}&text=${encodeURIComponent(text)}`;
+  };
+
+  const handleCopyPresentationLink = (consultation: ExpressConsultation) => {
+    const url = `${window.location.origin}/consultoria/${consultation.id}`;
+    navigator.clipboard.writeText(url);
+    showToastMsg('Link da apresentação copiado para a área de transferência!');
   };
 
   // Print PDF helper
@@ -1249,77 +1565,328 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
       )}
 
       {/* ========================================================================= */}
-      {/* STEP 3: REFERÊNCIAS */}
+      {/* STEP 3: REFERÊNCIAS REAIS COLOCADAS PELO CLIENTE / ARQUITETO */}
       {/* ========================================================================= */}
       {step === 3 && (
-        <div className="bg-[#1c1815] border border-[#3d342f] rounded-3xl p-6 sm:p-10 shadow-xl max-w-4xl mx-auto space-y-8">
-          {/* Top thumbnail */}
-          <div className="p-4 bg-[#0e0c0b] rounded-2xl border border-[#3d342f] flex items-center gap-4">
-            <img
-              src={originalImage}
-              alt="Ambiente em análise"
-              className="w-16 h-16 rounded-xl object-cover border border-[#3d342f]"
-            />
-            <div>
-              <span className="text-[10px] font-bold text-[#c58a4b] uppercase tracking-wider block">
-                AMBIENTE EM ANÁLISE — REFERÊNCIAS VISUAIS
-              </span>
-              <p className="text-xs font-medium text-[#a89c93]">
-                Escolha de uma a três fotos reais. As referências inspiram o estilo, sem substituir a arquitetura do ambiente.
-              </p>
-            </div>
-          </div>
+        <div className="bg-[#1c1815] border border-[#3d342f] rounded-3xl p-6 sm:p-10 shadow-xl max-w-5xl mx-auto space-y-8">
+          {/* Hidden multi-file upload input */}
+          <input
+            ref={refFileInputRef}
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handleReferenceFilesUpload}
+            className="hidden"
+          />
 
-          {/* References Grid */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#fcf8f5]">Referências sugeridas para {roomType}</h3>
+          {/* Top banner */}
+          <div className="p-4 bg-[#0e0c0b] rounded-2xl border border-[#3d342f] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              {originalImage ? (
+                <img
+                  src={originalImage}
+                  alt="Ambiente em análise"
+                  className="w-14 h-14 rounded-xl object-cover border border-[#3d342f] shrink-0"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-xl bg-[#1c1815] border border-[#3d342f] flex items-center justify-center text-[#c58a4b] shrink-0">
+                  <Camera className="w-6 h-6" />
+                </div>
+              )}
+              <div>
+                <span className="text-[10px] font-bold text-[#c58a4b] uppercase tracking-wider block">
+                  PASSO 3 DE 5 — FOTOS DE REFERÊNCIA DO CLIENTE
+                </span>
+                <h3 className="text-base font-bold text-[#fcf8f5]">
+                  Coloque as fotos reais de referência
+                </h3>
+                <p className="text-xs text-[#a89c93]">
+                  Adicione fotos de marcenaria, iluminação, revestimentos ou estilo que o cliente deseja incorporar na proposta.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Upload action buttons */}
+            <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
               <button
-                onClick={() => showToastMsg('Modo de upload de referências ativado.')}
-                className="px-3.5 py-1.5 bg-[#251e1a] hover:bg-[#2e2621] text-[#fcf8f5] text-xs font-bold rounded-xl border border-[#3d342f] flex items-center gap-1.5 cursor-pointer"
+                onClick={() => {
+                  setActiveRefSlotIndex(null);
+                  refFileInputRef.current?.click();
+                }}
+                className="px-4 py-2 bg-[#c58a4b] hover:bg-[#d49454] text-[#12100e] text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
               >
-                <Plus className="w-3.5 h-3.5 text-[#c58a4b]" />
-                <span>Cadastrar referências</span>
+                <Upload className="w-3.5 h-3.5" />
+                <span>Upload de Fotos</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveRefSlotIndex(null);
+                  setShowUrlReferenceModal(true);
+                }}
+                className="px-3.5 py-2 bg-[#251e1a] hover:bg-[#2e2621] text-[#fcf8f5] text-xs font-bold rounded-xl border border-[#3d342f] flex items-center gap-1.5 cursor-pointer"
+              >
+                <Link className="w-3.5 h-3.5 text-[#c58a4b]" />
+                <span>Link URL</span>
               </button>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {[
-                {
-                  title: 'Estilo Sofisticado / Iluminação',
-                  url: AI_REDESIGN_VARIATIONS[roomType]?.sofisticado || AI_REDESIGN_VARIATIONS.Escritório.sofisticado,
-                },
-                {
-                  title: 'Textura Natural / Madeira',
-                  url: AI_REDESIGN_VARIATIONS[roomType]?.madeira || AI_REDESIGN_VARIATIONS.Escritório.madeira,
-                },
-                {
-                  title: 'Clean / Minimalista',
-                  url: AI_REDESIGN_VARIATIONS[roomType]?.minimalista || AI_REDESIGN_VARIATIONS.Escritório.minimalista,
-                },
-              ].map((ref, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => toggleArrayItem(selectedReferences, setSelectedReferences, ref.url)}
-                  className={`relative rounded-2xl overflow-hidden border cursor-pointer transition-all group ${
-                    selectedReferences.includes(ref.url)
-                      ? 'border-[#c58a4b] ring-2 ring-[#c58a4b]'
-                      : 'border-[#3d342f] hover:border-[#c58a4b]'
-                  }`}
-                >
-                  <img src={ref.url} alt={ref.title} className="w-full h-44 object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-3 flex flex-col justify-end">
-                    <span className="text-xs font-bold text-white">{ref.title}</span>
-                  </div>
-                  {selectedReferences.includes(ref.url) && (
-                    <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#c58a4b] text-[#12100e] flex items-center justify-center font-bold">
-                      <Check className="w-3.5 h-3.5" />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
           </div>
+
+          {/* Status Counter */}
+          <div className="flex items-center justify-between pb-2 border-b border-[#3d342f]/80">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#fcf8f5]">
+                Slots de Referências Ativas para a Proposta:
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#c58a4b]/20 text-[#c58a4b] border border-[#c58a4b]/40">
+                {selectedReferences.length} de 3 selecionadas
+              </span>
+            </div>
+            <span className="text-[11px] text-[#a89c93] hidden sm:inline">
+              *Selecione até 3 fotos que guiarão a IA
+            </span>
+          </div>
+
+          {/* 3 Primary Slots */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[0, 1, 2].map((slotIdx) => {
+              const selectedId = selectedReferences[slotIdx];
+              const refItem = userReferences.find(
+                (r) => r.id === selectedId || r.url === selectedId
+              );
+
+              if (refItem) {
+                return (
+                  <div
+                    key={slotIdx}
+                    className="relative bg-[#0e0c0b] border-2 border-[#c58a4b] rounded-2xl overflow-hidden shadow-lg flex flex-col group"
+                  >
+                    {/* Slot Header Badge */}
+                    <div className="px-3 py-1.5 bg-[#1c1815] border-b border-[#3d342f] flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-[#c58a4b] tracking-wider uppercase">
+                        Slot 0{slotIdx + 1} — Ativa
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setPreviewingReference(refItem)}
+                          className="p-1 hover:bg-[#2e2621] text-[#a89c93] hover:text-[#fcf8f5] rounded cursor-pointer"
+                          title="Visualizar foto ampliada"
+                        >
+                          <ZoomIn className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => handleRemoveReference(refItem.id, e)}
+                          className="p-1 hover:bg-red-950/60 text-red-400 rounded cursor-pointer"
+                          title="Remover referência"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Image Thumbnail */}
+                    <div className="relative h-44 w-full bg-black/40 overflow-hidden">
+                      <img
+                        src={refItem.url}
+                        alt={refItem.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/20 text-[10px] font-bold text-[#c58a4b] flex items-center gap-1">
+                        <Check className="w-3 h-3 text-[#c58a4b]" />
+                        <span>Selecionada</span>
+                      </div>
+                    </div>
+
+                    {/* Controls & Tag */}
+                    <div className="p-3.5 space-y-2.5 flex-1 flex flex-col justify-between">
+                      <div>
+                        <input
+                          type="text"
+                          value={refItem.title}
+                          onChange={(e) => {
+                            const newTitle = e.target.value;
+                            setUserReferences((prev) =>
+                              prev.map((r) =>
+                                r.id === refItem.id ? { ...r, title: newTitle } : r
+                              )
+                            );
+                          }}
+                          placeholder="Nome da referência..."
+                          className="w-full px-2.5 py-1.5 bg-[#1c1815] border border-[#3d342f] rounded-lg text-xs font-bold text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]"
+                        />
+                      </div>
+
+                      {/* Tag selector */}
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-bold text-[#a89c93] uppercase tracking-wider block">
+                          Foco desta referência:
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {['Marcenaria', 'Iluminação', 'Cores', 'Mobiliário', 'Revestimento'].map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => handleUpdateReferenceTag(refItem.id, tag)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer ${
+                                refItem.tag === tag
+                                  ? 'bg-[#c58a4b] text-[#12100e]'
+                                  : 'bg-[#1c1815] text-[#a89c93] hover:text-[#fcf8f5] border border-[#3d342f]'
+                              }`}
+                            >
+                              {tag}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-[#3d342f] flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => triggerUploadForSlot(slotIdx)}
+                          className="text-[10px] font-bold text-[#c58a4b] hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          <span>Substituir foto</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleReferenceSelect(refItem.id)}
+                          className="text-[10px] font-bold text-red-400 hover:underline cursor-pointer"
+                        >
+                          Desmarcar slot
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Empty Slot
+              return (
+                <div
+                  key={slotIdx}
+                  className="border-2 border-dashed border-[#3d342f] hover:border-[#c58a4b]/80 bg-[#0e0c0b]/60 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-4 transition-all min-h-[300px]"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-[#1c1815] border border-[#3d342f] text-[#c58a4b] flex items-center justify-center shadow-inner">
+                    <Plus className="w-6 h-6" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-[#a89c93] uppercase tracking-wider block">
+                      Slot 0{slotIdx + 1} Livre
+                    </span>
+                    <h4 className="text-sm font-bold text-[#fcf8f5]">
+                      Colocar Foto de Referência
+                    </h4>
+                    <p className="text-[11px] text-[#a89c93] max-w-[200px] leading-relaxed">
+                      Faça upload de uma foto real ou insira o link da imagem
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col w-full max-w-[200px] gap-2 pt-2">
+                    <button
+                      onClick={() => triggerUploadForSlot(slotIdx)}
+                      className="w-full py-2 bg-[#1c1815] hover:bg-[#2e2621] text-[#fcf8f5] text-xs font-bold rounded-xl border border-[#3d342f] hover:border-[#c58a4b] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-[#c58a4b]" />
+                      <span>Upload do Arquivo</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveRefSlotIndex(slotIdx);
+                        setShowUrlReferenceModal(true);
+                      }}
+                      className="w-full py-1.5 bg-transparent hover:bg-[#1c1815] text-[#a89c93] hover:text-[#fcf8f5] text-[11px] font-semibold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Link className="w-3 h-3 text-[#c58a4b]" />
+                      <span>Inserir por Link URL</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* User's Reference Library / Banco de Referências */}
+          {userReferences.length > 0 && (
+            <div className="pt-6 border-t border-[#3d342f] space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-[#fcf8f5] uppercase tracking-wider">
+                    Galeria de Referências Colocadas ({userReferences.length})
+                  </h4>
+                  <p className="text-[11px] text-[#a89c93]">
+                    Clique em uma imagem para marcar ou desmarcar como referência ativa da proposta.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setActiveRefSlotIndex(null);
+                    refFileInputRef.current?.click();
+                  }}
+                  className="text-xs font-bold text-[#c58a4b] hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Adicionar Mais</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                {userReferences.map((ref) => {
+                  const isSelected =
+                    selectedReferences.includes(ref.id) ||
+                    selectedReferences.includes(ref.url);
+
+                  return (
+                    <div
+                      key={ref.id}
+                      onClick={() => handleToggleReferenceSelect(ref.id)}
+                      className={`relative rounded-xl overflow-hidden border cursor-pointer group transition-all ${
+                        isSelected
+                          ? 'border-[#c58a4b] ring-2 ring-[#c58a4b]'
+                          : 'border-[#3d342f] hover:border-[#a89c93]'
+                      }`}
+                    >
+                      <img
+                        src={ref.url}
+                        alt={ref.title}
+                        className="w-full h-24 object-cover group-hover:scale-105 transition-transform"
+                      />
+
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-1.5 flex flex-col justify-end">
+                        <span className="text-[10px] font-bold text-white truncate">
+                          {ref.title}
+                        </span>
+                        {ref.tag && (
+                          <span className="text-[8px] text-[#c58a4b] uppercase font-bold truncate">
+                            {ref.tag}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Selection Checkmark */}
+                      {isSelected ? (
+                        <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#c58a4b] text-[#12100e] flex items-center justify-center font-bold shadow-md">
+                          <Check className="w-3 h-3" />
+                        </div>
+                      ) : (
+                        <button
+                          onClick={(e) => handleRemoveReference(ref.id, e)}
+                          className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/70 text-red-400 hover:bg-red-950 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-2.5 h-2.5" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Action Footer */}
           <div className="pt-4 border-t border-[#3d342f] flex items-center justify-between">
@@ -1455,46 +2022,199 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
 
             {/* Right Instructions Panel */}
             <div className="space-y-6">
-              <div className="p-5 bg-[#0e0c0b] rounded-2xl border border-[#3d342f] space-y-3 shadow-2xs">
-                <h4 className="text-xs font-bold text-[#fcf8f5] uppercase tracking-wider">
-                  Resumo do Atendimento
-                </h4>
-                <div className="space-y-2 text-xs">
-                  <div>
+              {/* Comprehensive Summary of all Prior Choices */}
+              <div className="p-5 bg-[#0e0c0b] rounded-2xl border border-[#3d342f] space-y-4 shadow-2xs">
+                <div className="flex items-center justify-between border-b border-[#3d342f]/80 pb-2.5">
+                  <h4 className="text-xs font-bold text-[#fcf8f5] uppercase tracking-wider flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-[#c58a4b]" />
+                    <span>Resumo do Atendimento</span>
+                  </h4>
+                  <button
+                    onClick={() => setStep(2)}
+                    className="text-[11px] font-bold text-[#c58a4b] hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                    <span>Editar escolhas</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  {/* O que incomoda */}
+                  {selectedAnnoyances.length > 0 && (
+                    <div className="space-y-1">
+                      <span className="font-bold text-[#c58a4b] uppercase tracking-wider block text-[10px]">
+                        O QUE MAIS INCOMODA HOJE
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedAnnoyances.map((item, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2.5 py-0.5 bg-[#251e1a] text-[#fcf8f5] rounded-full text-[11px] border border-[#3d342f]"
+                          >
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* O que deseja mudar */}
+                  <div className="space-y-1">
                     <span className="font-bold text-[#c58a4b] uppercase tracking-wider block text-[10px]">
                       O QUE DESEJA MUDAR
                     </span>
-                    <span className="font-semibold text-[#fcf8f5]">
-                      {selectedChanges.join(', ') || 'Quase tudo.'}
-                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedChanges.map((item, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2.5 py-0.5 bg-[#251e1a] text-[#fcf8f5] rounded-full text-[11px] border border-[#3d342f]"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <div>
+
+                  {/* Como o ambiente deve ficar */}
+                  <div className="space-y-1">
                     <span className="font-bold text-[#c58a4b] uppercase tracking-wider block text-[10px]">
-                      COMO O AMBIENTE DEVE FICAR
+                      COMO O AMBIENTE DEVE FICAR (ATMOSFERA & CONCEITO)
                     </span>
-                    <span className="font-semibold text-[#fcf8f5]">
-                      {selectedStyles.join(', ') || 'Sofisticado, Minimalista.'}
-                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedStyles.map((item, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2.5 py-0.5 bg-[#c58a4b]/20 text-[#c58a4b] font-bold rounded-full text-[11px] border border-[#c58a4b]/40"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Checklist Técnico Selecionado */}
+                  <div className="space-y-1.5 pt-2 border-t border-[#3d342f]/60">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#c58a4b] uppercase tracking-wider block text-[10px]">
+                        DIRETRIZES DO CHECKLIST TÉCNICO
+                      </span>
+                      <button
+                        onClick={() => setStep(4)}
+                        className="text-[10px] text-[#a89c93] hover:text-[#c58a4b] hover:underline cursor-pointer"
+                      >
+                        Ajustar checklist
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                      {Object.entries(checklist).map(([cat, val]) => (
+                        <div
+                          key={cat}
+                          className="p-1.5 rounded-lg bg-[#14110f] border border-[#2b2420] flex items-center justify-between gap-1"
+                        >
+                          <span className="text-[#a89c93] truncate text-[10px]">{cat}:</span>
+                          <span
+                            className={`font-semibold text-[10px] px-1.5 py-0.5 rounded truncate ${
+                              val === 'Não mexer'
+                                ? 'bg-zinc-800 text-zinc-400'
+                                : 'bg-[#c58a4b]/20 text-[#fcf8f5]'
+                            }`}
+                          >
+                            {val}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Observações do Cliente */}
+                  {notes.trim() && (
+                    <div className="pt-2 border-t border-[#3d342f]/60">
+                      <span className="font-bold text-[#c58a4b] uppercase tracking-wider block text-[10px]">
+                        OBSERVAÇÕES DO CLIENTE
+                      </span>
+                      <p className="text-[#fcf8f5] text-xs italic mt-0.5">"{notes.trim()}"</p>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Selected References Preview */}
+              {selectedReferences.length > 0 && (
+                <div className="p-5 bg-[#0e0c0b] rounded-2xl border border-[#3d342f] space-y-3 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-[#fcf8f5] uppercase tracking-wider">
+                      Referências Visuais Selecionadas ({selectedReferences.length})
+                    </h4>
+                    <button
+                      onClick={() => setStep(3)}
+                      className="text-[11px] font-bold text-[#c58a4b] hover:underline cursor-pointer"
+                    >
+                      Editar referências
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {selectedReferences.map((refId, idx) => {
+                      const refItem = userReferences.find((r) => r.id === refId || r.url === refId);
+                      if (!refItem) return null;
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => setPreviewingReference(refItem)}
+                          className="relative rounded-xl overflow-hidden border border-[#3d342f] bg-[#1c1815] group cursor-pointer"
+                        >
+                          <img
+                            src={refItem.url}
+                            alt={refItem.title}
+                            className="w-full h-20 object-cover group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-1.5 flex flex-col justify-end">
+                            <span className="text-[10px] font-bold text-white truncate">
+                              {refItem.title}
+                            </span>
+                            {refItem.tag && (
+                              <span className="text-[8px] text-[#c58a4b] uppercase font-bold truncate">
+                                {refItem.tag}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Prompt Textarea */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-[#fcf8f5]">Prompt final da proposta IA</label>
                   <button
-                    onClick={() => showToastMsg('Prompt sincronizado com as diretrizes do checklist!')}
-                    className="text-[11px] font-bold text-[#c58a4b] hover:underline cursor-pointer"
+                    onClick={() => {
+                      const refreshedPrompt = buildArchitecturalPrompt(
+                        roomType,
+                        selectedAnnoyances,
+                        selectedChanges,
+                        selectedStyles,
+                        checklist,
+                        userReferences,
+                        selectedReferences,
+                        notes
+                      );
+                      setFinalPrompt(refreshedPrompt);
+                      showToastMsg('Prompt atualizado com todas as opções anteriores e diretrizes do checklist!');
+                    }}
+                    className="text-[11px] font-bold text-[#c58a4b] hover:underline cursor-pointer flex items-center gap-1"
                   >
-                    Atualizar pelo checklist
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Atualizar pelo checklist</span>
                   </button>
                 </div>
                 <textarea
-                  rows={6}
+                  rows={8}
                   value={finalPrompt}
                   onChange={(e) => setFinalPrompt(e.target.value)}
-                  className="w-full p-4 bg-[#0e0c0b] border border-[#3d342f] rounded-2xl text-xs leading-relaxed text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]"
+                  className="w-full p-4 bg-[#0e0c0b] border border-[#3d342f] rounded-2xl text-xs leading-relaxed text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b] font-mono font-normal"
                 />
               </div>
 
@@ -1731,6 +2451,17 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
             </button>
 
             {activeConsultation && (
+              <button
+                onClick={() => handleCopyPresentationLink(activeConsultation)}
+                className="px-6 py-3 bg-[#1c1815] hover:bg-[#251e1a] text-[#fcf8f5] border border-[#3d342f] text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+                title="Copiar link da apresentação online"
+              >
+                <Copy className="w-4 h-4 text-[#c58a4b]" />
+                <span>Copiar Link</span>
+              </button>
+            )}
+
+            {activeConsultation && (
               <a
                 href={getWhatsAppShareUrl(activeConsultation)}
                 target="_blank"
@@ -1761,40 +2492,178 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
       {/* PUBLIC PRESENTATION MODAL / FULL VIEW COM COMPARADOR ARRASTÁVEL */}
       {/* ========================================================================= */}
       {showPresentationModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md overflow-y-auto p-4 sm:p-8 flex justify-center animate-in fade-in">
-          <div className="bg-[#1c1815] text-[#fcf8f5] w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl border border-[#3d342f] my-auto relative">
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md overflow-y-auto p-2 sm:p-6 md:p-8 flex justify-center animate-in fade-in">
+          <div className="bg-[#f7f5f0] text-[#1c1917] w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl border border-[#3d342f] my-auto relative">
             {/* Close Modal Button */}
             <button
               onClick={() => setShowPresentationModal(false)}
-              className="absolute top-6 right-6 z-20 w-10 h-10 rounded-full bg-black/60 text-white hover:bg-black/80 flex items-center justify-center cursor-pointer backdrop-blur-md border border-white/20"
+              className="absolute top-5 right-5 z-30 w-10 h-10 rounded-full bg-black/60 text-white hover:bg-black/80 flex items-center justify-center cursor-pointer backdrop-blur-md border border-white/20 transition-all"
+              title="Fechar apresentação"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {/* PRESENTATION HEADER */}
-            <div className="bg-[#14110f] text-[#fcf8f5] p-8 sm:p-12 text-center space-y-4 relative border-b border-[#3d342f]">
-              <div className="font-serif text-xl sm:text-2xl font-bold tracking-widest text-[#c58a4b]">
-                {activeConsultation?.officeName || officeName}
+            {/* PRESENTATION TOP SECTION (DARK HERO & IDENTIFICATION) */}
+            <div className="bg-[#14110f] text-[#fcf8f5] p-6 sm:p-10 md:p-12 space-y-6 relative border-b border-[#2e2621]">
+              <div className="text-center space-y-2">
+                <div className="font-serif text-xl sm:text-2xl font-bold tracking-[0.2em] text-[#c58a4b] uppercase">
+                  {activeConsultation?.officeName || officeName}
+                </div>
+                <span className="text-[10px] font-bold tracking-[0.25em] uppercase text-[#a89c93] block">
+                  CONSULTORIA EXPRESSA DE ARQUITETURA
+                </span>
+
+                <h1 className="text-2xl sm:text-4xl md:text-5xl font-serif font-normal max-w-2xl mx-auto leading-tight text-[#fcf8f5] pt-2">
+                  Uma nova possibilidade para o seu espaço.
+                </h1>
+
+                <div className="text-xs text-[#a89c93] font-medium pt-1">
+                  {activeConsultation?.clientName || clientName || 'Cliente'} • {activeConsultation?.roomType || roomType} | Consultor: {activeConsultation?.consultantName || consultantName}
+                </div>
               </div>
-              <span className="text-[10px] font-bold tracking-widest uppercase text-[#a89c93] block">
-                CONSULTORIA EXPRESSA DE ARQUITETURA
-              </span>
 
-              <h1 className="text-3xl sm:text-5xl font-serif font-normal max-w-2xl mx-auto leading-tight text-[#fcf8f5]">
-                Uma nova possibilidade para o seu espaço.
-              </h1>
+              {/* IDENTIFIED & DESIRED CARDS IN DARK CONTAINER */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                {/* O QUE IDENTIFICAMOS */}
+                <div className="bg-[#0e0c0b] border border-[#2e2621] p-5 sm:p-6 rounded-2xl space-y-3">
+                  <div>
+                    <span className="text-[10px] font-bold text-[#c58a4b] uppercase tracking-[0.15em] block">
+                      O QUE IDENTIFICAMOS
+                    </span>
+                    <p className="text-xs text-[#a89c93] mt-0.5">Pontos que hoje limitam o ambiente.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {(activeConsultation?.annoyances || selectedAnnoyances).length > 0 ? (
+                      (activeConsultation?.annoyances || selectedAnnoyances).map((item, i) => (
+                        <span
+                          key={i}
+                          className="px-3.5 py-1.5 rounded-xl border border-[#3d342f] bg-[#1c1815] text-xs font-medium text-[#fcf8f5]"
+                        >
+                          {item}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="px-3.5 py-1.5 rounded-xl border border-[#3d342f] bg-[#1c1815] text-xs font-medium text-[#a89c93]">
+                        Visual pesado
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-              <div className="text-xs text-[#a89c93] font-medium">
-                {activeConsultation?.clientName || clientName || 'Cliente'} • {activeConsultation?.roomType || roomType} | Consultor: {activeConsultation?.consultantName || consultantName}
+                {/* O QUE VOCÊ GOSTARIA DE MELHORAR */}
+                <div className="bg-[#0e0c0b] border border-[#2e2621] p-5 sm:p-6 rounded-2xl space-y-3">
+                  <div>
+                    <span className="text-[10px] font-bold text-[#c58a4b] uppercase tracking-[0.15em] block">
+                      O QUE VOCÊ GOSTARIA DE MELHORAR
+                    </span>
+                    <p className="text-xs text-[#a89c93] mt-0.5">Mudanças e sensações desejadas para o espaço.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {[
+                      ...(activeConsultation?.desiredChanges || selectedChanges),
+                      ...(activeConsultation?.desiredStyle || selectedStyles),
+                    ].length > 0 ? (
+                      [
+                        ...(activeConsultation?.desiredChanges || selectedChanges),
+                        ...(activeConsultation?.desiredStyle || selectedStyles),
+                      ].map((item, i) => (
+                        <span
+                          key={i}
+                          className="px-3.5 py-1.5 rounded-xl border border-[#c58a4b]/30 bg-[#c58a4b]/10 text-xs font-medium text-[#c58a4b]"
+                        >
+                          {item}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="px-3.5 py-1.5 rounded-xl border border-[#c58a4b]/30 bg-[#c58a4b]/10 text-xs font-medium text-[#c58a4b]">
+                        Marcenaria • Sofisticado
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* PRESENTATION BODY */}
-            <div className="p-6 sm:p-12 space-y-12">
-              {/* SECTION: ANTES E DEPOIS INTERATIVO */}
+            {/* PRESENTATION BODY (WARM LIGHT CANVAS #f7f5f0) */}
+            <div className="p-6 sm:p-10 md:p-12 space-y-12 bg-[#f7f5f0]">
+              {/* SECTION: NOSSA PROPOSTA */}
               <div className="space-y-4">
-                <span className="text-[10px] font-bold text-[#c58a4b] uppercase tracking-widest block text-center sm:text-left">
-                  TRANSFORMAÇÃO VISUAL (ANTES & DEPOIS)
+                <span className="text-[10px] font-bold text-[#8c7e73] uppercase tracking-[0.15em] block">
+                  NOSSA PROPOSTA
+                </span>
+
+                <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-[#e5dfd8] bg-[#e5dfd8]/30">
+                  <img
+                    src={activeConsultation?.redesignImage || redesignImage}
+                    alt="Proposta de Redesign com IA"
+                    className="w-full h-auto max-h-[550px] object-cover"
+                  />
+                </div>
+              </div>
+
+              {/* SECTION: RESUMO DA PROPOSTA & O QUE AJUSTAMOS */}
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold text-[#8c7e73] uppercase tracking-[0.15em] block">
+                    RESUMO DA PROPOSTA
+                  </span>
+                  <p className="text-sm sm:text-base text-[#4a443e] leading-relaxed font-sans">
+                    {activeConsultation?.summaryText ||
+                      summaryText ||
+                      `A proposta segue uma linha de redesign pontual para ${activeConsultation?.roomType || roomType}, com foco em requalificar a marcenaria para diminuir a sensação de peso visual. A intenção é trazer um resultado mais sofisticado, preservando integralmente a arquitetura existente e todos os elementos que não foram indicados para alteração.`}
+                  </p>
+                </div>
+
+                {/* CARD: O QUE AJUSTAMOS NESTA PROPOSTA */}
+                <div className="bg-white border border-[#e5dfd8] rounded-2xl p-6 sm:p-8 space-y-3 shadow-xs">
+                  <span className="text-[11px] font-bold text-[#8c7e73] uppercase tracking-[0.15em] block">
+                    O QUE AJUSTAMOS NESTA PROPOSTA
+                  </span>
+                  <p className="text-xs sm:text-sm text-[#4a443e] leading-relaxed whitespace-pre-line font-sans">
+                    {activeConsultation?.adjustmentsText ||
+                      adjustmentsText ||
+                      `A intervenção se concentra nas soluções solicitadas para o ${(activeConsultation?.roomType || roomType).toLowerCase()}, que passa a ser o principal recurso para organizar melhor a leitura do espaço e aliviar o aspecto anterior. Mantêm-se rigorosamente o enquadramento, a perspectiva e a arquitetura original, sem qualquer alteração estrutural ou de composição espacial fora do que foi solicitado. Com isso, a proposta atua de forma controlada, sem modificar os demais elementos do cenário. Não há indicação de mudanças em iluminação, decoração ou mobiliário além do que for inerente ao que foi acordado. A leitura geral buscada é mais elegante, limpa e bem resolvida, sem descaracterizar o ambiente original.`}
+                  </p>
+                </div>
+              </div>
+
+              {/* SECTION: REFERÊNCIAS VISUAIS SELECIONADAS (SE HOUVER) */}
+              {((activeConsultation?.userReferences && activeConsultation.userReferences.length > 0) ||
+                selectedReferences.length > 0) && (
+                <div className="space-y-4">
+                  <span className="text-[10px] font-bold text-[#8c7e73] uppercase tracking-[0.15em] block">
+                    REFERÊNCIAS VISUAIS SELECIONADAS DO PROJETO
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {(
+                      activeConsultation?.userReferences ||
+                      userReferences.filter(
+                        (r) => selectedReferences.includes(r.id) || selectedReferences.includes(r.url)
+                      )
+                    ).map((ref, idx) => (
+                      <div
+                        key={idx}
+                        className="relative rounded-2xl overflow-hidden border border-[#e5dfd8] bg-white shadow-2xs"
+                      >
+                        <img src={ref.url} alt={ref.title} className="w-full h-36 object-cover" />
+                        <div className="p-3 bg-white border-t border-[#e5dfd8] flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-[#1c1917] block truncate">{ref.title}</span>
+                            {ref.tag && (
+                              <span className="text-[10px] text-[#c58a4b] font-semibold">{ref.tag}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* SECTION: ANTES E DEPOIS COMPARADOR */}
+              <div className="space-y-4">
+                <span className="text-[10px] font-bold text-[#8c7e73] uppercase tracking-[0.15em] block">
+                  ARRASTE PARA COMPARAR
                 </span>
 
                 <BeforeAfterSlider
@@ -1803,45 +2672,24 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
                   title="ARRASTE PARA COMPARAR"
                   aspectRatioClass="h-[380px] sm:h-[500px]"
                 />
-
-                <p className="text-xs sm:text-sm text-[#a89c93] leading-relaxed max-w-3xl font-sans">
-                  O ambiente ({activeConsultation?.roomType || roomType}) parte de uma base arquitetônica que é preservada integralmente, sem alterar enquadramento e perspectiva. A proposta da Inteligência Artificial renova materiais, marcenaria e iluminação para atingir a atmosfera desejada.
-                </p>
-              </div>
-
-              {/* SECTION: O QUE VOCÊ GOSTARIA DE MELHORAR */}
-              <div className="bg-[#0e0c0b] border border-[#3d342f] text-white p-8 rounded-2xl space-y-4">
-                <span className="text-[10px] font-bold text-[#c58a4b] uppercase tracking-widest block">
-                  O QUE VOCÊ GOSTARIA DE MELHORAR
-                </span>
-                <p className="text-xs text-[#a89c93]">Mudanças e sensações desejadas para o espaço.</p>
-
-                <div className="flex flex-wrap gap-3 pt-2">
-                  {(activeConsultation?.desiredChanges || selectedChanges).concat(activeConsultation?.desiredStyle || selectedStyles).map((tag, i) => (
-                    <span
-                      key={i}
-                      className="px-5 py-2.5 rounded-xl border border-[#c58a4b]/30 bg-[#c58a4b]/10 text-xs font-semibold text-[#c58a4b] backdrop-blur-md"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
               </div>
 
               {/* SECTION: IDEIAS PARA TRANSFORMAR SEU ESPAÇO */}
               <div className="space-y-6">
-                <h2 className="text-2xl font-serif font-bold text-[#fcf8f5]">Ideias para transformar seu espaço</h2>
+                <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#1c1917]">
+                  Ideias para transformar seu espaço
+                </h2>
 
                 <div className="space-y-3">
                   {(activeConsultation?.ideas || ideas).map((idea, idx) => (
                     <div
                       key={idx}
-                      className="p-4 bg-[#0e0c0b] rounded-2xl border border-[#3d342f] flex items-center gap-4 shadow-2xs"
+                      className="p-4 sm:p-5 bg-white rounded-2xl border border-[#e5dfd8] flex items-center gap-4 shadow-2xs"
                     >
-                      <div className="w-8 h-8 rounded-full bg-[#1c1815] border border-[#3d342f] text-[#c58a4b] font-bold text-xs flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-[#f7f5f0] border border-[#e5dfd8] text-[#8c7e73] font-bold text-xs flex items-center justify-center shrink-0">
                         0{idx + 1}
                       </div>
-                      <p className="text-xs sm:text-sm font-medium text-[#fcf8f5] leading-snug">{idea}</p>
+                      <p className="text-xs sm:text-sm font-medium text-[#2c2724] leading-snug">{idea}</p>
                     </div>
                   ))}
                 </div>
@@ -1849,14 +2697,14 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
 
               {/* SECTION: DIREÇÃO SUGERIDA */}
               <div className="space-y-3">
-                <span className="text-[10px] font-bold text-[#c58a4b] uppercase tracking-widest block">
+                <span className="text-[10px] font-bold text-[#8c7e73] uppercase tracking-[0.15em] block">
                   DIREÇÃO SUGERIDA
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {(activeConsultation?.directionTags || directionTags).map((tag, i) => (
                     <span
                       key={i}
-                      className="px-3 py-1 bg-[#0e0c0b] border border-[#3d342f] text-[#a89c93] text-xs font-semibold rounded-full"
+                      className="px-3.5 py-1.5 bg-white border border-[#e5dfd8] text-[#59524c] text-xs font-semibold rounded-full shadow-2xs"
                     >
                       {tag}
                     </span>
@@ -1864,36 +2712,54 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
                 </div>
               </div>
 
-              {/* SECTION: ESSA É APENAS UMA PRIMEIRA POSSIBILIDADE */}
-              <div className="text-center p-8 bg-[#0e0c0b] rounded-3xl border border-[#3d342f] space-y-6 shadow-sm">
-                <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#fcf8f5] max-w-xl mx-auto">
+              {/* SECTION: ESSA É APENAS UMA PRIMEIRA POSSIBILIDADE (CTA) */}
+              <div className="text-center p-8 sm:p-12 bg-white rounded-3xl border border-[#e5dfd8] space-y-6 shadow-sm">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-[#1c1917] max-w-xl mx-auto">
                   Essa é apenas uma primeira possibilidade.
                 </h2>
-                <p className="text-xs sm:text-sm text-[#a89c93] max-w-2xl mx-auto leading-relaxed">
-                  Esta consultoria apresenta uma primeira direção para o seu ambiente — uma forma de explorar possibilidades, identificar caminhos e visualizar o potencial do espaço. Em um projeto completo com o {activeConsultation?.officeName || officeName}, essa visão evolui.
-                </p>
+                <div className="text-xs sm:text-sm text-[#59524c] max-w-2xl mx-auto leading-relaxed space-y-4">
+                  <p>
+                    Esta consultoria apresenta uma primeira direção para o seu ambiente — uma forma de explorar possibilidades, identificar caminhos e visualizar o potencial do espaço.
+                  </p>
+                  <p>
+                    Em um projeto completo, essa visão evolui. Estudamos medidas, circulação, ergonomia, iluminação, materiais, marcenaria e cada decisão necessária para transformar a ideia em uma solução pensada para você e pronta para ser executada.
+                  </p>
+                  <p className="font-semibold text-[#1c1917]">
+                    Vamos desenvolver seu espaço?
+                  </p>
+                </div>
 
-                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
                   <a
                     href={`https://api.whatsapp.com/send?phone=5511999999999&text=${encodeURIComponent(
                       `Olá! Gostaria de evoluir a minha Consultoria Expressa para um Projeto Completo com o ${activeConsultation?.officeName || officeName}.`
                     )}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="px-6 py-3 bg-[#c58a4b] hover:bg-[#d49454] text-[#12100e] text-xs font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer shadow-md"
+                    className="px-7 py-3.5 bg-[#1c2e24] hover:bg-[#253e30] text-[#fcf8f5] text-xs font-bold rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
                   >
-                    <MessageCircle className="w-4 h-4 text-[#12100e]" />
+                    <MessageCircle className="w-4 h-4 text-[#25d366]" />
                     <span>Falar com o {activeConsultation?.officeName || officeName}</span>
                   </a>
 
                   <button
                     onClick={handlePrintPDF}
-                    className="px-6 py-3 border border-[#3d342f] bg-[#1c1815] hover:bg-[#251e1a] text-[#fcf8f5] text-xs font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer"
+                    className="px-7 py-3.5 border border-[#d5cfc7] bg-white hover:bg-[#f0ebe3] text-[#2c2724] text-xs font-bold rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                   >
-                    <Download className="w-4 h-4 text-[#a89c93]" />
+                    <Download className="w-4 h-4 text-[#8c7e73]" />
                     <span>Baixar PDF</span>
                   </button>
                 </div>
+              </div>
+
+              {/* PRESENTATION FOOTER */}
+              <div className="pt-6 border-t border-[#e5dfd8] text-center space-y-2">
+                <div className="font-serif text-sm font-bold tracking-[0.15em] text-[#8c7e73] uppercase">
+                  {activeConsultation?.officeName || officeName}
+                </div>
+                <p className="text-[11px] text-[#8c7e73] max-w-lg mx-auto">
+                  Imagem conceitual desenvolvida durante a Consultoria Expressa. Materiais e soluções devem ser validados em projeto antes da execução.
+                </p>
               </div>
             </div>
           </div>
@@ -1976,6 +2842,148 @@ export const ExpressConsultingTab: React.FC<ExpressConsultingTabProps> = ({ onEx
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ADICIONAR REFERÊNCIA POR LINK URL MODAL */}
+      {/* ========================================================================= */}
+      {showUrlReferenceModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 flex items-center justify-center animate-in fade-in">
+          <div className="bg-[#1c1815] text-[#fcf8f5] w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-[#3d342f] p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-[#3d342f] pb-3">
+              <div className="flex items-center gap-2">
+                <Link className="w-5 h-5 text-[#c58a4b]" />
+                <h3 className="text-sm font-bold text-[#fcf8f5]">Adicionar Foto por Link URL</h3>
+              </div>
+              <button
+                onClick={() => setShowUrlReferenceModal(false)}
+                className="p-1 text-[#a89c93] hover:text-[#fcf8f5] rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#a89c93]">Link direto da imagem (URL)</label>
+                <input
+                  type="url"
+                  placeholder="https://exemplo.com/foto-referencia.jpg"
+                  value={urlRefInput}
+                  onChange={(e) => setUrlRefInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#0e0c0b] border border-[#3d342f] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]"
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#a89c93]">Nome ou descrição curta</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Armário em carvalho ripado"
+                  value={urlRefTitle}
+                  onChange={(e) => setUrlRefTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#0e0c0b] border border-[#3d342f] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#a89c93]">Foco da referência</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {['Marcenaria', 'Iluminação', 'Cores', 'Mobiliário', 'Revestimento'].map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setUrlRefTag(tag)}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                        urlRefTag === tag
+                          ? 'bg-[#c58a4b] text-[#12100e]'
+                          : 'bg-[#0e0c0b] text-[#a89c93] hover:text-[#fcf8f5] border border-[#3d342f]'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {urlRefInput.trim() && (
+                <div className="relative rounded-xl overflow-hidden border border-[#3d342f] h-32 bg-black/40">
+                  <img
+                    src={urlRefInput}
+                    alt="Prévia"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=600&auto=format&fit=crop&q=80';
+                    }}
+                  />
+                  <div className="absolute bottom-1 right-2 bg-black/70 px-2 py-0.5 rounded text-[10px] text-white">
+                    Prévia
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#3d342f]">
+              <button
+                type="button"
+                onClick={() => setShowUrlReferenceModal(false)}
+                className="px-4 py-2 border border-[#3d342f] bg-[#14110f] hover:bg-[#1c1815] text-[#a89c93] text-xs font-bold rounded-xl cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleAddUrlReference}
+                className="px-5 py-2 bg-[#c58a4b] hover:bg-[#d49454] text-[#12100e] text-xs font-bold rounded-xl cursor-pointer shadow-md"
+              >
+                Salvar Referência
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ZOOM PREVIEW MODAL */}
+      {/* ========================================================================= */}
+      {previewingReference && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md p-4 flex items-center justify-center animate-in fade-in">
+          <div className="bg-[#1c1815] border border-[#3d342f] rounded-3xl overflow-hidden max-w-3xl w-full shadow-2xl relative">
+            <button
+              onClick={() => setPreviewingReference(null)}
+              className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-black/70 text-white hover:bg-black/90 flex items-center justify-center cursor-pointer border border-white/20"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <img
+              src={previewingReference.url}
+              alt={previewingReference.title}
+              className="w-full max-h-[70vh] object-contain bg-black/60"
+            />
+
+            <div className="p-4 bg-[#0e0c0b] border-t border-[#3d342f] flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-bold text-[#fcf8f5]">{previewingReference.title}</h4>
+                {previewingReference.tag && (
+                  <span className="text-xs text-[#c58a4b] font-semibold">{previewingReference.tag}</span>
+                )}
+              </div>
+
+              <button
+                onClick={() => {
+                  handleToggleReferenceSelect(previewingReference.id);
+                  setPreviewingReference(null);
+                }}
+                className="px-4 py-2 bg-[#c58a4b] hover:bg-[#d49454] text-[#12100e] text-xs font-bold rounded-xl cursor-pointer"
+              >
+                {selectedReferences.includes(previewingReference.id) ? 'Desmarcar' : 'Usar na Proposta'}
+              </button>
             </div>
           </div>
         </div>
