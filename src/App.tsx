@@ -49,9 +49,9 @@ import { auth } from './lib/firebase';
 import { SubscriptionGuard } from './components/auth/SubscriptionGuard';
 
 const AppContent: React.FC = () => {
-  // Default to 'Meu Dia & Agenda'
+  // Default to 'Painel do Escritório'
   const [activeTab, setActiveTab] = useState<string>(() => {
-    const tab = localStorage.getItem('office_active_tab') || 'today';
+    const tab = localStorage.getItem('office_active_tab') || 'dashboard';
     console.log("AppContent activeTab init:", tab);
     return tab;
   });

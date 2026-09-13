@@ -51,11 +51,11 @@ const ALL_QUICK_ACTIONS = [
 ];
 
 const DESKTOP_QUICK_ACTIONS = [
-  { id: 'dashboard', label: 'Painel do Escritório', icon: LayoutDashboard },
-  { id: 'today', label: 'Meu Dia & Agenda', icon: Calendar },
-  { id: 'actions', label: 'Central de Ações', icon: Clock },
-  { id: 'projects', label: 'Gestão de Projetos', icon: FolderOpen },
-  { id: 'consultoria_expressa', label: 'Consultoria IA', icon: Sparkles, isNew: true },
+  { id: 'dashboard', label: 'Painel', fullLabel: 'Painel do Escritório', icon: LayoutDashboard },
+  { id: 'today', label: 'Meu Dia', fullLabel: 'Meu Dia & Agenda', icon: Calendar },
+  { id: 'actions', label: 'Ações', fullLabel: 'Central de Ações', icon: Clock },
+  { id: 'projects', label: 'Projetos', fullLabel: 'Gestão de Projetos', icon: FolderOpen },
+  { id: 'consultoria_expressa', label: 'Consultoria IA', fullLabel: 'Consultoria Expressa IA', icon: Sparkles, isNew: true },
 ];
 
 const TAB_TITLES: Record<string, { label: string; icon: React.ElementType; description: string }> = {
@@ -173,7 +173,7 @@ export const TopBar: React.FC<TopBarProps> = ({
     <header className="w-full bg-[#161311]/95 backdrop-blur-md border-b border-[#2d2520] sticky top-0 z-20 px-3 sm:px-6 lg:px-8 py-2">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
         {/* Left: Mobile Menu Button & Tab Title */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-initial">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
             onClick={onOpenMobileSidebar}
             className="lg:hidden p-2 rounded-xl bg-[#221c18] border border-[#3d342f] text-[var(--theme-primary)] hover:text-[#fcf8f5] hover:bg-[#2c241f] transition-colors cursor-pointer shrink-0 shadow-xs flex items-center gap-1.5"
@@ -184,23 +184,23 @@ export const TopBar: React.FC<TopBarProps> = ({
             <span className="hidden xs:inline text-[11px] font-bold text-[#a89c93]">Menu</span>
           </button>
 
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#221c18] border border-[#3d342f] flex items-center justify-center text-[var(--theme-primary)] shrink-0 shadow-xs">
               <Icon className="w-4 h-4" />
             </div>
-            <div className="flex flex-col min-w-0">
-              <h1 className="font-serif font-bold text-xs sm:text-base text-[#fcf8f5] truncate leading-tight">
+            <div className="flex flex-col">
+              <h1 className="font-serif font-bold text-xs sm:text-sm md:text-base text-[#fcf8f5] whitespace-nowrap leading-tight">
                 {currentTabInfo.label}
               </h1>
-              <span className="hidden xl:inline text-[11px] text-[#a89c93] truncate">
+              <span className="hidden 2xl:inline text-[11px] text-[#a89c93] whitespace-nowrap">
                 {currentTabInfo.description}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Center: Desktop Quick Navigation Buttons */}
-        <nav className="hidden md:flex items-center gap-1.5 bg-[#12100e] p-1 rounded-xl border border-[#2d2520] shadow-inner shrink-0">
+        {/* Center: Quick Navigation Buttons (visible on wider screens) */}
+        <nav className="hidden xl:flex items-center gap-1 bg-[#12100e] p-1 rounded-xl border border-[#2d2520] shadow-inner shrink-0">
           {DESKTOP_QUICK_ACTIONS.map((item) => {
             const ItemIcon = item.icon;
             const isActive = activeTab === item.id;
@@ -208,17 +208,17 @@ export const TopBar: React.FC<TopBarProps> = ({
               <button
                 key={item.id}
                 onClick={() => setActiveTab?.(item.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'bg-[var(--theme-primary)]/15 text-[var(--theme-primary)] border border-[var(--theme-primary)]/40 shadow-xs'
+                    ? 'bg-[var(--theme-primary)]/15 text-[var(--theme-primary)] border border-[var(--theme-primary)]/40 shadow-xs font-bold'
                     : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#201a17] border border-transparent'
                 }`}
-                title={`Ir para ${item.label}`}
+                title={`Ir para ${item.fullLabel}`}
               >
                 <ItemIcon className={`w-3.5 h-3.5 ${isActive ? 'text-[var(--theme-primary)]' : 'text-[#8c827a]'}`} />
                 <span>{item.label}</span>
                 {item.isNew && (
-                  <span className="px-1 py-0.2 text-[9px] font-bold uppercase bg-[var(--theme-primary)] text-black rounded leading-none">
+                  <span className="px-1 py-0.2 text-[8px] font-bold uppercase bg-[var(--theme-primary)] text-black rounded leading-none">
                     Novo
                   </span>
                 )}

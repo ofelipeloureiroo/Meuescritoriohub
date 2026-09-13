@@ -29,29 +29,29 @@ import {
   Search,
   Filter,
   Trash2,
-  Play,
-  Pause,
+  TrendingUp,
+  Phone,
+  Mail,
+  UserCheck,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { AppAction, ArchitectureProject, Client, TeamMember } from '../../types';
 
-// Live Team Member Activity Interface
-export interface TeamLiveActivity {
+export interface TeamProjectAllocation {
   memberId: string;
   memberName: string;
   roleTitle: string;
   avatarUrl?: string;
   initials: string;
   color: string;
-  status: 'active' | 'meeting' | 'site_visit' | 'modeling_3d' | 'detailing' | 'break';
-  statusLabel: string;
-  currentProject: string;
-  currentTask: string;
-  startedAt: string; // HH:MM or ISO
-  elapsedMinutes?: number;
-  lastUpdated: string;
+  assignedProjectId?: string;
+  currentProjectTitle: string;
+  currentStage: string;
+  taskDetail: string;
+  deadline?: string;
+  lastUpdated?: string;
 }
 
 const DEFAULT_SECTORS_CONFIG = {
@@ -62,22 +62,19 @@ const DEFAULT_SECTORS_CONFIG = {
   week_calendar: true,
   construction: true,
   crm_followup: true,
-  business_health: true,
 };
 
-const INITIAL_TEAM_ACTIVITIES: TeamLiveActivity[] = [
+const INITIAL_TEAM_ALLOCATIONS: TeamProjectAllocation[] = [
   {
     memberId: 'member_1',
     memberName: 'Laíne Paula Loureiro',
     roleTitle: 'Arquiteta Titular & Sócia',
     initials: 'LP',
     color: '#c58a4b',
-    status: 'active',
-    statusLabel: 'Em Produção',
-    currentProject: 'Residência Alphaville',
-    currentTask: 'Revisão final do Projeto Executivo e Aprovação de Marcenaria',
-    startedAt: '09:00',
-    lastUpdated: new Date().toISOString(),
+    currentProjectTitle: 'Residência Alphaville',
+    currentStage: 'Projeto Executivo',
+    taskDetail: 'Revisão final do Projeto Executivo e Aprovação de Marcenaria',
+    deadline: '2026-09-25',
   },
   {
     memberId: 'member_2',
@@ -85,12 +82,10 @@ const INITIAL_TEAM_ACTIVITIES: TeamLiveActivity[] = [
     roleTitle: 'Coordenadora de Projetos',
     initials: 'ML',
     color: '#8c7456',
-    status: 'modeling_3d',
-    statusLabel: 'Modelagem 3D & Render',
-    currentProject: 'Apartamento Jardins 302',
-    currentTask: 'Modelagem da Cozinha Gourmet Integrada e Renders no Lumion',
-    startedAt: '10:15',
-    lastUpdated: new Date().toISOString(),
+    currentProjectTitle: 'Apartamento Jardins 302',
+    currentStage: 'Modelagem 3D & Render',
+    taskDetail: 'Modelagem da Cozinha Gourmet Integrada e Renders no Lumion',
+    deadline: '2026-09-30',
   },
   {
     memberId: 'member_3',
@@ -98,12 +93,10 @@ const INITIAL_TEAM_ACTIVITIES: TeamLiveActivity[] = [
     roleTitle: 'Arquiteto Desenvolvedor',
     initials: 'CE',
     color: '#4f7a61',
-    status: 'detailing',
-    statusLabel: 'Detalhamento Executivo',
-    currentProject: 'Clínica Dermatológica Harmonia',
-    currentTask: 'Detalhamento de paginação de piso, forro e pontos elétricos',
-    startedAt: '08:45',
-    lastUpdated: new Date().toISOString(),
+    currentProjectTitle: 'Clínica Dermatológica Harmonia',
+    currentStage: 'Detalhamento Executivo',
+    taskDetail: 'Detalhamento de paginação de piso, forro e pontos elétricos',
+    deadline: '2026-10-05',
   },
   {
     memberId: 'member_4',
@@ -111,12 +104,10 @@ const INITIAL_TEAM_ACTIVITIES: TeamLiveActivity[] = [
     roleTitle: 'Estagiária de Arquitetura',
     initials: 'BV',
     color: '#7b6194',
-    status: 'site_visit',
-    statusLabel: 'Visita Técnica / Medição',
-    currentProject: 'Consultório Dr. Marcelo',
-    currentTask: 'Levantamento métrico cadastral e conferência de pontos in loco',
-    startedAt: '11:00',
-    lastUpdated: new Date().toISOString(),
+    currentProjectTitle: 'Consultório Dr. Marcelo',
+    currentStage: 'Estudo Preliminar & Medição',
+    taskDetail: 'Levantamento métrico cadastral e conferência de pontos in loco',
+    deadline: '2026-09-20',
   },
 ];
 
@@ -127,6 +118,7 @@ interface BusinessDashboardTabProps {
 export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNavigateTab }) => {
   const { user, profile } = useAuth();
   const {
+    architectProfile,
     transactions,
     architectureProjects,
     clients,
@@ -137,11 +129,13 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
     addAppAction,
     updateAppAction,
     deleteAppAction,
-    addTransaction,
     selectedMonth,
+    monthlyTotalIncome,
+    monthlyTotalExpense,
+    monthlyBalance,
   } = useFinance();
 
-  // Navigation handler
+  // Navigation handler to any office module
   const handleNav = (tab: string) => {
     if (onNavigateTab) {
       onNavigateTab(tab);
@@ -154,7 +148,7 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
   // 1. Sectors Configuration State (persisted in localStorage)
   const [sectorsConfig, setSectorsConfig] = useState(() => {
     try {
-      const saved = localStorage.getItem('meu_escritorio_dashboard_sectors_v1');
+      const saved = localStorage.getItem('meu_escritorio_dashboard_sectors_v2');
       return saved ? { ...DEFAULT_SECTORS_CONFIG, ...JSON.parse(saved) } : DEFAULT_SECTORS_CONFIG;
     } catch {
       return DEFAULT_SECTORS_CONFIG;
@@ -171,73 +165,81 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
   const saveSectorsConfig = (newConfig: typeof DEFAULT_SECTORS_CONFIG) => {
     setSectorsConfig(newConfig);
     try {
-      localStorage.setItem('meu_escritorio_dashboard_sectors_v1', JSON.stringify(newConfig));
+      localStorage.setItem('meu_escritorio_dashboard_sectors_v2', JSON.stringify(newConfig));
     } catch (e) {
       console.warn('Could not save sectors config', e);
     }
   };
 
-  // 2. Team Live Activities State
-  const [teamActivities, setTeamActivities] = useState<TeamLiveActivity[]>(() => {
+  // 2. Team Members & Project Allocations (persisted and synced with office projects)
+  const [teamAllocations, setTeamAllocations] = useState<TeamProjectAllocation[]>(() => {
     try {
-      const saved = localStorage.getItem('meu_escritorio_team_live_activities_v1');
-      return saved ? JSON.parse(saved) : INITIAL_TEAM_ACTIVITIES;
+      const saved = localStorage.getItem('meu_escritorio_team_allocations_v2');
+      return saved ? JSON.parse(saved) : INITIAL_TEAM_ALLOCATIONS;
     } catch {
-      return INITIAL_TEAM_ACTIVITIES;
+      return INITIAL_TEAM_ALLOCATIONS;
     }
   });
 
   useEffect(() => {
     try {
-      localStorage.setItem('meu_escritorio_team_live_activities_v1', JSON.stringify(teamActivities));
+      localStorage.setItem('meu_escritorio_team_allocations_v2', JSON.stringify(teamAllocations));
     } catch (e) {
-      console.warn('Could not save team activities', e);
+      console.warn('Could not save team allocations', e);
     }
-  }, [teamActivities]);
+  }, [teamAllocations]);
 
-  // Modal to update collaborator activity
-  const [editingMemberActivity, setEditingMemberActivity] = useState<TeamLiveActivity | null>(null);
-  const [editStatus, setEditStatus] = useState<TeamLiveActivity['status']>('active');
-  const [editProject, setEditProject] = useState('');
-  const [editTask, setEditTask] = useState('');
+  // Modal to change which project a member is working on
+  const [editingAllocation, setEditingAllocation] = useState<TeamProjectAllocation | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [customProjectTitle, setCustomProjectTitle] = useState('');
+  const [selectedStage, setSelectedStage] = useState('');
+  const [customTaskDetail, setCustomTaskDetail] = useState('');
 
-  const handleOpenEditActivity = (member: TeamLiveActivity) => {
-    setEditingMemberActivity(member);
-    setEditStatus(member.status);
-    setEditProject(member.currentProject);
-    setEditTask(member.currentTask);
+  const handleOpenEditAllocation = (member: TeamProjectAllocation) => {
+    setEditingAllocation(member);
+    setSelectedProjectId(member.assignedProjectId || '');
+    setCustomProjectTitle(member.currentProjectTitle);
+    setSelectedStage(member.currentStage);
+    setCustomTaskDetail(member.taskDetail);
   };
 
-  const handleSaveMemberActivity = () => {
-    if (!editingMemberActivity) return;
-    const statusLabels: Record<TeamLiveActivity['status'], string> = {
-      active: 'Em Produção',
-      meeting: 'Em Reunião',
-      site_visit: 'Visita Técnica / Obra',
-      modeling_3d: 'Modelagem 3D & Render',
-      detailing: 'Detalhamento Executivo',
-      break: 'Pausa / Almoço',
-    };
+  const handleSaveAllocation = () => {
+    if (!editingAllocation) return;
 
-    const updated = teamActivities.map((m) =>
-      m.memberId === editingMemberActivity.memberId
+    let projectTitle = customProjectTitle.trim();
+    let stage = selectedStage.trim() || 'Em Desenvolvimento';
+
+    if (selectedProjectId) {
+      const found = architectureProjects.find((p) => p.id === selectedProjectId);
+      if (found) {
+        projectTitle = found.title;
+        if (!selectedStage.trim()) {
+          stage = found.status === 'obra' ? 'Acompanhamento de Obra' : found.status === 'executivo' ? 'Projeto Executivo' : 'Estudo & Anteprojeto';
+        }
+      }
+    }
+
+    const updated = teamAllocations.map((m) =>
+      m.memberId === editingAllocation.memberId
         ? {
             ...m,
-            status: editStatus,
-            statusLabel: statusLabels[editStatus],
-            currentProject: editProject.trim() || 'Geral do Escritório',
-            currentTask: editTask.trim() || 'Em atividades operacionais',
+            assignedProjectId: selectedProjectId || undefined,
+            currentProjectTitle: projectTitle || 'Geral do Escritório',
+            currentStage: stage,
+            taskDetail: customTaskDetail.trim() || 'Desenvolvimento de projetos do escritório',
             lastUpdated: new Date().toISOString(),
           }
         : m
     );
-    setTeamActivities(updated);
-    setEditingMemberActivity(null);
+
+    setTeamAllocations(updated);
+    setEditingAllocation(null);
   };
 
   // 3. Project Filter Pill State
-  type ProjectFilterCategory = 'critico' | 'ok' | 'nao_iniciada' | 'pausa' | 'standby';
-  const [projectFilter, setProjectFilter] = useState<ProjectFilterCategory>('critico');
+  type ProjectFilterCategory = 'todos' | 'critico' | 'ok' | 'obra' | 'estudo' | 'entregue';
+  const [projectFilter, setProjectFilter] = useState<ProjectFilterCategory>('todos');
 
   // 4. Quick Inline Task Input for "Tarefas de Hoje"
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
@@ -250,14 +252,14 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
 
     const todayStr = new Date().toISOString().split('T')[0];
     addAppAction({
-      title: quickTaskTitle.trim(),
-      category: quickTaskCategory,
-      priority: quickTaskPriority,
-      completed: false,
+      description: quickTaskTitle.trim(),
+      type: quickTaskCategory,
+      area: quickTaskCategory === 'Financeiro' ? 'Financeiro' : quickTaskCategory === 'Reunião' ? 'Comercial' : 'Operação',
+      origin: 'Projeto',
       date: todayStr,
-      dueDate: todayStr,
+      status: 'pending',
       time: '14:00',
-      description: 'Adicionado diretamente pelo Painel do Escritório',
+      notes: 'Adicionado diretamente pelo Painel do Escritório',
     });
     setQuickTaskTitle('');
   };
@@ -274,13 +276,10 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
   const todayIsoDate = useMemo(() => todayDate.toISOString().split('T')[0], [todayDate]);
 
   // 6. Financeiro de Hoje Calculations
-  // A receber hoje / no mês
   const receivablesToday = useMemo(() => {
-    // Check installments
     const inst = projectInstallments.filter(
-      (p) => !p.paid && (p.dueDate === todayIsoDate || p.dueDate.startsWith(selectedMonth))
+      (p) => p.status !== 'paid' && (p.dueDate === todayIsoDate || p.dueDate.startsWith(selectedMonth))
     );
-    // Check income transactions for today
     const tx = transactions.filter(
       (t) => t.type === 'income' && t.date === todayIsoDate
     );
@@ -291,10 +290,9 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
     };
   }, [projectInstallments, transactions, todayIsoDate, selectedMonth]);
 
-  // A pagar hoje / no mês
   const payablesToday = useMemo(() => {
     const tx = transactions.filter(
-      (t) => t.type === 'expense' && (t.date === todayIsoDate || (t.isPending && t.date.startsWith(selectedMonth)))
+      (t) => t.type === 'expense' && (t.date === todayIsoDate || (t.status === 'pending' && t.date.startsWith(selectedMonth)))
     );
     return {
       transactions: tx,
@@ -304,46 +302,48 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
 
   // 7. Tarefas de Hoje (DO DIA)
   const todayTasks = useMemo(() => {
-    return actions.filter((a) => a.date === todayIsoDate || a.dueDate === todayIsoDate || (!a.completed && a.priority === 'high'));
+    return actions.filter(
+      (a) => a.date === todayIsoDate || a.status === 'in_progress' || (a.status === 'pending' && a.area === 'Operação')
+    );
   }, [actions, todayIsoDate]);
 
-  const completedTodayTasks = useMemo(() => todayTasks.filter((t) => t.completed), [todayTasks]);
+  const completedTodayTasks = useMemo(() => todayTasks.filter((t) => t.status === 'completed'), [todayTasks]);
   const tasksPercentage = todayTasks.length > 0 ? Math.round((completedTodayTasks.length / todayTasks.length) * 100) : 0;
 
   // 8. Filtered Projects based on pill selection
   const filteredProjects = useMemo(() => {
-    const active = architectureProjects.filter((p) => p.status !== 'completed');
+    const active = architectureProjects;
 
     switch (projectFilter) {
       case 'critico':
-        // Prazo crítico: deadlines overdue or within next 7 days, or high priority
         return active.filter((p) => {
-          if (!p.deadline) return false;
-          const diffDays = Math.ceil((new Date(p.deadline).getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
-          return diffDays <= 7 || p.status === 'delayed';
+          if (p.status === 'entregue') return false;
+          if (!p.deliveryDate) return false;
+          const diffDays = Math.ceil((new Date(p.deliveryDate).getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+          return diffDays <= 7;
         });
       case 'ok':
-        // Prazo ok: ongoing projects with healthy deadline (> 7 days)
         return active.filter((p) => {
-          if (!p.deadline) return true;
-          const diffDays = Math.ceil((new Date(p.deadline).getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
-          return diffDays > 7 && p.status !== 'delayed' && p.status !== 'paused';
+          if (p.status === 'entregue') return false;
+          if (!p.deliveryDate) return true;
+          const diffDays = Math.ceil((new Date(p.deliveryDate).getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+          return diffDays > 7;
         });
-      case 'nao_iniciada':
-        return active.filter((p) => p.progress === 0 || p.currentStage?.toLowerCase().includes('briefing') || p.status === 'planning');
-      case 'pausa':
-        return active.filter((p) => p.status === 'paused' || p.category?.toLowerCase().includes('pausa'));
-      case 'standby':
-        return active.filter((p) => p.status === 'on_hold' || p.category?.toLowerCase().includes('standby'));
+      case 'obra':
+        return active.filter((p) => p.status === 'obra' || p.category?.toLowerCase().includes('obra'));
+      case 'estudo':
+        return active.filter((p) => p.status === 'estudo_preliminar' || p.status === 'anteprojeto');
+      case 'entregue':
+        return active.filter((p) => p.status === 'entregue');
+      case 'todos':
       default:
-        return active;
+        return active.filter((p) => p.status !== 'entregue');
     }
   }, [architectureProjects, projectFilter, todayDate]);
 
   // 9. Agenda da Semana (7 Days calculation)
   const weekDays = useMemo(() => {
     const curr = new Date(todayDate);
-    // Find Monday of current week
     const dayOfWeek = curr.getDay(); // 0 = Sun, 1 = Mon ...
     const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
     const monday = new Date(curr);
@@ -359,9 +359,8 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
       const isToday = isoStr === todayIsoDate;
       const dayNum = String(d.getDate()).padStart(2, '0');
 
-      // Find events/actions for this day
-      const dayActions = actions.filter((a) => a.date === isoStr || a.dueDate === isoStr);
-      const dayMilestones = projectMilestones.filter((m) => m.date === isoStr);
+      const dayActions = actions.filter((a) => a.date === isoStr);
+      const dayMilestones = projectMilestones.filter((m) => m.dueDate === isoStr);
 
       days.push({
         label: dayNames[i],
@@ -370,31 +369,36 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
         isToday,
         actions: dayActions,
         milestones: dayMilestones,
-        isFree: dayActions.length === 0 && dayMilestones.length === 0,
+        totalItems: dayActions.length + dayMilestones.length,
       });
     }
     return days;
   }, [todayDate, todayIsoDate, actions, projectMilestones]);
 
+  const [selectedWeekDayIso, setSelectedWeekDayIso] = useState<string>(todayIsoDate);
+
+  const selectedDayItems = useMemo(() => {
+    const dayActions = actions.filter((a) => a.date === selectedWeekDayIso);
+    const dayMilestones = projectMilestones.filter((m) => m.dueDate === selectedWeekDayIso);
+    return { dayActions, dayMilestones };
+  }, [actions, projectMilestones, selectedWeekDayIso]);
+
   // 10. Obras em Andamento
   const ongoingConstructions = useMemo(() => {
     return architectureProjects.filter(
       (p) =>
-        p.status === 'in_progress' &&
-        (p.category?.toLowerCase().includes('obra') ||
-          p.currentStage?.toLowerCase().includes('obra') ||
-          p.currentStage?.toLowerCase().includes('execução') ||
-          p.currentStage?.toLowerCase().includes('acompanhamento') ||
-          p.constructionReports?.length > 0)
+        p.status === 'obra' ||
+        p.category?.toLowerCase().includes('obra') ||
+        (p.reports && p.reports.length > 0)
     );
   }, [architectureProjects]);
 
-  // 11. CRM — Follow-ups Ativos
-  const activeFollowups = useMemo(() => {
+  // 11. CRM — Leads & Follow-ups Ativos
+  const activeLeads = useMemo(() => {
     return clients.filter(
       (c) =>
         c.status === 'lead' ||
-        c.status === 'prospect' ||
+        c.pipelineStage !== undefined ||
         c.notes?.toLowerCase().includes('follow') ||
         c.pendingAmount > 0
     );
@@ -416,7 +420,7 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-[#a89c93] mt-1 flex items-center gap-2">
-            <span>O que precisa da sua atenção hoje</span>
+            <span>Visão Integrada de Projetos, Agenda, Equipe e Financeiro</span>
             <span className="inline-block w-1 h-1 rounded-full bg-[#a89c93]" />
             <span className="text-[var(--theme-primary)] font-medium">Administração</span>
           </p>
@@ -434,7 +438,7 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
       </div>
 
       {/* ========================================================================= */}
-      {/* SECTOR 1: FINANCEIRO DE HOJE */}
+      {/* SECTOR 1: FINANCEIRO DE HOJE & MÊS */}
       {/* ========================================================================= */}
       {sectorsConfig.finance && (
         <div className="bg-[#1a1614] rounded-2xl border border-[#3d342f] overflow-hidden shadow-sm">
@@ -443,13 +447,17 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
               <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
                 <DollarSign className="w-4 h-4" />
               </div>
-              <h2 className="text-sm sm:text-base font-bold text-[#fcf8f5]">Financeiro de Hoje</h2>
+              <h2 className="text-sm sm:text-base font-bold text-[#fcf8f5]">Financeiro de Hoje & Mês</h2>
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-xs font-medium text-[#a89c93] bg-[#221c18] px-2.5 py-1 rounded-lg border border-[#3d342f]">
-                {todayFormattedBR}
-              </span>
+              <button
+                onClick={() => handleNav('financeiro')}
+                className="text-xs font-bold text-[var(--theme-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Ir para o Financeiro</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
               <button
                 onClick={() => toggleSectionCollapse('finance')}
                 className="p-1 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#251e1a] cursor-pointer"
@@ -461,100 +469,71 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
           </div>
 
           {!collapsedSections.finance && (
-            <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Card: A Receber */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-950/15 border border-emerald-500/20 flex flex-col justify-between space-y-4">
+            <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Card 1: A Receber */}
+              <div className="p-4 rounded-2xl bg-[#12100e] border border-emerald-900/30 flex flex-col justify-between space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider">A receber</span>
+                  <span className="text-xs font-semibold text-[#a89c93]">↙ A receber hoje / mês</span>
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-400">
+                    <ArrowDownLeft className="w-3.5 h-3.5" />
                   </div>
-                  <span className="text-base sm:text-lg font-mono font-bold text-emerald-400">
-                    {formatCurrency(receivablesToday.total)}
-                  </span>
                 </div>
-
-                {receivablesToday.installments.length > 0 || receivablesToday.transactions.length > 0 ? (
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                    {receivablesToday.installments.map((inst) => (
-                      <div
-                        key={inst.id}
-                        className="p-2.5 rounded-xl bg-[#14110f]/80 border border-emerald-500/20 flex items-center justify-between text-xs"
-                      >
-                        <div className="min-w-0 pr-2">
-                          <p className="font-semibold text-[#fcf8f5] truncate">{inst.projectTitle || 'Projeto'}</p>
-                          <p className="text-[10px] text-[#a89c93] truncate">{inst.clientName || 'Cliente'}</p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className="font-mono font-bold text-emerald-400 block">{formatCurrency(inst.amount)}</span>
-                          <span className="text-[9px] text-emerald-400/80">Vence hoje</span>
-                        </div>
-                      </div>
-                    ))}
-                    {receivablesToday.transactions.map((tx) => (
-                      <div
-                        key={tx.id}
-                        className="p-2.5 rounded-xl bg-[#14110f]/80 border border-emerald-500/20 flex items-center justify-between text-xs"
-                      >
-                        <div className="min-w-0 pr-2">
-                          <p className="font-semibold text-[#fcf8f5] truncate">{tx.description}</p>
-                          <p className="text-[10px] text-[#a89c93] truncate">{tx.category}</p>
-                        </div>
-                        <span className="font-mono font-bold text-emerald-400 shrink-0">{formatCurrency(tx.amount)}</span>
-                      </div>
-                    ))}
+                <div>
+                  <div className="text-xl font-bold text-emerald-400">
+                    {formatCurrency(receivablesToday.total)}
                   </div>
-                ) : (
-                  <div className="py-6 text-center text-xs text-[#a89c93] flex flex-col items-center justify-center gap-1">
-                    <span>Nenhum lançamento nesta data.</span>
-                    <button
-                      onClick={() => handleNav('recebimentos')}
-                      className="text-[11px] text-emerald-400 font-bold hover:underline cursor-pointer mt-1"
-                    >
-                      + Ver contas a receber
-                    </button>
-                  </div>
-                )}
+                  <p className="text-[11px] text-[#8c827a] mt-0.5">
+                    {receivablesToday.installments.length} parcela(s) pendente(s)
+                  </p>
+                </div>
               </div>
 
-              {/* Card: A Pagar */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-rose-950/15 border border-rose-500/20 flex flex-col justify-between space-y-4">
+              {/* Card 2: A Pagar */}
+              <div className="p-4 rounded-2xl bg-[#12100e] border border-rose-900/30 flex flex-col justify-between space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ArrowUpRight className="w-4 h-4 text-rose-400" />
-                    <span className="text-xs font-bold text-rose-300 uppercase tracking-wider">A pagar</span>
+                  <span className="text-xs font-semibold text-[#a89c93]">↗ A pagar hoje / mês</span>
+                  <div className="w-6 h-6 rounded-full bg-rose-500/15 flex items-center justify-center text-rose-400">
+                    <ArrowUpRight className="w-3.5 h-3.5" />
                   </div>
-                  <span className="text-base sm:text-lg font-mono font-bold text-rose-400">
+                </div>
+                <div>
+                  <div className="text-xl font-bold text-rose-400">
                     {formatCurrency(payablesToday.total)}
+                  </div>
+                  <p className="text-[11px] text-[#8c827a] mt-0.5">
+                    {payablesToday.transactions.length} despesa(s) agendada(s)
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 3: Receitas do Mês */}
+              <div className="p-4 rounded-2xl bg-[#12100e] border border-[#2e2621] flex flex-col justify-between space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[#a89c93]">Receita Total do Mês</span>
+                  <span className="text-[10px] font-bold text-[var(--theme-primary)] bg-[var(--theme-primary)]/10 px-2 py-0.5 rounded">
+                    {selectedMonth}
                   </span>
                 </div>
+                <div>
+                  <div className="text-xl font-bold text-[#fcf8f5]">
+                    {formatCurrency(monthlyTotalIncome)}
+                  </div>
+                  <p className="text-[11px] text-[#8c827a] mt-0.5">Entradas confirmadas</p>
+                </div>
+              </div>
 
-                {payablesToday.transactions.length > 0 ? (
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                    {payablesToday.transactions.map((tx) => (
-                      <div
-                        key={tx.id}
-                        className="p-2.5 rounded-xl bg-[#14110f]/80 border border-rose-500/20 flex items-center justify-between text-xs"
-                      >
-                        <div className="min-w-0 pr-2">
-                          <p className="font-semibold text-[#fcf8f5] truncate">{tx.description}</p>
-                          <p className="text-[10px] text-[#a89c93] truncate">{tx.category}</p>
-                        </div>
-                        <span className="font-mono font-bold text-rose-400 shrink-0">{formatCurrency(tx.amount)}</span>
-                      </div>
-                    ))}
+              {/* Card 4: Saldo Operacional */}
+              <div className="p-4 rounded-2xl bg-[#12100e] border border-[#2e2621] flex flex-col justify-between space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[#a89c93]">Saldo do Mês</span>
+                  <TrendingUp className="w-4 h-4 text-[var(--theme-primary)]" />
+                </div>
+                <div>
+                  <div className={`text-xl font-bold ${monthlyBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {formatCurrency(monthlyBalance)}
                   </div>
-                ) : (
-                  <div className="py-6 text-center text-xs text-[#a89c93] flex flex-col items-center justify-center gap-1">
-                    <span>Nenhum lançamento nesta data.</span>
-                    <button
-                      onClick={() => handleNav('financeiro')}
-                      className="text-[11px] text-rose-400 font-bold hover:underline cursor-pointer mt-1"
-                    >
-                      + Lançar nova despesa
-                    </button>
-                  </div>
-                )}
+                  <p className="text-[11px] text-[#8c827a] mt-0.5">Despesas: {formatCurrency(monthlyTotalExpense)}</p>
+                </div>
               </div>
             </div>
           )}
@@ -562,27 +541,31 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
       )}
 
       {/* ========================================================================= */}
-      {/* SECTOR 2: TAREFAS DE HOJE */}
+      {/* SECTOR 2: TAREFAS DE HOJE (DO DIA) */}
       {/* ========================================================================= */}
       {sectorsConfig.tasks && (
         <div className="bg-[#1a1614] rounded-2xl border border-[#3d342f] overflow-hidden shadow-sm">
           <div className="p-4 sm:p-5 flex items-center justify-between border-b border-[#3d342f]/80 bg-[#161311]">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-[var(--theme-primary)]/10 border border-[var(--theme-primary)]/20 text-[var(--theme-primary)] flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
-              <h2 className="text-sm sm:text-base font-bold text-[#fcf8f5]">Tarefas de Hoje</h2>
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-[#fcf8f5]">Tarefas de Hoje (DO DIA)</h2>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-xs text-[#a89c93]">
-                <span>Planejadas <strong className="text-[#fcf8f5]">{todayTasks.length}</strong></span>
-                <span>•</span>
-                <span>Concluídas <strong className="text-emerald-400">{completedTodayTasks.length}</strong></span>
-                <span className="px-2 py-0.5 rounded-full bg-[var(--theme-primary)]/20 text-[var(--theme-primary)] font-bold text-[10px]">
-                  {tasksPercentage}%
-                </span>
-              </div>
+              <span className="text-xs font-medium text-[#a89c93] bg-[#221c18] px-2.5 py-1 rounded-lg border border-[#3d342f]">
+                {completedTodayTasks.length} de {todayTasks.length} concluídas ({tasksPercentage}%)
+              </span>
+              <button
+                onClick={() => handleNav('actions')}
+                className="text-xs font-bold text-[var(--theme-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Central de Ações</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
               <button
                 onClick={() => toggleSectionCollapse('tasks')}
                 className="p-1 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#251e1a] cursor-pointer"
@@ -595,11 +578,11 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
 
           {!collapsedSections.tasks && (
             <div className="p-4 sm:p-6 space-y-4">
-              {/* Quick Task Creator Input */}
-              <form onSubmit={handleAddQuickTask} className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+              {/* Add Task Inline Form */}
+              <form onSubmit={handleAddQuickTask} className="flex flex-col sm:flex-row items-center gap-2">
                 <input
                   type="text"
-                  placeholder="Adicionar nova tarefa ao DO DIA..."
+                  placeholder="Adicionar nova tarefa para hoje no escritório..."
                   value={quickTaskTitle}
                   onChange={(e) => setQuickTaskTitle(e.target.value)}
                   className="flex-1 px-4 py-2.5 bg-[#0e0c0b] border border-[#3d342f] rounded-xl text-xs text-[#fcf8f5] placeholder-[#6b625b] focus:outline-none focus:border-[var(--theme-primary)]"
@@ -637,58 +620,66 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
               {/* Tasks List */}
               {todayTasks.length > 0 ? (
                 <div className="divide-y divide-[#2d2520] border border-[#3d342f] rounded-xl overflow-hidden bg-[#12100e]">
-                  {todayTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="p-3 sm:p-3.5 flex items-center justify-between gap-3 hover:bg-[#1c1815] transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <button
-                          type="button"
-                          onClick={() => updateAppAction(task.id, { completed: !task.completed })}
-                          className="cursor-pointer text-[#a89c93] hover:text-[var(--theme-primary)] shrink-0"
-                        >
-                          {task.completed ? (
-                            <CheckCircle2 className="w-5 h-5 text-emerald-400 fill-emerald-400/20" />
-                          ) : (
-                            <Circle className="w-5 h-5" />
-                          )}
-                        </button>
-                        <span
-                          className={`text-xs sm:text-sm truncate ${
-                            task.completed ? 'line-through text-[#6b625b]' : 'text-[#fcf8f5] font-medium'
-                          }`}
-                        >
-                          {task.title}
-                        </span>
-                      </div>
+                  {todayTasks.map((task) => {
+                    const isDone = task.status === 'completed';
+                    return (
+                      <div
+                        key={task.id}
+                        className="p-3 sm:p-3.5 flex items-center justify-between gap-3 hover:bg-[#1c1815] transition-colors"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateAppAction(task.id, {
+                                status: isDone ? 'pending' : 'completed',
+                                completedAt: isDone ? undefined : new Date().toISOString(),
+                              })
+                            }
+                            className="cursor-pointer text-[#a89c93] hover:text-[var(--theme-primary)] shrink-0"
+                          >
+                            {isDone ? (
+                              <CheckCircle2 className="w-5 h-5 text-emerald-400 fill-emerald-400/20" />
+                            ) : (
+                              <Circle className="w-5 h-5" />
+                            )}
+                          </button>
+                          <span
+                            className={`text-xs sm:text-sm truncate ${
+                              isDone ? 'line-through text-[#6b625b]' : 'text-[#fcf8f5] font-medium'
+                            }`}
+                          >
+                            {task.description}
+                          </span>
+                        </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        {task.category && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#251e1a] text-[#a89c93] border border-[#3d342f]">
-                            {task.category}
-                          </span>
-                        )}
-                        {task.priority === 'high' && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                            Alta
-                          </span>
-                        )}
-                        <button
-                          onClick={() => deleteAppAction(task.id)}
-                          className="p-1 text-[#6b625b] hover:text-rose-400 cursor-pointer"
-                          title="Remover"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {task.type && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#251e1a] text-[#a89c93] border border-[#3d342f]">
+                              {task.type}
+                            </span>
+                          )}
+                          {task.area && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#1a1614] text-[var(--theme-primary)] border border-[#3d342f]">
+                              {task.area}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => deleteAppAction(task.id)}
+                            className="p-1 text-[#6b625b] hover:text-rose-400 cursor-pointer"
+                            title="Remover"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="py-8 text-center text-xs text-[#a89c93] flex flex-col items-center justify-center gap-2 border border-dashed border-[#3d342f] rounded-xl">
                   <CheckCircle2 className="w-6 h-6 text-[#6b625b]" />
-                  <span>Nenhuma tarefa adicionada ao DO DIA.</span>
+                  <span>Nenhuma tarefa agendada para hoje. Adicione acima para conectar à Central de Ações.</span>
                 </div>
               )}
             </div>
@@ -697,7 +688,7 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
       )}
 
       {/* ========================================================================= */}
-      {/* SECTOR 3: O QUE CADA COLABORADOR ESTÁ FAZENDO NO MOMENTO (TEMPO REAL) */}
+      {/* SECTOR 3: EQUIPE DO ESCRITÓRIO & PROJETOS EM ANDAMENTO */}
       {/* ========================================================================= */}
       {sectorsConfig.team_activity && (
         <div className="bg-[#1a1614] rounded-2xl border border-[#3d342f] overflow-hidden shadow-sm">
@@ -708,16 +699,20 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
               </div>
               <div>
                 <h2 className="text-sm sm:text-base font-bold text-[#fcf8f5] flex items-center gap-2">
-                  <span>Atividades da Equipe em Tempo Real</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Equipe & Projetos do Escritório</span>
                 </h2>
+                <p className="text-[11px] text-[#a89c93]">Qual projeto cada integrante está desenvolvendo</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-[var(--theme-primary)] bg-[#251e1a] px-2.5 py-1 rounded-lg border border-[#3d342f]">
-                {teamActivities.length} colaboradores
-              </span>
+              <button
+                onClick={() => handleNav('team')}
+                className="text-xs font-bold text-[var(--theme-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Gestão de Equipe</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
               <button
                 onClick={() => toggleSectionCollapse('team_activity')}
                 className="p-1 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#251e1a] cursor-pointer"
@@ -730,76 +725,76 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
 
           {!collapsedSections.team_activity && (
             <div className="p-4 sm:p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {teamActivities.map((member) => {
-                  const statusColors: Record<TeamLiveActivity['status'], { badge: string; dot: string }> = {
-                    active: { badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400' },
-                    meeting: { badge: 'bg-amber-500/15 text-amber-400 border-amber-500/30', dot: 'bg-amber-400' },
-                    site_visit: { badge: 'bg-orange-500/15 text-orange-400 border-orange-500/30', dot: 'bg-orange-400' },
-                    modeling_3d: { badge: 'bg-blue-500/15 text-blue-400 border-blue-500/30', dot: 'bg-blue-400' },
-                    detailing: { badge: 'bg-purple-500/15 text-purple-400 border-purple-500/30', dot: 'bg-purple-400' },
-                    break: { badge: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30', dot: 'bg-zinc-400' },
-                  };
-
-                  const colors = statusColors[member.status] || statusColors.active;
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {teamAllocations.map((member) => {
+                  // Find if there's a matching architecture project
+                  const linkedArchProj = architectureProjects.find(
+                    (p) => p.id === member.assignedProjectId || p.title.toLowerCase() === member.currentProjectTitle.toLowerCase()
+                  );
 
                   return (
                     <div
                       key={member.memberId}
-                      className="p-4 rounded-2xl bg-[#12100e] border border-[#2e2621] hover:border-[var(--theme-primary)]/40 transition-all flex flex-col justify-between space-y-3 group"
+                      className="p-4 sm:p-5 rounded-2xl bg-[#12100e] border border-[#2e2621] hover:border-[var(--theme-primary)]/40 transition-all flex flex-col justify-between space-y-3.5 group"
                     >
-                      {/* Member Top Bar */}
+                      {/* Top: Member Info & Actions */}
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex items-center gap-3 min-w-0">
                           <div
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold text-[#12100e] shrink-0 relative shadow-2xs"
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold text-[#12100e] shrink-0 relative shadow-xs"
                             style={{ backgroundColor: member.color || '#c58a4b' }}
                           >
                             {member.initials}
-                            <span
-                              className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#12100e] ${colors.dot}`}
-                            />
                           </div>
                           <div className="min-w-0">
-                            <h4 className="text-xs sm:text-sm font-bold text-[#fcf8f5] truncate">{member.memberName}</h4>
-                            <p className="text-[11px] text-[#a89c93] truncate">{member.roleTitle}</p>
+                            <h4 className="text-sm font-bold text-[#fcf8f5] truncate">{member.memberName}</h4>
+                            <p className="text-xs text-[#a89c93] truncate">{member.roleTitle}</p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${colors.badge}`}>
-                            {member.statusLabel}
+                        <button
+                          onClick={() => handleOpenEditAllocation(member)}
+                          className="px-2.5 py-1.5 rounded-lg bg-[#1f1916] hover:bg-[#2c241f] border border-[#3d342f] text-[11px] font-semibold text-[var(--theme-primary)] flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                          title="Alterar projeto deste integrante"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          <span>Alterar Projeto</span>
+                        </button>
+                      </div>
+
+                      {/* Project Details Box */}
+                      <div className="p-3 rounded-xl bg-[#1a1614] border border-[#3d342f]/80 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider min-w-0">
+                            <Layers className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">{member.currentProjectTitle}</span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#251e1a] text-amber-400 border border-amber-500/20 shrink-0">
+                            {member.currentStage}
                           </span>
-                          <button
-                            onClick={() => handleOpenEditActivity(member)}
-                            className="p-1 rounded-lg text-[#a89c93] hover:text-[var(--theme-primary)] hover:bg-[#251e1a] cursor-pointer"
-                            title="Atualizar atividade deste colaborador"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
                         </div>
+                        <p className="text-xs text-[#ded7d1] font-medium leading-relaxed">{member.taskDetail}</p>
+                        {linkedArchProj && (
+                          <div className="flex items-center justify-between text-[11px] text-[#8c827a] pt-1 border-t border-[#251e1a]">
+                            <span>Cliente: <strong className="text-[#fcf8f5]">{linkedArchProj.clientName}</strong></span>
+                            {linkedArchProj.deliveryDate && (
+                              <span>Entrega: {formatDate(linkedArchProj.deliveryDate)}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
-                      {/* Current Activity Box */}
-                      <div className="p-2.5 rounded-xl bg-[#1a1614] border border-[#3d342f]/80 space-y-1">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--theme-primary)] uppercase tracking-wider">
-                          <Layers className="w-3 h-3" />
-                          <span className="truncate">{member.currentProject}</span>
-                        </div>
-                        <p className="text-xs text-[#fcf8f5] font-medium leading-snug">{member.currentTask}</p>
-                      </div>
-
-                      {/* Footer: Start time & timer */}
-                      <div className="flex items-center justify-between text-[10px] text-[#8c827a] pt-1">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-[var(--theme-primary)]" />
-                          <span>Iniciado às {member.startedAt}</span>
+                      {/* Footer: Quick Project Link */}
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-[#201a17]">
+                        <span className="text-[#8c827a] text-[11px]">
+                          {linkedArchProj ? `Status: ${linkedArchProj.status}` : 'Projeto Ativo'}
                         </span>
                         <button
-                          onClick={() => handleOpenEditActivity(member)}
-                          className="text-[11px] font-bold text-[var(--theme-primary)] hover:underline cursor-pointer"
+                          onClick={() => handleNav('projects')}
+                          className="text-[11px] font-bold text-[var(--theme-primary)] hover:underline flex items-center gap-1 cursor-pointer"
                         >
-                          Atualizar status →
+                          <span>Abrir no Módulo de Projetos</span>
+                          <ArrowUpRight className="w-3 h-3" />
                         </button>
                       </div>
                     </div>
@@ -812,43 +807,26 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
       )}
 
       {/* ========================================================================= */}
-      {/* SECTOR 4: PROJETOS (COM FILTROS DE PRAZO DA REFERÊNCIA) */}
+      {/* SECTOR 4: PROJETOS POR CATEGORIA DE PRAZO & STATUS */}
       {/* ========================================================================= */}
       {sectorsConfig.projects && (
         <div className="bg-[#1a1614] rounded-2xl border border-[#3d342f] overflow-hidden shadow-sm">
-          <div className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 border-b border-[#3d342f]/80 bg-[#161311]">
+          <div className="p-4 sm:p-5 flex items-center justify-between border-b border-[#3d342f]/80 bg-[#161311]">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-[var(--theme-primary)]/10 border border-[var(--theme-primary)]/20 text-[var(--theme-primary)] flex items-center justify-center">
                 <FolderOpen className="w-4 h-4" />
               </div>
-              <h2 className="text-sm sm:text-base font-bold text-[#fcf8f5]">Projetos</h2>
-            </div>
-
-            {/* Filter Pills matching the reference screenshot */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { id: 'critico', label: 'Prazo crítico' },
-                { id: 'ok', label: 'Prazo ok' },
-                { id: 'nao_iniciada', label: 'Etapa não iniciada' },
-                { id: 'pausa', label: 'Pausa cliente' },
-                { id: 'standby', label: 'Standby' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setProjectFilter(tab.id as ProjectFilterCategory)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    projectFilter === tab.id
-                      ? 'bg-[#251e1a] text-[#fcf8f5] border border-[var(--theme-primary)] shadow-2xs'
-                      : 'bg-[#12100e] text-[#a89c93] border border-[#2d2520] hover:text-[#fcf8f5]'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+              <h2 className="text-sm sm:text-base font-bold text-[#fcf8f5]">Projetos do Escritório</h2>
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-xs text-[#8c827a]">máximo 15</span>
+              <button
+                onClick={() => handleNav('projects')}
+                className="text-xs font-bold text-[var(--theme-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Gestão de Projetos</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
               <button
                 onClick={() => toggleSectionCollapse('projects')}
                 className="p-1 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#251e1a] cursor-pointer"
@@ -860,44 +838,84 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
           </div>
 
           {!collapsedSections.projects && (
-            <div className="p-4 sm:p-6">
+            <div className="p-4 sm:p-6 space-y-4">
+              {/* Category Filter Pills */}
+              <div className="flex flex-wrap items-center gap-2">
+                {[
+                  { id: 'todos', label: 'Todos os Ativos', count: architectureProjects.filter((p) => p.status !== 'entregue').length },
+                  { id: 'critico', label: 'Prazo Crítico (≤ 7 dias)', count: architectureProjects.filter((p) => {
+                    if (p.status === 'entregue' || !p.deliveryDate) return false;
+                    const diffDays = Math.ceil((new Date(p.deliveryDate).getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+                    return diffDays <= 7;
+                  }).length },
+                  { id: 'ok', label: 'Prazo OK', count: architectureProjects.filter((p) => {
+                    if (p.status === 'entregue') return false;
+                    if (!p.deliveryDate) return true;
+                    const diffDays = Math.ceil((new Date(p.deliveryDate).getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+                    return diffDays > 7;
+                  }).length },
+                  { id: 'obra', label: 'Em Fase de Obra', count: architectureProjects.filter((p) => p.status === 'obra').length },
+                  { id: 'estudo', label: 'Estudo / Anteprojeto', count: architectureProjects.filter((p) => p.status === 'estudo_preliminar' || p.status === 'anteprojeto').length },
+                  { id: 'entregue', label: 'Concluídos', count: architectureProjects.filter((p) => p.status === 'entregue').length },
+                ].map((pill) => (
+                  <button
+                    key={pill.id}
+                    onClick={() => setProjectFilter(pill.id as any)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                      projectFilter === pill.id
+                        ? 'bg-[var(--theme-primary)] text-black font-bold shadow-xs'
+                        : 'bg-[#221c18] hover:bg-[#2c241f] text-[#a89c93] hover:text-[#fcf8f5] border border-[#3d342f]'
+                    }`}
+                  >
+                    <span>{pill.label}</span>
+                    <span
+                      className={`px-1.5 py-0.2 rounded-md text-[10px] ${
+                        projectFilter === pill.id ? 'bg-black/20 text-black font-bold' : 'bg-[#14110f] text-[#a89c93]'
+                      }`}
+                    >
+                      {pill.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Projects Grid */}
               {filteredProjects.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                  {filteredProjects.slice(0, 15).map((project) => (
+                  {filteredProjects.map((project) => (
                     <div
                       key={project.id}
                       onClick={() => handleNav('projects')}
-                      className="p-4 rounded-2xl bg-[#12100e] border border-[#2e2621] hover:border-[var(--theme-primary)] transition-all cursor-pointer space-y-3 group"
+                      className="p-4 rounded-2xl bg-[#12100e] border border-[#2e2621] hover:border-[var(--theme-primary)]/50 transition-all flex flex-col justify-between space-y-3 cursor-pointer group"
                     >
+                      {/* Top */}
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-bold text-[#fcf8f5] group-hover:text-[var(--theme-primary)] truncate transition-colors">
+                          <h4 className="text-xs sm:text-sm font-bold text-[#fcf8f5] truncate group-hover:text-[var(--theme-primary)] transition-colors">
                             {project.title}
                           </h4>
                           <p className="text-[11px] text-[#a89c93] truncate">{project.clientName || 'Cliente'}</p>
                         </div>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#251e1a] text-[var(--theme-primary)] border border-[#3d342f] shrink-0">
-                          {project.currentStage || 'Em andamento'}
+
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[var(--theme-primary)]/15 text-[var(--theme-primary)] border border-[var(--theme-primary)]/30 shrink-0">
+                          {project.status || 'Ativo'}
                         </span>
                       </div>
 
-                      {/* Progress bar */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-[10px] text-[#a89c93]">
-                          <span>Progresso</span>
-                          <span className="font-bold text-[#fcf8f5]">{project.progress || 0}%</span>
-                        </div>
-                        <div className="w-full h-1.5 rounded-full bg-[#251e1a] overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-[var(--theme-primary)] transition-all"
-                            style={{ width: `${project.progress || 0}%` }}
-                          />
-                        </div>
+                      {/* Location & Honorários */}
+                      <div className="flex items-center justify-between text-xs text-[#a89c93]">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-[#8c827a]" />
+                          <span className="truncate">{project.location || project.state || 'Brasil'}</span>
+                        </span>
+                        {project.honorarios ? (
+                          <span className="font-semibold text-[#fcf8f5]">{formatCurrency(project.honorarios)}</span>
+                        ) : null}
                       </div>
 
                       {/* Footer */}
                       <div className="flex items-center justify-between text-[11px] text-[#8c827a] pt-1 border-t border-[#251e1a]">
-                        <span>Prazo: {project.deadline ? formatDate(project.deadline) : 'A definir'}</span>
+                        <span>Prazo: {project.deliveryDate ? formatDate(project.deliveryDate) : 'A definir'}</span>
                         <span className="text-[var(--theme-primary)] font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
                           Ver projeto →
                         </span>
@@ -908,7 +926,7 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
               ) : (
                 <div className="py-8 text-center text-xs text-[#a89c93] flex flex-col items-center justify-center gap-2 border border-dashed border-[#3d342f] rounded-xl">
                   <FolderOpen className="w-6 h-6 text-[#6b625b]" />
-                  <span>Nenhum projeto nesta categoria.</span>
+                  <span>Nenhum projeto encontrado nesta categoria de filtro.</span>
                 </div>
               )}
             </div>
@@ -917,16 +935,16 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
       )}
 
       {/* ========================================================================= */}
-      {/* SECTOR 5: AGENDA DA SEMANA (7 COLUNAS DA REFERÊNCIA) */}
+      {/* SECTOR 5: AGENDA DA SEMANA (7 DIAS) */}
       {/* ========================================================================= */}
       {sectorsConfig.week_calendar && (
         <div className="bg-[#1a1614] rounded-2xl border border-[#3d342f] overflow-hidden shadow-sm">
           <div className="p-4 sm:p-5 flex items-center justify-between border-b border-[#3d342f]/80 bg-[#161311]">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
                 <Calendar className="w-4 h-4" />
               </div>
-              <h2 className="text-sm sm:text-base font-bold text-[#fcf8f5]">Agenda da Semana</h2>
+              <h2 className="text-sm sm:text-base font-bold text-[#fcf8f5]">Agenda da Semana (7 Dias)</h2>
             </div>
 
             <div className="flex items-center gap-3">
@@ -934,7 +952,7 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
                 onClick={() => handleNav('today')}
                 className="text-xs font-bold text-[var(--theme-primary)] hover:underline flex items-center gap-1 cursor-pointer"
               >
-                <span>Abrir agenda</span>
+                <span>Abrir Agenda Completa</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </button>
               <button
@@ -948,52 +966,98 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
           </div>
 
           {!collapsedSections.week_calendar && (
-            <div className="p-4 sm:p-6">
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
-                {weekDays.map((day) => (
-                  <div
-                    key={day.isoStr}
-                    onClick={() => handleNav('today')}
-                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between min-h-[140px] ${
-                      day.isToday
-                        ? 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)] shadow-sm'
-                        : 'bg-[#12100e] border-[#2e2621] hover:border-[#3d342f]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between border-b border-[#2e2621]/60 pb-2">
-                      <span className={`text-[10px] font-bold tracking-wider ${day.isToday ? 'text-[var(--theme-primary)]' : 'text-[#a89c93]'}`}>
-                        {day.label}
-                      </span>
-                      <span className={`text-sm font-bold ${day.isToday ? 'text-[var(--theme-primary)]' : 'text-[#fcf8f5]'}`}>
-                        {day.dayNum}
-                      </span>
-                    </div>
-
-                    <div className="py-2 space-y-1.5 flex-1">
-                      {day.actions.length > 0 ? (
-                        day.actions.slice(0, 3).map((act) => (
-                          <div
-                            key={act.id}
-                            className="p-1.5 rounded bg-[#1c1815] text-[10px] text-[#fcf8f5] truncate border border-[#3d342f]"
-                            title={act.title}
-                          >
-                            • {act.title}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="h-full flex items-center justify-center text-[11px] text-[#6b625b]">
-                          Livre
-                        </div>
-                      )}
-                    </div>
-
-                    {day.isToday && (
-                      <div className="text-[9px] font-bold uppercase text-center text-[var(--theme-primary)] pt-1">
-                        Hoje
+            <div className="p-4 sm:p-6 space-y-4">
+              {/* 7 Days Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-2.5">
+                {weekDays.map((day) => {
+                  const isSelected = selectedWeekDayIso === day.isoStr;
+                  return (
+                    <button
+                      key={day.isoStr}
+                      onClick={() => setSelectedWeekDayIso(day.isoStr)}
+                      className={`p-3 rounded-2xl border transition-all cursor-pointer text-left flex flex-col justify-between gap-1.5 ${
+                        isSelected
+                          ? 'bg-[var(--theme-primary)]/15 border-[var(--theme-primary)] text-[#fcf8f5] shadow-xs'
+                          : day.isToday
+                          ? 'bg-[#251e1a] border-[var(--theme-primary)]/50 text-[#fcf8f5]'
+                          : 'bg-[#12100e] border-[#2e2621] text-[#a89c93] hover:border-[#3d342f]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider">{day.label}</span>
+                        {day.isToday && (
+                          <span className="px-1 py-0.2 rounded text-[8px] font-bold bg-[var(--theme-primary)] text-black">
+                            HOJE
+                          </span>
+                        )}
                       </div>
-                    )}
+
+                      <div className="text-base font-bold text-[#fcf8f5]">{day.dayNum}</div>
+
+                      <div className="text-[10px] text-[#8c827a]">
+                        {day.totalItems > 0 ? (
+                          <span className="text-[var(--theme-primary)] font-semibold">
+                            {day.totalItems} compromisso(s)
+                          </span>
+                        ) : (
+                          <span>Livre</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Selected Day Agenda Items */}
+              <div className="p-4 rounded-2xl bg-[#12100e] border border-[#2e2621] space-y-3">
+                <div className="flex items-center justify-between text-xs text-[#a89c93]">
+                  <span>Compromissos e Entregas para <strong>{formatDate(selectedWeekDayIso)}</strong></span>
+                  <button
+                    onClick={() => handleNav('today')}
+                    className="text-[var(--theme-primary)] font-bold hover:underline"
+                  >
+                    + Adicionar à Agenda
+                  </button>
+                </div>
+
+                {selectedDayItems.dayActions.length > 0 || selectedDayItems.dayMilestones.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedDayItems.dayActions.map((act) => (
+                      <div
+                        key={act.id}
+                        className="p-3 rounded-xl bg-[#1a1614] border border-[#3d342f] flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">
+                            {act.time || '14:00'}
+                          </span>
+                          <span className="font-semibold text-[#fcf8f5]">{act.description}</span>
+                        </div>
+                        <span className="text-[11px] text-[#8c827a]">{act.area || 'Operação'}</span>
+                      </div>
+                    ))}
+
+                    {selectedDayItems.dayMilestones.map((m) => (
+                      <div
+                        key={m.id}
+                        className="p-3 rounded-xl bg-[#1a1614] border border-amber-500/30 flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400">
+                            Entrega
+                          </span>
+                          <span className="font-semibold text-[#fcf8f5]">{m.title}</span>
+                        </div>
+                        <span className="text-[11px] text-[#8c827a]">{m.projectTitle}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div className="py-6 text-center text-xs text-[#8c827a] flex flex-col items-center justify-center gap-1.5">
+                    <Calendar className="w-5 h-5 text-[#6b625b]" />
+                    <span>Nenhum compromisso ou entrega agendada para esta data.</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1041,16 +1105,16 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
                           <p className="text-[11px] text-[#a89c93] truncate">{obra.clientName || 'Cliente'}</p>
                         </div>
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                          {obra.currentStage || 'Em Obra'}
+                          Em Obra
                         </span>
                       </div>
 
-                      {obra.notes && (
-                        <p className="text-xs text-[#a89c93] line-clamp-2">{obra.notes}</p>
+                      {obra.description && (
+                        <p className="text-xs text-[#a89c93] line-clamp-2">{obra.description}</p>
                       )}
 
                       <div className="flex items-center justify-between text-[11px] text-[#8c827a] pt-1 border-t border-[#251e1a]">
-                        <span>Prazo: {obra.deadline ? formatDate(obra.deadline) : 'Acompanhamento'}</span>
+                        <span>Prazo: {obra.deliveryDate ? formatDate(obra.deliveryDate) : 'Acompanhamento'}</span>
                         <span className="text-amber-400 font-semibold">Ver detalhes →</span>
                       </div>
                     </div>
@@ -1059,7 +1123,7 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
               ) : (
                 <div className="py-8 text-center text-xs text-[#a89c93] flex flex-col items-center justify-center gap-2 border border-dashed border-[#3d342f] rounded-xl">
                   <Building2 className="w-6 h-6 text-[#6b625b]" />
-                  <span>Nenhuma obra em andamento.</span>
+                  <span>Nenhuma obra em andamento registrada no momento.</span>
                 </div>
               )}
             </div>
@@ -1068,7 +1132,7 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
       )}
 
       {/* ========================================================================= */}
-      {/* SECTOR 7: CRM — FOLLOW-UPS ATIVOS */}
+      {/* SECTOR 7: CRM — LEADS & FOLLOW-UPS */}
       {/* ========================================================================= */}
       {sectorsConfig.crm_followup && (
         <div className="bg-[#1a1614] rounded-2xl border border-[#3d342f] overflow-hidden shadow-sm">
@@ -1077,7 +1141,7 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
               <div className="w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center">
                 <Users className="w-4 h-4" />
               </div>
-              <h2 className="text-sm sm:text-base font-bold text-[#fcf8f5]">CRM — Follow-ups Ativos</h2>
+              <h2 className="text-sm sm:text-base font-bold text-[#fcf8f5]">CRM — Leads & Oportunidades</h2>
             </div>
 
             <div className="flex items-center gap-3">
@@ -1100,45 +1164,54 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
 
           {!collapsedSections.crm_followup && (
             <div className="p-4 sm:p-6">
-              {activeFollowups.length > 0 ? (
+              {activeLeads.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                  {activeFollowups.map((lead) => (
-                    <div
-                      key={lead.id}
-                      className="p-4 rounded-2xl bg-[#12100e] border border-[#2e2621] hover:border-teal-500/40 transition-all flex flex-col justify-between space-y-3"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h4 className="text-xs sm:text-sm font-bold text-[#fcf8f5]">{lead.name}</h4>
-                          <p className="text-[11px] text-[#a89c93]">{lead.serviceType || 'Consultoria / Projeto'}</p>
+                  {activeLeads.map((lead) => {
+                    const cleanPhone = (lead.phone || lead.whatsapp || '').replace(/\D/g, '');
+                    return (
+                      <div
+                        key={lead.id}
+                        className="p-4 rounded-2xl bg-[#12100e] border border-[#2e2621] hover:border-teal-500/40 transition-all flex flex-col justify-between space-y-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h4 className="text-xs sm:text-sm font-bold text-[#fcf8f5]">{lead.name}</h4>
+                            <p className="text-[11px] text-[#a89c93]">{lead.serviceType || lead.projectType || 'Projeto de Arquitetura'}</p>
+                          </div>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/15 text-teal-400 border border-teal-500/30">
+                            {lead.pipelineStage || 'Em Contato'}
+                          </span>
                         </div>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/15 text-teal-400 border border-teal-500/30">
-                          Follow-up
-                        </span>
-                      </div>
 
-                      {lead.phone && (
-                        <div className="flex items-center gap-2">
-                          <a
-                            href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
-                              `Olá ${lead.name}, tudo bem? Gostaria de saber se você teve a oportunidade de avaliar nossa proposta de projeto.`
-                            )}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="w-full py-2 bg-[#25d366]/15 hover:bg-[#25d366]/25 text-[#25d366] border border-[#25d366]/30 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                            <span>Chamar no WhatsApp</span>
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        {lead.estimatedValue ? (
+                          <div className="text-xs text-[#ded7d1]">
+                            Valor Estimado: <strong className="text-emerald-400">{formatCurrency(lead.estimatedValue)}</strong>
+                          </div>
+                        ) : null}
+
+                        {cleanPhone ? (
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(
+                                `Olá ${lead.name}, tudo bem? Sou do escritório ${architectProfile.name || 'de Arquitetura'}. Gostaria de dar seguimento à sua solicitação de projeto.`
+                              )}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="w-full py-2 bg-[#25d366]/15 hover:bg-[#25d366]/25 text-[#25d366] border border-[#25d366]/30 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5" />
+                              <span>Chamar no WhatsApp</span>
+                            </a>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="py-8 text-center text-xs text-[#a89c93] flex flex-col items-center justify-center gap-2 border border-dashed border-[#3d342f] rounded-xl">
                   <Users className="w-6 h-6 text-[#6b625b]" />
-                  <span>Nenhum lead na coluna Follow-up Ativo.</span>
+                  <span>Nenhum lead em negociação no momento.</span>
                 </div>
               )}
             </div>
@@ -1173,11 +1246,11 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
               {[
                 { key: 'finance', label: 'Financeiro de Hoje (A receber / A pagar)', icon: DollarSign },
                 { key: 'tasks', label: 'Tarefas de Hoje (DO DIA)', icon: CheckCircle2 },
-                { key: 'team_activity', label: 'Atividades da Equipe em Tempo Real', icon: Users },
+                { key: 'team_activity', label: 'Equipe & Projetos do Escritório', icon: Users },
                 { key: 'projects', label: 'Projetos (Filtros por Prazo e Status)', icon: FolderOpen },
                 { key: 'week_calendar', label: 'Agenda da Semana (7 dias)', icon: Calendar },
                 { key: 'construction', label: 'Obras em Andamento', icon: Building2 },
-                { key: 'crm_followup', label: 'CRM — Follow-ups Ativos', icon: Users },
+                { key: 'crm_followup', label: 'CRM — Leads & Oportunidades', icon: Users },
               ].map((item) => {
                 const ItemIcon = item.icon;
                 const isChecked = (sectorsConfig as any)[item.key];
@@ -1223,26 +1296,26 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL: EDITAR ATIVIDADE DO COLABORADOR */}
+      {/* MODAL: ALTERAR PROJETO DO INTEGRANTE */}
       {/* ========================================================================= */}
-      {editingMemberActivity && (
+      {editingAllocation && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 flex items-center justify-center animate-in fade-in">
           <div className="bg-[#1c1815] text-[#fcf8f5] w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-[#3d342f] flex flex-col">
             <div className="p-5 bg-[#14110f] border-b border-[#3d342f] flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-black"
-                  style={{ backgroundColor: editingMemberActivity.color || '#c58a4b' }}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-black"
+                  style={{ backgroundColor: editingAllocation.color || '#c58a4b' }}
                 >
-                  {editingMemberActivity.initials}
+                  {editingAllocation.initials}
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-[#fcf8f5]">{editingMemberActivity.memberName}</h3>
-                  <p className="text-[10px] text-[#a89c93]">{editingMemberActivity.roleTitle}</p>
+                  <h3 className="text-sm font-bold text-[#fcf8f5]">{editingAllocation.memberName}</h3>
+                  <p className="text-[10px] text-[#a89c93]">{editingAllocation.roleTitle}</p>
                 </div>
               </div>
               <button
-                onClick={() => setEditingMemberActivity(null)}
+                onClick={() => setEditingAllocation(null)}
                 className="p-1 text-[#a89c93] hover:text-[#fcf8f5] rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -1250,51 +1323,59 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
             </div>
 
             <div className="p-5 space-y-4">
+              {/* Select from existing office projects */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#a89c93]">Status do momento</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: 'active', label: '🟢 Em Produção' },
-                    { id: 'modeling_3d', label: '🔵 Modelagem 3D' },
-                    { id: 'detailing', label: '🟣 Detalhamento' },
-                    { id: 'site_visit', label: '🟠 Visita Técnica' },
-                    { id: 'meeting', label: '🟡 Em Reunião' },
-                    { id: 'break', label: '⚪ Pausa / Almoço' },
-                  ].map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setEditStatus(s.id as any)}
-                      className={`px-3 py-2 rounded-xl text-xs font-semibold text-left transition-all cursor-pointer ${
-                        editStatus === s.id
-                          ? 'bg-[var(--theme-primary)] text-black font-bold shadow-xs'
-                          : 'bg-[#0e0c0b] text-[#a89c93] border border-[#3d342f] hover:text-[#fcf8f5]'
-                      }`}
-                    >
-                      {s.label}
-                    </button>
+                <label className="text-xs font-bold text-[#a89c93]">Selecionar Projeto do Escritório</label>
+                <select
+                  value={selectedProjectId}
+                  onChange={(e) => {
+                    setSelectedProjectId(e.target.value);
+                    const found = architectureProjects.find((p) => p.id === e.target.value);
+                    if (found) {
+                      setCustomProjectTitle(found.title);
+                      setSelectedStage(found.status === 'obra' ? 'Acompanhamento de Obra' : found.status === 'executivo' ? 'Projeto Executivo' : 'Estudo Preliminar');
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-[#0e0c0b] border border-[#3d342f] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+                >
+                  <option value="">-- Outro / Título personalizado --</option>
+                  {architectureProjects.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.title} ({proj.clientName || 'Cliente'})
+                    </option>
                   ))}
-                </div>
+                </select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#a89c93]">Projeto em andamento</label>
+                <label className="text-xs font-bold text-[#a89c93]">Nome do Projeto</label>
                 <input
                   type="text"
-                  value={editProject}
-                  onChange={(e) => setEditProject(e.target.value)}
+                  value={customProjectTitle}
+                  onChange={(e) => setCustomProjectTitle(e.target.value)}
                   placeholder="Ex: Residência Alphaville - Suíte Master"
                   className="w-full px-3.5 py-2.5 bg-[#0e0c0b] border border-[#3d342f] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#a89c93]">O que está fazendo agora (detalhe)</label>
+                <label className="text-xs font-bold text-[#a89c93]">Etapa / Fase Atual</label>
+                <input
+                  type="text"
+                  value={selectedStage}
+                  onChange={(e) => setSelectedStage(e.target.value)}
+                  placeholder="Ex: Projeto Executivo, Modelagem 3D, Detalhamento..."
+                  className="w-full px-3.5 py-2.5 bg-[#0e0c0b] border border-[#3d342f] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#a89c93]">Atividade / Tarefa Específica</label>
                 <textarea
                   rows={3}
-                  value={editTask}
-                  onChange={(e) => setEditTask(e.target.value)}
-                  placeholder="Ex: Modelagem 3D do closet e renderização de vistas principais no Lumion"
+                  value={customTaskDetail}
+                  onChange={(e) => setCustomTaskDetail(e.target.value)}
+                  placeholder="Ex: Modelagem 3D da cozinha e detalhamento de marcenaria"
                   className="w-full p-3 bg-[#0e0c0b] border border-[#3d342f] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
                 />
               </div>
@@ -1303,17 +1384,17 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
             <div className="p-4 bg-[#14110f] border-t border-[#3d342f] flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setEditingMemberActivity(null)}
+                onClick={() => setEditingAllocation(null)}
                 className="px-4 py-2 border border-[#3d342f] bg-[#1a1614] text-[#a89c93] hover:text-[#fcf8f5] text-xs font-bold rounded-xl cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
-                onClick={handleSaveMemberActivity}
+                onClick={handleSaveAllocation}
                 className="px-5 py-2 bg-[var(--theme-primary)] hover:opacity-90 text-black text-xs font-bold rounded-xl cursor-pointer shadow-md"
               >
-                Salvar Atividade
+                Salvar Alteração
               </button>
             </div>
           </div>
