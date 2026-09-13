@@ -20,6 +20,7 @@ import {
   ListChecks,
   Instagram,
   Sparkles,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
@@ -33,6 +34,7 @@ interface TopBarProps {
 }
 
 const ALL_QUICK_ACTIONS = [
+  { id: 'dashboard', label: 'Painel do Escritório', shortLabel: 'Painel', icon: LayoutDashboard },
   { id: 'today', label: 'Meu Dia & Agenda', shortLabel: 'Meu Dia', icon: Calendar },
   { id: 'actions', label: 'Central de Ações', shortLabel: 'Ações', icon: Clock },
   { id: 'projects', label: 'Gestão de Projetos', shortLabel: 'Projetos', icon: FolderOpen },
@@ -46,18 +48,18 @@ const ALL_QUICK_ACTIONS = [
   { id: 'team', label: 'Equipe', shortLabel: 'Equipe', icon: Users },
   { id: 'listas', label: 'Listas & Tarefas', shortLabel: 'Listas', icon: ListChecks },
   { id: 'instagram', label: 'Instagram', shortLabel: 'Instagram', icon: Instagram },
-  { id: 'dashboard', label: 'Saúde do Negócio', shortLabel: 'Métricas', icon: TrendingUp },
 ];
 
 const DESKTOP_QUICK_ACTIONS = [
+  { id: 'dashboard', label: 'Painel do Escritório', icon: LayoutDashboard },
   { id: 'today', label: 'Meu Dia & Agenda', icon: Calendar },
   { id: 'actions', label: 'Central de Ações', icon: Clock },
   { id: 'projects', label: 'Gestão de Projetos', icon: FolderOpen },
   { id: 'consultoria_expressa', label: 'Consultoria IA', icon: Sparkles, isNew: true },
-  { id: 'leads', label: 'Leads', icon: Users },
 ];
 
 const TAB_TITLES: Record<string, { label: string; icon: React.ElementType; description: string }> = {
+  dashboard: { label: 'Painel do Escritório', icon: LayoutDashboard, description: 'O que precisa da sua atenção hoje • Administração' },
   today: { label: 'Meu Dia & Agenda', icon: Calendar, description: 'Compromissos, prazos do dia e ações prioritárias' },
   actions: { label: 'Central de Ações', icon: Clock, description: 'Fluxo de tarefas e pendências de projetos' },
   leads: { label: 'Leads & Comercial', icon: Users, description: 'Pipeline de vendas, propostas e captação' },
@@ -73,7 +75,6 @@ const TAB_TITLES: Record<string, { label: string; icon: React.ElementType; descr
   financeiro: { label: 'Financeiro', icon: DollarSign, description: 'Gestão financeira, caixas e extrato bancário' },
   listas: { label: 'Listas & Tarefas', icon: ListChecks, description: 'Listas operacionais e pendências do escritório' },
   instagram: { label: 'Instagram', icon: Instagram, description: 'Planejamento de conteúdo e calendário editorial' },
-  dashboard: { label: 'Saúde do Negócio', icon: TrendingUp, description: 'Métricas financeiras, lucratividade e DRE' },
   goals: { label: 'Metas & Objetivos', icon: Target, description: 'Planejamento financeiro e reservas estratégicas' },
   budget: { label: 'Orçamento Anual', icon: PieChart, description: 'Teto de gastos e planejamento orçamentário' },
   home: { label: 'Portfólio & Mostra', icon: Home, description: 'Galeria visual de projetos finalizados' },

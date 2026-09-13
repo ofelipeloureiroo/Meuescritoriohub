@@ -146,7 +146,7 @@ const AppContent: React.FC = () => {
       case 'actions': return <ActionsTab />;
       case 'listas': return <ListsTab />;
       case 'leads': return <LeadsTab />;
-      case 'dashboard': return <BusinessDashboardTab />;
+      case 'dashboard': return <BusinessDashboardTab onNavigateTab={setActiveTab} />;
       case 'home': return <HomeProjectsTab onNavigateTab={setActiveTab} onOpenNewTxModal={handleOpenNewTx} />;
       case 'projects': return <ProjectsManagementTab onNavigateTab={setActiveTab} />;
       case 'consultoria_expressa': return <ExpressConsultingTab onExit={() => setActiveTab('projects')} />;

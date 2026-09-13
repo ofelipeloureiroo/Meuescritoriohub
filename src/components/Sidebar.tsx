@@ -27,6 +27,7 @@ import {
   ListChecks,
   Image as ImageIcon,
   Sparkles,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
@@ -122,6 +123,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       title: 'Comercial & Produtividade',
       items: [
+        {
+          id: 'dashboard',
+          label: 'Painel do Escritório',
+          icon: LayoutDashboard,
+          visible: !isCollaborator || !permissions || permissions.health !== false,
+        },
         {
           id: 'today',
           label: 'Meu Dia & Agenda',
@@ -229,15 +236,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             !isCollaborator ||
             !permissions ||
             (permissions.actions !== undefined ? permissions.actions : permissions.projects !== false),
-        },
-        {
-          id: 'dashboard',
-          label: 'Saúde do Negócio',
-          icon: TrendingUp,
-          visible:
-            !isCollaborator ||
-            !permissions ||
-            (permissions.health !== undefined ? permissions.health : permissions.finance !== false),
         },
         {
           id: 'goals',
