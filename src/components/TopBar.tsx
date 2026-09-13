@@ -32,11 +32,29 @@ interface TopBarProps {
   onOpenSettings: () => void;
 }
 
-const TOP_QUICK_ACTIONS = [
-  { id: 'today', label: 'Meu Dia & Agenda', shortLabel: 'Meu Dia & Agenda', icon: Calendar },
-  { id: 'actions', label: 'Central de Ações', shortLabel: 'Central de Ações', icon: Clock },
-  { id: 'projects', label: 'Gestão de Projetos', shortLabel: 'Gestão de Projetos', icon: FolderOpen },
-  { id: 'leads', label: 'Leads', shortLabel: 'Leads', icon: Users },
+const ALL_QUICK_ACTIONS = [
+  { id: 'today', label: 'Meu Dia & Agenda', shortLabel: 'Meu Dia', icon: Calendar },
+  { id: 'actions', label: 'Central de Ações', shortLabel: 'Ações', icon: Clock },
+  { id: 'projects', label: 'Gestão de Projetos', shortLabel: 'Projetos', icon: FolderOpen },
+  { id: 'consultoria_expressa', label: 'Consultoria IA', shortLabel: 'Consultoria IA', icon: Sparkles, isNew: true },
+  { id: 'leads', label: 'Leads & Comercial', shortLabel: 'Leads', icon: Users },
+  { id: 'freelance', label: 'Clientes & Contratos', shortLabel: 'Clientes', icon: Briefcase },
+  { id: 'banks', label: 'Financeiro & Bancos', shortLabel: 'Financeiro', icon: DollarSign },
+  { id: 'deadlines', label: 'Recebimentos', shortLabel: 'Recebimentos', icon: Clock },
+  { id: 'portal_cliente', label: 'Radar do Cliente', shortLabel: 'Radar Cliente', icon: KeyRound },
+  { id: 'suppliers', label: 'Fornecedores', shortLabel: 'Fornecedores', icon: Package },
+  { id: 'team', label: 'Equipe', shortLabel: 'Equipe', icon: Users },
+  { id: 'listas', label: 'Listas & Tarefas', shortLabel: 'Listas', icon: ListChecks },
+  { id: 'instagram', label: 'Instagram', shortLabel: 'Instagram', icon: Instagram },
+  { id: 'dashboard', label: 'Saúde do Negócio', shortLabel: 'Métricas', icon: TrendingUp },
+];
+
+const DESKTOP_QUICK_ACTIONS = [
+  { id: 'today', label: 'Meu Dia & Agenda', icon: Calendar },
+  { id: 'actions', label: 'Central de Ações', icon: Clock },
+  { id: 'projects', label: 'Gestão de Projetos', icon: FolderOpen },
+  { id: 'consultoria_expressa', label: 'Consultoria IA', icon: Sparkles, isNew: true },
+  { id: 'leads', label: 'Leads', icon: Users },
 ];
 
 const TAB_TITLES: Record<string, { label: string; icon: React.ElementType; description: string }> = {
@@ -124,6 +142,17 @@ export const TopBar: React.FC<TopBarProps> = ({
     return `${monthName} de ${year}`;
   };
 
+  // Short format for mobile (e.g. "Set/26")
+  const formatMonthDisplayShort = (monthStr: string) => {
+    if (!monthStr || !monthStr.includes('-')) return monthStr;
+    const [year, month] = monthStr.split('-');
+    const monthIndex = parseInt(month, 10) - 1;
+    const shortNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const shortName = shortNames[monthIndex] || month;
+    const shortYear = year.slice(-2);
+    return `${shortName}/${shortYear}`;
+  };
+
   const isOwner = !user?.email || 
     user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || 
     user.email.toLowerCase().includes('master_escritorio');
@@ -140,24 +169,26 @@ export const TopBar: React.FC<TopBarProps> = ({
   const userInitials = (userName.slice(0, 2) || 'LF').toUpperCase();
 
   return (
-    <header className="w-full bg-[#161311]/90 backdrop-blur-md border-b border-[#2d2520] sticky top-0 z-20 px-4 sm:px-6 lg:px-8 py-2.5">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+    <header className="w-full bg-[#161311]/95 backdrop-blur-md border-b border-[#2d2520] sticky top-0 z-20 px-3 sm:px-6 lg:px-8 py-2">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
         {/* Left: Mobile Menu Button & Tab Title */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-initial">
           <button
             onClick={onOpenMobileSidebar}
-            className="lg:hidden p-2 rounded-xl bg-[#221c18] border border-[#3d342f] text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#2c241f] transition-colors cursor-pointer shrink-0"
-            title="Abrir Menu Lateral"
+            className="lg:hidden p-2 rounded-xl bg-[#221c18] border border-[#3d342f] text-[var(--theme-primary)] hover:text-[#fcf8f5] hover:bg-[#2c241f] transition-colors cursor-pointer shrink-0 shadow-xs flex items-center gap-1.5"
+            title="Abrir Menu Completo"
+            aria-label="Menu"
           >
             <Menu className="w-5 h-5" />
+            <span className="hidden xs:inline text-[11px] font-bold text-[#a89c93]">Menu</span>
           </button>
 
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-[#221c18] border border-[#3d342f] flex items-center justify-center text-[var(--theme-primary)] shrink-0 shadow-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#221c18] border border-[#3d342f] flex items-center justify-center text-[var(--theme-primary)] shrink-0 shadow-xs">
               <Icon className="w-4 h-4" />
             </div>
             <div className="flex flex-col min-w-0">
-              <h1 className="font-serif font-bold text-sm sm:text-base text-[#fcf8f5] truncate leading-tight">
+              <h1 className="font-serif font-bold text-xs sm:text-base text-[#fcf8f5] truncate leading-tight">
                 {currentTabInfo.label}
               </h1>
               <span className="hidden xl:inline text-[11px] text-[#a89c93] truncate">
@@ -167,9 +198,9 @@ export const TopBar: React.FC<TopBarProps> = ({
           </div>
         </div>
 
-        {/* Center: 4 Quick Navigation Buttons requested by user */}
+        {/* Center: Desktop Quick Navigation Buttons */}
         <nav className="hidden md:flex items-center gap-1.5 bg-[#12100e] p-1 rounded-xl border border-[#2d2520] shadow-inner shrink-0">
-          {TOP_QUICK_ACTIONS.map((item) => {
+          {DESKTOP_QUICK_ACTIONS.map((item) => {
             const ItemIcon = item.icon;
             const isActive = activeTab === item.id;
             return (
@@ -185,20 +216,25 @@ export const TopBar: React.FC<TopBarProps> = ({
               >
                 <ItemIcon className={`w-3.5 h-3.5 ${isActive ? 'text-[var(--theme-primary)]' : 'text-[#8c827a]'}`} />
                 <span>{item.label}</span>
+                {item.isNew && (
+                  <span className="px-1 py-0.2 text-[9px] font-bold uppercase bg-[var(--theme-primary)] text-black rounded leading-none">
+                    Novo
+                  </span>
+                )}
               </button>
             );
           })}
         </nav>
 
         {/* Right Corner: User Profile & Date Selector */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {/* User Profile Info */}
           <button
             onClick={onOpenSettings}
-            className="flex items-center gap-2.5 p-1 sm:px-2.5 sm:py-1 rounded-xl hover:bg-[#201a17] border border-transparent hover:border-[#382f29] transition-all cursor-pointer text-left"
+            className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-xl hover:bg-[#201a17] border border-transparent hover:border-[#382f29] transition-all cursor-pointer text-left shrink-0"
             title="Abrir Configurações do Perfil"
           >
-            <div className="w-8 h-8 rounded-full p-0.5 flex items-center justify-center overflow-hidden border border-[var(--theme-primary)]/40 shadow-xs shrink-0 bg-[#12100e]">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full p-0.5 flex items-center justify-center overflow-hidden border border-[var(--theme-primary)]/40 shadow-xs shrink-0 bg-[#12100e]">
               {userPhoto ? (
                 <img
                   src={userPhoto}
@@ -213,7 +249,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               )}
             </div>
             <div className="hidden sm:flex flex-col min-w-0">
-              <span className="text-xs font-semibold text-[#fcf8f5] truncate max-w-[140px] leading-tight">
+              <span className="text-xs font-semibold text-[#fcf8f5] truncate max-w-[120px] lg:max-w-[140px] leading-tight">
                 {userName}
               </span>
               <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1 leading-none mt-0.5">
@@ -226,14 +262,17 @@ export const TopBar: React.FC<TopBarProps> = ({
           {/* Styled Date / Month Picker */}
           <div
             onClick={() => dateInputRef.current?.showPicker?.() || dateInputRef.current?.focus()}
-            className="relative flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#1c1815] hover:bg-[#241e1b] border border-[#3d342f] hover:border-[var(--theme-primary)]/50 text-[#fcf8f5] text-xs font-medium transition-all shadow-xs cursor-pointer group"
+            className="relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#1c1815] hover:bg-[#241e1b] border border-[#3d342f] hover:border-[var(--theme-primary)]/50 text-[#fcf8f5] text-xs font-medium transition-all shadow-xs cursor-pointer group shrink-0"
             title="Alterar Mês de Competência"
           >
             <Calendar className="w-3.5 h-3.5 text-[var(--theme-primary)] group-hover:scale-110 transition-transform shrink-0" />
-            <span className="text-xs text-[#fcf8f5] font-semibold whitespace-nowrap">
+            <span className="text-xs text-[#fcf8f5] font-semibold whitespace-nowrap hidden sm:inline">
               {formatMonthDisplay(selectedMonth)}
             </span>
-            <ChevronDown className="w-3 h-3 text-[#a89c93] group-hover:text-[#fcf8f5] transition-colors" />
+            <span className="text-[11px] text-[#fcf8f5] font-semibold whitespace-nowrap sm:hidden">
+              {formatMonthDisplayShort(selectedMonth)}
+            </span>
+            <ChevronDown className="w-3 h-3 text-[#a89c93] group-hover:text-[#fcf8f5] transition-colors shrink-0" />
 
             {/* Invisible native month picker overlay */}
             <input
@@ -248,7 +287,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           {/* Settings Shortcut Button */}
           <button
             onClick={onOpenSettings}
-            className="p-2 rounded-xl bg-[#1c1815] hover:bg-[#2c241f] border border-[#3d342f] text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer shrink-0"
+            className="p-1.5 sm:p-2 rounded-xl bg-[#1c1815] hover:bg-[#2c241f] border border-[#3d342f] text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer shrink-0"
             title="Configurações do Escritório"
           >
             <Settings className="w-4 h-4" />
@@ -257,7 +296,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           {/* Top Button to Leave the Office / Sair do Escritório */}
           <button
             onClick={logout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/25 hover:bg-red-900/40 border border-red-500/30 hover:border-red-500/50 text-red-300 hover:text-red-100 text-xs font-semibold transition-all shadow-xs cursor-pointer shrink-0"
+            className="flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-red-950/25 hover:bg-red-900/40 border border-red-500/30 hover:border-red-500/50 text-red-300 hover:text-red-100 text-xs font-semibold transition-all shadow-xs cursor-pointer shrink-0"
             title="Sair do Escritório e encerrar sessão"
           >
             <LogOut className="w-3.5 h-3.5 text-red-400" />
@@ -266,29 +305,52 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Navigation for the 4 buttons */}
-      <div className="md:hidden mt-2 pt-2 border-t border-[#2d2520] grid grid-cols-4 gap-1.5 max-w-7xl mx-auto">
-        {TOP_QUICK_ACTIONS.map((item) => {
-          const ItemIcon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab?.(item.id)}
-              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[11px] font-semibold transition-all cursor-pointer truncate ${
-                isActive
-                  ? 'bg-[var(--theme-primary)]/15 text-[var(--theme-primary)] border border-[var(--theme-primary)]/40 shadow-xs'
-                  : 'bg-[#1c1815] text-[#a89c93] border border-[#2d2520] hover:text-[#fcf8f5]'
-              }`}
-              title={item.label}
-            >
-              <ItemIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[var(--theme-primary)]' : 'text-[#8c827a]'}`} />
-              <span className="truncate">
-                {item.id === 'today' ? 'Meu Dia' : item.id === 'actions' ? 'Ações' : item.id === 'projects' ? 'Projetos' : 'Leads'}
-              </span>
-            </button>
-          );
-        })}
+      {/* Mobile Horizontally Scrollable Fast Navigation Pills */}
+      <div className="md:hidden mt-2 pt-1.5 border-t border-[#2d2520]">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5 scroll-smooth">
+          {ALL_QUICK_ACTIONS.map((item) => {
+            const ItemIcon = item.icon;
+            const isActive =
+              activeTab === item.id ||
+              (item.id === 'banks' && activeTab === 'financeiro') ||
+              (item.id === 'deadlines' && activeTab === 'recebimentos') ||
+              (item.id === 'actions' && activeTab === 'listas');
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab?.(item.id)}
+                className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                  isActive
+                    ? 'bg-[var(--theme-primary)] text-black shadow-md font-bold'
+                    : 'bg-[#1c1815] text-[#a89c93] border border-[#2d2520] hover:text-[#fcf8f5] hover:bg-[#251e1a]'
+                }`}
+                title={item.label}
+              >
+                <ItemIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-black' : 'text-[var(--theme-primary)]'}`} />
+                <span>{item.shortLabel}</span>
+                {item.isNew && (
+                  <span
+                    className={`px-1 py-0.2 text-[8px] font-bold uppercase rounded leading-none ${
+                      isActive ? 'bg-black text-[var(--theme-primary)]' : 'bg-[var(--theme-primary)] text-black'
+                    }`}
+                  >
+                    Novo
+                  </span>
+                )}
+              </button>
+            );
+          })}
+
+          {/* Quick full drawer trigger */}
+          <button
+            onClick={onOpenMobileSidebar}
+            className="flex items-center gap-1 py-1.5 px-2.5 rounded-xl text-xs font-bold bg-[#251e1a] text-[var(--theme-primary)] border border-[var(--theme-primary)]/40 hover:bg-[#322822] transition-all cursor-pointer whitespace-nowrap shrink-0"
+          >
+            <Menu className="w-3.5 h-3.5" />
+            <span>Todos</span>
+          </button>
+        </div>
       </div>
     </header>
   );

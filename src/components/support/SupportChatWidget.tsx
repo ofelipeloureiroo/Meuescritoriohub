@@ -77,24 +77,24 @@ export const SupportChatWidget: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40">
       {/* Floating Toggle Button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2.5 px-5 py-3.5 bg-[var(--theme-primary)] hover:opacity-95 text-[#14110f] font-bold text-xs rounded-full shadow-2xl transition-all cursor-pointer group hover:scale-105"
+          className="flex items-center gap-2 sm:gap-2.5 px-3.5 py-2.5 sm:px-5 sm:py-3 bg-[var(--theme-primary)] hover:opacity-95 text-[#14110f] font-bold text-xs rounded-full shadow-2xl transition-all cursor-pointer group hover:scale-105 border border-black/20"
         >
           <div className="relative">
-            <Headset className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#14110f] animate-pulse" />
+            <Headset className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="absolute -top-1 -right-1 w-2 sm:w-2.5 h-2 sm:h-2.5 bg-emerald-500 rounded-full border-2 border-[#14110f] animate-pulse" />
           </div>
-          <span className="tracking-wide">Suporte Online</span>
+          <span className="tracking-wide text-xs">Suporte</span>
         </button>
       )}
 
       {/* Chat Window Modal */}
       {isOpen && (
-        <div className="w-[360px] sm:w-[400px] h-[520px] bg-[#1c1815] border border-[#3d342f] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="w-[calc(100vw-32px)] sm:w-[400px] max-w-[400px] h-[480px] sm:h-[520px] bg-[#1c1815] border border-[#3d342f] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {/* Header */}
           <div className="bg-[#14110f] px-5 py-4 border-b border-[#3d342f] flex items-center justify-between">
             <div className="flex items-center gap-3">
