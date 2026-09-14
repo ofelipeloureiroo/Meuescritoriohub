@@ -40,6 +40,8 @@ import {
   Image as ImageIcon,
   Eye,
   EyeOff,
+  Zap,
+  ShieldCheck,
 } from 'lucide-react';
 import { compressImage } from '../../utils/imageCompressor';
 import { useFinance } from '../../context/FinanceContext';
@@ -256,6 +258,23 @@ export const SettingsTab: React.FC = () => {
   const [newCustoDireto, setNewCustoDireto] = useState('');
   const [newDespOperacional, setNewDespOperacional] = useState('');
 
+  // Mercado Pago Config State
+  const [mpAccessToken, setMpAccessToken] = useState('');
+  const [mpPublicKey, setMpPublicKey] = useState('');
+  const [mpDefaultDays, setMpDefaultDays] = useState(5);
+  const [mpInstructions, setMpInstructions] = useState('Após o vencimento cobrar multa de 2% e juros de mora de 1% ao mês.');
+  const [showMpToken, setShowMpToken] = useState(false);
+  const [mpSavedSuccess, setMpSavedSuccess] = useState(false);
+
+  useEffect(() => {
+    if (officeSettings.mercadopagoConfig) {
+      setMpAccessToken(officeSettings.mercadopagoConfig.accessToken || '');
+      setMpPublicKey(officeSettings.mercadopagoConfig.publicKey || '');
+      setMpDefaultDays(officeSettings.mercadopagoConfig.defaultExpirationDays || 5);
+      setMpInstructions(officeSettings.mercadopagoConfig.defaultInstructions || 'Após o vencimento cobrar multa de 2% e juros de mora de 1% ao mês.');
+    }
+  }, [officeSettings.mercadopagoConfig]);
+
   // Intelligence rules inside "Inteligência"
   const [aiEnabled, setAiEnabled] = useState(true);
   const [cashRunawayThreshold, setCashRunawayThreshold] = useState(3); // in months
@@ -384,6 +403,19 @@ export const SettingsTab: React.FC = () => {
     const current = { ...officeSettings.financialCategories };
     current[group] = current[group].filter(item => item !== value);
     updateOfficeSettings({ financialCategories: current });
+  };
+
+  const handleSaveMercadoPagoConfig = () => {
+    updateOfficeSettings({
+      mercadopagoConfig: {
+        accessToken: mpAccessToken.trim(),
+        publicKey: mpPublicKey.trim(),
+        defaultExpirationDays: Number(mpDefaultDays) || 5,
+        defaultInstructions: mpInstructions.trim(),
+      },
+    });
+    setMpSavedSuccess(true);
+    setTimeout(() => setMpSavedSuccess(false), 3000);
   };
 
   // Template custom manager
@@ -1695,6 +1727,118 @@ export const SettingsTab: React.FC = () => {
                       <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                     </button>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mercado Pago Integration Configuration */}
+            <div className="bg-[#1c1815] border border-[#302722] rounded-2xl p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#302722] pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center">
+                    <Zap className="w-4 h-4 fill-current" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif font-bold text-[#fcf8f5] text-sm">
+                      Integração Mercado Pago (Boletos Registrados & Cobranças)
+                    </h3>
+                    <p className="text-[11px] text-[#a89c93]">
+                      Permite que seu escritório emita boletos válidos (FEBRABAN) e cobranças com compensação e conciliação automática.
+                    </p>
+                  </div>
+                </div>
+
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 self-start sm:self-auto flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>{mpAccessToken ? 'Chave do Escritório Ativa' : 'Pronto p/ Emitir (Chave Padrão)'}</span>
+                </span>
+              </div>
+
+              {mpSavedSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2 animate-in fade-in">
+                  <Check className="w-4 h-4" />
+                  <span>Configurações do Mercado Pago salvas com sucesso!</span>
+                </div>
+              )}
+
+              <div className="space-y-3.5 text-xs">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-medium text-[#a89c93]">
+                      Access Token do Mercado Pago (Opcional)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowMpToken(!showMpToken)}
+                      className="text-[10px] text-amber-400 hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      {showMpToken ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      <span>{showMpToken ? 'Ocultar' : 'Visualizar'}</span>
+                    </button>
+                  </div>
+                  <input
+                    type={showMpToken ? 'text' : 'password'}
+                    value={mpAccessToken}
+                    onChange={(e) => setMpAccessToken(e.target.value)}
+                    placeholder="TEST-... ou APP_USR-... (Deixe em branco para usar a chave padrão da plataforma)"
+                    className="w-full bg-[#12100e] border border-[#302722] rounded-xl px-3.5 py-2 text-xs text-[#fcf8f5] focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                  <p className="text-[10px] text-[#857970] mt-1">
+                    Se você inserir seu próprio token (Access Token de Produção ou Teste do Mercado Pago Developers), os valores pagos pelos seus clientes entrarão diretamente na sua conta bancária / Mercado Pago.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="text-[11px] font-medium text-[#a89c93] block mb-1">
+                      Public Key (Chave Pública)
+                    </label>
+                    <input
+                      type="text"
+                      value={mpPublicKey}
+                      onChange={(e) => setMpPublicKey(e.target.value)}
+                      placeholder="TEST-... ou APP_USR-..."
+                      className="w-full bg-[#12100e] border border-[#302722] rounded-xl px-3.5 py-2 text-xs text-[#fcf8f5] focus:outline-none focus:border-amber-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-medium text-[#a89c93] block mb-1">
+                      Dias Padrão para Vencimento do Boleto
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={mpDefaultDays}
+                      onChange={(e) => setMpDefaultDays(Number(e.target.value))}
+                      className="w-full bg-[#12100e] border border-[#302722] rounded-xl px-3.5 py-2 text-xs text-[#fcf8f5] focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-medium text-[#a89c93] block mb-1">
+                    Instruções Padrão de Multa e Juros Impressas no Boleto
+                  </label>
+                  <input
+                    type="text"
+                    value={mpInstructions}
+                    onChange={(e) => setMpInstructions(e.target.value)}
+                    placeholder="Após o vencimento cobrar multa de 2% e juros de mora de 1% ao mês."
+                    className="w-full bg-[#12100e] border border-[#302722] rounded-xl px-3.5 py-2 text-xs text-[#fcf8f5] focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleSaveMercadoPagoConfig}
+                    className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>Salvar Configurações do Mercado Pago</span>
+                  </button>
                 </div>
               </div>
             </div>

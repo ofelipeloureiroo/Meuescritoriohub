@@ -478,11 +478,24 @@ export interface ProjectInstallment {
   boletoBarcode?: string; // Linha digitável formatada (ex: 34191.79001 01043.510047 91020.150008 5 98450000350000)
   boletoBarcodeRaw?: string; // Código de barras de 44 dígitos
   boletoOurNumber?: string; // Nosso número
-  boletoBank?: string; // Nome ou código do banco (ex: Itaú, Banco do Brasil, Bradesco)
+  boletoBank?: string; // Nome ou código do banco (ex: Mercado Pago, Itaú, Banco do Brasil, Bradesco)
   boletoBankAccountId?: string; // ID da conta bancária cadastrada utilizada
   boletoGeneratedAt?: string;
   boletoSentAt?: string;
   clientDocument?: string; // CPF / CNPJ do sacado
+  clientEmail?: string;
+  clientAddress?: {
+    zipCode?: string;
+    street?: string;
+    number?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+  };
+  boletoExternalUrl?: string; // Link oficial de visualização/PDF do boleto do Mercado Pago
+  boletoPaymentId?: string | number; // ID oficial do pagamento no Mercado Pago
+  boletoProvider?: 'mercadopago' | 'simulated';
+  boletoStatus?: 'pending' | 'approved' | 'cancelled' | 'rejected';
 }
 
 export interface ProjectMilestone {
@@ -560,6 +573,13 @@ export interface OfficeSettings {
     color: string;
   }[];
   templateBindings?: Record<string, string>;
+  mercadopagoConfig?: {
+    accessToken?: string;
+    publicKey?: string;
+    enabled?: boolean;
+    defaultDaysToExpire?: number;
+    customInstructions?: string;
+  };
 }
 
 export interface CollaboratorPermissions {

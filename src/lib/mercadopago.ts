@@ -373,3 +373,89 @@ export async function createMercadoPagoPix(
 
   return data;
 }
+
+export interface CreateBoletoParams {
+  amount: number;
+  description: string;
+  dueDate: string; // YYYY-MM-DD
+  payer: {
+    name: string;
+    email: string;
+    docType?: 'CPF' | 'CNPJ';
+    docNumber: string;
+    address?: {
+      zipCode?: string;
+      street?: string;
+      number?: string;
+      neighborhood?: string;
+      city?: string;
+      state?: string;
+    };
+  };
+  externalReference?: string;
+  metadata?: Record<string, any>;
+  customAccessToken?: string;
+}
+
+export interface BoletoPaymentResponse {
+  id: string | number;
+  status: 'pending' | 'approved' | 'in_process' | 'rejected' | string;
+  status_detail: string;
+  digitable_line: string;
+  barcode_raw: string;
+  external_resource_url: string;
+  pdf_url: string;
+  date_of_expiration: string;
+  transaction_amount: number;
+  payer?: any;
+}
+
+/**
+ * Calls backend to generate an official registered Boleto Bancário via Mercado Pago (FEBRABAN valid)
+ */
+export async function createMercadoPagoBoleto(
+  params: CreateBoletoParams
+): Promise<BoletoPaymentResponse> {
+  const res = await fetch('/api/mercadopago/create-boleto', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Erro ao gerar boleto no Mercado Pago.');
+  }
+
+  return data;
+}
+
+/**
+ * Queries payment status for a specific Mercado Pago payment/boleto ID
+ */
+export async function fetchMercadoPagoPaymentStatus(
+  paymentId: string | number,
+  customAccessToken?: string
+): Promise<{
+  id: string | number;
+  status: 'pending' | 'approved' | 'in_process' | 'rejected' | 'cancelled' | string;
+  status_detail: string;
+  date_approved?: string;
+  date_of_expiration?: string;
+  transaction_amount?: number;
+  payment_method_id?: string;
+  external_resource_url?: string;
+  digitable_line?: string;
+}> {
+  const url = customAccessToken
+    ? `/api/mercadopago/payment/${paymentId}?accessToken=${encodeURIComponent(customAccessToken)}`
+    : `/api/mercadopago/payment/${paymentId}`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Erro ao consultar status do pagamento.');
+  }
+  return data;
+}
+

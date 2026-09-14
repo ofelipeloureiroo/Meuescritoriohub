@@ -1114,6 +1114,150 @@ Retorne uma resposta JSON com o formato estrito:
     }
   });
 
+  // Create Official Mercado Pago Boleto Bancário (FEBRABAN Registered & Valid)
+  app.post('/api/mercadopago/create-boleto', async (req, res) => {
+    try {
+      const {
+        amount,
+        description,
+        dueDate,
+        payer,
+        externalReference,
+        metadata,
+        customAccessToken,
+      } = req.body;
+
+      if (!amount || Number(amount) <= 0) {
+        return res.status(400).json({ error: "Valor do boleto inválido." });
+      }
+
+      if (!payer || !payer.email || !payer.docNumber) {
+        return res.status(400).json({
+          error: "Dados do cliente sacado incompletos. CPF ou CNPJ e e-mail são obrigatórios para emissão de boleto registrado."
+        });
+      }
+
+      // Token resolution: subscriber's own Mercado Pago Token or platform default
+      const token = customAccessToken?.trim() || process.env.MERCADO_PAGO_ACCESS_TOKEN;
+      if (!token) {
+        return res.status(400).json({
+          error: "Nenhum Access Token do Mercado Pago configurado. Cadastre sua credencial do Mercado Pago nas configurações ou contate o suporte.",
+          configured: false,
+        });
+      }
+
+      const client = new MercadoPagoConfig({ accessToken: token });
+      const payment = new Payment(client);
+
+      const fullName = (payer.name || 'Cliente Sacado').trim();
+      const nameParts = fullName.split(' ');
+      const firstName = nameParts[0] || 'Cliente';
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Sacado';
+
+      const cleanDoc = (payer.docNumber || '').replace(/\D/g, '');
+      const docType = payer.docType || (cleanDoc.length > 11 ? 'CNPJ' : 'CPF');
+
+      const cleanZip = (payer.address?.zipCode || '01310100').replace(/\D/g, '');
+
+      // Expiration ISO calculation
+      let expirationISO: string;
+      if (dueDate) {
+        expirationISO = `${dueDate}T23:59:59.000-03:00`;
+      } else {
+        const exp = new Date();
+        exp.setDate(exp.getDate() + 5);
+        expirationISO = `${exp.toISOString().split('T')[0]}T23:59:59.000-03:00`;
+      }
+
+      const paymentResponse = await payment.create({
+        body: {
+          transaction_amount: Number(amount),
+          description: description || 'Honorários e Serviços Prestados',
+          payment_method_id: 'bolbradesco',
+          date_of_expiration: expirationISO,
+          payer: {
+            email: payer.email.trim(),
+            first_name: firstName,
+            last_name: lastName,
+            identification: {
+              type: docType,
+              number: cleanDoc,
+            },
+            address: {
+              zip_code: cleanZip.length >= 8 ? cleanZip.substring(0, 8) : '01310100',
+              street_name: payer.address?.street?.trim() || 'Avenida Principal',
+              street_number: payer.address?.number?.trim() || '100',
+              neighborhood: payer.address?.neighborhood?.trim() || 'Centro',
+              city: payer.address?.city?.trim() || 'São Paulo',
+              federal_unit: (payer.address?.state || 'SP').toUpperCase().trim().substring(0, 2),
+            },
+          },
+          external_reference: externalReference || `boleto-${Date.now()}`,
+          metadata: {
+            ...metadata,
+            source: 'escritorio_online_boleto',
+          },
+        },
+      });
+
+      const transactionDetails: any = paymentResponse.transaction_details;
+      const barcodeData: any = (paymentResponse as any).barcode;
+
+      const digitableLine = transactionDetails?.digitable_line || barcodeData?.content || '';
+      const barcodeRaw = barcodeData?.content || '';
+      const externalResourceUrl = transactionDetails?.external_resource_url || transactionDetails?.payment_method_reference_id || '';
+
+      res.json({
+        id: paymentResponse.id,
+        status: paymentResponse.status,
+        status_detail: paymentResponse.status_detail,
+        digitable_line: digitableLine,
+        barcode_raw: barcodeRaw,
+        external_resource_url: externalResourceUrl,
+        pdf_url: externalResourceUrl,
+        date_of_expiration: paymentResponse.date_of_expiration,
+        transaction_amount: paymentResponse.transaction_amount,
+        payer: paymentResponse.payer,
+      });
+    } catch (error: any) {
+      console.error('Mercado Pago Boleto error:', error);
+      const apiMessage = error.cause?.[0]?.description || error.message || 'Erro ao gerar boleto registrado no Mercado Pago';
+      res.status(500).json({ error: apiMessage, details: error });
+    }
+  });
+
+  // Query status of a specific Mercado Pago Payment / Boleto
+  app.get('/api/mercadopago/payment/:id', async (req, res) => {
+    try {
+      const paymentId = req.params.id;
+      const customToken = (req.query.accessToken as string)?.trim();
+      const token = customToken || process.env.MERCADO_PAGO_ACCESS_TOKEN;
+
+      if (!token) {
+        return res.status(400).json({ error: 'Nenhum token do Mercado Pago disponível.' });
+      }
+
+      const client = new MercadoPagoConfig({ accessToken: token });
+      const payment = new Payment(client);
+      const paymentInfo = await payment.get({ id: String(paymentId) });
+
+      res.json({
+        id: paymentInfo.id,
+        status: paymentInfo.status,
+        status_detail: paymentInfo.status_detail,
+        date_approved: paymentInfo.date_approved,
+        date_of_expiration: paymentInfo.date_of_expiration,
+        transaction_amount: paymentInfo.transaction_amount,
+        payment_method_id: paymentInfo.payment_method_id,
+        external_resource_url: (paymentInfo.transaction_details as any)?.external_resource_url,
+        digitable_line: (paymentInfo.transaction_details as any)?.digitable_line,
+      });
+    } catch (error: any) {
+      console.error('Mercado Pago payment check error:', error);
+      res.status(500).json({ error: error.message || 'Erro ao consultar status do pagamento' });
+    }
+  });
+
   // Mercado Pago Webhook / IPN notification receiver
   app.post(['/api/mercadopago/webhook', '/api/mercadopago/ipn'], async (req, res) => {
     try {
