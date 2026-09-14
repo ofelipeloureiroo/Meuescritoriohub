@@ -53,12 +53,12 @@ export const CheckoutPage: React.FC = () => {
   const [searchParams] = useSearchParams();
 
   const isAnnualPlan = searchParams.get('plan') === 'annual';
-  const planAmount = isAnnualPlan ? 550 : 50;
+  const planAmount = isAnnualPlan ? 850 : 110;
   const planLabel = isAnnualPlan ? 'Anual' : 'Mensal';
   const planPeriodLabel = isAnnualPlan ? 'ano' : 'mês';
 
-  // Payment method state: 'mercadopago' | 'pix' | 'credit_card'
-  const [paymentMethod, setPaymentMethod] = useState<'mercadopago' | 'pix' | 'credit_card'>('mercadopago');
+  // Payment method state: 'mercadopago' | 'pix'
+  const [paymentMethod, setPaymentMethod] = useState<'mercadopago' | 'pix'>('mercadopago');
   
   // Mercado Pago states
   const [mpLoaded, setMpLoaded] = useState(false);
@@ -130,7 +130,7 @@ export const CheckoutPage: React.FC = () => {
   const pixKey = 'lfquadrosdecorativos@gmail.com';
   const pixReceiver = 'Meu Escritório Online - Gestão Integrada';
   const pixCity = 'SAO PAULO';
-  const pixAmount = isAnnualPlan ? '550.00' : '50.00';
+  const pixAmount = isAnnualPlan ? '850.00' : '110.00';
   
   // Standard EMV BR Code / PIX Payload format simulation for instant copy
   const pixPayload = `00020126580014br.gov.bcb.pix0136${pixKey}5204000053039865405${pixAmount}5802BR5925${pixReceiver.substring(0, 25)}6009${pixCity}62070503***6304E8A2`;
@@ -936,8 +936,8 @@ export const CheckoutPage: React.FC = () => {
                 Forma de Pagamento
               </h2>
 
-              {/* Tabs for Mercado Pago / PIX / Credit Card */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+              {/* Tabs for Mercado Pago / PIX */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('mercadopago')}
@@ -952,7 +952,7 @@ export const CheckoutPage: React.FC = () => {
                   </div>
                   <div>
                     <span className="block text-xs font-bold text-[#fcf8f5]">Mercado Pago</span>
-                    <span className="block text-[10px] text-[#009ee3] font-semibold mt-0.5">Checkout Pro & PIX</span>
+                    <span className="block text-[10px] text-[#009ee3] font-semibold mt-0.5">Cartão até 12x, PIX & Pro</span>
                   </div>
                 </button>
 
@@ -971,30 +971,6 @@ export const CheckoutPage: React.FC = () => {
                   <div>
                     <span className="block text-xs font-bold text-[#fcf8f5]">PIX Direto</span>
                     <span className="block text-[10px] text-emerald-400 font-semibold mt-0.5">Chave Escritório</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('credit_card')}
-                  className={`p-3.5 rounded-xl border flex flex-col items-center justify-center gap-2 text-center transition-all ${
-                    paymentMethod === 'credit_card'
-                      ? 'bg-[#251f1a] border-[var(--theme-primary)] ring-1 ring-[var(--theme-primary)] shadow-lg shadow-[var(--theme-primary)]/10'
-                      : 'bg-[#0d0b0a] border-[#3d342f] hover:border-[#52443c] opacity-80'
-                  }`}
-                >
-                  <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{
-                      backgroundColor: 'var(--theme-badge-bg)',
-                      color: 'var(--theme-primary)',
-                    }}
-                  >
-                    <CreditCard className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="block text-xs font-bold text-[#fcf8f5]">Cartão de Crédito</span>
-                    <span className="block text-[10px] text-[#a89c93] mt-0.5">Stripe Seguro</span>
                   </div>
                 </button>
               </div>
@@ -1630,88 +1606,6 @@ export const CheckoutPage: React.FC = () => {
                     )}
                   </button>
                 </div>
-              )}
-
-              {/* Credit Card Payment Section */}
-              {paymentMethod === 'credit_card' && (
-                <form onSubmit={handleCreditCardSubmit} className="space-y-4 pt-2">
-                  <div>
-                    <label className="block text-xs font-medium text-[#a89c93] mb-1">Número do Cartão</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value)}
-                        placeholder="0000 0000 0000 0000"
-                        maxLength={19}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0d0b0a] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
-                      />
-                      <CreditCard className="w-4 h-4 text-[#a89c93] absolute left-3.5 top-3" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-[#a89c93] mb-1">Nome Impresso no Cartão</label>
-                    <input
-                      type="text"
-                      value={cardHolder}
-                      onChange={(e) => setCardHolder(e.target.value)}
-                      placeholder="NOME COMO ESTÁ NO CARTÃO"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#0d0b0a] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] uppercase"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-[#a89c93] mb-1">Validade (MM/AA)</label>
-                      <input
-                        type="text"
-                        value={cardExpiry}
-                        onChange={(e) => setCardExpiry(e.target.value)}
-                        placeholder="MM/AA"
-                        maxLength={5}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#0d0b0a] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-[#a89c93] mb-1">CVV / Cód. Segurança</label>
-                      <input
-                        type="password"
-                        value={cardCvv}
-                        onChange={(e) => setCardCvv(e.target.value)}
-                        placeholder="123"
-                        maxLength={4}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#0d0b0a] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={isProcessingCard}
-                      className="w-full py-4 px-6 rounded-xl text-black font-bold text-base flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer disabled:opacity-50 hover:brightness-110 active:scale-98"
-                      style={{ backgroundColor: 'var(--theme-primary)' }}
-                    >
-                      {isProcessingCard ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>Processando Pagamento...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="w-4 h-4" />
-                          <span>Pagar R$ {planAmount},00 no Cartão</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  <p className="text-center text-[11px] text-[#a89c93] flex items-center justify-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    Transação protegida por criptografia de 256 bits via Stripe
-                  </p>
-                </form>
               )}
             </div>
           </div>

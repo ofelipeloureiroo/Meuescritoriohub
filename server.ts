@@ -590,7 +590,7 @@ Retorne uma resposta JSON com o formato estrito:
         subscriberEmail,
         subscriberName,
         planLabel: planLabel || "Mensal",
-        planAmount: planAmount || "50,00",
+        planAmount: planAmount || "110,00",
         paymentMethod: paymentMethod || "pix",
         subscriberUid,
         appUrl: process.env.APP_URL || `http://localhost:${PORT}`,
@@ -848,7 +848,7 @@ Retorne uma resposta JSON com o formato estrito:
 
       const paymentResponse = await payment.create({
         body: {
-          transaction_amount: amount || 50,
+          transaction_amount: amount || 110,
           token: cardToken,
           description,
           installments,
@@ -863,7 +863,7 @@ Retorne uma resposta JSON com o formato estrito:
           external_reference: externalReference,
           metadata: {
             uid: externalReference,
-            plan: metadata.plan || (amount > 100 ? 'annual' : 'monthly'),
+            plan: metadata.plan || (amount > 300 ? 'annual' : 'monthly'),
             source: 'checkout_transparente',
           },
         },
@@ -878,7 +878,7 @@ Retorne uma resposta JSON com o formato estrito:
           try {
             const db = getFirestore();
             const baseDate = new Date();
-            if (amount > 100) {
+            if (amount > 300) {
               baseDate.setFullYear(baseDate.getFullYear() + 1);
             } else {
               baseDate.setMonth(baseDate.getMonth() + 1);
@@ -998,7 +998,7 @@ Retorne uma resposta JSON com o formato estrito:
             id: externalReference || `plan-${Date.now()}`,
             title: title || 'Assinatura - Meu Escritório Online',
             quantity: Number(quantity) || 1,
-            unit_price: Number(price) || 50,
+            unit_price: Number(price) || 110,
             currency_id: 'BRL',
           },
         ],

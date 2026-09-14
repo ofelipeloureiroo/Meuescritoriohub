@@ -189,7 +189,7 @@ export const SalesLandingPage: React.FC = () => {
                   className="px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-black font-bold text-xs sm:text-sm transition-all shadow-lg hover:brightness-110 cursor-pointer"
                   style={{ backgroundColor: 'var(--theme-primary)' }}
                 >
-                  <span className="hidden xs:inline">Assinar por </span>R$ 50/mês
+                  <span className="hidden xs:inline">Assinar por </span>R$ 110/mês
                 </button>
               </>
             )}
@@ -239,7 +239,7 @@ export const SalesLandingPage: React.FC = () => {
               style={{ backgroundColor: 'var(--theme-primary)' }}
             >
               <Zap className="w-5 h-5 fill-current" />
-              <span>Assinar Agora por R$ 50/mês</span>
+              <span>Assinar Agora por R$ 110/mês</span>
               <ArrowRight className="w-5 h-5" />
             </button>
             <a
@@ -1387,7 +1387,7 @@ export const SalesLandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Pricing Section (Planos e Preços - R$ 50/mês & R$ 550/ano) */}
+      {/* Pricing Section (Planos e Preços - R$ 110/mês & R$ 850/ano) */}
       <section id="planos" className="py-20 md:py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <span
@@ -1416,7 +1416,7 @@ export const SalesLandingPage: React.FC = () => {
                 
                 <div className="flex items-baseline justify-center gap-1 mt-6 mb-2">
                   <span className="text-2xl font-bold text-[#a89c93]">R$</span>
-                  <span className="text-5xl font-extrabold text-[#fcf8f5] tracking-tight">50</span>
+                  <span className="text-5xl font-extrabold text-[#fcf8f5] tracking-tight">110</span>
                   <span className="text-xl font-bold text-[#fcf8f5]">,00</span>
                   <span className="text-[#a89c93] font-medium text-sm">/mês</span>
                 </div>
@@ -1453,7 +1453,7 @@ export const SalesLandingPage: React.FC = () => {
                 className="w-full py-3.5 px-6 rounded-xl text-black font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer hover:brightness-110"
                 style={{ backgroundColor: 'var(--theme-primary)' }}
               >
-                <span>Assinar Mensal (R$ 50/mês)</span>
+                <span>Assinar Mensal (R$ 110/mês)</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -1468,7 +1468,7 @@ export const SalesLandingPage: React.FC = () => {
               className="absolute -top-4 left-1/2 -translate-x-1/2 text-black font-bold text-[10px] uppercase tracking-wider py-1.5 px-4 rounded-full shadow-md"
               style={{ backgroundColor: 'var(--theme-primary)' }}
             >
-              Melhor Custo-Benefício (Economize R$ 50)
+              Melhor Custo-Benefício (Economize R$ 470)
             </div>
 
             <div>
@@ -1478,7 +1478,7 @@ export const SalesLandingPage: React.FC = () => {
                 
                 <div className="flex items-baseline justify-center gap-1 mt-6 mb-2">
                   <span className="text-2xl font-bold text-[#a89c93]">R$</span>
-                  <span className="text-5xl font-extrabold text-[#fcf8f5] tracking-tight">550</span>
+                  <span className="text-5xl font-extrabold text-[#fcf8f5] tracking-tight">850</span>
                   <span className="text-xl font-bold text-[#fcf8f5]">,00</span>
                   <span className="text-[#a89c93] font-medium text-sm">/ano</span>
                 </div>
@@ -1500,7 +1500,7 @@ export const SalesLandingPage: React.FC = () => {
                 </div>
                 <div className="flex items-start gap-3">
                   <Check className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--theme-primary)' }} />
-                  <span className="text-sm text-[#fcf8f5]">Economia direta de R$ 50 no ano</span>
+                  <span className="text-sm text-[#fcf8f5]">Economia direta de R$ 470 no ano</span>
                 </div>
               </div>
             </div>
@@ -1511,7 +1511,7 @@ export const SalesLandingPage: React.FC = () => {
                 className="w-full py-3.5 px-6 rounded-xl text-black font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer hover:brightness-110"
                 style={{ backgroundColor: 'var(--theme-primary)' }}
               >
-                <span>Assinar Anual (R$ 550/ano)</span>
+                <span>Assinar Anual (R$ 850/ano)</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -1525,7 +1525,7 @@ export const SalesLandingPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <CreditCard className="w-4 h-4" style={{ color: 'var(--theme-primary)' }} />
-            <span>Cartão de Crédito via Stripe</span>
+            <span>Cartão de Crédito em até 12x</span>
           </div>
           <div className="flex items-center gap-2">
             <Lock className="w-4 h-4" style={{ color: 'var(--theme-primary)' }} />
@@ -1568,8 +1568,8 @@ export const SalesLandingPage: React.FC = () => {
                 a: "Sim! Ele possui modelos pré-configurados com nomenclaturas, categorias e fases específicas para Advocacia (processos e prazos judiciais), Arquitetura e Engenharia (etapas de projetos e obras), Consultorias (sprints e entregáveis), Vendas (pedidos e cronogramas) e Prestadores de Serviços em geral."
               },
               {
-                q: "Como funciona a assinatura de R$ 50/mês e o pagamento?",
-                a: "Você pode assinar mensalmente por R$ 50,00 ou no plano anual por R$ 550,00. O pagamento é realizado diretamente na plataforma via PIX (liberação imediata) ou Cartão de Crédito. Não há taxas ocultas nem taxa de adesão."
+                q: "Como funciona a assinatura e as formas de pagamento?",
+                a: "Você pode assinar mensalmente por R$ 110,00 ou no plano anual por R$ 850,00 (com R$ 470 de economia). O pagamento é realizado diretamente na plataforma via Mercado Pago (Cartão até 12x, PIX com liberação instantânea ou Checkout Pro). Não há taxas ocultas nem taxa de adesão."
               },
               {
                 q: "Posso acessar pelo celular quando estiver em visitas a clientes?",
@@ -1633,7 +1633,7 @@ export const SalesLandingPage: React.FC = () => {
               className="hover:text-[#fcf8f5] transition-colors font-bold"
               style={{ color: 'var(--theme-primary)' }}
             >
-              Assinar R$ 50/mês
+              Assinar R$ 110/mês
             </Link>
           </div>
         </div>
@@ -1665,7 +1665,7 @@ export const SalesLandingPage: React.FC = () => {
               style={{ backgroundColor: 'var(--theme-primary)' }}
             >
               <Sparkles className="w-4 h-4" />
-              <span>Assinar R$ 50/mês</span>
+              <span>Assinar R$ 110/mês</span>
             </button>
           </>
         )}
