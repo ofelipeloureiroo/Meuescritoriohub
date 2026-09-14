@@ -29,7 +29,9 @@ import {
   BankInfo,
   generateBoletoCodes,
   buildBoletoWhatsAppMessage,
+  getBankInfo,
 } from '../../utils/boletoGenerator';
+import { BankAccountsModal } from '../banks/BankAccountsModal';
 
 interface BoletoModalProps {
   isOpen: boolean;
@@ -44,10 +46,14 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
   installment,
   onUpdateInstallment,
 }) => {
-  const { architectProfile, profile, user } = useFinance();
+  const { architectProfile, profile, user, bankAccounts } = useFinance();
 
-  // Bank selection
+  // Selected registered account ID or '' for raw bank
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedBankCode, setSelectedBankCode] = useState<string>('341'); // Itaú default
+  const [isManageAccountsOpen, setIsManageAccountsOpen] = useState<boolean>(false);
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+
   const [clientDocument, setClientDocument] = useState<string>('');
   const [customInstructions, setCustomInstructions] = useState<string>(
     'Após o vencimento cobrar multa de 2,00% e juros de mora de 1,00% ao mês. Não receber após 30 dias do vencimento.'
@@ -64,58 +70,77 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Initialize data when installment opens
+  // Selected registered account object
+  const selectedAccount = useMemo(() => {
+    return bankAccounts.find((a) => a.id === selectedAccountId) || null;
+  }, [bankAccounts, selectedAccountId]);
+
+  // Effective bank code derived from registered account or selectedBankCode
+  const effectiveBankCode = useMemo(() => {
+    if (selectedAccount) {
+      const codeFromAccount = selectedAccount.bankCode || getBankInfo(selectedAccount.name).code;
+      if (codeFromAccount && POPULAR_BANKS[codeFromAccount]) {
+        return codeFromAccount;
+      }
+    }
+    return selectedBankCode || '341';
+  }, [selectedAccount, selectedBankCode]);
+
+  // Derived bank info
+  const currentBank: BankInfo = useMemo(() => {
+    return POPULAR_BANKS[effectiveBankCode] || POPULAR_BANKS['341'];
+  }, [effectiveBankCode]);
+
+  // Effective agency, account and wallet from registered account or bank default
+  const effectiveAgency = selectedAccount?.agency || currentBank.agencyDefault;
+  const effectiveAccountNumber = selectedAccount?.accountNumber || currentBank.accountDefault;
+  const effectiveWallet = selectedAccount?.wallet || currentBank.walletDefault || '109';
+
+  // Initialize data when installment opens or bankAccounts change
   useEffect(() => {
-    if (installment) {
-      if (installment.boletoBank && POPULAR_BANKS[installment.boletoBank]) {
+    if (installment && isOpen) {
+      // 1. Try to find the account explicitly assigned to this installment
+      let matchedAcc = bankAccounts.find((a) => a.id === installment.boletoBankAccountId);
+      if (!matchedAcc && installment.bankAccountId) {
+        matchedAcc = bankAccounts.find((a) => a.id === installment.bankAccountId);
+      }
+
+      // 2. If not found, pick the default account or first available bank/fintech account
+      if (!matchedAcc && bankAccounts.length > 0) {
+        matchedAcc =
+          bankAccounts.find((a) => a.isDefault && a.type !== 'physical_cash') ||
+          bankAccounts.find((a) => a.type !== 'physical_cash') ||
+          bankAccounts[0];
+      }
+
+      if (matchedAcc) {
+        setSelectedAccountId(matchedAcc.id);
+        const code = matchedAcc.bankCode || getBankInfo(matchedAcc.name).code;
+        setSelectedBankCode(code || '341');
+      } else if (installment.boletoBank && POPULAR_BANKS[installment.boletoBank]) {
+        setSelectedAccountId('');
         setSelectedBankCode(installment.boletoBank);
       } else {
+        setSelectedAccountId('');
         setSelectedBankCode('341');
       }
 
       setClientDocument(installment.clientDocument || '');
       setCustomNotes(installment.description || '');
-
-      // Generate codes and message
-      const bank = POPULAR_BANKS[selectedBankCode] || POPULAR_BANKS['341'];
-      const codes = generateBoletoCodes(
-        selectedBankCode,
-        installment.amount,
-        installment.dueDate,
-        `${installment.installmentNumber}`
-      );
-
-      const msg = buildBoletoWhatsAppMessage({
-        clientName: installment.clientName || 'Cliente',
-        projectTitle: installment.projectTitle || 'Projeto',
-        installmentNumber: installment.installmentNumber,
-        totalInstallments: installment.totalInstallments,
-        description: installment.description || 'Honorários',
-        amount: installment.amount,
-        dueDate: installment.dueDate,
-        linhaDigitavel: installment.boletoBarcode || codes.linhaDigitavel,
-        bankName: bank.fullName,
-        pixKey: architectProfile?.pixKey,
-        architectName:
-          architectProfile?.name || profile?.companyName || user?.displayName || 'Laíne Paula',
-      });
-      setCustomMessage(msg);
     }
-  }, [installment, isOpen]);
-
-  // Derived bank and codes
-  const currentBank: BankInfo = useMemo(() => {
-    return POPULAR_BANKS[selectedBankCode] || POPULAR_BANKS['341'];
-  }, [selectedBankCode]);
+  }, [installment, isOpen, bankAccounts]);
 
   const boletoData = useMemo(() => {
     if (!installment) return null;
 
     const codes = generateBoletoCodes(
-      selectedBankCode,
+      effectiveBankCode,
       installment.amount,
       installment.dueDate,
-      `${installment.installmentNumber}`
+      `${installment.installmentNumber}`,
+      effectiveAgency,
+      effectiveAccountNumber,
+      effectiveWallet
     );
 
     return {
@@ -135,13 +160,27 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
         : 'Brasil',
       documentoNumero: `PARC-${String(installment.installmentNumber).padStart(2, '0')}/${installment.totalInstallments}`,
       dataDocumento: new Date().toLocaleDateString('pt-BR'),
-      agenciaCodigo: `${currentBank.agencyDefault} / ${currentBank.accountDefault}`,
+      agenciaCodigo: `${effectiveAgency} / ${effectiveAccountNumber}`,
+      carteira: effectiveWallet,
     };
-  }, [installment, selectedBankCode, architectProfile, profile, user, currentBank]);
+  }, [
+    installment,
+    effectiveBankCode,
+    effectiveAgency,
+    effectiveAccountNumber,
+    effectiveWallet,
+    architectProfile,
+    profile,
+    user,
+  ]);
 
-  // Recalculate message when bank or codes change
+  // Recalculate message when bank, account or codes change
   useEffect(() => {
     if (installment && boletoData) {
+      const bankDisplayName = selectedAccount
+        ? `${selectedAccount.name} (${currentBank.fullName})`
+        : currentBank.fullName;
+
       const msg = buildBoletoWhatsAppMessage({
         clientName: installment.clientName || 'Cliente',
         projectTitle: installment.projectTitle || 'Projeto',
@@ -151,25 +190,39 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
         amount: installment.amount,
         dueDate: installment.dueDate,
         linhaDigitavel: boletoData.linhaDigitavel,
-        bankName: currentBank.fullName,
+        bankName: bankDisplayName,
+        agency: effectiveAgency,
+        accountNumber: effectiveAccountNumber,
         pixKey: architectProfile?.pixKey,
         architectName:
           architectProfile?.name || profile?.companyName || user?.displayName || 'Laíne Paula',
       });
       setCustomMessage(msg);
     }
-  }, [selectedBankCode, installment, boletoData, currentBank, architectProfile, profile, user]);
+  }, [
+    effectiveBankCode,
+    effectiveAgency,
+    effectiveAccountNumber,
+    selectedAccount,
+    installment,
+    boletoData,
+    currentBank,
+    architectProfile,
+    profile,
+    user,
+  ]);
 
   if (!isOpen || !installment || !boletoData) return null;
 
   // Save generated boleto info into the installment
   const handleSaveToInstallment = () => {
-    if (onUpdateInstallment && installment) {
+    if (onUpdateInstallment && installment && boletoData) {
       onUpdateInstallment(installment.id, {
         boletoBarcode: boletoData.linhaDigitavel,
         boletoBarcodeRaw: boletoData.barcodeRaw,
         boletoOurNumber: boletoData.nossoNumero,
-        boletoBank: selectedBankCode,
+        boletoBank: effectiveBankCode,
+        boletoBankAccountId: selectedAccountId || undefined,
         boletoGeneratedAt: new Date().toISOString(),
         clientDocument: clientDocument || undefined,
       });
@@ -258,23 +311,57 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
         {/* Top Control Bar: Bank Selector & Fast Actions */}
         <div className="px-4 sm:px-6 py-3 bg-[#1e1916] border-b border-[#3d342f] flex flex-wrap items-center justify-between gap-3 shrink-0">
-          {/* Bank selector */}
+          {/* Bank / Account selector */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-medium text-[#a89c93] flex items-center gap-1">
               <Building2 className="w-3.5 h-3.5 text-[#c58a4b]" />
-              Banco Emissor:
+              Conta de Recebimento:
             </span>
             <select
-              value={selectedBankCode}
-              onChange={(e) => setSelectedBankCode(e.target.value)}
-              className="bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs font-semibold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#c58a4b] cursor-pointer"
+              value={selectedAccountId || `bank_${effectiveBankCode}`}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val.startsWith('bank_')) {
+                  setSelectedAccountId('');
+                  setSelectedBankCode(val.replace('bank_', ''));
+                } else {
+                  setSelectedAccountId(val);
+                  const acc = bankAccounts.find((a) => a.id === val);
+                  if (acc) {
+                    const code = acc.bankCode || getBankInfo(acc.name).code;
+                    setSelectedBankCode(code || '341');
+                  }
+                }
+              }}
+              className="bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs font-semibold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#c58a4b] cursor-pointer max-w-[280px] sm:max-w-[340px] truncate"
             >
-              {Object.values(POPULAR_BANKS).map((bank) => (
-                <option key={bank.code} value={bank.code}>
-                  {bank.code} - {bank.name} ({bank.walletDefault ? `Cart. ${bank.walletDefault}` : ''})
-                </option>
-              ))}
+              {bankAccounts.length > 0 && (
+                <optgroup label="Minhas Contas Bancárias Cadastradas">
+                  {bankAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name} {acc.agency && acc.accountNumber ? `(Ag: ${acc.agency} • CC: ${acc.accountNumber})` : '(Sem agência/conta)'}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label="Bancos Emissores (Padrão)">
+                {Object.values(POPULAR_BANKS).map((bank) => (
+                  <option key={bank.code} value={`bank_${bank.code}`}>
+                    {bank.code} - {bank.name} ({bank.walletDefault ? `Cart. ${bank.walletDefault}` : ''})
+                  </option>
+                ))}
+              </optgroup>
             </select>
+
+            <button
+              type="button"
+              onClick={() => setIsManageAccountsOpen(true)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#14110f] hover:bg-[#28221e] border border-[#3d342f] text-amber-400 hover:text-amber-300 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Gerenciar contas bancárias, agência e conta"
+            >
+              <Building2 className="w-3.5 h-3.5 text-[#c58a4b]" />
+              <span>Gerenciar Contas</span>
+            </button>
 
             <button
               type="button"
@@ -395,6 +482,50 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
             </button>
           </div>
 
+          {/* Account Status Notice Banner */}
+          {selectedAccount && !selectedAccount.agency && !selectedAccount.accountNumber && (
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 flex-wrap animate-in fade-in">
+              <div className="flex items-center gap-2.5 text-xs text-amber-300">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  A conta <strong>"{selectedAccount.name}"</strong> não possui <strong>Agência e Conta Corrente</strong> cadastradas.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingAccountId(selectedAccount.id);
+                  setIsManageAccountsOpen(true);
+                }}
+                className="px-3.5 py-1.5 bg-[#c58a4b] hover:bg-[#b0783d] text-black text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span>Cadastrar Agência e Conta</span>
+              </button>
+            </div>
+          )}
+
+          {selectedAccount && selectedAccount.agency && selectedAccount.accountNumber && (
+            <div className="px-3.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-2 text-xs text-emerald-300 animate-in fade-in">
+              <div className="flex items-center gap-2 flex-wrap">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>
+                  Recebimento vinculado à conta: <strong className="text-white">{selectedAccount.name}</strong> • Agência: <strong className="font-mono text-white">{selectedAccount.agency}</strong> • Conta: <strong className="font-mono text-white">{selectedAccount.accountNumber}</strong> {selectedAccount.wallet ? `• Carteira: ${selectedAccount.wallet}` : ''}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingAccountId(selectedAccount.id);
+                  setIsManageAccountsOpen(true);
+                }}
+                className="text-[11px] text-[#c58a4b] hover:underline cursor-pointer font-semibold shrink-0"
+              >
+                Alterar dados
+              </button>
+            </div>
+          )}
+
           {/* PRINTABLE BOLETO CONTAINER (White sheet styled for standard FEBRABAN slip) */}
           <div
             id="printable-boleto"
@@ -488,7 +619,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                 </div>
                 <div className="col-span-2 p-1.5">
                   <div className="text-[9px] uppercase font-bold text-gray-700">Carteira</div>
-                  <div className="font-medium text-black">{currentBank.walletDefault || '109'}</div>
+                  <div className="font-medium text-black">{boletoData.carteira || currentBank.walletDefault || '109'}</div>
                 </div>
                 <div className="col-span-2 p-1.5">
                   <div className="text-[9px] uppercase font-bold text-gray-700">Espécie</div>
@@ -697,6 +828,16 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Modal to manage bank accounts, agency and account number directly from boleto view */}
+      <BankAccountsModal
+        isOpen={isManageAccountsOpen}
+        onClose={() => {
+          setIsManageAccountsOpen(false);
+          setEditingAccountId(null);
+        }}
+        initialEditingAccountId={editingAccountId}
+      />
     </div>
   );
 };

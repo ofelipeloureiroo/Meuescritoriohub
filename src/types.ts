@@ -68,6 +68,9 @@ export interface BankAccount {
   textColor?: string;
   iconName: string;
   accountNumber?: string;
+  agency?: string;
+  accountDigit?: string;
+  wallet?: string;
   bankCode?: string;
   isDefault?: boolean;
 }
@@ -474,6 +477,7 @@ export interface ProjectInstallment {
   boletoBarcodeRaw?: string; // Código de barras de 44 dígitos
   boletoOurNumber?: string; // Nosso número
   boletoBank?: string; // Nome ou código do banco (ex: Itaú, Banco do Brasil, Bradesco)
+  boletoBankAccountId?: string; // ID da conta bancária cadastrada utilizada
   boletoGeneratedAt?: string;
   boletoSentAt?: string;
   clientDocument?: string; // CPF / CNPJ do sacado

@@ -50,6 +50,7 @@ import {
 import { useFinance } from '../../context/FinanceContext';
 import { BankAccount, Transaction, TransactionStatus } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { BankAccountsModal } from './BankAccountsModal';
 
 interface BanksAndCashTabProps {
   onOpenTransferModal: () => void;
@@ -2037,86 +2038,12 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
         </div>
       )}
 
-      {/* ================= DRAWER: CONTAS BANCÁRIAS ================= */}
-      {isBankDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-lg rounded-2xl bg-white text-[#1a1614] shadow-2xl border border-[#e8e2d9] p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-[#eae4dc] pb-3">
-              <h3 className="text-base font-bold text-[#1a1614] flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-[#c58a4b]" />
-                Contas Bancárias e Saldos
-              </h3>
-              <button
-                onClick={() => setIsBankDrawerOpen(false)}
-                className="p-1 rounded-lg text-[#73655c] hover:text-[#1a1614] hover:bg-[#f5f1eb] cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {bankAccounts.map((acc) => (
-                <div
-                  key={acc.id}
-                  className="p-4 rounded-xl border border-[#eae4dc] flex items-center justify-between gap-3 bg-[#fdfcfb]"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm"
-                      style={{ backgroundColor: acc.color || '#c58a4b' }}
-                    >
-                      {acc.name.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-[#1a1614]">{acc.name}</h4>
-                      <span className="text-[10px] text-[#73655c] capitalize">
-                        {acc.type === 'physical_cash' ? 'Caixa Físico' : 'Conta Corrente'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-xs text-[#9c8e85] block">Saldo Atual</span>
-                    <span className="text-sm font-bold font-serif text-[#1a1614]">
-                      {formatCurrency(acc.balance)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="pt-2 flex items-center justify-between">
-              <button
-                onClick={onOpenTransferModal}
-                className="px-4 py-2 rounded-xl border border-[#dfd7cc] bg-white text-xs font-semibold text-[#574d46] hover:bg-[#f8f5f1] transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                <ArrowRightLeft className="w-3.5 h-3.5" />
-                <span>Nova Transferência</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  const name = prompt('Nome do Banco/Conta (ex: Nubank PJ, Itaú):');
-                  if (!name) return;
-                  const balanceStr = prompt('Saldo inicial (R$):', '0');
-                  const bal = parseFloat((balanceStr || '0').replace(',', '.')) || 0;
-                  addBankAccount({
-                    name,
-                    balance: bal,
-                    type: 'bank',
-                    color: '#c58a4b',
-                    iconName: 'Building2',
-                  });
-                }}
-                className="px-4 py-2 rounded-xl bg-[#c58a4b] text-white text-xs font-bold hover:bg-[#b0783d] transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Adicionar Banco</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ================= MODAL: CONTAS BANCÁRIAS E SALDOS ================= */}
+      <BankAccountsModal
+        isOpen={isBankDrawerOpen}
+        onClose={() => setIsBankDrawerOpen(false)}
+        onOpenTransferModal={onOpenTransferModal}
+      />
     </div>
   );
 };

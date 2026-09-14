@@ -95,7 +95,46 @@ export const POPULAR_BANKS: Record<string, BankInfo> = {
     accountDefault: '54321-0',
     walletDefault: '01',
   },
+  '336': {
+    code: '336',
+    digit: '0',
+    name: 'C6 Bank',
+    fullName: 'Banco C6 S.A.',
+    color: '#242424',
+    agencyDefault: '0001',
+    accountDefault: '345678-9',
+    walletDefault: '01',
+  },
+  '748': {
+    code: '748',
+    digit: 'X',
+    name: 'Sicredi',
+    fullName: 'Banco Cooperativo Sicredi S.A.',
+    color: '#006633',
+    agencyDefault: '0123',
+    accountDefault: '45678-9',
+    walletDefault: '01',
+  },
 };
+
+/**
+ * Finds bank information by 3-digit code or part of bank name
+ */
+export function getBankInfo(codeOrName?: string): BankInfo {
+  if (!codeOrName) return POPULAR_BANKS['341'];
+  if (POPULAR_BANKS[codeOrName]) return POPULAR_BANKS[codeOrName];
+
+  const clean = codeOrName.toLowerCase().trim();
+  const found = Object.values(POPULAR_BANKS).find(
+    (b) =>
+      b.code === clean ||
+      b.name.toLowerCase().includes(clean) ||
+      clean.includes(b.name.toLowerCase()) ||
+      b.fullName.toLowerCase().includes(clean)
+  );
+
+  return found || POPULAR_BANKS['341'];
+}
 
 /**
  * Calculates the FEBRABAN due date factor (Fator de Vencimento)
@@ -157,29 +196,39 @@ export function generateBoletoCodes(
   bankCode = '341',
   amount = 0,
   dueDateStr = '',
-  documentNumber = '1'
+  documentNumber = '1',
+  agency?: string,
+  accountNumber?: string,
+  wallet?: string
 ) {
-  const bank = POPULAR_BANKS[bankCode] || POPULAR_BANKS['341'];
+  const bank = getBankInfo(bankCode);
   const currencyCode = '9'; // Real
   const fator = getFatorVencimento(dueDateStr);
   const valorStr = formatAmountForBoleto(amount);
 
-  // Derive a deterministic seed from document number and amount
-  const seedNum = (Math.abs(hashString(`${documentNumber}-${amount}-${dueDateStr}`)) % 9000000) + 1000000;
+  // Clean agency and account to numeric digits
+  const cleanAgency = (agency || bank.agencyDefault).replace(/\D/g, '').padEnd(4, '0').slice(0, 4);
+  const cleanAccount = (accountNumber || bank.accountDefault).replace(/\D/g, '').padEnd(6, '0').slice(0, 6);
+  const cleanWallet = (wallet || bank.walletDefault || '109').replace(/\D/g, '').slice(0, 3) || '109';
+
+  // Derive a deterministic seed from document number, agency, account and amount
+  const seedNum =
+    (Math.abs(hashString(`${cleanAgency}-${cleanAccount}-${documentNumber}-${amount}-${dueDateStr}`)) % 9000000) +
+    1000000;
   const seedStr = String(seedNum).padStart(7, '0');
-  
-  // Field 1: Bank (3) + Currency (1) + Campolivre1 (5) + DV (1)
-  const f1_raw = `${bank.code}${currencyCode}${seedStr.substring(0, 5)}`;
+
+  // Field 1: Bank (3) + Currency (1) + Campolivre1 (first 5 chars: wallet or agency part) + DV (1)
+  const f1_raw = `${bank.code}${currencyCode}${cleanAgency.substring(0, 4)}${cleanWallet.substring(0, 1)}`;
   const f1_dv = modulo10(f1_raw);
   const campo1 = `${f1_raw.substring(0, 5)}.${f1_raw.substring(5)}${f1_dv}`;
 
-  // Field 2: Campolivre2 (10) + DV (1)
-  const f2_raw = `${seedStr.substring(5)}${String(documentNumber).replace(/\D/g, '').padEnd(8, '0').substring(0, 8)}`;
+  // Field 2: Campolivre2 (10 chars: account + doc) + DV (1)
+  const f2_raw = `${cleanAccount}${String(documentNumber).replace(/\D/g, '').padEnd(4, '0').substring(0, 4)}`;
   const f2_dv = modulo10(f2_raw);
   const campo2 = `${f2_raw.substring(0, 5)}.${f2_raw.substring(5)}${f2_dv}`;
 
-  // Field 3: Campolivre3 (10) + DV (1)
-  const f3_raw = `109${String(seedNum * 3).padStart(7, '0').substring(0, 7)}`;
+  // Field 3: Campolivre3 (10 chars) + DV (1)
+  const f3_raw = `${cleanWallet.padEnd(3, '0')}${seedStr}`;
   const f3_dv = modulo10(f3_raw);
   const campo3 = `${f3_raw.substring(0, 5)}.${f3_raw.substring(5)}${f3_dv}`;
 
@@ -196,7 +245,7 @@ export function generateBoletoCodes(
   const barcodeRaw = `${bank.code}${currencyCode}${campo4}${fator}${valorStr}${f1_raw.substring(4)}${f2_raw}${f3_raw}`.substring(0, 44);
 
   // Nosso número formatado
-  const nossoNumero = `109/${seedStr.substring(0, 8)}-${f2_dv}`;
+  const nossoNumero = `${cleanWallet}/${seedStr.substring(0, 8)}-${f2_dv}`;
 
   return {
     linhaDigitavel,
@@ -229,6 +278,8 @@ export function buildBoletoWhatsAppMessage(params: {
   dueDate: string;
   linhaDigitavel: string;
   bankName: string;
+  agency?: string;
+  accountNumber?: string;
   pixKey?: string;
   architectName: string;
 }) {
@@ -242,6 +293,8 @@ export function buildBoletoWhatsAppMessage(params: {
     dueDate,
     linhaDigitavel,
     bankName,
+    agency,
+    accountNumber,
     pixKey,
     architectName,
   } = params;
@@ -261,7 +314,9 @@ export function buildBoletoWhatsAppMessage(params: {
     `📄 *DADOS DO BOLETO:*\n` +
     `💰 *Valor:* ${formattedAmount}\n` +
     `📅 *Vencimento:* ${formattedDate}\n` +
-    `🏦 *Banco Emissor:* ${bankName}\n\n` +
+    `🏦 *Banco Emissor:* ${bankName}\n` +
+    (agency && accountNumber ? `🏢 *Agência/Conta:* Ag ${agency} • CC ${accountNumber}\n` : '') +
+    `\n` +
     `📋 *LINHA DIGITÁVEL (Copie e Cole no App do seu Banco):*\n` +
     `\`${linhaDigitavel}\`\n\n` +
     (pixKey
