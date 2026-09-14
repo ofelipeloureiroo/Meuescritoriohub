@@ -3,9 +3,23 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import Stripe from "stripe";
+import { MercadoPagoConfig, Preference, Payment } from "mercadopago";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { GoogleGenAI } from "@google/genai";
+
+// Lazy initialize Mercado Pago client
+let mpClient: MercadoPagoConfig | null = null;
+function getMercadoPagoClient(): MercadoPagoConfig {
+  const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+  if (!token) {
+    throw new Error("MERCADO_PAGO_ACCESS_TOKEN is not configured.");
+  }
+  if (!mpClient) {
+    mpClient = new MercadoPagoConfig({ accessToken: token });
+  }
+  return mpClient;
+}
 
 // Initialize Gemini Client
 function getGeminiClient(): GoogleGenAI | null {
@@ -616,6 +630,242 @@ Retorne uma resposta JSON com o formato estrito:
     } catch (error: any) {
       console.error('Stripe error:', error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== MERCADO PAGO INTEGRATION ====================
+
+  // Check Mercado Pago Status
+  app.get('/api/mercadopago/status', (req, res) => {
+    const hasAccessToken = Boolean(process.env.MERCADO_PAGO_ACCESS_TOKEN);
+    const publicKey = process.env.VITE_MERCADO_PAGO_PUBLIC_KEY || '';
+    const hasPublicKey = Boolean(publicKey);
+
+    res.json({
+      configured: hasAccessToken || hasPublicKey,
+      hasAccessToken,
+      hasPublicKey,
+      publicKeyPrefix: hasPublicKey ? `${publicKey.substring(0, 11)}...` : undefined,
+    });
+  });
+
+  // Create Mercado Pago Checkout Preference (Checkout Pro)
+  app.post('/api/mercadopago/preference', async (req, res) => {
+    try {
+      const {
+        title,
+        price,
+        quantity = 1,
+        payerEmail,
+        payerName,
+        externalReference,
+        metadata,
+      } = req.body;
+
+      const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+      const appUrl = process.env.APP_URL || `http://localhost:${PORT}`;
+
+      if (!token) {
+        return res.status(400).json({
+          error: "MERCADO_PAGO_ACCESS_TOKEN não configurado. Por favor, adicione seu Access Token do Mercado Pago nas configurações.",
+          configured: false,
+        });
+      }
+
+      const client = getMercadoPagoClient();
+      const preference = new Preference(client);
+
+      const preferenceData: any = {
+        items: [
+          {
+            id: externalReference || `plan-${Date.now()}`,
+            title: title || 'Assinatura - Meu Escritório Online',
+            quantity: Number(quantity) || 1,
+            unit_price: Number(price) || 50,
+            currency_id: 'BRL',
+          },
+        ],
+        back_urls: {
+          success: `${appUrl}/checkout?status=approved&plan=${metadata?.plan || 'monthly'}`,
+          failure: `${appUrl}/checkout?status=failure`,
+          pending: `${appUrl}/checkout?status=pending`,
+        },
+        auto_return: 'approved',
+        notification_url: `${appUrl}/api/mercadopago/webhook`,
+        external_reference: externalReference || metadata?.uid || '',
+        metadata: metadata || {},
+      };
+
+      if (payerEmail) {
+        preferenceData.payer = {
+          email: payerEmail,
+          name: payerName || undefined,
+        };
+      }
+
+      const response = await preference.create({ body: preferenceData });
+
+      res.json({
+        id: response.id,
+        init_point: response.init_point,
+        sandbox_init_point: response.sandbox_init_point,
+      });
+    } catch (error: any) {
+      console.error('Mercado Pago preference error:', error);
+      res.status(500).json({ error: error.message || 'Erro ao gerar preferência no Mercado Pago' });
+    }
+  });
+
+  // Create Instant Mercado Pago PIX with QR Code and Copia & Cola
+  app.post('/api/mercadopago/create-pix', async (req, res) => {
+    try {
+      const {
+        amount,
+        description,
+        email,
+        name,
+        docType,
+        docNumber,
+        uid,
+        installmentId,
+      } = req.body;
+
+      const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+      if (!token) {
+        return res.status(400).json({
+          error: "MERCADO_PAGO_ACCESS_TOKEN não configurado no servidor.",
+          configured: false,
+        });
+      }
+
+      const client = getMercadoPagoClient();
+      const payment = new Payment(client);
+
+      const nameParts = (name || 'Cliente Escritorio').trim().split(' ');
+      const firstName = nameParts[0] || 'Cliente';
+      const lastName = nameParts.slice(1).join(' ') || 'Assinante';
+
+      const cleanDoc = (docNumber || '').replace(/\D/g, '');
+      const identification = cleanDoc
+        ? {
+            type: docType || (cleanDoc.length > 11 ? 'CNPJ' : 'CPF'),
+            number: cleanDoc,
+          }
+        : undefined;
+
+      const paymentResponse = await payment.create({
+        body: {
+          transaction_amount: Number(amount),
+          description: description || 'Assinatura Meu Escritório Online',
+          payment_method_id: 'pix',
+          payer: {
+            email: email || 'cliente@escritorio.com',
+            first_name: firstName,
+            last_name: lastName,
+            identification,
+          },
+          metadata: {
+            uid,
+            installmentId,
+            source: 'meu_escritorio_online',
+          },
+        },
+      });
+
+      const pointOfInteraction: any = paymentResponse.point_of_interaction;
+      const transactionData = pointOfInteraction?.transaction_data;
+
+      res.json({
+        id: paymentResponse.id,
+        status: paymentResponse.status,
+        status_detail: paymentResponse.status_detail,
+        qr_code: transactionData?.qr_code,
+        qr_code_base64: transactionData?.qr_code_base64,
+        ticket_url: transactionData?.ticket_url,
+      });
+    } catch (error: any) {
+      console.error('Mercado Pago PIX error:', error);
+      res.status(500).json({ error: error.message || 'Erro ao gerar PIX no Mercado Pago' });
+    }
+  });
+
+  // Mercado Pago Webhook / IPN notification receiver
+  app.post(['/api/mercadopago/webhook', '/api/mercadopago/ipn'], async (req, res) => {
+    try {
+      const topic = req.query.topic || req.body?.type || req.query.type;
+      const id = req.query.id || req.body?.data?.id;
+
+      console.log(`Mercado Pago webhook received: topic=${topic}, id=${id}`);
+
+      if (
+        (topic === 'payment' ||
+          req.body?.action === 'payment.created' ||
+          req.body?.action === 'payment.updated') &&
+        id
+      ) {
+        const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+        if (token) {
+          const client = getMercadoPagoClient();
+          const payment = new Payment(client);
+          const paymentInfo = await payment.get({ id: String(id) });
+
+          if (paymentInfo.status === 'approved') {
+            const metadata: any = paymentInfo.metadata || {};
+            const uid = metadata.uid || paymentInfo.external_reference;
+
+            if (uid && getApps().length > 0) {
+              try {
+                const db = getFirestore();
+                const baseDate = new Date();
+                const amount = paymentInfo.transaction_amount || 0;
+                if (amount > 100) {
+                  baseDate.setFullYear(baseDate.getFullYear() + 1);
+                } else {
+                  baseDate.setMonth(baseDate.getMonth() + 1);
+                }
+
+                await db.collection('users').doc(uid).update({
+                  subscriptionDueDate: baseDate.toISOString(),
+                  status: 'active',
+                  lastPaymentMethod: 'mercadopago',
+                  lastPaymentDate: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+                console.log(`Mercado Pago approved: User ${uid} subscription updated!`);
+              } catch (fsErr) {
+                console.error('Error updating user subscription from Mercado Pago webhook:', fsErr);
+              }
+            }
+
+            // Notify Administrator by email
+            try {
+              const payerEmail =
+                paymentInfo.payer?.email || 'cliente@mercadopago.com';
+              const payerName = paymentInfo.payer?.first_name
+                ? `${paymentInfo.payer.first_name} ${paymentInfo.payer.last_name || ''}`
+                : 'Assinante Mercado Pago';
+              const amountTotal = String(paymentInfo.transaction_amount || '50.00');
+              const isAnnual = Number(amountTotal) > 100;
+
+              await sendNewSubscriberNotification({
+                subscriberEmail: payerEmail,
+                subscriberName: payerName,
+                planLabel: isAnnual ? 'Anual (Mercado Pago)' : 'Mensal (Mercado Pago)',
+                planAmount: Number(amountTotal).toFixed(2),
+                paymentMethod: `Mercado Pago (${paymentInfo.payment_method_id || 'PIX/Cartão'})`,
+                subscriberUid: uid,
+              });
+            } catch (notifErr) {
+              console.error('Error sending notification from Mercado Pago webhook:', notifErr);
+            }
+          }
+        }
+      }
+
+      res.status(200).send('OK');
+    } catch (err: any) {
+      console.error('Mercado Pago webhook error:', err);
+      res.status(200).send('OK');
     }
   });
 
