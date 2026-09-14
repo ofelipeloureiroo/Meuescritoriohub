@@ -1041,6 +1041,9 @@ Retorne uma resposta JSON com o formato estrito:
             source: 'checkout_transparente',
           },
         },
+        requestOptions: {
+          idempotencyKey: `card-${externalReference || Date.now()}-${amount}`.replace(/[^a-zA-Z0-9-]/g, '').substring(0, 64)
+        }
       });
 
       console.log(`[Mercado Pago] Pagamento processado: id=${paymentResponse.id}, status=${paymentResponse.status}, detail=${paymentResponse.status_detail}`);
@@ -1269,6 +1272,9 @@ Retorne uma resposta JSON com o formato estrito:
             source: 'meu_escritorio_online',
           },
         },
+        requestOptions: {
+          idempotencyKey: `pix-${installmentId || uid || Date.now()}-${amount}`.replace(/[^a-zA-Z0-9-]/g, '').substring(0, 64)
+        }
       });
 
       const pointOfInteraction: any = paymentResponse.point_of_interaction;
@@ -1386,6 +1392,9 @@ Retorne uma resposta JSON com o formato estrito:
               source: 'escritorio_online_boleto',
             },
           },
+          requestOptions: {
+            idempotencyKey: `bol-${externalReference || Date.now()}-${amount}`.replace(/[^a-zA-Z0-9-]/g, '').substring(0, 64)
+          }
         });
 
         if (paymentResponse && paymentResponse.id) {
@@ -1427,6 +1436,9 @@ Retorne uma resposta JSON com o formato estrito:
                 source: 'escritorio_online_boleto',
               },
             },
+            requestOptions: {
+              idempotencyKey: `pec-${externalReference || Date.now()}-${amount}`.replace(/[^a-zA-Z0-9-]/g, '').substring(0, 64)
+            }
           });
 
           if (paymentResponse && paymentResponse.id) {
@@ -1506,6 +1518,13 @@ Retorne uma resposta JSON com o formato estrito:
               ...metadata,
               source: 'escritorio_online_boleto',
             },
+            payment_methods: {
+              excluded_payment_types: [
+                { id: 'credit_card' },
+                { id: 'debit_card' },
+                { id: 'bank_transfer' }
+              ]
+            }
           },
         });
 
