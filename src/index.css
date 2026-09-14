@@ -94,3 +94,36 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Boleto Print Styles */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  
+  /* Hide all elements by default when printing except the printable boleto */
+  body * {
+    visibility: hidden;
+  }
+
+  #printable-boleto, #printable-boleto * {
+    visibility: visible;
+  }
+
+  #printable-boleto {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

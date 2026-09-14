@@ -469,6 +469,14 @@ export interface ProjectInstallment {
   pixKey?: string;
   notes?: string;
   createdAt: string;
+  // Boleto Bancário fields
+  boletoBarcode?: string; // Linha digitável formatada (ex: 34191.79001 01043.510047 91020.150008 5 98450000350000)
+  boletoBarcodeRaw?: string; // Código de barras de 44 dígitos
+  boletoOurNumber?: string; // Nosso número
+  boletoBank?: string; // Nome ou código do banco (ex: Itaú, Banco do Brasil, Bradesco)
+  boletoGeneratedAt?: string;
+  boletoSentAt?: string;
+  clientDocument?: string; // CPF / CNPJ do sacado
 }
 
 export interface ProjectMilestone {

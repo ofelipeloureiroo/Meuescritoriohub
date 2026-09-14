@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Barcode,
   Check,
   Copy,
   ExternalLink,
@@ -12,6 +13,7 @@ import {
 import { ProjectInstallment, ProjectMilestone } from '../../types';
 import { useFinance } from '../../context/FinanceContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { generateBoletoCodes, POPULAR_BANKS } from '../../utils/boletoGenerator';
 
 interface NotifyClientModalProps {
   isOpen: boolean;
@@ -20,7 +22,7 @@ interface NotifyClientModalProps {
   milestone?: ProjectMilestone | null;
 }
 
-type MessageTemplateType = 'due_soon' | 'due_today' | 'overdue' | 'receipt' | 'milestone_done';
+type MessageTemplateType = 'due_soon' | 'due_today' | 'overdue' | 'receipt' | 'milestone_done' | 'boleto';
 
 export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
   isOpen,
@@ -80,7 +82,31 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
       const formattedValue = formatCurrency(installment.amount);
       const formattedDueDate = formatDate(installment.dueDate);
 
-      if (templateType === 'due_soon') {
+      if (templateType === 'boleto') {
+        const bank = POPULAR_BANKS[installment.boletoBank || '341'] || POPULAR_BANKS['341'];
+        const codes = generateBoletoCodes(
+          installment.boletoBank || '341',
+          installment.amount,
+          installment.dueDate,
+          `${installment.installmentNumber}`
+        );
+        const linha = installment.boletoBarcode || codes.linhaDigitavel;
+
+        setCustomMessage(
+          `Olá, *${clientName}*! Tudo bem? Aqui é do escritório de arquitetura de *${architectName}* 📐✨\n\n` +
+          `Segue o *Boleto Bancário* referente à *${installmentInfo}* do seu projeto *${projectTitle}*:\n\n` +
+          `📄 *DADOS DO BOLETO:*\n` +
+          `💰 *Valor:* ${formattedValue}\n` +
+          `📅 *Vencimento:* ${formattedDueDate}\n` +
+          `🏦 *Banco Emissor:* ${bank.fullName}\n\n` +
+          `📋 *LINHA DIGITÁVEL (Copie e Cole no App do seu Banco):*\n` +
+          `\`${linha}\`\n\n` +
+          `⚡ *Ou pague via PIX:*\n` +
+          `Chave PIX: ${pixKey}${pixType}\n` +
+          `Favorecido: ${architectName}\n\n` +
+          `Após efetuar o pagamento, basta nos enviar o comprovante por aqui. Muito obrigado!`
+        );
+      } else if (templateType === 'due_soon') {
         setCustomMessage(
           `Olá ${clientName}! Tudo bem? Aqui é a arquiteta ${architectName} 📐✨\n\n` +
           `Passando para lembrar que a ${installmentInfo} referente ao seu projeto "${projectTitle}" tem vencimento próximo no dia ${formattedDueDate}, no valor de ${formattedValue}.\n\n` +
@@ -171,7 +197,19 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
               <label className="block text-xs font-semibold text-[#d49454] uppercase tracking-wider mb-2">
                 Tipo de Lembrete
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTemplateType('boleto')}
+                  className={`px-2.5 py-2 rounded-xl text-xs font-bold text-center transition-all cursor-pointer border flex items-center justify-center gap-1 ${
+                    templateType === 'boleto'
+                      ? 'bg-[#c58a4b] text-black border-[#c58a4b] shadow'
+                      : 'bg-[#241e1b] text-amber-400 border-amber-500/30 hover:border-amber-500/60'
+                  }`}
+                >
+                  <Barcode className="w-3.5 h-3.5" />
+                  <span>Boleto</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setTemplateType('due_soon')}
@@ -181,7 +219,7 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
                       : 'bg-[#241e1b] text-[#a89c93] border-[#3d342f] hover:border-[#a89c93]/40'
                   }`}
                 >
-                  📅 A Vencer Logo
+                  📅 A Vencer
                 </button>
                 <button
                   type="button"
@@ -192,7 +230,7 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
                       : 'bg-[#241e1b] text-[#a89c93] border-[#3d342f] hover:border-[#a89c93]/40'
                   }`}
                 >
-                  ⏰ Vence Hoje
+                  ⏰ Hoje
                 </button>
                 <button
                   type="button"
@@ -203,7 +241,7 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
                       : 'bg-[#241e1b] text-[#a89c93] border-[#3d342f] hover:border-[#a89c93]/40'
                   }`}
                 >
-                  ⚠️ Parcela Vencida
+                  ⚠️ Vencida
                 </button>
                 <button
                   type="button"
@@ -214,7 +252,7 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
                       : 'bg-[#241e1b] text-[#a89c93] border-[#3d342f] hover:border-[#a89c93]/40'
                   }`}
                 >
-                  ✅ Confirmar Recibo
+                  ✅ Recibo
                 </button>
               </div>
             </div>

@@ -3,6 +3,7 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowRight,
+  Barcode,
   Bell,
   Building2,
   Calendar,
@@ -33,6 +34,7 @@ import { ReceiveInstallmentModal } from './ReceiveInstallmentModal';
 import { NewInstallmentModal } from './NewInstallmentModal';
 import { NewMilestoneModal } from './NewMilestoneModal';
 import { NewReportModal } from './NewReportModal';
+import { BoletoModal } from './BoletoModal';
 
 interface DeadlinesAndInstallmentsTabProps {
   onNavigateToProject?: (projectId: string) => void;
@@ -48,6 +50,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
     projectInstallments,
     projectMilestones,
     deleteProjectInstallment,
+    updateProjectInstallment,
     deleteProjectMilestone,
     toggleProjectMilestone,
     dueSoonInstallments,
@@ -75,6 +78,9 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
 
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
   const [selectedReceiveInstallment, setSelectedReceiveInstallment] = useState<ProjectInstallment | null>(null);
+
+  const [boletoModalOpen, setBoletoModalOpen] = useState(false);
+  const [selectedBoletoInstallment, setSelectedBoletoInstallment] = useState<ProjectInstallment | null>(null);
 
   const [newInstallmentModalOpen, setNewInstallmentModalOpen] = useState(false);
   const [newMilestoneModalOpen, setNewMilestoneModalOpen] = useState(false);
@@ -187,6 +193,11 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
   const handleOpenReceiveModal = (installment: ProjectInstallment) => {
     setSelectedReceiveInstallment(installment);
     setReceiveModalOpen(true);
+  };
+
+  const handleOpenBoletoModal = (installment: ProjectInstallment) => {
+    setSelectedBoletoInstallment(installment);
+    setBoletoModalOpen(true);
   };
 
   const handleOpenNewInstallment = (projectId?: string) => {
@@ -844,6 +855,13 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                                       </button>
                                     )}
                                     <button
+                                      onClick={() => handleOpenBoletoModal(inst)}
+                                      className="p-1.5 text-amber-400 hover:bg-amber-500/20 rounded-lg transition-colors cursor-pointer"
+                                      title="Gerar e Enviar Boleto Bancário"
+                                    >
+                                      <Barcode className="w-4 h-4" />
+                                    </button>
+                                    <button
                                       onClick={() => handleOpenNotifyInstallment(inst)}
                                       className="p-1.5 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors cursor-pointer"
                                       title="Avisar no WhatsApp"
@@ -1007,6 +1025,13 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                             Obs: {inst.notes}
                           </p>
                         )}
+
+                        {inst.boletoBarcode && (
+                          <div className="inline-flex items-center gap-1.5 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md mt-1">
+                            <Barcode className="w-3 h-3" />
+                            <span>Boleto Gerado • Linha: <span className="font-mono text-amber-200">{inst.boletoBarcode.substring(0, 16)}...</span></span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Right side: Amount & Action Buttons */}
@@ -1033,6 +1058,16 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                               <Check className="w-3.5 h-3.5" /> Pago
                             </span>
                           )}
+
+                          {/* Botão Gerar / Ver Boleto */}
+                          <button
+                            onClick={() => handleOpenBoletoModal(inst)}
+                            title="Gerar boleto e enviar para o cliente"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#241e1b] hover:bg-[#322924] text-amber-400 hover:text-amber-300 rounded-xl text-xs font-bold border border-amber-500/30 hover:border-amber-500/60 shadow-xs transition-all cursor-pointer active:scale-95"
+                          >
+                            <Barcode className="w-3.5 h-3.5" />
+                            <span>Boleto</span>
+                          </button>
 
                           <button
                             onClick={() => handleOpenNotifyInstallment(inst)}
@@ -1335,6 +1370,16 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
         onClose={() => setReceiveModalOpen(false)}
         installment={selectedReceiveInstallment}
         onOpenReceiptWhatsApp={handleOpenNotifyInstallment}
+      />
+
+      <BoletoModal
+        isOpen={boletoModalOpen}
+        onClose={() => {
+          setBoletoModalOpen(false);
+          setSelectedBoletoInstallment(null);
+        }}
+        installment={selectedBoletoInstallment}
+        onUpdateInstallment={updateProjectInstallment}
       />
 
       <NewInstallmentModal
