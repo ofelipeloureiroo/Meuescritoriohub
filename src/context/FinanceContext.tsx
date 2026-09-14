@@ -309,6 +309,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
     return {
       name: formattedName,
+      ownerName: '',
       title: '',
       photoUrl: user?.photoURL || '',
       location: '',
@@ -361,6 +362,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (isOwner) {
       return {
         name: 'LF Quadros & Decoração',
+        ownerName: 'Carlos Felipe',
         title: 'Arte, Decoração & Vendas',
         photoUrl: '',
         location: 'Brasil • Atendimento Nacional',

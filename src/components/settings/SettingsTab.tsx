@@ -233,6 +233,7 @@ export const SettingsTab: React.FC = () => {
 
   // Profile fields inside "Sistema"
   const [name, setName] = useState(architectProfile.name || '');
+  const [ownerName, setOwnerName] = useState(architectProfile.ownerName || '');
   const [titleText, setTitleText] = useState(architectProfile.title || '');
   const [photoUrl, setPhotoUrl] = useState(architectProfile.photoUrl || '');
   const [selectedNiche, setSelectedNiche] = useState<NicheType>(architectProfile.niche || 'arquitetura');
@@ -494,7 +495,7 @@ export const SettingsTab: React.FC = () => {
 
   // Profile Action Saves
   const handleSaveProfile = () => {
-    updateArchitectProfile({ name, title: titleText, niche: selectedNiche, themeColor: selectedTheme, bgTheme: selectedBgTheme, photoUrl });
+    updateArchitectProfile({ name, ownerName, title: titleText, niche: selectedNiche, themeColor: selectedTheme, bgTheme: selectedBgTheme, photoUrl });
     updateProfilePhoto(photoUrl);
     changeTheme(selectedTheme);
     changeBgTheme(selectedBgTheme);
@@ -775,6 +776,26 @@ export const SettingsTab: React.FC = () => {
                     }}
                     className="w-full px-3.5 py-2 rounded-xl bg-[#0e0c0b] border border-[#3d342f] text-[#fcf8f5] text-xs focus:outline-none focus:border-[var(--theme-primary)]"
                     placeholder="Ex: Studio Alvorada"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-[#a89c93] mb-1">Responsável pelo Escritório</label>
+                  <input
+                    type="text"
+                    value={ownerName}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setOwnerName(val);
+                      updateArchitectProfile({ ownerName: val });
+                    }}
+                    onBlur={() => {
+                      if (ownerName.trim()) {
+                        updateArchitectProfile({ ownerName: ownerName.trim() });
+                      }
+                    }}
+                    className="w-full px-3.5 py-2 rounded-xl bg-[#0e0c0b] border border-[#3d342f] text-[#fcf8f5] text-xs focus:outline-none focus:border-[var(--theme-primary)]"
+                    placeholder="Ex: Carlos Felipe"
                   />
                 </div>
 

@@ -435,6 +435,7 @@ export interface BrazilStateInfo {
 
 export interface ArchitectProfile {
   name: string;
+  ownerName?: string;
   title: string;
   photoUrl: string;
   location: string;

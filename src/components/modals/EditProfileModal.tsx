@@ -675,7 +675,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-[var(--theme-primary)] uppercase tracking-wider mb-1.5">
-                      Seu Nome / Nome do Escritório *
+                      Nome do Escritório / Empresa *
                     </label>
                     <input
                       type="text"
@@ -683,13 +683,29 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full bg-[#14110f] border border-[#3d342f] rounded-xl px-3.5 py-2.5 text-sm text-[#f5ede4] focus:outline-none focus:border-[var(--theme-primary)]"
-                      placeholder={`Ex: ${activeNicheConfig.label} / Seu Nome`}
+                      placeholder="Ex: Studio Alvorada"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-[var(--theme-primary)] uppercase tracking-wider mb-1.5">
-                      Título Profissional
+                      Responsável pelo Escritório *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.ownerName || ''}
+                      onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
+                      className="w-full bg-[#14110f] border border-[#3d342f] rounded-xl px-3.5 py-2.5 text-sm text-[#f5ede4] focus:outline-none focus:border-[var(--theme-primary)]"
+                      placeholder="Ex: Carlos Felipe"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--theme-primary)] uppercase tracking-wider mb-1.5">
+                      Título Profissional ou Slogan
                     </label>
                     <input
                       type="text"
@@ -699,9 +715,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                       placeholder={`Ex: ${activeNicheConfig.defaultTitle}`}
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-[var(--theme-primary)] uppercase tracking-wider mb-1.5">
                       Especialidade Principal
@@ -714,7 +728,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                       placeholder={`Ex: ${activeNicheConfig.defaultSpecialty}`}
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-[var(--theme-primary)] uppercase tracking-wider mb-1.5">
                       Localização (Cidade, UF)

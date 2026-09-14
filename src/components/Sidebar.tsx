@@ -321,8 +321,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 ONLINE
               </span>
             </div>
-            <span className="text-[10px] text-[#a89c93] tracking-wide mt-0.5 truncate max-w-[160px]">
-              {architectProfile?.title || 'Gestão & Negócios'}
+            <span 
+              className="text-[10px] text-[#a89c93] tracking-wide mt-0.5 truncate max-w-[160px]"
+              title={architectProfile?.ownerName ? `${architectProfile.ownerName}${architectProfile.title ? ` • ${architectProfile.title}` : ''}` : (architectProfile?.title || 'Gestão & Negócios')}
+            >
+              {architectProfile?.ownerName ? `${architectProfile.ownerName}${architectProfile.title ? ` • ${architectProfile.title}` : ''}` : (architectProfile?.title || 'Gestão & Negócios')}
             </span>
           </div>
         </button>

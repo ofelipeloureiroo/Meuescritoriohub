@@ -157,11 +157,12 @@ export const TopBar: React.FC<TopBarProps> = ({
     user.email.toLowerCase().includes('master_escritorio');
 
   const userName =
+    architectProfile?.ownerName?.trim() ||
     architectProfile?.name?.trim() ||
     profile?.companyName?.trim() ||
     profile?.name?.trim() ||
     user?.displayName?.trim() ||
-    (isOwner ? 'LF Quadros & Decoração' : 'Meu Escritório');
+    (isOwner ? 'Carlos Felipe' : 'Meu Escritório');
 
   const userPhoto = architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL || '';
 
