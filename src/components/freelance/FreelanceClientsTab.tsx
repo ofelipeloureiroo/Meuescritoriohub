@@ -127,13 +127,9 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
 
   // Selected client for detail view
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [selectedClientForPortal, setSelectedClientForPortal] = useState<Client | null>(null);
   const [isPortalModalOpen, setIsPortalModalOpen] = useState(false);
-
-  useEffect(() => {
-    setIsConfirmingDelete(false);
-  }, [viewingClient]);
 
   // Client Action Modal State
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
@@ -347,11 +343,15 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
 
     if (editingClient) {
       updateClient(editingClient.id, payload);
+      if (viewingClient && viewingClient.id === editingClient.id) {
+        setViewingClient((prev) => (prev ? { ...prev, ...payload } : null));
+      }
     } else {
       addClient(payload);
     }
 
     setIsClientModalOpen(false);
+    setEditingClient(null);
   };
 
   // Origin Channels List for Modal
@@ -366,35 +366,54 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
     { label: 'Outro', icon: Radio },
   ];
 
-  // CLIENT DETAIL VIEW (Matches Reference Screenshot)
-  if (viewingClient) {
-    const clientContracts = workContracts.filter(
-      (wc) => wc.clientId === viewingClient.id || wc.clientName.toLowerCase() === viewingClient.name.toLowerCase()
+  // Synchronized active viewing client
+  const activeViewingClient = useMemo(() => {
+    if (!viewingClient) return null;
+    return clients.find((c) => c.id === viewingClient.id) || viewingClient;
+  }, [clients, viewingClient]);
+
+  const clientContracts = useMemo(() => {
+    if (!activeViewingClient) return [];
+    return workContracts.filter(
+      (wc) => wc.clientId === activeViewingClient.id || wc.clientName.toLowerCase() === activeViewingClient.name.toLowerCase()
     );
-    const activeContracts = clientContracts.filter(
+  }, [workContracts, activeViewingClient]);
+
+  const activeContracts = useMemo(() => {
+    return clientContracts.filter(
       (wc) => wc.status !== 'completed' && wc.status !== 'cancelled'
     );
-    const completedContracts = clientContracts.filter(
+  }, [clientContracts]);
+
+  const completedContracts = useMemo(() => {
+    return clientContracts.filter(
       (wc) => wc.status === 'completed' || wc.status === 'signed' || wc.status === 'paid'
     );
-    const totalContractedAmount = clientContracts.reduce(
+  }, [clientContracts]);
+
+  const totalContractedAmount = useMemo(() => {
+    return clientContracts.reduce(
       (sum, c) => sum + (c.totalAmount || 0),
       0
     );
+  }, [clientContracts]);
 
-    const createdDateFormatted = viewingClient.createdAt
-      ? formatDate(viewingClient.createdAt)
-      : '—';
+  const createdDateFormatted = activeViewingClient?.createdAt
+    ? formatDate(activeViewingClient.createdAt)
+    : '—';
 
-    const createdMonthYearFormatted = viewingClient.createdAt
-      ? new Date(viewingClient.createdAt).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
-      : '—';
+  const createdMonthYearFormatted = activeViewingClient?.createdAt
+    ? new Date(activeViewingClient.createdAt).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
+    : '—';
 
+  // CLIENT DETAIL VIEW (Matches Reference Screenshot)
+  if (activeViewingClient) {
     return (
       <div className="space-y-6 pb-12 font-sans bg-[#fbf9f5] min-h-screen p-3 sm:p-6 rounded-3xl">
         {/* Breadcrumb Header */}
         <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 font-medium">
           <button
+            type="button"
             onClick={() => setViewingClient(null)}
             className="flex items-center gap-1.5 hover:text-zinc-900 transition-colors cursor-pointer"
           >
@@ -402,7 +421,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
             <span className="hover:underline">Clientes</span>
           </button>
           <span>/</span>
-          <span className="font-bold text-zinc-900">{viewingClient.name}</span>
+          <span className="font-bold text-zinc-900">{activeViewingClient.name}</span>
         </div>
 
         {/* Client Header Card Banner */}
@@ -410,24 +429,24 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-[#b5986e] text-white flex items-center justify-center font-extrabold text-2xl shadow-xs shrink-0">
-                {viewingClient.name ? viewingClient.name.charAt(0).toUpperCase() : 'C'}
+                {activeViewingClient.name ? activeViewingClient.name.charAt(0).toUpperCase() : 'C'}
               </div>
 
               <div className="space-y-1">
                 <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
-                  {viewingClient.name}
+                  {activeViewingClient.name}
                 </h2>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-600 border border-zinc-200 flex items-center gap-1">
                     <User className="w-3 h-3" />
-                    <span>{viewingClient.clientType === 'pj' ? 'Pessoa Jurídica' : 'Pessoa Física'}</span>
+                    <span>{activeViewingClient.clientType === 'pj' ? 'Pessoa Jurídica' : 'Pessoa Física'}</span>
                   </span>
                   <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
-                    {viewingClient.clientProfile || 'Médio'}
+                    {activeViewingClient.clientProfile || 'Médio'}
                   </span>
-                  {viewingClient.detailedOrigin && (
+                  {activeViewingClient.detailedOrigin && (
                     <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-zinc-100 text-zinc-600 border border-zinc-200">
-                      ↔ via {viewingClient.detailedOrigin}
+                      ↔ via {activeViewingClient.detailedOrigin}
                     </span>
                   )}
                 </div>
@@ -436,40 +455,21 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
 
             <div className="flex items-center gap-2 self-end sm:self-center">
               <button
-                onClick={() => handleOpenEditClient(viewingClient)}
-                className="p-2.5 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors cursor-pointer"
+                type="button"
+                onClick={() => handleOpenEditClient(activeViewingClient)}
+                className="p-2.5 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
                 title="Editar Cliente"
               >
                 <Edit2 className="w-4 h-4" />
               </button>
-              {isConfirmingDelete ? (
-                <div className="flex items-center gap-1.5 animate-in fade-in zoom-in duration-100">
-                  <button
-                    onClick={() => {
-                      deleteClient(viewingClient.id);
-                      setViewingClient(null);
-                      setIsConfirmingDelete(false);
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer whitespace-nowrap"
-                  >
-                    Confirmar Exclusão
-                  </button>
-                  <button
-                    onClick={() => setIsConfirmingDelete(false)}
-                    className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-xs font-medium transition-colors cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setIsConfirmingDelete(true)}
-                  className="p-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer"
-                  title="Excluir Cliente"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setClientToDelete(activeViewingClient)}
+                className="p-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                title="Excluir Cliente"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
@@ -549,8 +549,9 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
 
                 <div className="flex items-center gap-2">
                   <button
+                    type="button"
                     onClick={() => {
-                      setSelectedClientForPortal(viewingClient);
+                      setSelectedClientForPortal(activeViewingClient);
                       setIsPortalModalOpen(true);
                     }}
                     className="px-3.5 py-2 rounded-xl bg-[#faf6f0] border border-[#e5dcd0] text-[#a38253] hover:bg-[#f0eae1] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
@@ -560,6 +561,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                     <span>Radar do Cliente</span>
                   </button>
                   <button
+                    type="button"
                     onClick={() => setIsAssociateModalOpen(true)}
                     className="px-3.5 py-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
@@ -567,8 +569,9 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                     <span>Associar</span>
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
-                      setNewContractDefaultClientId(viewingClient.id);
+                      setNewContractDefaultClientId(activeViewingClient.id);
                       setIsNewContractModalOpen(true);
                     }}
                     className="px-3.5 py-2 rounded-xl bg-[#c8a97e] hover:bg-[#b8986d] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
@@ -591,8 +594,9 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                       Nenhum projeto ou contrato registrado para este cliente.
                     </p>
                     <button
+                      type="button"
                       onClick={() => {
-                        setNewContractDefaultClientId(viewingClient.id);
+                        setNewContractDefaultClientId(activeViewingClient.id);
                         setIsNewContractModalOpen(true);
                       }}
                       className="px-3.5 py-2 rounded-xl bg-[#faf6f0] text-[#8a6a3e] hover:bg-[#f3ebe0] font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
@@ -638,6 +642,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => setIsActionModalOpen(true)}
                   className="px-3.5 py-2 rounded-xl bg-[#c8a97e] hover:bg-[#b8986d] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
                 >
@@ -647,7 +652,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
               </div>
 
               {/* Actions List or Empty State */}
-              {(!viewingClient.clientActions || viewingClient.clientActions.length === 0) ? (
+              {(!activeViewingClient.clientActions || activeViewingClient.clientActions.length === 0) ? (
                 <div className="py-10 text-center space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-[#faf6f0] text-[#c8a97e] flex items-center justify-center mx-auto">
                     <Calendar className="w-6 h-6" />
@@ -657,6 +662,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                     Registre contatos administrativos, pedidos de documento ou retornos futuros
                   </p>
                   <button
+                    type="button"
                     onClick={() => setIsActionModalOpen(true)}
                     className="px-4 py-2.5 rounded-xl bg-[#faf6f0] text-[#8a6a3e] hover:bg-[#f3ebe0] font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1.5 mx-auto"
                   >
@@ -666,7 +672,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {viewingClient.clientActions.map((action) => (
+                  {activeViewingClient.clientActions.map((action) => (
                     <div
                       key={action.id}
                       className="p-3.5 rounded-2xl border border-zinc-100 bg-zinc-50/50 flex items-center justify-between"
@@ -676,11 +682,11 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                           type="checkbox"
                           checked={action.completed}
                           onChange={() => {
-                            const updatedActions = viewingClient.clientActions?.map((act) =>
+                            const updatedActions = activeViewingClient.clientActions?.map((act) =>
                               act.id === action.id ? { ...act, completed: !act.completed } : act
                             );
-                            updateClient(viewingClient.id, { clientActions: updatedActions });
-                            setViewingClient({ ...viewingClient, clientActions: updatedActions });
+                            updateClient(activeViewingClient.id, { clientActions: updatedActions });
+                            setViewingClient({ ...activeViewingClient, clientActions: updatedActions });
                           }}
                           className="w-4 h-4 rounded text-[#c8a97e] focus:ring-[#c8a97e] cursor-pointer"
                         />
@@ -693,10 +699,11 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                       </div>
 
                       <button
+                        type="button"
                         onClick={() => {
-                          const updatedActions = viewingClient.clientActions?.filter((act) => act.id !== action.id);
-                          updateClient(viewingClient.id, { clientActions: updatedActions });
-                          setViewingClient({ ...viewingClient, clientActions: updatedActions });
+                          const updatedActions = activeViewingClient.clientActions?.filter((act) => act.id !== action.id);
+                          updateClient(activeViewingClient.id, { clientActions: updatedActions });
+                          setViewingClient({ ...activeViewingClient, clientActions: updatedActions });
                         }}
                         className="p-1 text-zinc-400 hover:text-rose-500 cursor-pointer"
                       >
@@ -718,22 +725,22 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
               <div className="space-y-3.5 text-xs">
                 <div className="flex items-center gap-3 text-zinc-700">
                   <Phone className="w-4 h-4 text-zinc-400 shrink-0" />
-                  <span>{viewingClient.whatsapp || viewingClient.phone || '—'}</span>
+                  <span>{activeViewingClient.whatsapp || activeViewingClient.phone || '—'}</span>
                 </div>
 
                 <div className="flex items-center gap-3 text-zinc-700">
                   <MapPin className="w-4 h-4 text-zinc-400 shrink-0" />
-                  <span>{viewingClient.city || '—'}</span>
+                  <span>{activeViewingClient.city || '—'}</span>
                 </div>
 
                 <div className="flex items-center gap-3 text-zinc-700">
                   <Briefcase className="w-4 h-4 text-zinc-400 shrink-0" />
-                  <span>{viewingClient.profession || '—'}</span>
+                  <span>{activeViewingClient.profession || '—'}</span>
                 </div>
 
                 <div className="flex items-center gap-3 text-zinc-700">
                   <Home className="w-4 h-4 text-zinc-400 shrink-0" />
-                  <span>{viewingClient.address || '—'}</span>
+                  <span>{activeViewingClient.address || '—'}</span>
                 </div>
               </div>
             </div>
@@ -748,7 +755,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                     ↔ LEAD DE ORIGEM
                   </span>
                   <p className="font-bold text-zinc-900">
-                    {viewingClient.detailedOrigin || '—'}
+                    {activeViewingClient.detailedOrigin || '—'}
                   </p>
                 </div>
 
@@ -758,7 +765,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                     CANAL
                   </span>
                   <p className="font-semibold text-zinc-800">
-                    {viewingClient.originChannel || viewingClient.acquisitionChannel || '—'}
+                    {activeViewingClient.originChannel || activeViewingClient.acquisitionChannel || '—'}
                   </p>
                 </div>
 
@@ -768,7 +775,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                     RESPONSÁVEL
                   </span>
                   <p className="font-semibold text-zinc-800">
-                    {viewingClient.responsibleName || '—'}
+                    {activeViewingClient.responsibleName || '—'}
                   </p>
                 </div>
 
@@ -805,9 +812,9 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (!viewingClient) return;
+                  if (!activeViewingClient) return;
 
-                  const titleText = actionDescription.trim() || `${actionType} com ${viewingClient.name}`;
+                  const titleText = actionDescription.trim() || `${actionType} com ${activeViewingClient.name}`;
 
                   const newAct = {
                     id: `act-${Date.now()}`,
@@ -825,9 +832,9 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                     completed: false,
                   };
 
-                  const updatedActions = [...(viewingClient.clientActions || []), newAct];
-                  updateClient(viewingClient.id, { clientActions: updatedActions });
-                  setViewingClient({ ...viewingClient, clientActions: updatedActions });
+                  const updatedActions = [...(activeViewingClient.clientActions || []), newAct];
+                  updateClient(activeViewingClient.id, { clientActions: updatedActions });
+                  setViewingClient({ ...activeViewingClient, clientActions: updatedActions });
 
                   // Reset form
                   setActionArea('Comercial');
@@ -858,7 +865,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                         VINCULADO A
                       </span>
                       <p className="font-bold text-zinc-900 text-xs sm:text-sm">
-                        Cliente · {viewingClient?.name}
+                        Cliente · {activeViewingClient?.name}
                       </p>
                     </div>
                   </div>
@@ -934,7 +941,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                     <label className="text-xs font-bold text-zinc-700 block">DESCRIÇÃO DA AÇÃO</label>
                     <textarea
                       rows={3}
-                      placeholder={`Ex: com ${viewingClient?.name || ''}`}
+                      placeholder={`Ex: com ${activeViewingClient?.name || ''}`}
                       value={actionDescription}
                       onChange={(e) => setActionDescription(e.target.value)}
                       className="w-full px-4 py-2.5 rounded-2xl border border-zinc-200 text-xs font-medium text-zinc-800 focus:outline-none focus:border-[#c8a97e] bg-white resize-none"
@@ -1090,7 +1097,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
               <div className="space-y-3">
                 <p className="text-xs text-zinc-500">
                   Selecione um contrato existente para vincular ao cliente{' '}
-                  <strong className="text-zinc-800">{viewingClient.name}</strong>:
+                  <strong className="text-zinc-800">{activeViewingClient.name}</strong>:
                 </p>
 
                 <select
@@ -1108,17 +1115,19 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
 
                 <div className="pt-2 flex items-center justify-end gap-2">
                   <button
+                    type="button"
                     onClick={() => setIsAssociateModalOpen(false)}
                     className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 font-bold text-xs hover:bg-zinc-50 cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       if (associateSelectedContractId) {
                         setIsAssociateModalOpen(false);
                       } else {
-                        setNewContractDefaultClientId(viewingClient.id);
+                        setNewContractDefaultClientId(activeViewingClient.id);
                         setIsAssociateModalOpen(false);
                         setIsNewContractModalOpen(true);
                       }
@@ -1441,6 +1450,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                           <KeyRound className="w-4 h-4" />
                         </button>
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleOpenEditClient(client);
@@ -1449,6 +1459,17 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                           title="Editar"
                         >
                           <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setClientToDelete(client);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-rose-50 text-zinc-400 hover:text-rose-600 transition-colors cursor-pointer"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                         <ChevronRight className="w-5 h-5" />
                       </div>
@@ -2034,6 +2055,61 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
             setSigningContractTarget(null);
           }}
         />
+      )}
+
+      {/* Confirmation Modal for Deleting Client */}
+      {clientToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-zinc-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-zinc-900">Excluir Cliente</h3>
+                <p className="text-xs text-zinc-500">Esta ação é permanente e removerá o cliente.</p>
+              </div>
+            </div>
+
+            <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-200/80 space-y-1.5 text-xs">
+              <p className="font-bold text-zinc-900 text-sm">{clientToDelete.name}</p>
+              <p className="text-zinc-500">
+                Email: <strong className="text-zinc-800">{clientToDelete.email || 'Não informado'}</strong>
+              </p>
+              <p className="text-zinc-500">
+                WhatsApp / Tel: <strong className="text-zinc-800">{clientToDelete.whatsapp || clientToDelete.phone || 'Não informado'}</strong>
+              </p>
+              {clientToDelete.city && (
+                <p className="text-zinc-500">
+                  Cidade: <strong className="text-zinc-800">{clientToDelete.city}{clientToDelete.state ? `, ${clientToDelete.state}` : ''}</strong>
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100">
+              <button
+                type="button"
+                onClick={() => setClientToDelete(null)}
+                className="px-4 py-2.5 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteClient(clientToDelete.id);
+                  if (viewingClient?.id === clientToDelete.id) {
+                    setViewingClient(null);
+                  }
+                  setClientToDelete(null);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs"
+              >
+                Excluir Cliente
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Confirmation Modal for Deleting Contract */}
