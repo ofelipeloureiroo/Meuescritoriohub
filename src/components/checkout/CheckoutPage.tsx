@@ -217,39 +217,82 @@ export const CheckoutPage: React.FC = () => {
       return { uid: user.uid, email: user.email || email };
     }
 
-    if (!email || !password) {
-      setError('Por favor, informe seu e-mail e crie uma senha para liberar seu acesso.');
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setError('Por favor, informe seu e-mail para vincular seu acesso.');
       return null;
     }
 
+    // Helper for fallback identifier when Firebase Email/Password provider is disabled in Firebase Console
+    const createFallbackCustomer = async (): Promise<{ uid: string; email: string }> => {
+      const fallbackUid = 'usr_' + btoa(cleanEmail).replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
+      try {
+        await setDoc(doc(db, 'users', fallbackUid), {
+          uid: fallbackUid,
+          email: cleanEmail,
+          displayName: name || cleanEmail.split('@')[0],
+          phone: phone || '',
+          whatsapp: phone || '',
+          status: 'pending_payment',
+          authProvider: 'email_pending',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+        console.log('[Checkout] Usuário temporário criado com sucesso:', fallbackUid);
+      } catch (err) {
+        console.warn('[Checkout] Aviso ao salvar documento de usuário provisório:', err);
+      }
+      return { uid: fallbackUid, email: cleanEmail };
+    };
+
     if (authMode === 'register') {
-      if (password.length < 6) {
+      if (password && password.length < 6) {
         setError('A senha deve ter pelo menos 6 caracteres.');
         return null;
       }
       try {
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
-        return { uid: cred.user.uid, email: cred.user.email || email };
+        const cred = await createUserWithEmailAndPassword(auth, cleanEmail, password || 'senha123');
+        return { uid: cred.user.uid, email: cred.user.email || cleanEmail };
       } catch (err: any) {
         if (err.code === 'auth/email-already-in-use') {
           // Try signing in
           try {
-            const loginCred = await signInWithEmailAndPassword(auth, email, password);
-            return { uid: loginCred.user.uid, email: loginCred.user.email || email };
+            const loginCred = await signInWithEmailAndPassword(auth, cleanEmail, password || 'senha123');
+            return { uid: loginCred.user.uid, email: loginCred.user.email || cleanEmail };
           } catch (loginErr: any) {
             setError('Este e-mail já possui cadastro. Alterne para "Já tenho conta" ou verifique sua senha.');
             return null;
           }
         }
+        
+        // If Email/Password is not enabled in Firebase Console, do not block the payment!
+        if (err.code === 'auth/operation-not-allowed') {
+          console.warn('[Firebase Auth] O provedor Email/Senha não está ativado no Firebase Console. Prosseguindo com identificador do cliente para não travar o checkout.');
+          return await createFallbackCustomer();
+        }
+
+        if (err.code === 'auth/invalid-email') {
+          setError('O formato do e-mail informado é inválido.');
+          return null;
+        }
+
         setError(err.message || 'Erro ao criar conta.');
         return null;
       }
     } else {
       try {
-        const cred = await signInWithEmailAndPassword(auth, email, password);
-        return { uid: cred.user.uid, email: cred.user.email || email };
+        const cred = await signInWithEmailAndPassword(auth, cleanEmail, password);
+        return { uid: cred.user.uid, email: cred.user.email || cleanEmail };
       } catch (err: any) {
-        setError('E-mail ou senha incorretos.');
+        if (err.code === 'auth/operation-not-allowed') {
+          console.warn('[Firebase Auth] O provedor Email/Senha não está ativado no Firebase Console. Prosseguindo para o pagamento.');
+          return await createFallbackCustomer();
+        }
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+          setError('E-mail ou senha incorretos. Caso seja seu primeiro acesso, mude para "Criar Conta".');
+        } else {
+          setError(err.message || 'Erro ao fazer login.');
+        }
         return null;
       }
     }

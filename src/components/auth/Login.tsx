@@ -275,6 +275,8 @@ export const Login: React.FC = () => {
         setError('Este e-mail já está cadastrado. Digite sua senha correta para entrar.');
       } else if (err.code === 'auth/weak-password') {
         setError('A senha deve conter no mínimo 6 caracteres.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('O login por E-mail/Senha precisa ser ativado no Firebase Console (Authentication > Sign-in method > E-mail/Senha). Você também pode entrar usando o botão "Entrar com o Google".');
       } else {
         setError(err.message || 'Erro ao realizar login por e-mail.');
       }
