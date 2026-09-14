@@ -314,8 +314,8 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
       setMpError('CPF (11 dígitos) ou CNPJ (14 dígitos) válido do cliente é obrigatório.');
       return;
     }
-    if (!boletoAmount || boletoAmount <= 0) {
-      setMpError('O valor do boleto deve ser maior que zero.');
+    if (!boletoAmount || boletoAmount < 5) {
+      setMpError('O valor mínimo para emitir um Boleto registrado via Mercado Pago é de R$ 5,00 (valores menores são recusados pelo processador).');
       return;
     }
 
@@ -986,11 +986,15 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                       <input
                         type="number"
                         step="0.01"
+                        min="5"
                         required
                         value={boletoAmount}
                         onChange={(e) => setBoletoAmount(parseFloat(e.target.value) || 0)}
                         className="w-full bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs font-mono rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
                       />
+                      <span className="text-[10px] text-[#a89c93] block mt-1">
+                        Mínimo R$ 5,00 para boleto
+                      </span>
                     </div>
 
                     <div>
