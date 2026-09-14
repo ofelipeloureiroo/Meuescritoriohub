@@ -72,6 +72,8 @@ export interface BankAccount {
   accountDigit?: string;
   wallet?: string;
   bankCode?: string;
+  beneficiaryName?: string;
+  beneficiaryDocument?: string;
   isDefault?: boolean;
 }
 

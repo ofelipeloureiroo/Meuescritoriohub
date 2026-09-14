@@ -266,6 +266,28 @@ function hashString(str: string): number {
 }
 
 /**
+ * Formats CPF (000.000.000-00) or CNPJ (00.000.000/0001-00)
+ */
+export function formatCpfCnpj(value?: string): string {
+  if (!value) return '';
+  const digits = value.replace(/\D/g, '');
+  if (digits.length <= 11) {
+    return digits
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+      .substring(0, 14);
+  } else {
+    return digits
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
+      .substring(0, 18);
+  }
+}
+
+/**
  * Builds formatted WhatsApp notification message with boleto details
  */
 export function buildBoletoWhatsAppMessage(params: {
@@ -280,6 +302,8 @@ export function buildBoletoWhatsAppMessage(params: {
   bankName: string;
   agency?: string;
   accountNumber?: string;
+  beneficiaryName?: string;
+  beneficiaryDoc?: string;
   pixKey?: string;
   architectName: string;
 }) {
@@ -295,6 +319,8 @@ export function buildBoletoWhatsAppMessage(params: {
     bankName,
     agency,
     accountNumber,
+    beneficiaryName,
+    beneficiaryDoc,
     pixKey,
     architectName,
   } = params;
@@ -308,10 +334,13 @@ export function buildBoletoWhatsAppMessage(params: {
     ? dueDate.split('-').reverse().join('/')
     : 'No vencimento';
 
+  const beneficiaryDisplay = beneficiaryName || architectName;
+
   return (
     `Olá, *${clientName}*! Tudo bem? Aqui é do escritório de arquitetura de *${architectName}* 📐✨\n\n` +
     `Segue o *Boleto Bancário* referente à parcela *${installmentNumber}/${totalInstallments}* (${description}) do seu projeto *${projectTitle}*:\n\n` +
     `📄 *DADOS DO BOLETO:*\n` +
+    `👤 *Beneficiário:* ${beneficiaryDisplay}${beneficiaryDoc ? ` (CPF/CNPJ: ${beneficiaryDoc})` : ''}\n` +
     `💰 *Valor:* ${formattedAmount}\n` +
     `📅 *Vencimento:* ${formattedDate}\n` +
     `🏦 *Banco Emissor:* ${bankName}\n` +
@@ -320,7 +349,7 @@ export function buildBoletoWhatsAppMessage(params: {
     `📋 *LINHA DIGITÁVEL (Copie e Cole no App do seu Banco):*\n` +
     `\`${linhaDigitavel}\`\n\n` +
     (pixKey
-      ? `⚡ *Ou se preferir pagar via PIX:*\nChave PIX: ${pixKey}\nFavorecido: ${architectName}\n\n`
+      ? `⚡ *Ou se preferir pagar via PIX:*\nChave PIX: ${pixKey}\nFavorecido: ${beneficiaryDisplay}\n\n`
       : '') +
     `Assim que efetuar o pagamento, basta nos enviar o comprovante por aqui para darmos a baixa no sistema.\n\n` +
     `Qualquer dúvida, estamos à sua total disposição!`

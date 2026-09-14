@@ -133,6 +133,19 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
   const boletoData = useMemo(() => {
     if (!installment) return null;
 
+    const effectiveBeneficiary =
+      selectedAccount?.beneficiaryName?.trim() ||
+      architectProfile?.name ||
+      profile?.companyName ||
+      user?.displayName ||
+      'Laíne Paula Arquitetura';
+
+    const effectiveBeneficiaryDoc =
+      selectedAccount?.beneficiaryDocument?.trim() ||
+      architectProfile?.cnpj ||
+      architectProfile?.cpf ||
+      '';
+
     const codes = generateBoletoCodes(
       effectiveBankCode,
       installment.amount,
@@ -143,18 +156,32 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
       effectiveWallet
     );
 
+    // If the installment previously saved a boleto FOR THIS EXACT ACCOUNT, preserve it;
+    // otherwise, generate freshly for the newly selected bank account!
+    const isSameAccountAsSaved =
+      Boolean(installment.boletoBarcode) &&
+      installment.boletoBankAccountId === selectedAccountId &&
+      installment.boletoBank === effectiveBankCode;
+
+    const linhaDigitavel = isSameAccountAsSaved && installment.boletoBarcode
+      ? installment.boletoBarcode
+      : codes.linhaDigitavel;
+
+    const barcodeRaw = isSameAccountAsSaved && installment.boletoBarcodeRaw
+      ? installment.boletoBarcodeRaw
+      : codes.barcodeRaw;
+
+    const nossoNumero = isSameAccountAsSaved && installment.boletoOurNumber
+      ? installment.boletoOurNumber
+      : codes.nossoNumero;
+
     return {
-      linhaDigitavel: installment.boletoBarcode || codes.linhaDigitavel,
-      barcodeRaw: installment.boletoBarcodeRaw || codes.barcodeRaw,
-      nossoNumero: installment.boletoOurNumber || codes.nossoNumero,
+      linhaDigitavel,
+      barcodeRaw,
+      nossoNumero,
       fatorVencimento: codes.fatorVencimento,
-      beneficiario:
-        architectProfile?.name ||
-        profile?.companyName ||
-        user?.displayName ||
-        'Escritório de Arquitetura',
-      beneficiarioDoc:
-        architectProfile?.cnpj || architectProfile?.cpf || '12.345.678/0001-90',
+      beneficiario: effectiveBeneficiary,
+      beneficiarioDoc: effectiveBeneficiaryDoc,
       beneficiarioEndereco: architectProfile?.city
         ? `${architectProfile.city} - ${architectProfile.state || 'Brasil'}`
         : 'Brasil',
@@ -165,6 +192,8 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
     };
   }, [
     installment,
+    selectedAccount,
+    selectedAccountId,
     effectiveBankCode,
     effectiveAgency,
     effectiveAccountNumber,
@@ -193,6 +222,8 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
         bankName: bankDisplayName,
         agency: effectiveAgency,
         accountNumber: effectiveAccountNumber,
+        beneficiaryName: boletoData.beneficiario,
+        beneficiaryDoc: boletoData.beneficiarioDoc,
         pixKey: architectProfile?.pixKey,
         architectName:
           architectProfile?.name || profile?.companyName || user?.displayName || 'Laíne Paula',
@@ -223,6 +254,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
         boletoOurNumber: boletoData.nossoNumero,
         boletoBank: effectiveBankCode,
         boletoBankAccountId: selectedAccountId || undefined,
+        bankAccountId: selectedAccountId || installment.bankAccountId,
         boletoGeneratedAt: new Date().toISOString(),
         clientDocument: clientDocument || undefined,
       });
@@ -337,11 +369,15 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
             >
               {bankAccounts.length > 0 && (
                 <optgroup label="Minhas Contas Bancárias Cadastradas">
-                  {bankAccounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.name} {acc.agency && acc.accountNumber ? `(Ag: ${acc.agency} • CC: ${acc.accountNumber})` : '(Sem agência/conta)'}
-                    </option>
-                  ))}
+                  {bankAccounts.map((acc) => {
+                    const docText = acc.beneficiaryDocument ? `CPF/CNPJ: ${acc.beneficiaryDocument}` : 'Sem CPF/CNPJ';
+                    const bankData = acc.agency && acc.accountNumber ? `Ag: ${acc.agency} • CC: ${acc.accountNumber}` : 'Sem Ag/CC';
+                    return (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} — {docText} • {bankData}
+                      </option>
+                    );
+                  })}
                 </optgroup>
               )}
               <optgroup label="Bancos Emissores (Padrão)">
@@ -483,13 +519,27 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
           </div>
 
           {/* Account Status Notice Banner */}
-          {selectedAccount && !selectedAccount.agency && !selectedAccount.accountNumber && (
+          {selectedAccount && (!selectedAccount.beneficiaryDocument || !selectedAccount.agency || !selectedAccount.accountNumber) && (
             <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 flex-wrap animate-in fade-in">
               <div className="flex items-center gap-2.5 text-xs text-amber-300">
                 <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>
-                  A conta <strong>"{selectedAccount.name}"</strong> não possui <strong>Agência e Conta Corrente</strong> cadastradas.
-                </span>
+                <div>
+                  <span>
+                    A conta <strong>"{selectedAccount.name}"</strong> precisa de dados para emissão com beneficiário certo:
+                  </span>
+                  <div className="flex items-center gap-2 mt-1 text-[11px] text-amber-200/90 flex-wrap">
+                    {!selectedAccount.beneficiaryDocument && (
+                      <span className="bg-amber-500/20 px-2 py-0.5 rounded font-semibold text-amber-300">
+                        • Falta CPF/CNPJ do Beneficiário
+                      </span>
+                    )}
+                    {(!selectedAccount.agency || !selectedAccount.accountNumber) && (
+                      <span className="bg-amber-500/20 px-2 py-0.5 rounded font-semibold text-amber-300">
+                        • Falta Agência e Conta
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
               <button
                 type="button"
@@ -500,17 +550,17 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                 className="px-3.5 py-1.5 bg-[#c58a4b] hover:bg-[#b0783d] text-black text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
               >
                 <Building2 className="w-3.5 h-3.5" />
-                <span>Cadastrar Agência e Conta</span>
+                <span>Cadastrar CPF/CNPJ e Conta</span>
               </button>
             </div>
           )}
 
-          {selectedAccount && selectedAccount.agency && selectedAccount.accountNumber && (
+          {selectedAccount && selectedAccount.beneficiaryDocument && selectedAccount.agency && selectedAccount.accountNumber && (
             <div className="px-3.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-2 text-xs text-emerald-300 animate-in fade-in">
               <div className="flex items-center gap-2 flex-wrap">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>
-                  Recebimento vinculado à conta: <strong className="text-white">{selectedAccount.name}</strong> • Agência: <strong className="font-mono text-white">{selectedAccount.agency}</strong> • Conta: <strong className="font-mono text-white">{selectedAccount.accountNumber}</strong> {selectedAccount.wallet ? `• Carteira: ${selectedAccount.wallet}` : ''}
+                  Boleto gerado para a conta: <strong className="text-white">{selectedAccount.name}</strong> • Beneficiário: <strong className="text-white">{boletoData.beneficiario}</strong> (CPF/CNPJ: <strong className="font-mono text-white">{boletoData.beneficiarioDoc}</strong>) • Agência: <strong className="font-mono text-white">{selectedAccount.agency}</strong> • Conta: <strong className="font-mono text-white">{selectedAccount.accountNumber}</strong> {selectedAccount.wallet ? `• Cart: ${selectedAccount.wallet}` : ''}
                 </span>
               </div>
               <button

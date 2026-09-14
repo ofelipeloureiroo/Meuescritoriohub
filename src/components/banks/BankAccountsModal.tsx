@@ -15,7 +15,7 @@ import {
 import { BankAccount } from '../../types';
 import { useFinance } from '../../context/FinanceContext';
 import { formatCurrency } from '../../utils/formatters';
-import { POPULAR_BANKS, getBankInfo } from '../../utils/boletoGenerator';
+import { POPULAR_BANKS, getBankInfo, formatCpfCnpj } from '../../utils/boletoGenerator';
 
 interface BankAccountsModalProps {
   isOpen: boolean;
@@ -41,7 +41,14 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
   onOpenTransferModal,
   initialEditingAccountId,
 }) => {
-  const { bankAccounts, addBankAccount, updateBankAccount, deleteBankAccount } = useFinance();
+  const {
+    bankAccounts,
+    addBankAccount,
+    updateBankAccount,
+    deleteBankAccount,
+    architectProfile,
+    profile,
+  } = useFinance();
 
   // Mode: 'list' | 'add' | 'edit'
   const [mode, setMode] = useState<'list' | 'add' | 'edit'>('list');
@@ -54,6 +61,8 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
     agency: '',
     accountNumber: '',
     wallet: '109',
+    beneficiaryName: '',
+    beneficiaryDocument: '',
     balance: '0',
     type: 'bank' as 'bank' | 'fintech' | 'investment' | 'physical_cash',
     color: '#ec7000',
@@ -85,6 +94,8 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
       agency: '',
       accountNumber: '',
       wallet: '109',
+      beneficiaryName: architectProfile?.name || profile?.companyName || '',
+      beneficiaryDocument: formatCpfCnpj(architectProfile?.cnpj || architectProfile?.cpf || ''),
       balance: '0',
       type: 'bank',
       color: '#ec7000',
@@ -101,6 +112,10 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
       agency: acc.agency || '',
       accountNumber: acc.accountNumber || '',
       wallet: acc.wallet || matchedBank.walletDefault || '109',
+      beneficiaryName:
+        acc.beneficiaryName || architectProfile?.name || profile?.companyName || '',
+      beneficiaryDocument:
+        acc.beneficiaryDocument || formatCpfCnpj(architectProfile?.cnpj || architectProfile?.cpf || ''),
       balance: String(acc.balance || 0),
       type: acc.type || 'bank',
       color: acc.color || matchedBank.color || '#c58a4b',
@@ -136,6 +151,8 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
         agency: formData.agency.trim() || undefined,
         accountNumber: formData.accountNumber.trim() || undefined,
         wallet: formData.wallet.trim() || undefined,
+        beneficiaryName: formData.beneficiaryName.trim() || undefined,
+        beneficiaryDocument: formData.beneficiaryDocument.trim() || undefined,
         balance: numBalance,
         type: formData.type,
         color: formData.color,
@@ -148,6 +165,8 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
         agency: formData.agency.trim() || undefined,
         accountNumber: formData.accountNumber.trim() || undefined,
         wallet: formData.wallet.trim() || undefined,
+        beneficiaryName: formData.beneficiaryName.trim() || undefined,
+        beneficiaryDocument: formData.beneficiaryDocument.trim() || undefined,
         balance: numBalance,
         type: formData.type,
         color: formData.color,
@@ -236,31 +255,52 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
                             </span>
                           </div>
 
-                          {/* Boleto Banking Details (Agência / Conta) */}
+                          {/* Boleto Banking Details (Agência / Conta / CPF/CNPJ) */}
                           {acc.type !== 'physical_cash' && (
-                            <div className="mt-1">
-                              {hasBoletoData ? (
-                                <div className="flex items-center gap-2 flex-wrap">
+                            <div className="mt-1 space-y-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {hasBoletoData ? (
                                   <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md font-medium">
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                                    Agência: {acc.agency} • Conta: {acc.accountNumber}
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                                    Ag: {acc.agency} • CC: {acc.accountNumber}
                                   </span>
-                                  {acc.wallet && (
-                                    <span className="text-[10px] font-mono text-[#a89c93] bg-[#1a1614] px-1.5 py-0.5 rounded border border-[#3d342f]">
-                                      Cart. {acc.wallet}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="inline-flex items-center gap-1.5 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
-                                  <AlertCircle className="w-3 h-3 text-amber-400" />
-                                  <span>Sem agência/conta para boleto</span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                                    <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
+                                    Sem agência/conta
+                                  </span>
+                                )}
+
+                                {acc.beneficiaryDocument ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md font-medium">
+                                    CPF/CNPJ: {acc.beneficiaryDocument}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                                    <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
+                                    Sem CPF/CNPJ
+                                  </span>
+                                )}
+
+                                {acc.wallet && (
+                                  <span className="text-[10px] font-mono text-[#a89c93] bg-[#1a1614] px-1.5 py-0.5 rounded border border-[#3d342f]">
+                                    Cart. {acc.wallet}
+                                  </span>
+                                )}
+
+                                {(!hasBoletoData || !acc.beneficiaryDocument) && (
                                   <button
                                     onClick={() => startEdit(acc)}
-                                    className="text-[#d49454] underline hover:text-[#fcf8f5] cursor-pointer ml-1 font-bold"
+                                    className="text-[#d49454] text-[10px] underline hover:text-[#fcf8f5] cursor-pointer ml-1 font-bold"
                                   >
-                                    Preencher
+                                    Completar p/ Boleto
                                   </button>
+                                )}
+                              </div>
+
+                              {acc.beneficiaryName && (
+                                <div className="text-[10px] text-[#a89c93]">
+                                  Beneficiário: <span className="text-[#fcf8f5] font-medium">{acc.beneficiaryName}</span>
                                 </div>
                               )}
                             </div>
@@ -363,19 +403,89 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
               </div>
             </div>
 
-            {/* Destaque: Dados de Recebimento do Boleto */}
-            <div className="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/25 space-y-3">
-              <div className="flex items-center justify-between">
+            {/* Destaque: Dados de Recebimento do Boleto e Beneficiário */}
+            <div className="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/25 space-y-3.5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5 text-[#c58a4b]" />
-                  Dados de Recebimento de Boleto Bancário
+                  Dados do Beneficiário para Emissão de Boleto
                 </span>
-                <span className="text-[10px] text-amber-400/80 bg-amber-500/15 px-2 py-0.5 rounded-md font-medium">
-                  Usado no Boleto
+                <span className="text-[10px] text-amber-400/90 bg-amber-500/15 border border-amber-500/20 px-2 py-0.5 rounded-md font-medium">
+                  Boleto & Ficha de Compensação
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* CPF / CNPJ do Beneficiário e Nome/Razão Social */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-semibold text-amber-200">
+                      CPF ou CNPJ do Beneficiário *
+                    </label>
+                    {(architectProfile?.cnpj || architectProfile?.cpf) && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            beneficiaryDocument: formatCpfCnpj(architectProfile?.cnpj || architectProfile?.cpf || ''),
+                          }))
+                        }
+                        className="text-[10px] text-[#c58a4b] hover:underline cursor-pointer"
+                      >
+                        Usar do perfil
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="000.000.000-00 ou 00.000.000/0001-00"
+                    value={formData.beneficiaryDocument}
+                    onChange={(e) =>
+                      setFormData({ ...formData, beneficiaryDocument: formatCpfCnpj(e.target.value) })
+                    }
+                    className="w-full bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] font-mono text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
+                  />
+                  <span className="text-[10px] text-[#a89c93] mt-0.5 block">
+                    Documento do titular da conta impresso no boleto.
+                  </span>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-semibold text-[#c4b5a5]">
+                      Nome / Razão Social do Beneficiário
+                    </label>
+                    {(architectProfile?.name || profile?.companyName) && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            beneficiaryName: architectProfile?.name || profile?.companyName || '',
+                          }))
+                        }
+                        className="text-[10px] text-[#c58a4b] hover:underline cursor-pointer"
+                      >
+                        Usar do perfil
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="ex: Laíne Paula Arquitetura ou Nome do Titular"
+                    value={formData.beneficiaryName}
+                    onChange={(e) => setFormData({ ...formData, beneficiaryName: e.target.value })}
+                    className="w-full bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
+                  />
+                  <span className="text-[10px] text-[#a89c93] mt-0.5 block">
+                    Nome ou Razão Social titular da conta bancária.
+                  </span>
+                </div>
+              </div>
+
+              {/* Agência, Conta Corrente e Carteira */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                 <div>
                   <label className="block text-[11px] font-medium text-[#c4b5a5] mb-1">
                     Agência *
@@ -416,7 +526,7 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
                 </div>
               </div>
               <p className="text-[10px] text-[#a89c93]">
-                Esses dados serão impressos na <strong>Ficha de Compensação</strong> e utilizados para calcular a <strong>Linha Digitável</strong> dos boletos emitidos por esta conta.
+                Esses dados definem o <strong>beneficiário oficial (Nome e CPF/CNPJ)</strong> e são utilizados para calcular a <strong>Agência/Código Beneficiário</strong> e a <strong>Linha Digitável</strong> dos boletos gerados para esta conta.
               </p>
             </div>
 
