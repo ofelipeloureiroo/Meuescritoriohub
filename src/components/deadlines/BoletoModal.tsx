@@ -359,6 +359,14 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
       // Custom access token configured in officeSettings, if any
       const customAccessToken = officeSettings?.mercadopagoConfig?.accessToken;
 
+      const rawDoc = payerDoc.replace(/\D/g, '');
+      let rawZip = payerZip.replace(/\D/g, '');
+      if (rawZip.length > 0 && rawZip.length < 8) {
+        rawZip = rawZip.padEnd(8, '0');
+      }
+
+      const cleanState = (payerState || 'RJ').trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+
       const response = await createMercadoPagoBoleto({
         amount: boletoAmount || installment.amount,
         description: boletoDescription || `Honorários: ${installment.projectTitle} - Parcela ${installment.installmentNumber}/${installment.totalInstallments}`,
@@ -366,15 +374,15 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
         payer: {
           name: payerName.trim() || installment.clientName,
           email: payerEmail.trim(),
-          docType: payerDoc.replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF',
-          docNumber: payerDoc.replace(/\D/g, ''),
+          docType: rawDoc.length > 11 ? 'CNPJ' : 'CPF',
+          docNumber: rawDoc,
           address: {
-            zipCode: payerZip.replace(/\D/g, '') || '01310100',
+            zipCode: rawZip || '01310100',
             street: payerStreet.trim() || 'Avenida Principal',
             number: payerNumber.trim() || '100',
             neighborhood: payerNeighborhood.trim() || 'Centro',
-            city: payerCity.trim() || 'São Paulo',
-            state: payerState.trim() || 'SP',
+            city: payerCity.trim() || 'Rio de Janeiro',
+            state: cleanState || 'RJ',
           },
         },
         externalReference: `inst-${installment.id}`,
