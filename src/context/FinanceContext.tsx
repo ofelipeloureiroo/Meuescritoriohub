@@ -2729,7 +2729,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const resetTeamData = () => {
     const ownerAdminMember: TeamMember = {
       id: 'member_owner',
-      name: architectProfile.name || user?.displayName || 'LF Quadros & Decoração',
+      name: architectProfile.ownerName || architectProfile.name || user?.displayName || 'LF Quadros & Decoração',
       email: user?.email || 'lfquadrosdecorativos@gmail.com',
       role: 'admin',
       roleTitle: 'Administrador / Gestor',

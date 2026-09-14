@@ -115,7 +115,7 @@ export const TeamTab: React.FC = () => {
   useEffect(() => {
     const defaultOwner: TeamMember = {
       id: user?.uid || 'member_owner',
-      name: architectProfile?.name || profile?.companyName || user?.displayName || 'LF Quadros & Decoração',
+      name: architectProfile?.ownerName || architectProfile?.name || profile?.companyName || user?.displayName || 'LF Quadros & Decoração',
       email: user?.email || 'lfquadrosdecorativos@gmail.com',
       role: 'admin',
       roleTitle: 'Administrador / Gestor',
@@ -247,7 +247,7 @@ export const TeamTab: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, [profile?.collaborators, user?.uid, user?.email, architectProfile?.name, profile?.companyName]);
+  }, [profile?.collaborators, user?.uid, user?.email, architectProfile?.ownerName, architectProfile?.name, profile?.companyName]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);

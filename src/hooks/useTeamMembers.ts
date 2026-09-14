@@ -20,7 +20,11 @@ export function useTeamMembers(): {
 
   const getMembersFromStorage = (): TeamMember[] => {
     const defaultOwnerName =
-      architectProfile?.name || profile?.companyName || user?.displayName || 'LF Quadros & Decoração';
+      architectProfile?.ownerName ||
+      architectProfile?.name ||
+      profile?.companyName ||
+      user?.displayName ||
+      'LF Quadros & Decoração';
     const defaultOwnerEmail = user?.email || 'lfquadrosdecorativos@gmail.com';
 
     const defaultOwner: TeamMember = {
@@ -94,7 +98,7 @@ export function useTeamMembers(): {
       window.removeEventListener('team_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
-  }, [architectProfile?.name, profile?.companyName, user?.displayName, user?.email]);
+  }, [architectProfile?.ownerName, architectProfile?.name, profile?.companyName, user?.displayName, user?.email]);
 
   const teamMembers = useMemo<SimpleTeamMember[]>(() => {
     const list: SimpleTeamMember[] = [];
