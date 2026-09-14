@@ -16,7 +16,10 @@ import {
   Smartphone,
   Send,
   Zap,
-  HelpCircle
+  HelpCircle,
+  Settings,
+  Key,
+  ExternalLink
 } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -35,7 +38,13 @@ import {
   createMercadoPagoPix,
   fetchMercadoPagoStatus,
   isMercadoPagoScriptLoaded,
-  PixPaymentResponse
+  PixPaymentResponse,
+  PaymentMethodItem,
+  fetchPaymentMethods,
+  saveMercadoPagoConfig,
+  processTransparentPayment,
+  createCardTokenWithSDK,
+  detectCardBrand
 } from '../../lib/mercadopago';
 
 export const CheckoutPage: React.FC = () => {
@@ -57,12 +66,37 @@ export const CheckoutPage: React.FC = () => {
     configured: boolean;
     hasPublicKey: boolean;
     hasAccessToken: boolean;
+    publicKey?: string;
     publicKeyPrefix?: string;
   }>({
     configured: false,
     hasPublicKey: false,
     hasAccessToken: false,
   });
+  
+  // Sub-tabs for Mercado Pago: 'card' (Transparent) | 'pix' (Transparent) | 'pro' (Checkout Pro)
+  const [mpSubTab, setMpSubTab] = useState<'card' | 'pix' | 'pro'>('card');
+  const [paymentMethodsList, setPaymentMethodsList] = useState<PaymentMethodItem[]>([]);
+  const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
+
+  // Transparent Card states
+  const [mpCardNumber, setMpCardNumber] = useState('');
+  const [mpCardHolder, setMpCardHolder] = useState('');
+  const [mpCardExpiry, setMpCardExpiry] = useState('');
+  const [mpCardCvv, setMpCardCvv] = useState('');
+  const [mpInstallments, setMpInstallments] = useState('1');
+  const [mpDocNumber, setMpDocNumber] = useState('');
+  const [mpDocType, setMpDocType] = useState<'CPF' | 'CNPJ'>('CPF');
+  const [isProcessingTransparentCard, setIsProcessingTransparentCard] = useState(false);
+
+  // In-app Mercado Pago Credentials configuration panel
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [customAccessToken, setCustomAccessToken] = useState('');
+  const [customPublicKey, setCustomPublicKey] = useState('');
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const [configSuccess, setConfigSuccess] = useState('');
+
+  // Checkout Pro & PIX states
   const [isProcessingMpCheckout, setIsProcessingMpCheckout] = useState(false);
   const [isGeneratingMpPix, setIsGeneratingMpPix] = useState(false);
   const [mpPixData, setMpPixData] = useState<PixPaymentResponse | null>(null);
@@ -110,10 +144,26 @@ export const CheckoutPage: React.FC = () => {
     }
   }, [user]);
 
-  // Initialize Mercado Pago SDK & fetch backend configuration status
+  // Initialize Mercado Pago SDK, fetch backend configuration status & payment methods
   useEffect(() => {
     fetchMercadoPagoStatus().then((status) => {
       setMpStatus(status);
+      if (status.publicKey) {
+        setCustomPublicKey(status.publicKey);
+        if (isMercadoPagoScriptLoaded()) {
+          setMpLoaded(true);
+          initMercadoPago(status.publicKey);
+        }
+      }
+    });
+
+    setLoadingPaymentMethods(true);
+    fetchPaymentMethods().then((res) => {
+      if (res?.payment_methods && Array.isArray(res.payment_methods)) {
+        setPaymentMethodsList(res.payment_methods);
+      }
+    }).finally(() => {
+      setLoadingPaymentMethods(false);
     });
 
     const checkAndInitMp = () => {
@@ -379,6 +429,204 @@ export const CheckoutPage: React.FC = () => {
       setError('Ocorreu um erro no processamento do cartão. Verifique os dados ou pague via PIX.');
     } finally {
       setIsProcessingCard(false);
+    }
+  };
+
+  // Helper formatting functions
+  const formatCardNumber = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 16);
+    return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+  };
+
+  const formatExpiry = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 4);
+    if (digits.length > 2) {
+      return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    }
+    return digits;
+  };
+
+  const formatCpf = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 14);
+    if (digits.length <= 11) {
+      return digits
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    }
+    return digits
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  };
+
+  // Save Mercado Pago API Credentials directly from UI
+  const handleSaveConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setConfigSuccess('');
+    setIsSavingConfig(true);
+
+    try {
+      const res = await saveMercadoPagoConfig({
+        accessToken: customAccessToken.trim() || undefined,
+        publicKey: customPublicKey.trim() || undefined,
+      });
+
+      setMpStatus({
+        configured: res.configured,
+        hasAccessToken: res.hasAccessToken,
+        hasPublicKey: res.hasPublicKey,
+        publicKeyPrefix: res.publicKeyPrefix,
+      });
+
+      // Refetch payment methods
+      const methodsRes = await fetchPaymentMethods();
+      if (methodsRes?.payment_methods) {
+        setPaymentMethodsList(methodsRes.payment_methods);
+      }
+
+      if (customPublicKey.trim()) {
+        initMercadoPago(customPublicKey.trim());
+      }
+
+      setConfigSuccess('Credenciais salvas e ativadas com sucesso!');
+      setTimeout(() => {
+        setShowConfigModal(false);
+        setConfigSuccess('');
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message || 'Erro ao salvar credenciais do Mercado Pago.');
+    } finally {
+      setIsSavingConfig(false);
+    }
+  };
+
+  // Mercado Pago Checkout Transparente (Modo Automático - Cartão de Crédito)
+  const handleTransparentCardPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsProcessingTransparentCard(true);
+
+    try {
+      const authUser = await ensureAuthenticatedUser();
+      if (!authUser) {
+        setIsProcessingTransparentCard(false);
+        return;
+      }
+
+      const cleanNum = mpCardNumber.replace(/\D/g, '');
+      if (cleanNum.length < 13) {
+        setError('Por favor, informe um número de cartão de crédito válido.');
+        setIsProcessingTransparentCard(false);
+        return;
+      }
+
+      if (!mpCardHolder.trim()) {
+        setError('Por favor, informe o nome do titular como está impresso no cartão.');
+        setIsProcessingTransparentCard(false);
+        return;
+      }
+
+      const expiryParts = mpCardExpiry.split('/');
+      const month = expiryParts[0]?.trim();
+      const year = expiryParts[1]?.trim();
+      if (!month || !year || month.length !== 2) {
+        setError('Data de validade inválida. Utilize o formato MM/AA.');
+        setIsProcessingTransparentCard(false);
+        return;
+      }
+
+      if (mpCardCvv.length < 3) {
+        setError('Código de segurança (CVV) inválido.');
+        setIsProcessingTransparentCard(false);
+        return;
+      }
+
+      const cleanDoc = (mpDocNumber || mpCpf).replace(/\D/g, '');
+      if (!cleanDoc || cleanDoc.length < 11) {
+        setError('Por favor, informe um CPF ou CNPJ válido do titular do cartão.');
+        setIsProcessingTransparentCard(false);
+        return;
+      }
+
+      const detectedBrand = detectCardBrand(cleanNum);
+
+      let cardTokenId = '';
+
+      // Check if SDK is loaded and public key is available
+      const pubKey = customPublicKey || mpStatus.publicKey || getMercadoPagoPublicKey();
+      if (isMercadoPagoScriptLoaded() && pubKey) {
+        try {
+          const tokenRes = await createCardTokenWithSDK({
+            cardNumber: cleanNum,
+            cardholderName: mpCardHolder,
+            cardExpirationMonth: month,
+            cardExpirationYear: year,
+            securityCode: mpCardCvv,
+            identificationType: cleanDoc.length > 11 ? 'CNPJ' : 'CPF',
+            identificationNumber: cleanDoc,
+            customPublicKey: pubKey,
+          });
+          cardTokenId = tokenRes.id;
+        } catch (tokenErr: any) {
+          console.error('Erro na tokenização do cartão:', tokenErr);
+          throw new Error(tokenErr.message || 'Falha ao tokenizar o cartão junto ao Mercado Pago. Verifique os dados digitados.');
+        }
+      } else {
+        throw new Error('Chave pública do Mercado Pago não configurada. Configure em "Configurar Credenciais" acima ou adicione VITE_MERCADO_PAGO_PUBLIC_KEY.');
+      }
+
+      const nameParts = mpCardHolder.trim().split(' ');
+      const firstName = nameParts[0] || 'Assinante';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const paymentResult = await processTransparentPayment({
+        token: cardTokenId,
+        payment_method_id: detectedBrand === 'credit_card' ? 'master' : detectedBrand,
+        installments: Number(mpInstallments) || 1,
+        transaction_amount: planAmount,
+        description: `Assinatura ${planLabel} - Meu Escritório Online`,
+        payer: {
+          email: authUser.email,
+          first_name: firstName,
+          last_name: lastName,
+          identification: {
+            type: cleanDoc.length > 11 ? 'CNPJ' : 'CPF',
+            number: cleanDoc,
+          },
+        },
+        external_reference: authUser.uid,
+        metadata: {
+          uid: authUser.uid,
+          plan: isAnnualPlan ? 'annual' : 'monthly',
+        },
+      });
+
+      if (paymentResult.status === 'approved' || paymentResult.status === 'processed') {
+        await activateSubscriptionForUser(authUser.uid, authUser.email, 'mercadopago_card');
+        setSuccessMessage('🎉 Pagamento aprovado com sucesso pelo Mercado Pago! Seu plano foi ativado.');
+        setTimeout(() => {
+          navigate('/app');
+        }, 2000);
+      } else if (paymentResult.status === 'in_process') {
+        setSuccessMessage('⏳ Pagamento em processamento pelo Mercado Pago. Seu plano será ativado assim que for confirmado.');
+        setTimeout(() => {
+          navigate('/app');
+        }, 3000);
+      } else {
+        setError(`Pagamento recusado (${paymentResult.status_detail || paymentResult.status}). Verifique seu cartão ou tente outra forma de pagamento.`);
+      }
+    } catch (err: any) {
+      console.error('Erro no checkout transparente:', err);
+      if (!mpStatus.hasAccessToken) {
+        setError('MERCADO_PAGO_ACCESS_TOKEN não está configurado no servidor. Adicione suas credenciais no botão "⚙️ Configurar Credenciais" acima.');
+      } else {
+        setError(err.message || 'Erro ao processar pagamento com cartão.');
+      }
+    } finally {
+      setIsProcessingTransparentCard(false);
     }
   };
 
@@ -754,190 +1002,540 @@ export const CheckoutPage: React.FC = () => {
               {/* Mercado Pago Payment Section */}
               {paymentMethod === 'mercadopago' && (
                 <div className="space-y-5 pt-1 animate-in fade-in">
-                  {/* Status Banner */}
-                  <div className="p-4 rounded-xl bg-[#0f1922] border border-[#009ee3]/30 flex items-center justify-between gap-3">
+                  {/* Status Banner & Settings Toggle */}
+                  <div className="p-4 rounded-xl bg-[#0f1922] border border-[#009ee3]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#009ee3]/20 text-[#009ee3] flex items-center justify-center shrink-0">
-                        <Zap className="w-4 h-4" />
+                      <div className="w-9 h-9 rounded-xl bg-[#009ee3]/20 text-[#009ee3] flex items-center justify-center shrink-0 shadow-sm">
+                        <Zap className="w-5 h-5" />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-[#fcf8f5] flex items-center gap-1.5">
-                          <span>Integração Mercado Pago SDK v2</span>
-                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 font-semibold">
-                            Ativa
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-bold text-[#fcf8f5]">Mercado Pago Checkout Transparente</p>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            mpStatus.hasAccessToken 
+                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                              : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                          }`}>
+                            {mpStatus.hasAccessToken ? 'Pronto para Pagamentos' : 'Credenciais Pendentes'}
                           </span>
-                        </p>
+                        </div>
                         <p className="text-[11px] text-[#8ea7be] mt-0.5">
-                          PIX com aprovação em tempo real, Cartão em até 12x e saldo Mercado Pago.
+                          Pague diretamente na tela com Cartão até 12x, PIX instantâneo ou Checkout Pro.
                         </p>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Choice 1: Checkout Pro */}
-                  <div className="p-5 rounded-2xl bg-[#0d0b0a] border border-[#3d342f] space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h4 className="text-sm font-bold text-[#fcf8f5] flex items-center gap-2">
-                          <span>Opção 1: Mercado Pago Checkout Pro</span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#009ee3]/20 text-[#009ee3] font-bold">
-                            Recomendado
-                          </span>
-                        </h4>
-                        <p className="text-xs text-[#a89c93] mt-1">
-                          Redireciona para o ambiente 100% seguro do Mercado Pago. Pague com PIX, Cartão até 12x ou saldo da sua conta MP.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#a89c93]">
-                      <span className="bg-[#1f1a17] px-2.5 py-1 rounded-md border border-[#3d342f] flex items-center gap-1">
-                        <Check className="w-3 h-3 text-emerald-400" /> PIX Automático
-                      </span>
-                      <span className="bg-[#1f1a17] px-2.5 py-1 rounded-md border border-[#3d342f] flex items-center gap-1">
-                        <Check className="w-3 h-3 text-emerald-400" /> Cartão até 12x
-                      </span>
-                      <span className="bg-[#1f1a17] px-2.5 py-1 rounded-md border border-[#3d342f] flex items-center gap-1">
-                        <Check className="w-3 h-3 text-emerald-400" /> Saldo Mercado Pago
-                      </span>
                     </div>
 
                     <button
                       type="button"
-                      onClick={handleMercadoPagoCheckout}
-                      disabled={isProcessingMpCheckout}
-                      className="w-full py-3.5 px-6 rounded-xl bg-[#009ee3] hover:bg-[#008cc9] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#009ee3]/20 transition-all cursor-pointer disabled:opacity-50 active:scale-98"
+                      onClick={() => setShowConfigModal(!showConfigModal)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#142331] hover:bg-[#1a2d3f] border border-[#009ee3]/40 text-[#009ee3] text-xs font-semibold transition-colors cursor-pointer self-start sm:self-auto"
                     >
-                      {isProcessingMpCheckout ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Gerando Sessão Mercado Pago...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="w-4 h-4" />
-                          <span>Pagar com Mercado Pago (R$ {planAmount},00)</span>
-                        </>
-                      )}
+                      <Settings className="w-3.5 h-3.5" />
+                      <span>{showConfigModal ? 'Ocultar Chaves' : 'Configurar Chaves MP'}</span>
                     </button>
                   </div>
 
-                  {/* Choice 2: Instant Mercado Pago PIX with QR Code */}
-                  <div className="p-5 rounded-2xl bg-[#0d0b0a] border border-[#3d342f] space-y-4">
-                    <div>
-                      <h4 className="text-sm font-bold text-[#fcf8f5]">
-                        Opção 2: Gerar PIX Mercado Pago na Tela
-                      </h4>
-                      <p className="text-xs text-[#a89c93] mt-1">
-                        Gere o QR Code oficial do Mercado Pago diretamente nesta tela para escanear com o seu banco.
-                      </p>
-                    </div>
-
-                    {!mpPixData ? (
-                      <div className="space-y-3">
+                  {/* Credentials Configuration Drawer / Inline Panel */}
+                  {showConfigModal && (
+                    <form onSubmit={handleSaveConfig} className="p-4 rounded-xl bg-[#14110f] border border-[#009ee3]/40 space-y-3 animate-in fade-in">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-[#fcf8f5] flex items-center gap-1.5">
+                          <Key className="w-4 h-4 text-[#009ee3]" />
+                          <span>Credenciais do Mercado Pago (API)</span>
+                        </h4>
+                        <span className="text-[10px] text-[#a89c93]">Salvo de forma segura no servidor</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-[#a89c93] mb-1">
-                            CPF ou CNPJ do Pagador (Opcional)
+                          <label className="block text-[11px] font-medium text-[#a89c93] mb-1">
+                            Access Token (TEST-... ou APP_USR-...)
                           </label>
                           <input
-                            type="text"
-                            value={mpCpf}
-                            onChange={(e) => setMpCpf(e.target.value)}
-                            placeholder="000.000.000-00"
-                            className="w-full px-3.5 py-2 rounded-xl bg-[#14110f] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[#009ee3]"
+                            type="password"
+                            value={customAccessToken}
+                            onChange={(e) => setCustomAccessToken(e.target.value)}
+                            placeholder="TEST-1234567890-..."
+                            className="w-full px-3 py-2 rounded-lg bg-[#0a0908] border border-[#3d342f] text-xs font-mono text-[#fcf8f5] focus:outline-none focus:border-[#009ee3]"
                           />
                         </div>
 
+                        <div>
+                          <label className="block text-[11px] font-medium text-[#a89c93] mb-1">
+                            Public Key (TEST-... ou APP_USR-...)
+                          </label>
+                          <input
+                            type="text"
+                            value={customPublicKey}
+                            onChange={(e) => setCustomPublicKey(e.target.value)}
+                            placeholder="TEST-abcdef123-..."
+                            className="w-full px-3 py-2 rounded-lg bg-[#0a0908] border border-[#3d342f] text-xs font-mono text-[#fcf8f5] focus:outline-none focus:border-[#009ee3]"
+                          />
+                        </div>
+                      </div>
+
+                      {configSuccess && (
+                        <div className="p-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-300 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                          <span>{configSuccess}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[10px] text-[#8ea7be]">
+                          Obtenha suas chaves em: Mercado Pago Developers &gt; Suas Integrações.
+                        </span>
                         <button
-                          type="button"
-                          onClick={handleGenerateMpPix}
-                          disabled={isGeneratingMpPix}
-                          className="w-full py-3 px-4 rounded-xl bg-[#182330] hover:bg-[#1f2e3f] text-[#009ee3] border border-[#009ee3]/40 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                          type="submit"
+                          disabled={isSavingConfig}
+                          className="px-4 py-2 rounded-lg bg-[#009ee3] hover:bg-[#008cc9] text-white font-bold text-xs flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
                         >
-                          {isGeneratingMpPix ? (
+                          {isSavingConfig ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                          <span>Salvar e Ativar</span>
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* Available Payment Methods Ribbon */}
+                  <div className="p-3.5 rounded-xl bg-[#0d0b0a] border border-[#3d342f]/80">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-semibold text-[#a89c93] uppercase tracking-wider flex items-center gap-1.5">
+                        <Lock className="w-3 h-3 text-[#009ee3]" />
+                        Meios de Pagamento Disponíveis:
+                      </span>
+                      {loadingPaymentMethods && (
+                        <span className="text-[10px] text-[#8ea7be] flex items-center gap-1">
+                          <Loader2 className="w-2.5 h-2.5 animate-spin" /> Atualizando...
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {paymentMethodsList.length > 0 ? (
+                        paymentMethodsList.slice(0, 10).map((pm) => (
+                          <div
+                            key={pm.id}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#191513] border border-[#3d342f] text-[11px] text-[#ded3cb]"
+                            title={`${pm.name} (${pm.payment_type_id})`}
+                          >
+                            {pm.secure_thumbnail ? (
+                              <img src={pm.secure_thumbnail} alt={pm.name} className="h-3.5 w-auto object-contain" referrerPolicy="no-referrer" />
+                            ) : (
+                              <CreditCard className="w-3 h-3 text-[#009ee3]" />
+                            )}
+                            <span className="capitalize">{pm.name}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <>
+                          <span className="px-2.5 py-1 rounded-md bg-[#191513] border border-[#3d342f] text-[11px] text-[#ded3cb] flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Pix Instantâneo
+                          </span>
+                          <span className="px-2.5 py-1 rounded-md bg-[#191513] border border-[#3d342f] text-[11px] text-[#ded3cb]">
+                            Mastercard
+                          </span>
+                          <span className="px-2.5 py-1 rounded-md bg-[#191513] border border-[#3d342f] text-[11px] text-[#ded3cb]">
+                            Visa
+                          </span>
+                          <span className="px-2.5 py-1 rounded-md bg-[#191513] border border-[#3d342f] text-[11px] text-[#ded3cb]">
+                            Elo
+                          </span>
+                          <span className="px-2.5 py-1 rounded-md bg-[#191513] border border-[#3d342f] text-[11px] text-[#ded3cb]">
+                            Hipercard
+                          </span>
+                          <span className="px-2.5 py-1 rounded-md bg-[#191513] border border-[#3d342f] text-[11px] text-[#ded3cb]">
+                            Boleto Bancário
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Sub-tabs Selector: Card / PIX / Pro */}
+                  <div className="grid grid-cols-3 gap-2 p-1 bg-[#14110f] rounded-xl border border-[#3d342f]">
+                    <button
+                      type="button"
+                      onClick={() => setMpSubTab('card')}
+                      className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+                        mpSubTab === 'card'
+                          ? 'bg-[#009ee3] text-white shadow-md'
+                          : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1f1a17]'
+                      }`}
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Cartão Transparente</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMpSubTab('pix')}
+                      className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+                        mpSubTab === 'pix'
+                          ? 'bg-[#009ee3] text-white shadow-md'
+                          : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1f1a17]'
+                      }`}
+                    >
+                      <QrCode className="w-3.5 h-3.5" />
+                      <span>PIX Transparente</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMpSubTab('pro')}
+                      className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+                        mpSubTab === 'pro'
+                          ? 'bg-[#009ee3] text-white shadow-md'
+                          : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1f1a17]'
+                      }`}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Checkout Pro</span>
+                    </button>
+                  </div>
+
+                  {/* Sub-tab 1: Checkout Transparente (Cartão de Crédito) */}
+                  {mpSubTab === 'card' && (
+                    <form onSubmit={handleTransparentCardPayment} className="p-5 rounded-2xl bg-[#0d0b0a] border border-[#3d342f] space-y-4 animate-in fade-in">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-bold text-[#fcf8f5] flex items-center gap-2">
+                            <span>Pagamento com Cartão de Crédito</span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/20">
+                              Sem sair do site
+                            </span>
+                          </h4>
+                          <p className="text-xs text-[#a89c93] mt-0.5">
+                            Criptografado e processado com segurança através da API do Mercado Pago.
+                          </p>
+                        </div>
+                        {mpCardNumber && (
+                          <span className="text-[11px] font-bold uppercase px-2 py-1 rounded bg-[#1f1a17] text-[#009ee3] border border-[#009ee3]/30">
+                            {detectCardBrand(mpCardNumber.replace(/\D/g, ''))}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        {/* Card Number */}
+                        <div>
+                          <label className="block text-xs font-medium text-[#ded3cb] mb-1">
+                            Número do Cartão
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={mpCardNumber}
+                              onChange={(e) => setMpCardNumber(formatCardNumber(e.target.value))}
+                              placeholder="0000 0000 0000 0000"
+                              maxLength={19}
+                              className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[#14110f] border border-[#3d342f] text-xs font-mono text-[#fcf8f5] focus:outline-none focus:border-[#009ee3]"
+                              required
+                            />
+                            <CreditCard className="w-4 h-4 text-[#8ea7be] absolute left-3 top-3" />
+                          </div>
+                        </div>
+
+                        {/* Cardholder Name */}
+                        <div>
+                          <label className="block text-xs font-medium text-[#ded3cb] mb-1">
+                            Nome Completo Impresso no Cartão
+                          </label>
+                          <input
+                            type="text"
+                            value={mpCardHolder}
+                            onChange={(e) => setMpCardHolder(e.target.value)}
+                            placeholder="Como gravado no cartão"
+                            className="w-full px-3.5 py-2.5 rounded-xl bg-[#14110f] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[#009ee3] uppercase"
+                            required
+                          />
+                        </div>
+
+                        {/* Expiry & CVV */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-[#ded3cb] mb-1">
+                              Validade (MM/AA)
+                            </label>
+                            <input
+                              type="text"
+                              value={mpCardExpiry}
+                              onChange={(e) => setMpCardExpiry(formatExpiry(e.target.value))}
+                              placeholder="MM/AA"
+                              maxLength={5}
+                              className="w-full px-3.5 py-2.5 rounded-xl bg-[#14110f] border border-[#3d342f] text-xs font-mono text-[#fcf8f5] focus:outline-none focus:border-[#009ee3]"
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-[#ded3cb] mb-1">
+                              Código CVV
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="password"
+                                value={mpCardCvv}
+                                onChange={(e) => setMpCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                placeholder="123"
+                                maxLength={4}
+                                className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[#14110f] border border-[#3d342f] text-xs font-mono text-[#fcf8f5] focus:outline-none focus:border-[#009ee3]"
+                                required
+                              />
+                              <Lock className="w-3.5 h-3.5 text-[#8ea7be] absolute left-3 top-3" />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Document (CPF / CNPJ) */}
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-[#ded3cb] mb-1">
+                              Documento
+                            </label>
+                            <select
+                              value={mpDocType}
+                              onChange={(e) => setMpDocType(e.target.value as 'CPF' | 'CNPJ')}
+                              className="w-full px-3 py-2.5 rounded-xl bg-[#14110f] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[#009ee3]"
+                            >
+                              <option value="CPF">CPF</option>
+                              <option value="CNPJ">CNPJ</option>
+                            </select>
+                          </div>
+
+                          <div className="col-span-2">
+                            <label className="block text-xs font-medium text-[#ded3cb] mb-1">
+                              Número do {mpDocType} do Titular
+                            </label>
+                            <input
+                              type="text"
+                              value={mpDocNumber}
+                              onChange={(e) => setMpDocNumber(formatCpf(e.target.value))}
+                              placeholder={mpDocType === 'CPF' ? '000.000.000-00' : '00.000.000/0000-00'}
+                              maxLength={18}
+                              className="w-full px-3.5 py-2.5 rounded-xl bg-[#14110f] border border-[#3d342f] text-xs font-mono text-[#fcf8f5] focus:outline-none focus:border-[#009ee3]"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        {/* Installments */}
+                        <div>
+                          <label className="block text-xs font-medium text-[#ded3cb] mb-1">
+                            Parcelamento
+                          </label>
+                          <select
+                            value={mpInstallments}
+                            onChange={(e) => setMpInstallments(e.target.value)}
+                            className="w-full px-3.5 py-2.5 rounded-xl bg-[#14110f] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[#009ee3]"
+                          >
+                            <option value="1">1x de R$ {planAmount},00 (à vista)</option>
+                            <option value="2">2x de R$ {(planAmount / 2).toFixed(2).replace('.', ',')}</option>
+                            <option value="3">3x de R$ {(planAmount / 3).toFixed(2).replace('.', ',')}</option>
+                            <option value="6">6x de R$ {(planAmount / 6).toFixed(2).replace('.', ',')}</option>
+                            <option value="10">10x de R$ {(planAmount / 10).toFixed(2).replace('.', ',')}</option>
+                            <option value="12">12x de R$ {(planAmount / 12).toFixed(2).replace('.', ',')}</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="pt-2">
+                        <button
+                          type="submit"
+                          disabled={isProcessingTransparentCard}
+                          className="w-full py-3.5 px-6 rounded-xl bg-[#009ee3] hover:bg-[#008cc9] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#009ee3]/20 transition-all cursor-pointer disabled:opacity-50 active:scale-98"
+                        >
+                          {isProcessingTransparentCard ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin" />
-                              <span>Gerando PIX Mercado Pago...</span>
+                              <span>Processando Pagamento no Mercado Pago...</span>
                             </>
                           ) : (
                             <>
-                              <QrCode className="w-4 h-4" />
-                              <span>Gerar QR Code PIX Mercado Pago</span>
+                              <ShieldCheck className="w-4 h-4" />
+                              <span>Pagar R$ {planAmount},00 com Cartão (Transparente)</span>
                             </>
                           )}
                         </button>
+                        <p className="text-[10px] text-center text-[#8ea7be] mt-2 flex items-center justify-center gap-1.5">
+                          <Lock className="w-3 h-3 text-[#009ee3]" />
+                          Tokenização segura via Mercado Pago SDK v2 • Seus dados nunca são armazenados
+                        </p>
                       </div>
-                    ) : (
-                      <div className="space-y-4 pt-2 text-center animate-in fade-in">
-                        {/* QR Code image */}
-                        {mpPixData.qr_code_base64 ? (
-                          <div className="w-48 h-48 mx-auto bg-white p-2 rounded-2xl shadow-md flex items-center justify-center">
-                            <img
-                              src={`data:image/png;base64,${mpPixData.qr_code_base64}`}
-                              alt="Mercado Pago PIX QR Code"
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
-                        ) : mpPixData.qr_code ? (
-                          <div className="w-48 h-48 mx-auto bg-white p-2 rounded-2xl shadow-md flex items-center justify-center">
-                            <img
-                              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(mpPixData.qr_code)}`}
-                              alt="Mercado Pago PIX QR Code"
-                              className="w-full h-full object-contain"
-                              referrerPolicy="no-referrer"
-                            />
-                          </div>
-                        ) : null}
+                    </form>
+                  )}
 
-                        <div className="space-y-1">
-                          <p className="text-xs text-[#a89c93]">Valor:</p>
-                          <p className="text-2xl font-serif font-bold text-[#009ee3]">R$ {planAmount},00</p>
-                          <p className="text-[11px] text-[#a89c93]">
-                            ID do Pagamento MP: #{mpPixData.id} • Status: <span className="text-amber-400 font-semibold">{mpPixData.status || 'pendente'}</span>
+                  {/* Sub-tab 2: Instant PIX (Mercado Pago API) */}
+                  {mpSubTab === 'pix' && (
+                    <div className="p-5 rounded-2xl bg-[#0d0b0a] border border-[#3d342f] space-y-4 animate-in fade-in">
+                      <div>
+                        <h4 className="text-sm font-bold text-[#fcf8f5] flex items-center gap-2">
+                          <span>PIX Oficial Mercado Pago</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/20">
+                            Aprovação Imediata
+                          </span>
+                        </h4>
+                        <p className="text-xs text-[#a89c93] mt-0.5">
+                          Gere o QR Code dinâmico do Mercado Pago diretamente nesta tela e pague em qualquer aplicativo bancário.
+                        </p>
+                      </div>
+
+                      {!mpPixData ? (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-medium text-[#a89c93] mb-1">
+                              CPF ou CNPJ do Pagador (Recomendado pelo Banco Central)
+                            </label>
+                            <input
+                              type="text"
+                              value={mpCpf}
+                              onChange={(e) => setMpCpf(formatCpf(e.target.value))}
+                              placeholder="000.000.000-00"
+                              className="w-full px-3.5 py-2.5 rounded-xl bg-[#14110f] border border-[#3d342f] text-xs font-mono text-[#fcf8f5] focus:outline-none focus:border-[#009ee3]"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleGenerateMpPix}
+                            disabled={isGeneratingMpPix}
+                            className="w-full py-3.5 px-4 rounded-xl bg-[#009ee3] hover:bg-[#008cc9] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#009ee3]/20 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            {isGeneratingMpPix ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Gerando PIX Mercado Pago...</span>
+                              </>
+                            ) : (
+                              <>
+                                <QrCode className="w-4 h-4" />
+                                <span>Gerar QR Code PIX Mercado Pago (R$ {planAmount},00)</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-4 pt-2 text-center animate-in fade-in">
+                          {/* QR Code image */}
+                          {mpPixData.qr_code_base64 ? (
+                            <div className="w-48 h-48 mx-auto bg-white p-2 rounded-2xl shadow-md flex items-center justify-center">
+                              <img
+                                src={`data:image/png;base64,${mpPixData.qr_code_base64}`}
+                                alt="Mercado Pago PIX QR Code"
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          ) : mpPixData.qr_code ? (
+                            <div className="w-48 h-48 mx-auto bg-white p-2 rounded-2xl shadow-md flex items-center justify-center">
+                              <img
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(mpPixData.qr_code)}`}
+                                alt="Mercado Pago PIX QR Code"
+                                className="w-full h-full object-contain"
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                          ) : null}
+
+                          <div className="space-y-1">
+                            <p className="text-xs text-[#a89c93]">Valor:</p>
+                            <p className="text-2xl font-serif font-bold text-[#009ee3]">R$ {planAmount},00</p>
+                            <p className="text-[11px] text-[#a89c93]">
+                              ID do Pagamento MP: #{mpPixData.id} • Status: <span className="text-amber-400 font-semibold">{mpPixData.status || 'pendente'}</span>
+                            </p>
+                          </div>
+
+                          {/* Copia e cola */}
+                          {mpPixData.qr_code && (
+                            <div className="bg-[#14110f] border border-[#3d342f] rounded-xl p-2.5 flex items-center justify-between gap-2 max-w-md mx-auto text-left">
+                              <div className="overflow-hidden">
+                                <span className="block text-[10px] text-[#a89c93] uppercase font-semibold">Código Copia e Cola:</span>
+                                <span className="block text-xs font-mono text-[#fcf8f5] truncate">
+                                  {mpPixData.qr_code.substring(0, 32)}...
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (mpPixData.qr_code) {
+                                    navigator.clipboard.writeText(mpPixData.qr_code);
+                                    setMpPixCopied(true);
+                                    setTimeout(() => setMpPixCopied(false), 3000);
+                                  }
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-[#009ee3] text-white font-bold text-xs flex items-center gap-1 shrink-0 hover:bg-[#008cc9] transition-all"
+                              >
+                                {mpPixCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                <span>{mpPixCopied ? 'Copiado!' : 'Copiar'}</span>
+                              </button>
+                            </div>
+                          )}
+
+                          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-300 flex items-center gap-2 justify-center">
+                            <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />
+                            <span>Após pagar no seu banco, a liberação ocorre automaticamente pelo Webhook do Mercado Pago!</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setMpPixData(null)}
+                            className="text-xs text-[#a89c93] hover:text-[#fcf8f5] underline cursor-pointer"
+                          >
+                            Gerar outro PIX ou alterar dados
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sub-tab 3: Checkout Pro (Redirecionamento) */}
+                  {mpSubTab === 'pro' && (
+                    <div className="p-5 rounded-2xl bg-[#0d0b0a] border border-[#3d342f] space-y-4 animate-in fade-in">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="text-sm font-bold text-[#fcf8f5] flex items-center gap-2">
+                            <span>Mercado Pago Checkout Pro</span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#009ee3]/20 text-[#009ee3] font-bold">
+                              Oficial MP
+                            </span>
+                          </h4>
+                          <p className="text-xs text-[#a89c93] mt-1">
+                            Redireciona para a página segura do Mercado Pago. Pague com saldo da conta Mercado Pago, PIX, Cartão até 12x ou Boleto bancário.
                           </p>
                         </div>
-
-                        {/* Copia e cola */}
-                        {mpPixData.qr_code && (
-                          <div className="bg-[#14110f] border border-[#3d342f] rounded-xl p-2.5 flex items-center justify-between gap-2 max-w-md mx-auto text-left">
-                            <div className="overflow-hidden">
-                              <span className="block text-[10px] text-[#a89c93] uppercase font-semibold">Código Copia e Cola:</span>
-                              <span className="block text-xs font-mono text-[#fcf8f5] truncate">
-                                {mpPixData.qr_code.substring(0, 32)}...
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (mpPixData.qr_code) {
-                                  navigator.clipboard.writeText(mpPixData.qr_code);
-                                  setMpPixCopied(true);
-                                  setTimeout(() => setMpPixCopied(false), 3000);
-                                }
-                              }}
-                              className="px-3 py-1.5 rounded-lg bg-[#009ee3] text-white font-bold text-xs flex items-center gap-1 shrink-0 hover:bg-[#008cc9] transition-all"
-                            >
-                              {mpPixCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                              <span>{mpPixCopied ? 'Copiado!' : 'Copiar'}</span>
-                            </button>
-                          </div>
-                        )}
-
-                        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-300 flex items-center gap-2 justify-center">
-                          <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />
-                          <span>Após pagar no seu banco, a liberação ocorre automaticamente pelo Webhook do Mercado Pago!</span>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => setMpPixData(null)}
-                          className="text-xs text-[#a89c93] hover:text-[#fcf8f5] underline cursor-pointer"
-                        >
-                          Gerar outro PIX ou alterar dados
-                        </button>
                       </div>
-                    )}
-                  </div>
+
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#a89c93]">
+                        <span className="bg-[#1f1a17] px-2.5 py-1 rounded-md border border-[#3d342f] flex items-center gap-1">
+                          <Check className="w-3 h-3 text-emerald-400" /> Saldo da Conta MP
+                        </span>
+                        <span className="bg-[#1f1a17] px-2.5 py-1 rounded-md border border-[#3d342f] flex items-center gap-1">
+                          <Check className="w-3 h-3 text-emerald-400" /> Cartão até 12x
+                        </span>
+                        <span className="bg-[#1f1a17] px-2.5 py-1 rounded-md border border-[#3d342f] flex items-center gap-1">
+                          <Check className="w-3 h-3 text-emerald-400" /> PIX Automático
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleMercadoPagoCheckout}
+                        disabled={isProcessingMpCheckout}
+                        className="w-full py-3.5 px-6 rounded-xl bg-[#009ee3] hover:bg-[#008cc9] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#009ee3]/20 transition-all cursor-pointer disabled:opacity-50 active:scale-98"
+                      >
+                        {isProcessingMpCheckout ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Gerando Sessão Mercado Pago...</span>
+                          </>
+                        ) : (
+                          <>
+                            <ExternalLink className="w-4 h-4" />
+                            <span>Ir para Checkout Pro (R$ {planAmount},00)</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

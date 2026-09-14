@@ -3,14 +3,33 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import Stripe from "stripe";
-import { MercadoPagoConfig, Preference, Payment } from "mercadopago";
+import { MercadoPagoConfig, Preference, Payment, PaymentMethod } from "mercadopago";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { GoogleGenAI } from "@google/genai";
 
-// Lazy initialize Mercado Pago client
+// Lazy initialize Mercado Pago client & persistent credentials
+const MP_CREDENTIALS_FILE = path.join(process.cwd(), '.mp_credentials.json');
+function loadPersistedMpCredentials() {
+  try {
+    if (fs.existsSync(MP_CREDENTIALS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(MP_CREDENTIALS_FILE, 'utf-8'));
+      if (data.accessToken && !process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+        process.env.MERCADO_PAGO_ACCESS_TOKEN = data.accessToken;
+      }
+      if (data.publicKey && !process.env.VITE_MERCADO_PAGO_PUBLIC_KEY) {
+        process.env.VITE_MERCADO_PAGO_PUBLIC_KEY = data.publicKey;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not read .mp_credentials.json:', err);
+  }
+}
+loadPersistedMpCredentials();
+
 let mpClient: MercadoPagoConfig | null = null;
 function getMercadoPagoClient(): MercadoPagoConfig {
+  loadPersistedMpCredentials();
   const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
   if (!token) {
     throw new Error("MERCADO_PAGO_ACCESS_TOKEN is not configured.");
@@ -637,6 +656,7 @@ Retorne uma resposta JSON com o formato estrito:
 
   // Check Mercado Pago Status
   app.get('/api/mercadopago/status', (req, res) => {
+    loadPersistedMpCredentials();
     const hasAccessToken = Boolean(process.env.MERCADO_PAGO_ACCESS_TOKEN);
     const publicKey = process.env.VITE_MERCADO_PAGO_PUBLIC_KEY || '';
     const hasPublicKey = Boolean(publicKey);
@@ -645,8 +665,279 @@ Retorne uma resposta JSON com o formato estrito:
       configured: hasAccessToken || hasPublicKey,
       hasAccessToken,
       hasPublicKey,
+      publicKey,
       publicKeyPrefix: hasPublicKey ? `${publicKey.substring(0, 11)}...` : undefined,
     });
+  });
+
+  // Save / Update Mercado Pago Credentials (persisted to .mp_credentials.json)
+  app.post('/api/mercadopago/config', (req, res) => {
+    try {
+      const { accessToken, publicKey } = req.body;
+      if (!accessToken && !publicKey) {
+        return res.status(400).json({ error: 'Nenhuma credencial informada.' });
+      }
+
+      if (accessToken) {
+        process.env.MERCADO_PAGO_ACCESS_TOKEN = accessToken.trim();
+        mpClient = null;
+      }
+      if (publicKey) {
+        process.env.VITE_MERCADO_PAGO_PUBLIC_KEY = publicKey.trim();
+      }
+
+      try {
+        fs.writeFileSync(
+          MP_CREDENTIALS_FILE,
+          JSON.stringify(
+            {
+              accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN,
+              publicKey: process.env.VITE_MERCADO_PAGO_PUBLIC_KEY,
+              updatedAt: new Date().toISOString(),
+            },
+            null,
+            2
+          )
+        );
+      } catch (saveErr) {
+        console.warn('Could not write .mp_credentials.json:', saveErr);
+      }
+
+      res.json({
+        success: true,
+        configured: Boolean(process.env.MERCADO_PAGO_ACCESS_TOKEN),
+        hasAccessToken: Boolean(process.env.MERCADO_PAGO_ACCESS_TOKEN),
+        hasPublicKey: Boolean(process.env.VITE_MERCADO_PAGO_PUBLIC_KEY),
+        publicKeyPrefix: process.env.VITE_MERCADO_PAGO_PUBLIC_KEY
+          ? `${process.env.VITE_MERCADO_PAGO_PUBLIC_KEY.substring(0, 11)}...`
+          : undefined,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Erro ao salvar credenciais' });
+    }
+  });
+
+  // Fetch available Payment Methods from Mercado Pago API (/v1/payment_methods)
+  app.get('/api/mercadopago/payment-methods', async (req, res) => {
+    try {
+      loadPersistedMpCredentials();
+      const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+      if (!token) {
+        // Fallback with standard active Brazilian payment methods
+        return res.json({
+          configured: false,
+          payment_methods: [
+            {
+              id: 'pix',
+              name: 'Pix Instantâneo',
+              payment_type_id: 'bank_transfer',
+              status: 'active',
+              secure_thumbnail: 'https://http2.mlstatic.com/storage/logos-api-admin/a5f047d0-9be0-11ec-aad4-c3381f368aaf-m.svg',
+              thumbnail: 'https://http2.mlstatic.com/storage/logos-api-admin/a5f047d0-9be0-11ec-aad4-c3381f368aaf-m.svg',
+            },
+            {
+              id: 'master',
+              name: 'Mastercard',
+              payment_type_id: 'credit_card',
+              status: 'active',
+              secure_thumbnail: 'https://http2.mlstatic.com/storage/logos-api-admin/a5f047d0-9be0-11ec-aad4-c3381f368aaf-m.svg',
+              thumbnail: 'https://http2.mlstatic.com/storage/logos-api-admin/a5f047d0-9be0-11ec-aad4-c3381f368aaf-m.svg',
+            },
+            {
+              id: 'visa',
+              name: 'Visa',
+              payment_type_id: 'credit_card',
+              status: 'active',
+              secure_thumbnail: 'https://http2.mlstatic.com/storage/logos-api-admin/a5f047d0-9be0-11ec-aad4-c3381f368aaf-m.svg',
+              thumbnail: 'https://http2.mlstatic.com/storage/logos-api-admin/a5f047d0-9be0-11ec-aad4-c3381f368aaf-m.svg',
+            },
+            {
+              id: 'elo',
+              name: 'Elo',
+              payment_type_id: 'credit_card',
+              status: 'active',
+              secure_thumbnail: 'https://http2.mlstatic.com/storage/logos-api-admin/a5f047d0-9be0-11ec-aad4-c3381f368aaf-m.svg',
+              thumbnail: 'https://http2.mlstatic.com/storage/logos-api-admin/a5f047d0-9be0-11ec-aad4-c3381f368aaf-m.svg',
+            },
+            {
+              id: 'hipercard',
+              name: 'Hipercard',
+              payment_type_id: 'credit_card',
+              status: 'active',
+              secure_thumbnail: 'https://http2.mlstatic.com/storage/logos-api-admin/a5f047d0-9be0-11ec-aad4-c3381f368aaf-m.svg',
+              thumbnail: 'https://http2.mlstatic.com/storage/logos-api-admin/a5f047d0-9be0-11ec-aad4-c3381f368aaf-m.svg',
+            },
+            {
+              id: 'bolbradesco',
+              name: 'Boleto Bancário',
+              payment_type_id: 'ticket',
+              status: 'active',
+              secure_thumbnail: 'https://http2.mlstatic.com/storage/logos-api-admin/a5f047d0-9be0-11ec-aad4-c3381f368aaf-m.svg',
+              thumbnail: 'https://http2.mlstatic.com/storage/logos-api-admin/a5f047d0-9be0-11ec-aad4-c3381f368aaf-m.svg',
+            },
+          ],
+        });
+      }
+
+      const client = getMercadoPagoClient();
+      const pm = new PaymentMethod(client);
+      const paymentMethods = await pm.get();
+      res.json({
+        configured: true,
+        payment_methods: paymentMethods,
+      });
+    } catch (error: any) {
+      console.error('Error fetching Mercado Pago payment methods:', error);
+      res.status(500).json({ error: error.message || 'Erro ao consultar meios de pagamento' });
+    }
+  });
+
+  // Process Payment - Checkout Transparente (Credit Card & Orders API)
+  app.post('/api/mercadopago/process-payment', async (req, res) => {
+    try {
+      loadPersistedMpCredentials();
+      const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+      if (!token) {
+        return res.status(400).json({
+          error: 'MERCADO_PAGO_ACCESS_TOKEN não está configurado no servidor. Configure sua chave em Configurações do Mercado Pago.',
+          configured: false,
+        });
+      }
+
+      // Handle both standard payments payload and the nested Order structure (automatic mode)
+      let cardToken = req.body.token;
+      let paymentMethodId = req.body.payment_method_id;
+      let installments = Number(req.body.installments) || 1;
+      let amount = Number(req.body.transaction_amount || req.body.amount || req.body.total_amount);
+      let payerEmail = req.body.payer?.email;
+      let payerName = req.body.payer?.first_name || req.body.payerName;
+      let docNumber = req.body.payer?.identification?.number || req.body.docNumber;
+      let docType = req.body.payer?.identification?.type || req.body.docType || 'CPF';
+      let externalReference = req.body.external_reference || req.body.metadata?.uid || '';
+      let issuerId = req.body.issuer_id;
+      let description = req.body.description || 'Assinatura Meu Escritório Online';
+      const metadata = req.body.metadata || {};
+
+      // If payload is in Order format with transactions.payments
+      if (req.body.transactions?.payments?.[0]) {
+        const p = req.body.transactions.payments[0];
+        if (p.payment_method?.token) cardToken = p.payment_method.token;
+        if (p.payment_method?.id) paymentMethodId = p.payment_method.id;
+        if (p.payment_method?.installments) installments = Number(p.payment_method.installments);
+        if (p.amount) amount = Number(p.amount);
+      }
+
+      if (!cardToken) {
+        return res.status(400).json({ error: 'Token do cartão não fornecido.' });
+      }
+
+      const client = getMercadoPagoClient();
+      const payment = new Payment(client);
+
+      const nameParts = (payerName || 'Assinante').trim().split(' ');
+      const firstName = nameParts[0] || 'Assinante';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const cleanDoc = (docNumber || '').replace(/\D/g, '');
+      const identification = cleanDoc
+        ? {
+            type: docType || (cleanDoc.length > 11 ? 'CNPJ' : 'CPF'),
+            number: cleanDoc,
+          }
+        : undefined;
+
+      const paymentResponse = await payment.create({
+        body: {
+          transaction_amount: amount || 50,
+          token: cardToken,
+          description,
+          installments,
+          payment_method_id: paymentMethodId,
+          issuer_id: issuerId,
+          payer: {
+            email: payerEmail || 'cliente@escritorio.com',
+            first_name: firstName,
+            last_name: lastName,
+            identification,
+          },
+          external_reference: externalReference,
+          metadata: {
+            uid: externalReference,
+            plan: metadata.plan || (amount > 100 ? 'annual' : 'monthly'),
+            source: 'checkout_transparente',
+          },
+        },
+      });
+
+      console.log(`[Mercado Pago] Pagamento processado: id=${paymentResponse.id}, status=${paymentResponse.status}, detail=${paymentResponse.status_detail}`);
+
+      // If approved, update user subscription in Firestore & notify
+      if (paymentResponse.status === 'approved' || paymentResponse.status === 'processed') {
+        const uid = externalReference || metadata.uid;
+        if (uid && getApps().length > 0) {
+          try {
+            const db = getFirestore();
+            const baseDate = new Date();
+            if (amount > 100) {
+              baseDate.setFullYear(baseDate.getFullYear() + 1);
+            } else {
+              baseDate.setMonth(baseDate.getMonth() + 1);
+            }
+
+            await db.collection('users').doc(uid).set({
+              subscriptionDueDate: baseDate.toISOString(),
+              status: 'active',
+              lastPaymentMethod: `mercadopago_${paymentMethodId || 'card'}`,
+              lastPaymentDate: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }, { merge: true });
+            console.log(`[Mercado Pago] Assinatura do usuário ${uid} ativada no Firestore!`);
+          } catch (fsErr) {
+            console.error('Erro ao atualizar usuário no Firestore após pagamento aprovado:', fsErr);
+          }
+        }
+
+        // Notify Administrator by email
+        try {
+          await sendNewSubscriberNotification({
+            subscriberEmail: payerEmail || 'cliente@mercadopago.com',
+            subscriberName: `${firstName} ${lastName}`.trim(),
+            planLabel: amount > 100 ? 'Anual (Cartão Mercado Pago)' : 'Mensal (Cartão Mercado Pago)',
+            planAmount: Number(amount).toFixed(2),
+            paymentMethod: `Cartão de Crédito Mercado Pago (${paymentMethodId?.toUpperCase() || 'Cartão'} ${installments}x)`,
+            subscriberUid: uid,
+          });
+        } catch (emailErr) {
+          console.error('Erro ao enviar e-mail de novo assinante:', emailErr);
+        }
+      }
+
+      res.json({
+        id: paymentResponse.id,
+        status: paymentResponse.status,
+        status_detail: paymentResponse.status_detail,
+        transactions: {
+          payments: [
+            {
+              id: paymentResponse.id,
+              status: paymentResponse.status,
+              status_detail: paymentResponse.status_detail,
+              payment_method: {
+                id: paymentMethodId,
+                type: 'credit_card',
+                installments,
+              },
+            },
+          ],
+        },
+      });
+    } catch (error: any) {
+      console.error('Mercado Pago card payment error:', error);
+      res.status(500).json({
+        error: error.message || 'Erro ao processar pagamento com cartão no Mercado Pago.',
+        cause: error.cause || undefined,
+      });
+    }
   });
 
   // Create Mercado Pago Checkout Preference (Checkout Pro)
