@@ -70,8 +70,16 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
     receiveInstallmentPayment,
   } = useFinance();
 
-  // Mode: 'mercadopago' | 'preview' | 'send' | 'traditional'
   const [activeTab, setActiveTab] = useState<'mercadopago' | 'preview' | 'send' | 'traditional'>('mercadopago');
+
+  // Reactive local installment state to immediately reflect generated boleto data
+  const [localInstallment, setLocalInstallment] = useState<ProjectInstallment | null>(installment);
+
+  useEffect(() => {
+    setLocalInstallment(installment);
+  }, [installment]);
+
+  const activeInstallment = localInstallment || installment;
 
   // Mercado Pago Boleto Form State
   const [payerName, setPayerName] = useState<string>('');
@@ -484,6 +492,9 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
         },
       };
 
+      // Immediately reflect generated boleto data in local modal state
+      setLocalInstallment((prev) => (prev ? { ...prev, ...updates } : ({ ...installment, ...updates } as ProjectInstallment)));
+
       if (onUpdateInstallment) {
         onUpdateInstallment(installment.id, updates);
       } else {
@@ -491,7 +502,9 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
       }
 
       setMpSuccess('Boleto registrado com sucesso na FEBRABAN via Mercado Pago!');
-      setTimeout(() => setMpSuccess(''), 5000);
+      // Switch to preview tab so user can immediately view and print the boleto
+      setActiveTab('preview');
+      setTimeout(() => setMpSuccess(''), 6000);
     } catch (err: any) {
       console.error('Error generating Mercado Pago Boleto:', err);
       setMpError(err.message || 'Erro ao emitir boleto no Mercado Pago.');
@@ -502,7 +515,8 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
   // Sync / Verify payment status in real time
   const handleCheckPaymentStatus = async () => {
-    if (!installment.boletoPaymentId) {
+    const paymentId = activeInstallment?.boletoPaymentId;
+    if (!paymentId) {
       setSyncStatusResult('Nenhum ID de pagamento do Mercado Pago associado a esta parcela.');
       return;
     }
@@ -511,28 +525,32 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
       setIsCheckingStatus(true);
       setSyncStatusResult('');
       const customToken = officeSettings?.mercadopagoConfig?.accessToken;
-      const statusData = await fetchMercadoPagoPaymentStatus(installment.boletoPaymentId, customToken);
+      const statusData = await fetchMercadoPagoPaymentStatus(paymentId, customToken);
 
       if (statusData.status === 'approved') {
         const defaultAcc = bankAccounts.find((a) => a.isDefault)?.id || bankAccounts[0]?.id || 'acc-main';
         receiveInstallmentPayment(
-          installment.id,
-          installment.bankAccountId || defaultAcc,
+          activeInstallment.id,
+          activeInstallment.bankAccountId || defaultAcc,
           statusData.date_approved ? statusData.date_approved.split('T')[0] : new Date().toISOString().split('T')[0],
-          statusData.transaction_amount || installment.amount
+          statusData.transaction_amount || activeInstallment.amount
         );
 
+        const paidUpdates: Partial<ProjectInstallment> = {
+          status: 'paid',
+          boletoStatus: 'approved',
+          paidDate: new Date().toISOString().split('T')[0],
+        };
+
+        setLocalInstallment((prev) => (prev ? { ...prev, ...paidUpdates } : null));
+
         if (onUpdateInstallment) {
-          onUpdateInstallment(installment.id, {
-            status: 'paid',
-            boletoStatus: 'approved',
-            paidDate: new Date().toISOString().split('T')[0],
-          });
+          onUpdateInstallment(activeInstallment.id, paidUpdates);
         }
 
         setSyncStatusResult('🎉 Pagamento Confirmado! Parcela baixada e saldo atualizado no sistema!');
       } else if (statusData.status === 'pending' || statusData.status === 'in_process') {
-        setSyncStatusResult('⏳ Boleto aguardando compensação bancária pelo cliente.');
+        setSyncStatusResult('⏳ Boleto registrado e aguardando compensação bancária pelo cliente.');
       } else {
         setSyncStatusResult(`Status retornado pelo Mercado Pago: ${statusData.status} (${statusData.status_detail})`);
       }
@@ -545,6 +563,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
   // Send Boleto via Email API
   const handleSendEmail = async () => {
+    if (!activeInstallment) return;
     const targetEmail = payerEmail.trim();
     if (!targetEmail || !targetEmail.includes('@')) {
       setEmailError('Por favor informe um e-mail válido para o cliente.');
@@ -561,14 +580,14 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           toEmail: targetEmail,
-          clientName: payerName.trim() || installment.clientName,
-          projectTitle: installment.projectTitle,
-          installmentNumber: installment.installmentNumber,
-          totalInstallments: installment.totalInstallments,
-          amount: boletoAmount || installment.amount,
-          dueDate: boletoDueDate || installment.dueDate,
-          linhaDigitavel: installment.boletoBarcode || traditionalBoletoData?.linhaDigitavel,
-          boletoUrl: installment.boletoExternalUrl,
+          clientName: payerName.trim() || activeInstallment.clientName,
+          projectTitle: activeInstallment.projectTitle,
+          installmentNumber: activeInstallment.installmentNumber,
+          totalInstallments: activeInstallment.totalInstallments,
+          amount: boletoAmount || activeInstallment.amount,
+          dueDate: boletoDueDate || activeInstallment.dueDate,
+          linhaDigitavel: activeInstallment.boletoBarcode || traditionalBoletoData?.linhaDigitavel,
+          boletoUrl: activeInstallment.boletoExternalUrl,
           officeName: officeSettings?.officeName || architectProfile?.officeName || architectProfile?.name || 'Meu Escritório Online',
           officeEmail: officeSettings?.contactEmail || architectProfile?.email || user?.email,
           customNote: customNotes || boletoDescription,
@@ -591,17 +610,18 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
   // Open native mail app fallback
   const handleOpenMailClient = () => {
+    if (!activeInstallment) return;
     const subject = encodeURIComponent(
-      `Boleto Bancário: Parcela ${installment.installmentNumber}/${installment.totalInstallments} - ${installment.projectTitle}`
+      `Boleto Bancário: Parcela ${activeInstallment.installmentNumber}/${activeInstallment.totalInstallments} - ${activeInstallment.projectTitle}`
     );
     const body = encodeURIComponent(
-      `Olá ${payerName || installment.clientName},\n\n` +
-      `Segue o boleto bancário referente ao projeto ${installment.projectTitle}:\n\n` +
-      `• Parcela: ${installment.installmentNumber}/${installment.totalInstallments}\n` +
-      `• Valor: ${formatCurrency(boletoAmount || installment.amount)}\n` +
-      `• Vencimento: ${formatDate(boletoDueDate || installment.dueDate)}\n\n` +
-      (installment.boletoBarcode ? `Linha Digitável:\n${installment.boletoBarcode}\n\n` : '') +
-      (installment.boletoExternalUrl ? `Link do Boleto em PDF:\n${installment.boletoExternalUrl}\n\n` : '') +
+      `Olá ${payerName || activeInstallment.clientName},\n\n` +
+      `Segue o boleto bancário referente ao projeto ${activeInstallment.projectTitle}:\n\n` +
+      `• Parcela: ${activeInstallment.installmentNumber}/${activeInstallment.totalInstallments}\n` +
+      `• Valor: ${formatCurrency(boletoAmount || activeInstallment.amount)}\n` +
+      `• Vencimento: ${formatDate(boletoDueDate || activeInstallment.dueDate)}\n\n` +
+      (activeInstallment.boletoBarcode ? `Linha Digitável:\n${activeInstallment.boletoBarcode}\n\n` : '') +
+      (activeInstallment.boletoExternalUrl ? `Link do Boleto em PDF:\n${activeInstallment.boletoExternalUrl}\n\n` : '') +
       `Atenciosamente,\n${officeSettings?.officeName || architectProfile?.name || 'Meu Escritório'}`
     );
     window.open(`mailto:${payerEmail}?subject=${subject}&body=${body}`, '_blank');
@@ -609,6 +629,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
   // Save traditional slip data to installment
   const handleSaveTraditionalToInstallment = () => {
+    if (!activeInstallment) return;
     if (traditionalBoletoData) {
       const updates: Partial<ProjectInstallment> = {
         boletoBarcode: traditionalBoletoData.linhaDigitavel,
@@ -616,16 +637,18 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
         boletoOurNumber: traditionalBoletoData.nossoNumero,
         boletoBank: effectiveBankCode,
         boletoBankAccountId: selectedAccountId || undefined,
-        bankAccountId: selectedAccountId || installment.bankAccountId,
+        bankAccountId: selectedAccountId || activeInstallment.bankAccountId,
         boletoGeneratedAt: new Date().toISOString(),
         clientDocument: clientDocument || payerDoc || undefined,
         boletoProvider: 'simulated',
       };
 
+      setLocalInstallment((prev) => (prev ? { ...prev, ...updates } : null));
+
       if (onUpdateInstallment) {
-        onUpdateInstallment(installment.id, updates);
+        onUpdateInstallment(activeInstallment.id, updates);
       } else {
-        updateProjectInstallment(installment.id, updates);
+        updateProjectInstallment(activeInstallment.id, updates);
       }
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
@@ -633,7 +656,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
   };
 
   const handleCopyLinha = async (codeToCopy?: string) => {
-    const text = codeToCopy || installment.boletoBarcode || traditionalBoletoData?.linhaDigitavel || '';
+    const text = codeToCopy || activeInstallment?.boletoBarcode || traditionalBoletoData?.linhaDigitavel || '';
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
@@ -643,9 +666,9 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
   };
 
   const handleCopyPdfUrl = async () => {
-    if (!installment.boletoExternalUrl) return;
+    if (!activeInstallment?.boletoExternalUrl) return;
     try {
-      await navigator.clipboard.writeText(installment.boletoExternalUrl);
+      await navigator.clipboard.writeText(activeInstallment.boletoExternalUrl);
       setCopiedUrl(true);
       setTimeout(() => setCopiedUrl(false), 2500);
     } catch {}
@@ -661,7 +684,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
   };
 
   const handleSendWhatsApp = () => {
-    const rawPhone = (payerPhone || installment.clientPhone || '').replace(/\D/g, '');
+    const rawPhone = (payerPhone || activeInstallment?.clientPhone || '').replace(/\D/g, '');
     const cleanPhone = rawPhone.startsWith('55') ? rawPhone : `55${rawPhone}`;
     const encodedMsg = encodeURIComponent(customMessage);
     const url = rawPhone
@@ -670,11 +693,151 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
     window.open(url, '_blank');
   };
 
+  // Robust print method that ensures the preview tab and ID are active
   const handlePrint = () => {
     if (activeTab === 'traditional') {
       handleSaveTraditionalToInstallment();
     }
+    if (activeTab !== 'preview') {
+      setActiveTab('preview');
+      setTimeout(() => {
+        window.print();
+      }, 250);
+      return;
+    }
     window.print();
+  };
+
+  // Dedicated Popup Window Print helper for zero iframe blank page issues
+  const handlePrintDedicatedWindow = () => {
+    if (activeTab === 'traditional') {
+      handleSaveTraditionalToInstallment();
+    }
+
+    const printEl = document.getElementById('printable-boleto');
+    if (!printEl) {
+      handlePrint();
+      return;
+    }
+
+    try {
+      const printWindow = window.open('', '_blank', 'width=920,height=960');
+      if (!printWindow) {
+        window.print();
+        return;
+      }
+
+      printWindow.document.open();
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+          <meta charset="utf-8">
+          <title>Boleto Bancário - ${activeInstallment?.projectTitle || 'Cobrança'}</title>
+          <style>
+            @page { size: A4 portrait; margin: 10mm; }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+              background-color: #ffffff;
+              color: #000000;
+              padding: 20px;
+              margin: 0 auto;
+              max-width: 800px;
+            }
+            .border-black { border-color: #000 !important; }
+            .bg-black { background-color: #000 !important; color: #fff !important; }
+            .bg-gray-50 { background-color: #f9fafb !important; }
+            .bg-gray-100 { background-color: #f3f4f6 !important; }
+            .text-gray-900 { color: #111827 !important; }
+            .text-gray-700 { color: #374151 !important; }
+            .text-gray-600 { color: #4b5563 !important; }
+            .text-gray-500 { color: #6b7280 !important; }
+            .text-emerald-700 { color: #047857 !important; }
+            .text-rose-700 { color: #be123c !important; }
+            .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important; }
+            .grid { display: grid; }
+            .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .col-span-3 { grid-column: span 3 / span 3; }
+            .flex { display: flex; }
+            .items-center { align-items: center; }
+            .items-end { align-items: flex-end; }
+            .justify-between { justify-content: space-between; }
+            .gap-1 { gap: 4px; }
+            .gap-2 { gap: 8px; }
+            .gap-4 { gap: 16px; }
+            .p-1\\.5 { padding: 6px; }
+            .p-2 { padding: 8px; }
+            .p-4 { padding: 16px; }
+            .p-6 { padding: 24px; }
+            .pb-2 { padding-bottom: 8px; }
+            .pb-4 { padding-bottom: 16px; }
+            .pt-1 { padding-top: 4px; }
+            .pt-2 { padding-top: 8px; }
+            .mb-0\\.5 { margin-bottom: 2px; }
+            .mb-1 { margin-bottom: 4px; }
+            .mb-2 { margin-bottom: 8px; }
+            .mb-3 { margin-bottom: 12px; }
+            .mb-4 { margin-bottom: 16px; }
+            .mt-0\\.5 { margin-top: 2px; }
+            .mt-1 { margin-top: 4px; }
+            .ml-2 { margin-left: 8px; }
+            .border { border: 1px solid #000; }
+            .border-gray-300 { border-color: #d1d5db !important; }
+            .border-gray-400 { border-color: #9ca3af !important; }
+            .border-b { border-bottom: 1px solid #000; }
+            .border-b-2 { border-bottom: 2px solid #000; }
+            .border-r { border-right: 1px solid #000; }
+            .border-t { border-top: 1px solid #000; }
+            .border-dashed { border-style: dashed; }
+            .rounded { border-radius: 4px; }
+            .rounded-lg { border-radius: 8px; }
+            .rounded-xl { border-radius: 12px; }
+            .text-xs { font-size: 12px; }
+            .text-sm { font-size: 14px; }
+            .text-\\[9px\\] { font-size: 9px; }
+            .text-\\[10px\\] { font-size: 10px; }
+            .text-\\[11px\\] { font-size: 11px; }
+            .font-medium { font-weight: 500; }
+            .font-bold { font-weight: 700; }
+            .font-extrabold { font-weight: 800; }
+            .font-black { font-weight: 900; }
+            .uppercase { text-transform: uppercase; }
+            .tracking-widest { letter-spacing: 0.1em; }
+            .tracking-tight { letter-spacing: -0.025em; }
+            .leading-relaxed { line-height: 1.625; }
+            .h-14 { height: 56px; }
+            .w-8 { width: 32px; }
+            .h-8 { height: 32px; }
+            .w-10 { width: 40px; }
+            .h-10 { height: 40px; }
+            .w-12 { width: 48px; }
+            .h-12 { height: 48px; }
+            .w-full { width: 100%; }
+            .max-w-md { max-width: 448px; }
+            .block { display: block; }
+            .inline-block { display: inline-block; }
+            .shrink-0 { flex-shrink: 0; }
+          </style>
+        </head>
+        <body>
+          ${printEl.outerHTML}
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 300);
+            };
+          </script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    } catch (err) {
+      console.warn('Dedicated print window failed, using fallback:', err);
+      window.print();
+    }
   };
 
   // Barcode pattern for traditional display
@@ -685,8 +848,10 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
     1, 3, 1, 1, 2, 2, 3, 1, 1, 2, 1, 2, 3, 1, 2, 1, 1, 2, 2, 1,
   ];
 
-  const hasGeneratedMP = Boolean(installment.boletoExternalUrl);
-  const activeLinhaDigitavel = installment.boletoBarcode || traditionalBoletoData?.linhaDigitavel || '';
+  const hasGeneratedMP = Boolean(activeInstallment?.boletoExternalUrl || activeInstallment?.boletoPaymentId);
+  const activeLinhaDigitavel = activeInstallment?.boletoBarcode || traditionalBoletoData?.linhaDigitavel || '';
+
+  if (!installment || !activeInstallment) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
@@ -703,16 +868,16 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                   Emissão de Boleto Bancário
                 </h3>
                 <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-wider uppercase bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                  Parcela {installment.installmentNumber}/{installment.totalInstallments}
+                  Parcela {activeInstallment.installmentNumber}/{activeInstallment.totalInstallments}
                 </span>
-                {installment.status === 'paid' && (
+                {activeInstallment.status === 'paid' && (
                   <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                     Pago
                   </span>
                 )}
               </div>
               <p className="text-xs text-[#a89c93] mt-0.5">
-                {installment.projectTitle} • Cliente: <strong className="text-[#fcf8f5]">{payerName || installment.clientName}</strong> • Valor: <strong className="text-emerald-400">{formatCurrency(boletoAmount || installment.amount)}</strong>
+                {activeInstallment.projectTitle} • Cliente: <strong className="text-[#fcf8f5]">{payerName || activeInstallment.clientName}</strong> • Valor: <strong className="text-emerald-400">{formatCurrency(boletoAmount || activeInstallment.amount)}</strong>
               </p>
             </div>
           </div>
@@ -1224,24 +1389,34 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={handlePrint}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
+                    title="Imprime diretamente esta página formatada para A4"
                   >
                     <Printer className="w-4 h-4" />
                     <span>Imprimir Boleto (A4)</span>
                   </button>
 
-                  {installment.boletoExternalUrl && (
+                  <button
+                    onClick={handlePrintDedicatedWindow}
+                    className="px-3.5 py-2 bg-[#241e1b] hover:bg-[#2d2622] text-[#fcf8f5] border border-[#3d342f] font-bold rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
+                    title="Abre o boleto em janela limpa dedicada para impressão perfeita"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Imprimir em Nova Janela</span>
+                  </button>
+
+                  {activeInstallment.boletoExternalUrl && (
                     <a
-                      href={installment.boletoExternalUrl}
+                      href={activeInstallment.boletoExternalUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      <span>Baixar PDF Oficial</span>
+                      <span>PDF Oficial MP</span>
                     </a>
                   )}
 
@@ -1257,6 +1432,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
               {/* Printable Standard Boleto Slip */}
               <div
+                id="printable-boleto"
                 ref={printRef}
                 className="bg-white text-black p-4 sm:p-6 rounded-xl border border-gray-300 shadow-xl print:shadow-none print:border-none print:m-0 print:p-0 print:rounded-none max-w-3xl mx-auto font-sans"
               >
@@ -1268,11 +1444,11 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                         MP
                       </div>
                       <span className="font-bold text-sm text-gray-900">
-                        {installment.boletoProvider === 'mercadopago' ? 'Mercado Pago / Bradesco / Santander' : currentBank.fullName}
+                        {activeInstallment.boletoProvider === 'mercadopago' ? 'Mercado Pago / Santander / Bradesco' : currentBank.fullName}
                       </span>
                     </div>
                     <div className="font-mono font-bold text-xs bg-gray-100 px-2 py-1 border border-gray-400">
-                      {installment.boletoProvider === 'mercadopago' ? '033-7' : `${currentBank.code}-${currentBank.digit}`}
+                      {activeInstallment.boletoProvider === 'mercadopago' ? '033-7' : `${currentBank.code}-${currentBank.digit}`}
                     </div>
                     <div className="text-[11px] font-bold text-gray-700 uppercase">
                       Recibo do Pagador
@@ -1295,20 +1471,20 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                     <div>
                       <span className="text-[9px] text-gray-500 block uppercase font-bold">Vencimento</span>
                       <strong className="text-rose-700 font-bold block">
-                        {formatDate(boletoDueDate || installment.dueDate)}
+                        {formatDate(boletoDueDate || activeInstallment.dueDate)}
                       </strong>
                     </div>
                     <div>
                       <span className="text-[9px] text-gray-500 block uppercase font-bold">Valor Cobrado</span>
                       <strong className="text-emerald-700 font-extrabold text-xs block">
-                        {formatCurrency(boletoAmount || installment.amount)}
+                        {formatCurrency(boletoAmount || activeInstallment.amount)}
                       </strong>
                     </div>
                   </div>
 
                   <div className="text-[10px] text-gray-600 border border-gray-300 p-2">
                     <span className="text-[9px] text-gray-500 uppercase font-bold block mb-0.5">Pagador (Sacado)</span>
-                    <strong className="text-gray-900">{payerName || installment.clientName}</strong>
+                    <strong className="text-gray-900">{payerName || activeInstallment.clientName}</strong>
                     {payerDoc && <span className="font-mono text-gray-700 ml-2">({payerDoc})</span>}
                     {(payerStreet || payerCity) && (
                       <div className="text-gray-600 text-[9px] mt-0.5">
@@ -1324,14 +1500,14 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                   <div className="flex items-center justify-between border-b-2 border-black pb-2 mb-2">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 bg-black text-white font-black text-xs flex items-center justify-center rounded">
-                        {installment.boletoProvider === 'mercadopago' ? 'MP' : currentBank.code}
+                        {activeInstallment.boletoProvider === 'mercadopago' ? 'MP' : currentBank.code}
                       </div>
                       <span className="font-bold text-sm text-gray-900">
-                        {installment.boletoProvider === 'mercadopago' ? 'Mercado Pago' : currentBank.fullName}
+                        {activeInstallment.boletoProvider === 'mercadopago' ? 'Mercado Pago' : currentBank.fullName}
                       </span>
                     </div>
                     <div className="font-mono font-bold text-sm bg-gray-100 px-2 py-0.5 border border-gray-400">
-                      {installment.boletoProvider === 'mercadopago' ? '033-7' : `${currentBank.code}-${currentBank.digit}`}
+                      {activeInstallment.boletoProvider === 'mercadopago' ? '033-7' : `${currentBank.code}-${currentBank.digit}`}
                     </div>
                     <div className="font-mono text-xs sm:text-sm font-bold text-gray-900 tracking-tight">
                       {activeLinhaDigitavel || '00000.00000 00000.000000 00000.000000 0 00000000000000'}
@@ -1347,7 +1523,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                       </div>
                       <div className="p-1.5 bg-gray-50">
                         <span className="text-[9px] text-gray-500 uppercase font-bold block">Vencimento</span>
-                        <strong className="text-gray-900 font-bold text-xs">{formatDate(boletoDueDate || installment.dueDate)}</strong>
+                        <strong className="text-gray-900 font-bold text-xs">{formatDate(boletoDueDate || activeInstallment.dueDate)}</strong>
                       </div>
                     </div>
 
@@ -1370,7 +1546,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                       </div>
                       <div className="border-r border-black p-1.5">
                         <span className="text-[9px] text-gray-500 uppercase font-bold block">Número do Documento</span>
-                        <span className="font-mono">{traditionalBoletoData?.documentoNumero || `PARC-${installment.installmentNumber}`}</span>
+                        <span className="font-mono">{traditionalBoletoData?.documentoNumero || `PARC-${activeInstallment.installmentNumber}`}</span>
                       </div>
                       <div className="border-r border-black p-1.5">
                         <span className="text-[9px] text-gray-500 uppercase font-bold block">Espécie Doc.</span>
@@ -1378,7 +1554,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                       </div>
                       <div className="p-1.5 bg-gray-50">
                         <span className="text-[9px] text-gray-500 uppercase font-bold block">(=) Valor do Documento</span>
-                        <strong className="text-gray-900 text-xs font-bold">{formatCurrency(boletoAmount || installment.amount)}</strong>
+                        <strong className="text-gray-900 text-xs font-bold">{formatCurrency(boletoAmount || activeInstallment.amount)}</strong>
                       </div>
                     </div>
 
@@ -1391,7 +1567,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                           • {customInstructions}
                         </p>
                         <p className="text-[10px] text-gray-600 mt-1">
-                          • Referente a: {boletoDescription || installment.projectTitle}
+                          • Referente a: {boletoDescription || activeInstallment.projectTitle}
                         </p>
                       </div>
                       <div className="p-1.5 bg-gray-50 space-y-2">
@@ -1405,7 +1581,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                         </div>
                         <div className="border-t border-gray-300 pt-1">
                           <span className="text-[9px] text-gray-500 uppercase font-bold block">(=) Valor Cobrado</span>
-                          <strong className="text-gray-900 font-extrabold text-xs">{formatCurrency(boletoAmount || installment.amount)}</strong>
+                          <strong className="text-gray-900 font-extrabold text-xs">{formatCurrency(boletoAmount || activeInstallment.amount)}</strong>
                         </div>
                       </div>
                     </div>
@@ -1415,7 +1591,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                       <span className="text-[9px] text-gray-500 uppercase font-bold block mb-0.5">Pagador (Sacado)</span>
                       <div className="flex flex-wrap items-center justify-between gap-1 text-[10px]">
                         <div>
-                          <strong className="text-gray-900">{payerName || installment.clientName}</strong>
+                          <strong className="text-gray-900">{payerName || activeInstallment.clientName}</strong>
                           {payerDoc && <span className="font-mono text-gray-700 ml-2">CPF/CNPJ: {payerDoc}</span>}
                         </div>
                         {payerPhone && <span className="text-gray-600">Tel: {payerPhone}</span>}
