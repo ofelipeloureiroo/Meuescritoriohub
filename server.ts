@@ -951,10 +951,32 @@ Retorne uma resposta JSON com o formato estrito:
         payerName,
         externalReference,
         metadata,
+        origin: clientOrigin,
       } = req.body;
 
       const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-      const appUrl = process.env.APP_URL || `http://localhost:${PORT}`;
+
+      // Extract dynamic URL from client or request headers
+      let originFromHeader = '';
+      try {
+        if (req.headers.origin) {
+          originFromHeader = String(req.headers.origin);
+        } else if (req.headers.referer) {
+          originFromHeader = new URL(String(req.headers.referer)).origin;
+        }
+      } catch {}
+
+      const forwardedHost = req.headers['x-forwarded-host'];
+      const forwardedProto = req.headers['x-forwarded-proto'] || 'https';
+      const forwardedOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : '';
+
+      const appUrl = (
+        clientOrigin ||
+        originFromHeader ||
+        forwardedOrigin ||
+        process.env.APP_URL ||
+        `https://ais-dev-su4zqshj47o55562to2iuv-729561127771.us-east1.run.app`
+      ).replace(/\/$/, '');
 
       if (!token) {
         return res.status(400).json({
@@ -965,6 +987,10 @@ Retorne uma resposta JSON com o formato estrito:
 
       const client = getMercadoPagoClient();
       const preference = new Preference(client);
+
+      const successUrl = `${appUrl}/checkout?status=approved&plan=${metadata?.plan || 'monthly'}`;
+      const failureUrl = `${appUrl}/checkout?status=failure`;
+      const pendingUrl = `${appUrl}/checkout?status=pending`;
 
       const preferenceData: any = {
         items: [
@@ -977,15 +1003,23 @@ Retorne uma resposta JSON com o formato estrito:
           },
         ],
         back_urls: {
-          success: `${appUrl}/checkout?status=approved&plan=${metadata?.plan || 'monthly'}`,
-          failure: `${appUrl}/checkout?status=failure`,
-          pending: `${appUrl}/checkout?status=pending`,
+          success: successUrl,
+          failure: failureUrl,
+          pending: pendingUrl,
         },
-        auto_return: 'approved',
-        notification_url: `${appUrl}/api/mercadopago/webhook`,
         external_reference: externalReference || metadata?.uid || '',
         metadata: metadata || {},
       };
+
+      // auto_return is valid only with valid http/https URLs
+      if (appUrl.startsWith('http://') || appUrl.startsWith('https://')) {
+        preferenceData.auto_return = 'approved';
+      }
+
+      // notification_url should be a public URL
+      if (appUrl.startsWith('https://') || (appUrl.startsWith('http://') && !appUrl.includes('localhost'))) {
+        preferenceData.notification_url = `${appUrl}/api/mercadopago/webhook`;
+      }
 
       if (payerEmail) {
         preferenceData.payer = {

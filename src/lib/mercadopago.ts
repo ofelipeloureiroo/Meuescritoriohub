@@ -115,6 +115,7 @@ export interface CreatePreferenceParams {
   payerName?: string;
   externalReference?: string;
   metadata?: Record<string, any>;
+  origin?: string;
 }
 
 export interface PreferenceResponse {
@@ -129,10 +130,14 @@ export interface PreferenceResponse {
 export async function createCheckoutPreference(
   params: CreatePreferenceParams
 ): Promise<PreferenceResponse> {
+  const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
   const res = await fetch('/api/mercadopago/preference', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+    body: JSON.stringify({
+      ...params,
+      origin: params.origin || origin,
+    }),
   });
 
   const data = await res.json();
