@@ -75,6 +75,8 @@ export interface BankAccount {
   beneficiaryName?: string;
   beneficiaryDocument?: string;
   isDefault?: boolean;
+  pixKey?: string;
+  pixKeyType?: 'cpf' | 'cnpj' | 'email' | 'phone' | 'random';
 }
 
 export interface ExtraAmortization {
@@ -496,6 +498,17 @@ export interface ProjectInstallment {
   boletoPaymentId?: string | number; // ID oficial do pagamento no Mercado Pago
   boletoProvider?: 'mercadopago' | 'simulated';
   boletoStatus?: 'pending' | 'approved' | 'cancelled' | 'rejected';
+  mercadoPagoPaymentId?: string | number;
+  mercadoPagoStatus?: string;
+  mercadoPagoTicketUrl?: string;
+  mercadoPagoDigitableLine?: string;
+  mercadoPagoBarcode?: string;
+  mercadoPagoExpirationDate?: string;
+  digitableLine?: string;
+  barcode?: string;
+  boletoPdfUrl?: string;
+  paymentMethod?: string;
+  clientId?: string;
 }
 
 export interface ProjectMilestone {
@@ -573,6 +586,8 @@ export interface OfficeSettings {
     color: string;
   }[];
   templateBindings?: Record<string, string>;
+  mercadoPagoAccessToken?: string;
+  mercadoPagoPublicKey?: string;
   mercadopagoConfig?: {
     accessToken?: string;
     publicKey?: string;

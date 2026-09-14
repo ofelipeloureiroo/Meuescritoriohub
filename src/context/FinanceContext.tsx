@@ -271,7 +271,9 @@ const INITIAL_OFFICE_SETTINGS: OfficeSettings = {
     'Outro'
   ],
   acquisitionChannels: ['Indicação', 'Instagram', 'WhatsApp', 'Evento/Feira', 'Google'],
-  tags: []
+  tags: [],
+  mercadoPagoAccessToken: 'APP_USR-3573349139215622-091408-39d733a8863ebb870c694cd79c7a1d7d-44930358',
+  mercadoPagoPublicKey: 'APP_USR-b4400ce4-2825-453a-b397-782bcffa457c',
 };
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);

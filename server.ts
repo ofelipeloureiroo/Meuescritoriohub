@@ -10,19 +10,28 @@ import { GoogleGenAI } from "@google/genai";
 
 // Lazy initialize Mercado Pago client & persistent credentials
 const MP_CREDENTIALS_FILE = path.join(process.cwd(), '.mp_credentials.json');
+const DEFAULT_MP_ACCESS_TOKEN = 'APP_USR-3573349139215622-091408-39d733a8863ebb870c694cd79c7a1d7d-44930358';
+const DEFAULT_MP_PUBLIC_KEY = 'APP_USR-b4400ce4-2825-453a-b397-782bcffa457c';
+
 function loadPersistedMpCredentials() {
   try {
     if (fs.existsSync(MP_CREDENTIALS_FILE)) {
       const data = JSON.parse(fs.readFileSync(MP_CREDENTIALS_FILE, 'utf-8'));
-      if (data.accessToken && !process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+      if (data.accessToken) {
         process.env.MERCADO_PAGO_ACCESS_TOKEN = data.accessToken;
       }
-      if (data.publicKey && !process.env.VITE_MERCADO_PAGO_PUBLIC_KEY) {
+      if (data.publicKey) {
         process.env.VITE_MERCADO_PAGO_PUBLIC_KEY = data.publicKey;
       }
     }
   } catch (err) {
     console.warn('Could not read .mp_credentials.json:', err);
+  }
+  if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+    process.env.MERCADO_PAGO_ACCESS_TOKEN = DEFAULT_MP_ACCESS_TOKEN;
+  }
+  if (!process.env.VITE_MERCADO_PAGO_PUBLIC_KEY) {
+    process.env.VITE_MERCADO_PAGO_PUBLIC_KEY = DEFAULT_MP_PUBLIC_KEY;
   }
 }
 loadPersistedMpCredentials();
@@ -1341,9 +1350,10 @@ Retorne uma resposta JSON com o formato estrito:
         expirationISO = `${exp.toISOString().split('T')[0]}T23:59:59.000-03:00`;
       }
 
-      // Attempt 1: Try Direct Payment Creation with bolbradesco
+      // Attempt 1: Direct Payment Creation with bolbradesco (Official FEBRABAN Registered Boleto)
       let directPaymentSucceeded = false;
       let paymentResponse: any = null;
+      let directErrorMsg = '';
 
       try {
         const payment = new Payment(client);
@@ -1381,17 +1391,70 @@ Retorne uma resposta JSON com o formato estrito:
         if (paymentResponse && paymentResponse.id) {
           directPaymentSucceeded = true;
         }
-      } catch (directError: any) {
-        console.warn('Mercado Pago direct bolbradesco attempt returned error (standard in sandbox/test mode), creating official Preference fallback:', directError?.message || directError);
+      } catch (err1: any) {
+        directErrorMsg = err1?.cause?.[0]?.description || err1?.message || 'Erro no bolbradesco';
+        console.warn('Mercado Pago bolbradesco attempt failed:', directErrorMsg);
+
+        // Attempt 1.1: Try PEC (Caixa / Lotérica) if bolbradesco was rejected
+        try {
+          const payment = new Payment(client);
+          paymentResponse = await payment.create({
+            body: {
+              transaction_amount: Number(amount),
+              description: description || 'Honorários e Serviços Prestados',
+              payment_method_id: 'pec',
+              date_of_expiration: expirationISO,
+              payer: {
+                email: payer.email.trim(),
+                first_name: firstName,
+                last_name: lastName,
+                identification: {
+                  type: docType,
+                  number: cleanDoc,
+                },
+                address: {
+                  zip_code: cleanZip,
+                  street_name: payer.address?.street?.trim() || 'Avenida Principal',
+                  street_number: payer.address?.number?.trim() || '100',
+                  neighborhood: payer.address?.neighborhood?.trim() || 'Centro',
+                  city: payer.address?.city?.trim() || 'Rio de Janeiro',
+                  federal_unit: federalUnit,
+                },
+              },
+              external_reference: externalReference || `boleto-${Date.now()}`,
+              metadata: {
+                ...metadata,
+                source: 'escritorio_online_boleto',
+              },
+            },
+          });
+
+          if (paymentResponse && paymentResponse.id) {
+            directPaymentSucceeded = true;
+          }
+        } catch (err2: any) {
+          directErrorMsg = err2?.cause?.[0]?.description || err2?.message || directErrorMsg;
+          console.warn('Mercado Pago PEC fallback also returned error:', directErrorMsg);
+        }
       }
 
       if (directPaymentSucceeded && paymentResponse) {
         const transactionDetails: any = paymentResponse.transaction_details;
         const barcodeData: any = (paymentResponse as any).barcode;
+        const poiData: any = (paymentResponse as any).point_of_interaction?.transaction_data;
 
-        const digitableLine = transactionDetails?.digitable_line || barcodeData?.content || '';
+        const digitableLine =
+          transactionDetails?.digitable_line ||
+          poiData?.digitable_line ||
+          barcodeData?.content ||
+          '';
+
         const barcodeRaw = barcodeData?.content || '';
-        const externalResourceUrl = transactionDetails?.external_resource_url || transactionDetails?.payment_method_reference_id || '';
+        const externalResourceUrl =
+          transactionDetails?.external_resource_url ||
+          poiData?.ticket_url ||
+          transactionDetails?.payment_method_reference_id ||
+          '';
 
         return res.json({
           id: paymentResponse.id,
@@ -1408,81 +1471,76 @@ Retorne uma resposta JSON com o formato estrito:
         });
       }
 
-      // Attempt 2: Resilient Fallback to Mercado Pago Preference (Generates Official MP Hosted Checkout & Boleto Slip)
-      const preference = new Preference(client);
-      const prefResponse = await preference.create({
-        body: {
-          items: [
-            {
-              id: externalReference || `inst-${Date.now()}`,
-              title: description || 'Honorários e Serviços Prestados',
-              quantity: 1,
-              currency_id: 'BRL',
-              unit_price: Number(amount),
+      // If direct boleto creation was rejected by Mercado Pago, try Preference as official MP checkout link
+      try {
+        const preference = new Preference(client);
+        const prefResponse = await preference.create({
+          body: {
+            items: [
+              {
+                id: externalReference || `inst-${Date.now()}`,
+                title: description || 'Honorários e Serviços Prestados',
+                quantity: 1,
+                currency_id: 'BRL',
+                unit_price: Number(amount),
+              },
+            ],
+            payer: {
+              name: firstName,
+              surname: lastName,
+              email: payer.email.trim(),
+              identification: {
+                type: docType,
+                number: cleanDoc,
+              },
+              address: {
+                zip_code: cleanZip,
+                street_name: payer.address?.street?.trim() || 'Avenida Principal',
+                street_number: payer.address?.number?.trim() || '100',
+              },
             },
-          ],
+            expires: true,
+            expiration_date_to: expirationISO,
+            external_reference: externalReference || `boleto-${Date.now()}`,
+            metadata: {
+              ...metadata,
+              source: 'escritorio_online_boleto',
+            },
+          },
+        });
+
+        const checkoutUrl = prefResponse.init_point || prefResponse.sandbox_init_point || '';
+
+        return res.json({
+          id: prefResponse.id,
+          status: 'pending',
+          status_detail: 'pending_payment',
+          digitable_line: '',
+          barcode_raw: '',
+          external_resource_url: checkoutUrl,
+          pdf_url: checkoutUrl,
+          date_of_expiration: expirationISO,
+          transaction_amount: Number(amount),
           payer: {
-            name: firstName,
-            surname: lastName,
-            email: payer.email.trim(),
+            first_name: firstName,
+            last_name: lastName,
+            email: payer.email,
             identification: {
               type: docType,
               number: cleanDoc,
             },
-            address: {
-              zip_code: cleanZip,
-              street_name: payer.address?.street?.trim() || 'Avenida Principal',
-              street_number: payer.address?.number?.trim() || '100',
-            },
           },
-          expires: true,
-          expiration_date_to: expirationISO,
-          external_reference: externalReference || `boleto-${Date.now()}`,
-          metadata: {
-            ...metadata,
-            source: 'escritorio_online_boleto',
-          },
-        },
-      });
-
-      // Compute FEBRABAN standard digitable line & barcode
-      const baseDate = new Date(1997, 9, 7);
-      const targetDate = dueDate ? new Date(dueDate) : new Date();
-      const diffDays = Math.max(1000, Math.floor((targetDate.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24)));
-      const factor = String(diffDays % 10000).padStart(4, '0');
-      const valorStr = String(Math.round(Number(amount) * 100)).padStart(10, '0');
-      const rawNumber = String(Date.now()).slice(-7);
-      const campo1 = `23790.09871`;
-      const campo2 = `65432.1${rawNumber.slice(0, 4)}2`;
-      const campo3 = `${rawNumber.slice(4)}0.001093`;
-      const campo4 = `1`;
-      const campo5 = `${factor}${valorStr}`;
-      const fallbackLinhaDigitavel = `${campo1} ${campo2} ${campo3} ${campo4} ${campo5}`;
-      const fallbackBarcodeRaw = `23791${factor}${valorStr}00987654321${rawNumber}109`;
-
-      const checkoutUrl = prefResponse.init_point || prefResponse.sandbox_init_point || '';
-
-      return res.json({
-        id: prefResponse.id,
-        status: 'pending',
-        status_detail: 'pending_payment',
-        digitable_line: fallbackLinhaDigitavel,
-        barcode_raw: fallbackBarcodeRaw,
-        external_resource_url: checkoutUrl,
-        pdf_url: checkoutUrl,
-        date_of_expiration: expirationISO,
-        transaction_amount: Number(amount),
-        payer: {
-          first_name: firstName,
-          last_name: lastName,
-          email: payer.email,
-          identification: {
-            type: docType,
-            number: cleanDoc,
-          },
-        },
-        provider: 'mercadopago_preference',
-      });
+          provider: 'mercadopago_preference',
+          warning: directErrorMsg ? `Aviso Mercado Pago: ${directErrorMsg}` : undefined,
+        });
+      } catch (prefError: any) {
+        throw new Error(
+          directErrorMsg ||
+          prefError?.cause?.[0]?.description ||
+          prefError?.message ||
+          'Falha na comunicação com o Mercado Pago.'
+        );
+      }
     } catch (error: any) {
       console.error('Mercado Pago Boleto error:', error);
       const apiMessage = error.cause?.[0]?.description || error.message || 'Erro ao gerar boleto registrado no Mercado Pago';

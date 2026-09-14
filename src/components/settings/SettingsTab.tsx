@@ -50,6 +50,7 @@ import { signOut, EmailAuthProvider, reauthenticateWithCredential, updatePasswor
 import { auth } from '../../lib/firebase';
 import { NicheType, ThemeColorId, BgThemeId, OfficeSettings, CollaboratorPermissions } from '../../types';
 import { NICHES, THEMES, BG_THEMES } from '../../utils/theme';
+import { saveMercadoPagoConfig } from '../../lib/mercadopago';
 
 const PRESET_AVATARS = [
   {
@@ -405,7 +406,7 @@ export const SettingsTab: React.FC = () => {
     updateOfficeSettings({ financialCategories: current });
   };
 
-  const handleSaveMercadoPagoConfig = () => {
+  const handleSaveMercadoPagoConfig = async () => {
     updateOfficeSettings({
       mercadopagoConfig: {
         accessToken: mpAccessToken.trim(),
@@ -414,6 +415,16 @@ export const SettingsTab: React.FC = () => {
         defaultInstructions: mpInstructions.trim(),
       },
     });
+
+    try {
+      await saveMercadoPagoConfig({
+        accessToken: mpAccessToken.trim(),
+        publicKey: mpPublicKey.trim(),
+      });
+    } catch (err) {
+      console.error("Erro ao salvar credenciais do Mercado Pago no servidor:", err);
+    }
+
     setMpSavedSuccess(true);
     setTimeout(() => setMpSavedSuccess(false), 3000);
   };

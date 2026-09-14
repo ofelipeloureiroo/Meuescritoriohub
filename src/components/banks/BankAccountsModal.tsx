@@ -6,8 +6,10 @@ import {
   Building2,
   Check,
   CheckCircle2,
+  Copy,
   Pencil,
   Plus,
+  QrCode,
   Trash2,
   Wallet,
   X,
@@ -53,6 +55,7 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
   // Mode: 'list' | 'add' | 'edit'
   const [mode, setMode] = useState<'list' | 'add' | 'edit'>('list');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [copiedPixId, setCopiedPixId] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -63,6 +66,8 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
     wallet: '109',
     beneficiaryName: '',
     beneficiaryDocument: '',
+    pixKey: '',
+    pixKeyType: 'cnpj' as 'cpf' | 'cnpj' | 'email' | 'phone' | 'random',
     balance: '0',
     type: 'bank' as 'bank' | 'fintech' | 'investment' | 'physical_cash',
     color: '#ec7000',
@@ -88,6 +93,7 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
 
   const startAdd = () => {
     setEditingId(null);
+    const defaultPix = architectProfile?.pixKey || architectProfile?.cnpj || architectProfile?.cpf || '';
     setFormData({
       name: '',
       bankCode: '341',
@@ -96,6 +102,8 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
       wallet: '109',
       beneficiaryName: architectProfile?.name || profile?.companyName || '',
       beneficiaryDocument: formatCpfCnpj(architectProfile?.cnpj || architectProfile?.cpf || ''),
+      pixKey: defaultPix,
+      pixKeyType: (architectProfile?.pixKeyType as any) || (architectProfile?.cnpj ? 'cnpj' : 'cpf'),
       balance: '0',
       type: 'bank',
       color: '#ec7000',
@@ -116,6 +124,8 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
         acc.beneficiaryName || architectProfile?.name || profile?.companyName || '',
       beneficiaryDocument:
         acc.beneficiaryDocument || formatCpfCnpj(architectProfile?.cnpj || architectProfile?.cpf || ''),
+      pixKey: acc.pixKey || architectProfile?.pixKey || '',
+      pixKeyType: acc.pixKeyType || (architectProfile?.pixKeyType as any) || 'cnpj',
       balance: String(acc.balance || 0),
       type: acc.type || 'bank',
       color: acc.color || matchedBank.color || '#c58a4b',
@@ -153,6 +163,8 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
         wallet: formData.wallet.trim() || undefined,
         beneficiaryName: formData.beneficiaryName.trim() || undefined,
         beneficiaryDocument: formData.beneficiaryDocument.trim() || undefined,
+        pixKey: formData.pixKey.trim() || undefined,
+        pixKeyType: formData.pixKeyType,
         balance: numBalance,
         type: formData.type,
         color: formData.color,
@@ -167,6 +179,8 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
         wallet: formData.wallet.trim() || undefined,
         beneficiaryName: formData.beneficiaryName.trim() || undefined,
         beneficiaryDocument: formData.beneficiaryDocument.trim() || undefined,
+        pixKey: formData.pixKey.trim() || undefined,
+        pixKeyType: formData.pixKeyType,
         balance: numBalance,
         type: formData.type,
         color: formData.color,
@@ -294,6 +308,42 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
                                     className="text-[#d49454] text-[10px] underline hover:text-[#fcf8f5] cursor-pointer ml-1 font-bold"
                                   >
                                     Completar p/ Boleto
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* PIX Key on Bank Account */}
+                              <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                                {acc.pixKey ? (
+                                  <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded-md text-[11px] font-mono">
+                                    <QrCode className="w-3 h-3 text-emerald-400 shrink-0" />
+                                    <span>
+                                      PIX ({acc.pixKeyType?.toUpperCase() || 'CHAVE'}): <strong>{acc.pixKey}</strong>
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(acc.pixKey || '');
+                                        setCopiedPixId(acc.id);
+                                        setTimeout(() => setCopiedPixId(null), 2000);
+                                      }}
+                                      title="Copiar Chave PIX"
+                                      className="text-emerald-400 hover:text-emerald-200 ml-0.5 cursor-pointer"
+                                    >
+                                      {copiedPixId === acc.id ? (
+                                        <Check className="w-3 h-3 text-emerald-400" />
+                                      ) : (
+                                        <Copy className="w-3 h-3" />
+                                      )}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => startEdit(acc)}
+                                    className="inline-flex items-center gap-1 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md hover:bg-amber-500/20 cursor-pointer"
+                                  >
+                                    <QrCode className="w-3 h-3 text-amber-400 shrink-0" />
+                                    <span>+ Cadastrar Chave PIX</span>
                                   </button>
                                 )}
                               </div>
@@ -528,6 +578,94 @@ export const BankAccountsModal: React.FC<BankAccountsModalProps> = ({
               <p className="text-[10px] text-[#a89c93]">
                 Esses dados definem o <strong>beneficiário oficial (Nome e CPF/CNPJ)</strong> e são utilizados para calcular a <strong>Agência/Código Beneficiário</strong> e a <strong>Linha Digitável</strong> dos boletos gerados para esta conta.
               </p>
+            </div>
+
+            {/* Destaque: Configuração da Chave PIX desta Conta */}
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                  <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+                  Chave PIX Desta Conta Bancária
+                </span>
+                <span className="text-[10px] text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 rounded-md font-medium">
+                  Cobrança PIX & QR Code
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-emerald-200 mb-1">
+                    Tipo de Chave PIX
+                  </label>
+                  <select
+                    value={formData.pixKeyType}
+                    onChange={(e) => setFormData({ ...formData, pixKeyType: e.target.value as any })}
+                    className="w-full bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs rounded-xl p-2.5 focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="cnpj">CNPJ</option>
+                    <option value="cpf">CPF</option>
+                    <option value="email">E-mail</option>
+                    <option value="phone">Celular (WhatsApp)</option>
+                    <option value="random">Chave Aleatória (EVP)</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-semibold text-emerald-200">
+                      Chave PIX
+                    </label>
+                    {formData.pixKeyType === 'cpf' && (architectProfile?.cpf || profile?.cpf) && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            pixKey: architectProfile?.cpf || profile?.cpf || '',
+                          }))
+                        }
+                        className="text-[10px] text-emerald-400 hover:underline cursor-pointer"
+                      >
+                        Usar CPF do perfil
+                      </button>
+                    )}
+                    {formData.pixKeyType === 'cnpj' && (architectProfile?.cnpj || profile?.cnpj) && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            pixKey: architectProfile?.cnpj || profile?.cnpj || '',
+                          }))
+                        }
+                        className="text-[10px] text-emerald-400 hover:underline cursor-pointer"
+                      >
+                        Usar CNPJ do perfil
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder={
+                      formData.pixKeyType === 'cpf'
+                        ? '000.000.000-00'
+                        : formData.pixKeyType === 'cnpj'
+                        ? '00.000.000/0001-00'
+                        : formData.pixKeyType === 'email'
+                        ? 'financeiro@seuescritorio.com'
+                        : formData.pixKeyType === 'phone'
+                        ? '(21) 99999-9999'
+                        : 'Chave aleatória (EVP)'
+                    }
+                    value={formData.pixKey}
+                    onChange={(e) => setFormData({ ...formData, pixKey: e.target.value })}
+                    className="w-full bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] font-mono text-xs rounded-xl p-2.5 focus:outline-none focus:border-emerald-500"
+                  />
+                  <span className="text-[10px] text-[#a89c93] mt-0.5 block">
+                    Esta chave será utilizada para gerar cobranças PIX, Copia e Cola e QR Codes para seus clientes no módulo de cobranças.
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Tipo de Conta e Saldo */}
