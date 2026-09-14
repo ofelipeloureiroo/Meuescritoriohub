@@ -609,6 +609,171 @@ Retorne uma resposta JSON com o formato estrito:
     }
   });
 
+  // Endpoint to send boleto details directly to client via Email
+  app.post('/api/send-boleto-email', async (req, res) => {
+    try {
+      const {
+        toEmail,
+        clientName,
+        projectTitle,
+        installmentNumber,
+        totalInstallments,
+        amount,
+        dueDate,
+        linhaDigitavel,
+        boletoUrl,
+        officeName,
+        officeEmail,
+        customNote,
+      } = req.body;
+
+      if (!toEmail) {
+        return res.status(400).json({ error: "O e-mail do cliente é obrigatório." });
+      }
+
+      const formattedAmount = Number(amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      const formattedDate = dueDate ? new Date(dueDate + 'T12:00:00').toLocaleDateString('pt-BR') : 'A Combinar';
+      const effectiveOffice = officeName || 'Meu Escritório Online';
+
+      const subject = `Boleto Bancário: Parcela ${installmentNumber || 1}/${totalInstallments || 1} - ${projectTitle || 'Honorários'} (${effectiveOffice})`;
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f6f5f3; margin: 0; padding: 20px; color: #2d241e; }
+            .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e6e0da; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+            .header { background: #1a1614; color: #fcf8f5; padding: 28px 24px; text-align: center; }
+            .header h1 { margin: 0 0 6px 0; font-size: 20px; font-weight: 700; color: #d4a373; }
+            .header p { margin: 0; font-size: 13px; color: #a89c93; }
+            .content { padding: 28px 24px; }
+            .greeting { font-size: 15px; margin-bottom: 20px; line-height: 1.6; }
+            .details-box { background: #faf7f5; border: 1px solid #ede7e2; border-radius: 12px; padding: 18px; margin-bottom: 24px; }
+            .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #e2dbd4; font-size: 13px; }
+            .detail-row:last-child { border-bottom: none; }
+            .detail-label { color: #7a6e65; font-weight: 500; }
+            .detail-value { font-weight: 700; color: #1a1614; }
+            .amount-highlight { font-size: 18px; color: #16a34a; font-weight: 800; }
+            .btn-container { text-align: center; margin: 24px 0; }
+            .btn-primary { display: inline-block; background: #d4a373; color: #1a1614; font-weight: 800; font-size: 14px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(212,163,115,0.3); }
+            .linha-box { background: #1a1614; color: #4ade80; border-radius: 10px; padding: 14px; font-family: monospace; font-size: 13px; word-break: break-all; margin: 20px 0; text-align: center; border: 1px solid #3d342f; }
+            .footer { background: #faf7f5; padding: 20px; text-align: center; font-size: 12px; color: #8c7f75; border-top: 1px solid #ede7e2; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="header">
+              <h1>${effectiveOffice}</h1>
+              <p>Cobrança de Honorários & Serviços Prestados</p>
+            </div>
+            <div class="content">
+              <p class="greeting">Olá <strong>${clientName || 'Cliente'}</strong>,</p>
+              <p style="font-size: 14px; line-height: 1.6; color: #52473f;">
+                Segue o boleto bancário referente aos serviços prestados para o projeto <strong>${projectTitle}</strong>:
+              </p>
+
+              <div class="details-box">
+                <div class="detail-row">
+                  <span class="detail-label">Projeto / Descrição:</span>
+                  <span class="detail-value">${projectTitle}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Parcela:</span>
+                  <span class="detail-value">Parcela ${installmentNumber} de ${totalInstallments}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Data de Vencimento:</span>
+                  <span class="detail-value" style="color: #c2410c;">${formattedDate}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Valor a Pagar:</span>
+                  <span class="detail-value amount-highlight">${formattedAmount}</span>
+                </div>
+              </div>
+
+              ${boletoUrl ? `
+              <div class="btn-container">
+                <a href="${boletoUrl}" target="_blank" class="btn-primary">
+                  📄 Visualizar e Imprimir Boleto Bancário
+                </a>
+              </div>
+              ` : ''}
+
+              ${linhaDigitavel ? `
+              <div style="margin-top: 16px;">
+                <p style="font-size: 12px; font-weight: bold; color: #7a6e65; margin-bottom: 6px; text-transform: uppercase;">
+                  Linha Digitável (Copie e cole no app do seu banco ou internet banking):
+                </p>
+                <div class="linha-box">
+                  ${linhaDigitavel}
+                </div>
+              </div>
+              ` : ''}
+
+              ${customNote ? `<p style="font-size: 12px; color: #7a6e65; font-style: italic; margin-top: 16px;">Obs: ${customNote}</p>` : ''}
+              <p style="font-size: 12px; color: #7a6e65; margin-top: 20px;">
+                Você pode efetuar o pagamento em qualquer aplicativo de banco, internet banking, casas lotéricas ou agências bancárias até o vencimento.
+              </p>
+            </div>
+            <div class="footer">
+              <p style="margin: 0 0 4px 0;"><strong>${effectiveOffice}</strong></p>
+              ${officeEmail ? `<p style="margin: 0;">Contato: ${officeEmail}</p>` : ''}
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      let sentViaSmtp = false;
+      const smtpHost = process.env.SMTP_HOST;
+      const smtpUser = process.env.SMTP_USER;
+      const smtpPass = process.env.SMTP_PASS;
+
+      if (smtpHost && smtpUser && smtpPass) {
+        try {
+          const nodemailer = await import("nodemailer");
+          const transporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: Number(process.env.SMTP_PORT) || 587,
+            secure: Number(process.env.SMTP_PORT) === 465,
+            auth: {
+              user: smtpUser,
+              pass: smtpPass,
+            },
+          });
+
+          await transporter.sendMail({
+            from: `"${effectiveOffice}" <${smtpUser}>`,
+            to: toEmail,
+            replyTo: officeEmail || smtpUser,
+            subject: subject,
+            html: htmlContent,
+          });
+
+          sentViaSmtp = true;
+        } catch (smtpErr) {
+          console.warn("Could not send boleto email via SMTP:", smtpErr);
+        }
+      }
+
+      return res.json({
+        success: true,
+        sentViaSmtp,
+        toEmail,
+        subject,
+        htmlContent,
+        message: sentViaSmtp
+          ? `Boleto enviado com sucesso por e-mail para ${toEmail}!`
+          : `E-mail formatado e preparado com sucesso para ${toEmail}.`,
+      });
+    } catch (err: any) {
+      console.error("Error in /api/send-boleto-email:", err);
+      return res.status(500).json({ error: err.message || "Erro ao processar envio de e-mail." });
+    }
+  });
+
   // Create Checkout Session
   app.post('/api/create-checkout-session', async (req, res) => {
     try {

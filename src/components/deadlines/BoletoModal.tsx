@@ -27,7 +27,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { ProjectInstallment } from '../../types';
+import { ProjectInstallment, Client } from '../../types';
 import { useFinance } from '../../context/FinanceContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import {
@@ -63,12 +63,15 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
     user,
     bankAccounts,
     officeSettings,
+    clients,
+    architectureProjects,
+    freelanceProjects,
     updateProjectInstallment,
     receiveInstallmentPayment,
   } = useFinance();
 
-  // Mode: 'mercadopago' (Official FEBRABAN registered) vs 'traditional' (Local / Printable slip)
-  const [activeTab, setActiveTab] = useState<'mercadopago' | 'traditional'>('mercadopago');
+  // Mode: 'mercadopago' | 'preview' | 'send' | 'traditional'
+  const [activeTab, setActiveTab] = useState<'mercadopago' | 'preview' | 'send' | 'traditional'>('mercadopago');
 
   // Mercado Pago Boleto Form State
   const [payerName, setPayerName] = useState<string>('');
@@ -93,6 +96,11 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
   const [mpSuccess, setMpSuccess] = useState<string>('');
   const [syncStatusResult, setSyncStatusResult] = useState<string>('');
 
+  // Email sending state
+  const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false);
+  const [emailSuccess, setEmailSuccess] = useState<string>('');
+  const [emailError, setEmailError] = useState<string>('');
+
   // Traditional Boleto State
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedBankCode, setSelectedBankCode] = useState<string>('341'); // Itaú default
@@ -115,27 +123,81 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
   const printRef = useRef<HTMLDivElement>(null);
 
+  // Find matching client from database to auto-fill data
+  const matchedClient: Client | null = useMemo(() => {
+    if (!installment) return null;
+    if (installment.clientId) {
+      const found = clients.find((c) => c.id === installment.clientId);
+      if (found) return found;
+    }
+    if (installment.clientName) {
+      const term = installment.clientName.trim().toLowerCase();
+      const found = clients.find(
+        (c) => c.name?.trim().toLowerCase() === term || term.includes(c.name?.trim().toLowerCase() || '___')
+      );
+      if (found) return found;
+    }
+    const archProj = architectureProjects.find(
+      (p) => p.id === installment.projectId || p.title === installment.projectTitle
+    );
+    if (archProj?.clientName) {
+      const term = archProj.clientName.trim().toLowerCase();
+      const found = clients.find((c) => c.name?.trim().toLowerCase() === term);
+      if (found) return found;
+    }
+    const freeProj = freelanceProjects.find(
+      (p) => p.id === installment.projectId || p.title === installment.projectTitle
+    );
+    if (freeProj?.clientId) {
+      const found = clients.find((c) => c.id === freeProj.clientId);
+      if (found) return found;
+    }
+    return null;
+  }, [installment, clients, architectureProjects, freelanceProjects]);
+
+  // Populate data from Client
+  const applyClientData = (client: Client | null) => {
+    if (!installment) return;
+
+    const doc = client?.document || installment.clientDocument || '';
+    const email = client?.email || installment.clientEmail || `${(client?.name || installment.clientName || 'cliente').toLowerCase().replace(/\s+/g, '')}@email.com`;
+    const phone = client?.phone || client?.whatsapp || installment.clientPhone || '';
+    const name = client?.name || installment.clientName || '';
+
+    let street = installment.clientAddress?.street || '';
+    let number = installment.clientAddress?.number || '';
+    let neighborhood = installment.clientAddress?.neighborhood || client?.neighborhood || '';
+    let city = installment.clientAddress?.city || client?.city || '';
+    let state = installment.clientAddress?.state || client?.state || 'SP';
+    let zip = installment.clientAddress?.zipCode || '';
+
+    if (client?.address && !street) {
+      street = client.address;
+    }
+
+    setPayerName(name);
+    setPayerEmail(email);
+    setPayerDoc(doc);
+    setPayerPhone(phone);
+    setPayerZip(zip);
+    setPayerStreet(street);
+    setPayerNumber(number);
+    setPayerNeighborhood(neighborhood);
+    setPayerCity(city);
+    setPayerState(state);
+    setClientDocument(doc);
+  };
+
   // Auto-fill states on installment open
   useEffect(() => {
     if (installment && isOpen) {
-      setPayerName(installment.clientName || '');
-      setPayerEmail(installment.clientEmail || `${(installment.clientName || 'cliente').toLowerCase().replace(/\s+/g, '')}@email.com`);
-      setPayerDoc(installment.clientDocument || '');
-      setPayerPhone(installment.clientPhone || '');
+      applyClientData(matchedClient);
+
       setBoletoAmount(installment.amount || 0);
       setBoletoDueDate(installment.dueDate || new Date().toISOString().split('T')[0]);
       setBoletoDescription(
-        `Honorários: ${installment.projectTitle} - Parcela ${installment.installmentNumber}/${installment.totalInstallments} (${installment.description || 'Serviços'})`
+        `Honorários: ${installment.projectTitle} - Parcela ${installment.installmentNumber}/${installment.totalInstallments} (${installment.description || 'Serviços Prestados'})`
       );
-
-      if (installment.clientAddress) {
-        setPayerZip(installment.clientAddress.zipCode || '');
-        setPayerStreet(installment.clientAddress.street || '');
-        setPayerNumber(installment.clientAddress.number || '');
-        setPayerNeighborhood(installment.clientAddress.neighborhood || '');
-        setPayerCity(installment.clientAddress.city || '');
-        setPayerState(installment.clientAddress.state || 'SP');
-      }
 
       // Traditional account selection
       let matchedAcc = bankAccounts.find((a) => a.id === installment.boletoBankAccountId);
@@ -161,7 +223,6 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
         setSelectedBankCode('341');
       }
 
-      setClientDocument(installment.clientDocument || '');
       setCustomNotes(installment.description || '');
 
       // If installment already has an official Mercado Pago boleto, default to mercadopago tab
@@ -169,7 +230,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
         setActiveTab('mercadopago');
       }
     }
-  }, [installment, isOpen, bankAccounts]);
+  }, [installment, isOpen, matchedClient, bankAccounts]);
 
   // Handle ViaCEP search
   const handleCepLookup = async (cepValue: string) => {
@@ -221,32 +282,30 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
     if (!installment) return null;
 
     const effectiveBeneficiary =
-      selectedAccount?.beneficiaryName?.trim() ||
+      selectedAccount?.holderName ||
+      officeSettings?.officeName ||
+      architectProfile?.officeName ||
       architectProfile?.name ||
       profile?.companyName ||
       user?.displayName ||
-      'Meu Escritório Online';
+      'Nosso Escritório';
 
     const effectiveBeneficiaryDoc =
-      selectedAccount?.beneficiaryDocument?.trim() ||
-      architectProfile?.cnpj ||
-      architectProfile?.cpf ||
-      '';
+      selectedAccount?.holderDocument ||
+      architectProfile?.cpfCnpj ||
+      '00.000.000/0001-00';
 
     const codes = generateBoletoCodes(
       effectiveBankCode,
-      installment.amount,
-      installment.dueDate,
-      `${installment.installmentNumber}`,
+      boletoAmount || installment.amount,
+      boletoDueDate || installment.dueDate,
+      `PARC-${installment.installmentNumber}`,
       effectiveAgency,
       effectiveAccountNumber,
       effectiveWallet
     );
 
-    const isSameAccountAsSaved =
-      Boolean(installment.boletoBarcode) &&
-      installment.boletoBankAccountId === selectedAccountId &&
-      installment.boletoBank === effectiveBankCode;
+    const isSameAccountAsSaved = installment.boletoBankAccountId === selectedAccountId;
 
     const linhaDigitavel = isSameAccountAsSaved && installment.boletoBarcode
       ? installment.boletoBarcode
@@ -286,6 +345,9 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
     architectProfile,
     profile,
     user,
+    officeSettings,
+    boletoAmount,
+    boletoDueDate,
   ]);
 
   // Build WhatsApp Message based on active boleto data
@@ -293,28 +355,28 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
     if (installment) {
       const isMP = Boolean(installment.boletoExternalUrl);
       const linha = installment.boletoBarcode || traditionalBoletoData?.linhaDigitavel || '';
-      const officeName = architectProfile?.name || profile?.companyName || user?.displayName || 'Nosso Escritório';
+      const officeName = officeSettings?.officeName || architectProfile?.officeName || architectProfile?.name || profile?.companyName || user?.displayName || 'Nosso Escritório';
 
       let msg = '';
       if (isMP && installment.boletoExternalUrl) {
         msg =
-          `Olá *${installment.clientName}*, tudo bem?\n\n` +
+          `Olá *${payerName || installment.clientName}*, tudo bem?\n\n` +
           `Segue o *Boleto Bancário Registrado* referente à parcela *${installment.installmentNumber}/${installment.totalInstallments}* do seu projeto *${installment.projectTitle}*:\n\n` +
-          `💰 *Valor:* ${formatCurrency(installment.amount)}\n` +
-          `📅 *Vencimento:* ${formatDate(installment.dueDate)}\n\n` +
+          `💰 *Valor:* ${formatCurrency(boletoAmount || installment.amount)}\n` +
+          `📅 *Vencimento:* ${formatDate(boletoDueDate || installment.dueDate)}\n\n` +
           `📄 *Visualizar e Imprimir Boleto Oficial (PDF):*\n${installment.boletoExternalUrl}\n\n` +
           `🔢 *Linha Digitável (Copiar e Colar no App do seu Banco):*\n\`\`\`${linha}\`\`\`\n\n` +
           `_Pague pelo aplicativo do seu banco, internet banking ou em qualquer agência/lotérica até o vencimento._\n\n` +
           `Atenciosamente,\n*${officeName}*`;
       } else {
         msg = buildBoletoWhatsAppMessage({
-          clientName: installment.clientName || 'Cliente',
+          clientName: payerName || installment.clientName || 'Cliente',
           projectTitle: installment.projectTitle || 'Projeto',
           installmentNumber: installment.installmentNumber,
           totalInstallments: installment.totalInstallments,
-          description: installment.description || 'Honorários',
-          amount: installment.amount,
-          dueDate: installment.dueDate,
+          description: boletoDescription || installment.description || 'Honorários',
+          amount: boletoAmount || installment.amount,
+          dueDate: boletoDueDate || installment.dueDate,
           linhaDigitavel: linha,
           bankName: currentBank.fullName,
           agency: effectiveAgency,
@@ -336,6 +398,11 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
     architectProfile,
     profile,
     user,
+    officeSettings,
+    payerName,
+    boletoAmount,
+    boletoDueDate,
+    boletoDescription,
   ]);
 
   if (!isOpen || !installment) return null;
@@ -356,7 +423,6 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
       setMpError('');
       setMpSuccess('');
 
-      // Custom access token configured in officeSettings, if any
       const customAccessToken = officeSettings?.mercadopagoConfig?.accessToken;
 
       const rawDoc = payerDoc.replace(/\D/g, '');
@@ -448,7 +514,6 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
       const statusData = await fetchMercadoPagoPaymentStatus(installment.boletoPaymentId, customToken);
 
       if (statusData.status === 'approved') {
-        // Mark installment as paid!
         const defaultAcc = bankAccounts.find((a) => a.isDefault)?.id || bankAccounts[0]?.id || 'acc-main';
         receiveInstallmentPayment(
           installment.id,
@@ -478,6 +543,70 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
     }
   };
 
+  // Send Boleto via Email API
+  const handleSendEmail = async () => {
+    const targetEmail = payerEmail.trim();
+    if (!targetEmail || !targetEmail.includes('@')) {
+      setEmailError('Por favor informe um e-mail válido para o cliente.');
+      return;
+    }
+
+    try {
+      setIsSendingEmail(true);
+      setEmailError('');
+      setEmailSuccess('');
+
+      const res = await fetch('/api/send-boleto-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toEmail: targetEmail,
+          clientName: payerName.trim() || installment.clientName,
+          projectTitle: installment.projectTitle,
+          installmentNumber: installment.installmentNumber,
+          totalInstallments: installment.totalInstallments,
+          amount: boletoAmount || installment.amount,
+          dueDate: boletoDueDate || installment.dueDate,
+          linhaDigitavel: installment.boletoBarcode || traditionalBoletoData?.linhaDigitavel,
+          boletoUrl: installment.boletoExternalUrl,
+          officeName: officeSettings?.officeName || architectProfile?.officeName || architectProfile?.name || 'Meu Escritório Online',
+          officeEmail: officeSettings?.contactEmail || architectProfile?.email || user?.email,
+          customNote: customNotes || boletoDescription,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao enviar e-mail.');
+      }
+
+      setEmailSuccess(data.message || `E-mail enviado com sucesso para ${targetEmail}!`);
+      setTimeout(() => setEmailSuccess(''), 6000);
+    } catch (err: any) {
+      setEmailError(err.message || 'Erro ao enviar e-mail.');
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  // Open native mail app fallback
+  const handleOpenMailClient = () => {
+    const subject = encodeURIComponent(
+      `Boleto Bancário: Parcela ${installment.installmentNumber}/${installment.totalInstallments} - ${installment.projectTitle}`
+    );
+    const body = encodeURIComponent(
+      `Olá ${payerName || installment.clientName},\n\n` +
+      `Segue o boleto bancário referente ao projeto ${installment.projectTitle}:\n\n` +
+      `• Parcela: ${installment.installmentNumber}/${installment.totalInstallments}\n` +
+      `• Valor: ${formatCurrency(boletoAmount || installment.amount)}\n` +
+      `• Vencimento: ${formatDate(boletoDueDate || installment.dueDate)}\n\n` +
+      (installment.boletoBarcode ? `Linha Digitável:\n${installment.boletoBarcode}\n\n` : '') +
+      (installment.boletoExternalUrl ? `Link do Boleto em PDF:\n${installment.boletoExternalUrl}\n\n` : '') +
+      `Atenciosamente,\n${officeSettings?.officeName || architectProfile?.name || 'Meu Escritório'}`
+    );
+    window.open(`mailto:${payerEmail}?subject=${subject}&body=${body}`, '_blank');
+  };
+
   // Save traditional slip data to installment
   const handleSaveTraditionalToInstallment = () => {
     if (traditionalBoletoData) {
@@ -489,7 +618,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
         boletoBankAccountId: selectedAccountId || undefined,
         bankAccountId: selectedAccountId || installment.bankAccountId,
         boletoGeneratedAt: new Date().toISOString(),
-        clientDocument: clientDocument || undefined,
+        clientDocument: clientDocument || payerDoc || undefined,
         boletoProvider: 'simulated',
       };
 
@@ -532,7 +661,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
   };
 
   const handleSendWhatsApp = () => {
-    const rawPhone = (installment.clientPhone || payerPhone || '').replace(/\D/g, '');
+    const rawPhone = (payerPhone || installment.clientPhone || '').replace(/\D/g, '');
     const cleanPhone = rawPhone.startsWith('55') ? rawPhone : `55${rawPhone}`;
     const encodedMsg = encodeURIComponent(customMessage);
     const url = rawPhone
@@ -542,7 +671,9 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
   };
 
   const handlePrint = () => {
-    handleSaveTraditionalToInstallment();
+    if (activeTab === 'traditional') {
+      handleSaveTraditionalToInstallment();
+    }
     window.print();
   };
 
@@ -555,6 +686,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
   ];
 
   const hasGeneratedMP = Boolean(installment.boletoExternalUrl);
+  const activeLinhaDigitavel = installment.boletoBarcode || traditionalBoletoData?.linhaDigitavel || '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
@@ -580,7 +712,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                 )}
               </div>
               <p className="text-xs text-[#a89c93] mt-0.5">
-                {installment.projectTitle} • Cliente: <strong className="text-[#fcf8f5]">{installment.clientName}</strong> • Valor: <strong className="text-emerald-400">{formatCurrency(installment.amount)}</strong>
+                {installment.projectTitle} • Cliente: <strong className="text-[#fcf8f5]">{payerName || installment.clientName}</strong> • Valor: <strong className="text-emerald-400">{formatCurrency(boletoAmount || installment.amount)}</strong>
               </p>
             </div>
           </div>
@@ -595,88 +727,89 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
           </div>
         </div>
 
-        {/* Tab Selection: Mercado Pago (Official) vs Traditional */}
+        {/* Navigation Tabs Bar */}
         <div className="px-4 sm:px-6 py-2.5 bg-[#1e1916] border-b border-[#3d342f] flex items-center justify-between gap-3 shrink-0 flex-wrap">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <button
               onClick={() => setActiveTab('mercadopago')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'mercadopago'
                   ? 'bg-amber-500 text-black shadow-md'
                   : 'bg-[#14110f] text-[#a89c93] hover:text-[#fcf8f5] border border-[#3d342f]'
               }`}
             >
               <Zap className="w-3.5 h-3.5" />
-              <span>Boleto Oficial Mercado Pago (Válido & Registrado)</span>
+              <span>Boleto Mercado Pago (Registrado)</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('preview')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'preview'
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-[#14110f] text-[#a89c93] hover:text-[#fcf8f5] border border-[#3d342f]'
+              }`}
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Visualizar & Imprimir</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('send')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'send'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'bg-[#14110f] text-[#a89c93] hover:text-[#fcf8f5] border border-[#3d342f]'
+              }`}
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Enviar ao Cliente (WhatsApp & E-mail)</span>
             </button>
 
             <button
               onClick={() => setActiveTab('traditional')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'traditional'
                   ? 'bg-[#c58a4b] text-black shadow-md'
                   : 'bg-[#14110f] text-[#a89c93] hover:text-[#fcf8f5] border border-[#3d342f]'
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>Carnê / Impressão Tradicional</span>
+              <span>Carnê Tradicional</span>
             </button>
           </div>
 
-          {/* Quick WhatsApp Action */}
+          {/* Quick Action Buttons */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowWhatsAppPreview(!showWhatsAppPreview)}
-              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-md transition-all cursor-pointer active:scale-95"
+              onClick={() => {
+                setActiveTab('preview');
+                setTimeout(() => window.print(), 200);
+              }}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#14110f] hover:bg-[#241e1b] text-[#fcf8f5] border border-[#3d342f] flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Imprimir boleto"
+            >
+              <Printer className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Imprimir</span>
+            </button>
+
+            <button
+              onClick={handleSendWhatsApp}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-md transition-all cursor-pointer active:scale-95"
             >
               <MessageCircle className="w-3.5 h-3.5" />
-              <span>Enviar no WhatsApp</span>
+              <span>WhatsApp</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('send')}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-500 text-white flex items-center gap-1.5 shadow-md transition-all cursor-pointer active:scale-95"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>E-mail</span>
             </button>
           </div>
         </div>
-
-        {/* Optional WhatsApp Preview Bar */}
-        {showWhatsAppPreview && (
-          <div className="px-4 sm:px-6 py-3 bg-[#13231a] border-b border-emerald-600/30 shrink-0">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <MessageCircle className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-bold text-emerald-300">
-                  Mensagem Pronta para Envio do Boleto a {installment.clientName}
-                </span>
-                {installment.clientPhone && (
-                  <span className="text-[11px] text-emerald-400/80">({installment.clientPhone})</span>
-                )}
-              </div>
-              <button
-                onClick={() => setShowWhatsAppPreview(false)}
-                className="text-xs text-[#a89c93] hover:text-white cursor-pointer"
-              >
-                Fechar
-              </button>
-            </div>
-
-            <textarea
-              value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value)}
-              rows={4}
-              className="w-full bg-[#0e1913] border border-emerald-500/30 rounded-xl p-2.5 text-xs text-[#ded5cc] font-mono focus:outline-none focus:border-emerald-400"
-            />
-
-            <div className="flex items-center justify-between mt-2 pt-1 flex-wrap gap-2">
-              <span className="text-[11px] text-emerald-400/70">
-                A mensagem já inclui o link direto para download do boleto em PDF e a linha digitável para pagamento.
-              </span>
-              <button
-                onClick={handleSendWhatsApp}
-                className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow transition-all"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Disparar WhatsApp com 1 Clique</span>
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
@@ -731,7 +864,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                           </span>
                         </div>
                         <p className="text-xs text-[#a89c93] mt-0.5">
-                          ID do Pagamento MP: <code className="text-[#fcf8f5] font-mono">{installment.boletoPaymentId || 'N/A'}</code> • Aceito em qualquer banco, lotérica ou app
+                          ID: <code className="text-[#fcf8f5] font-mono">{installment.boletoPaymentId || 'N/A'}</code> • Aceito em qualquer banco, lotérica ou internet banking
                         </p>
                       </div>
                     </div>
@@ -772,24 +905,34 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Official PDF & Fast Actions */}
-                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap items-center gap-2.5 pt-2">
+                    {/* View and Print Visualizer */}
+                    <button
+                      onClick={() => setActiveTab('preview')}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-lg transition-all cursor-pointer"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>Visualizar e Imprimir Boleto</span>
+                    </button>
+
+                    {/* Open External MP PDF */}
                     {installment.boletoExternalUrl && (
                       <a
                         href={installment.boletoExternalUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-lg transition-all cursor-pointer"
+                        className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-lg transition-all cursor-pointer"
                       >
                         <ExternalLink className="w-4 h-4" />
-                        <span>Abrir / Imprimir Boleto Oficial (PDF)</span>
+                        <span>Abrir PDF Oficial Mercado Pago</span>
                       </a>
                     )}
 
                     {installment.boletoExternalUrl && (
                       <button
                         onClick={handleCopyPdfUrl}
-                        className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-[#1c1815] hover:bg-[#241e1b] text-[#fcf8f5] border border-[#3d342f] flex items-center gap-1.5 cursor-pointer"
+                        className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#1c1815] hover:bg-[#241e1b] text-[#fcf8f5] border border-[#3d342f] flex items-center gap-1.5 cursor-pointer"
                       >
                         <Copy className="w-3.5 h-3.5 text-[#c58a4b]" />
                         <span>{copiedUrl ? 'Link Copiado!' : 'Copiar Link do PDF'}</span>
@@ -798,10 +941,18 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
                     <button
                       onClick={handleSendWhatsApp}
-                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer"
                     >
                       <MessageCircle className="w-4 h-4" />
-                      <span>Enviar pelo WhatsApp</span>
+                      <span>WhatsApp</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('send')}
+                      className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                    >
+                      <Mail className="w-4 h-4" />
+                      <span>Enviar por E-mail</span>
                     </button>
                   </div>
                 </div>
@@ -809,20 +960,39 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
               {/* Form to Issue or Re-issue Official Boleto */}
               <div className="p-5 rounded-2xl bg-[#14110f] border border-[#3d342f] space-y-4">
-                <div className="flex items-center justify-between border-b border-[#302722] pb-3">
+                <div className="flex items-center justify-between border-b border-[#302722] pb-3 flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <Zap className="w-4 h-4 text-amber-400" />
                     <h4 className="font-serif font-bold text-[#fcf8f5] text-sm">
-                      {hasGeneratedMP ? 'Reemitir / Gerar Novo Boleto Mercado Pago' : 'Dados para Emissão de Boleto Registrado'}
+                      {hasGeneratedMP ? 'Reemitir / Atualizar Boleto Mercado Pago' : 'Dados para Emissão de Boleto Registrado'}
                     </h4>
                   </div>
-                  <span className="text-[11px] text-[#a89c93]">
-                    Normas FEBRABAN: CPF/CNPJ e Endereço obrigatórios
-                  </span>
+
+                  {/* Customer Auto-fill Badge */}
+                  {matchedClient ? (
+                    <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-lg">
+                      <span className="text-[11px] text-amber-300 font-medium flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-amber-400" />
+                        Cadastro de: <strong>{matchedClient.name}</strong>
+                      </span>
+                      <button
+                        onClick={() => applyClientData(matchedClient)}
+                        className="text-[10px] text-amber-400 hover:underline font-bold cursor-pointer"
+                        title="Recarregar dados do cliente do cadastro"
+                      >
+                        Recarregar
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-[11px] text-[#a89c93]">
+                      Normas FEBRABAN: CPF/CNPJ e Endereço obrigatórios
+                    </span>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {/* Nome do Cliente */}
+                {/* Form Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                  {/* Nome Completo / Razão Social */}
                   <div>
                     <label className="text-[11px] font-medium text-[#a89c93] block mb-1">
                       Nome Completo / Razão Social *
@@ -853,7 +1023,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                   {/* E-mail */}
                   <div>
                     <label className="text-[11px] font-medium text-[#a89c93] block mb-1">
-                      E-mail do Cliente *
+                      E-mail do Cliente (Cadastrado) *
                     </label>
                     <input
                       type="email"
@@ -1039,7 +1209,416 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: TRADITIONAL BOLETO SLIP & PRINT */}
+          {/* TAB 2: FULL PREVIEW & PRINT VISUALIZER (FEBRABAN STANDARD) */}
+          {activeTab === 'preview' && (
+            <div className="space-y-4">
+              {/* Preview Control Header */}
+              <div className="p-4 bg-[#14110f] border border-[#3d342f] rounded-2xl flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+                    <Printer className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-[#fcf8f5]">Visualizador de Boleto Bancário</h4>
+                    <p className="text-[11px] text-[#a89c93]">Layout compatível com impressão A4 e compensação bancária FEBRABAN</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handlePrint}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Imprimir Boleto (A4)</span>
+                  </button>
+
+                  {installment.boletoExternalUrl && (
+                    <a
+                      href={installment.boletoExternalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Baixar PDF Oficial</span>
+                    </a>
+                  )}
+
+                  <button
+                    onClick={handleSendWhatsApp}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>WhatsApp</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Standard Boleto Slip */}
+              <div
+                ref={printRef}
+                className="bg-white text-black p-4 sm:p-6 rounded-xl border border-gray-300 shadow-xl print:shadow-none print:border-none print:m-0 print:p-0 print:rounded-none max-w-3xl mx-auto font-sans"
+              >
+                {/* 1. RECIBO DO PAGADOR */}
+                <div className="border-b-2 border-dashed border-gray-400 pb-4 mb-4">
+                  <div className="flex items-center justify-between border-b-2 border-black pb-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-amber-500 text-black font-black text-xs flex items-center justify-center rounded">
+                        MP
+                      </div>
+                      <span className="font-bold text-sm text-gray-900">
+                        {installment.boletoProvider === 'mercadopago' ? 'Mercado Pago / Bradesco / Santander' : currentBank.fullName}
+                      </span>
+                    </div>
+                    <div className="font-mono font-bold text-xs bg-gray-100 px-2 py-1 border border-gray-400">
+                      {installment.boletoProvider === 'mercadopago' ? '033-7' : `${currentBank.code}-${currentBank.digit}`}
+                    </div>
+                    <div className="text-[11px] font-bold text-gray-700 uppercase">
+                      Recibo do Pagador
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] border border-gray-300 p-2 bg-gray-50/50 mb-2">
+                    <div>
+                      <span className="text-[9px] text-gray-500 block uppercase font-bold">Beneficiário</span>
+                      <strong className="text-gray-900 block truncate">
+                        {officeSettings?.officeName || architectProfile?.officeName || architectProfile?.name || 'Meu Escritório'}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-gray-500 block uppercase font-bold">CPF/CNPJ Beneficiário</span>
+                      <span className="font-mono text-gray-800 block">
+                        {architectProfile?.cpfCnpj || '00.000.000/0001-00'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-gray-500 block uppercase font-bold">Vencimento</span>
+                      <strong className="text-rose-700 font-bold block">
+                        {formatDate(boletoDueDate || installment.dueDate)}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-gray-500 block uppercase font-bold">Valor Cobrado</span>
+                      <strong className="text-emerald-700 font-extrabold text-xs block">
+                        {formatCurrency(boletoAmount || installment.amount)}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-gray-600 border border-gray-300 p-2">
+                    <span className="text-[9px] text-gray-500 uppercase font-bold block mb-0.5">Pagador (Sacado)</span>
+                    <strong className="text-gray-900">{payerName || installment.clientName}</strong>
+                    {payerDoc && <span className="font-mono text-gray-700 ml-2">({payerDoc})</span>}
+                    {(payerStreet || payerCity) && (
+                      <div className="text-gray-600 text-[9px] mt-0.5">
+                        {payerStreet} {payerNumber && `, Nº ${payerNumber}`} {payerNeighborhood && `- ${payerNeighborhood}`} • {payerCity}/{payerState} {payerZip && `• CEP: ${payerZip}`}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. FICHA DE COMPENSAÇÃO (FEBRABAN) */}
+                <div>
+                  {/* Bank header and Linha Digitavel */}
+                  <div className="flex items-center justify-between border-b-2 border-black pb-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-black text-white font-black text-xs flex items-center justify-center rounded">
+                        {installment.boletoProvider === 'mercadopago' ? 'MP' : currentBank.code}
+                      </div>
+                      <span className="font-bold text-sm text-gray-900">
+                        {installment.boletoProvider === 'mercadopago' ? 'Mercado Pago' : currentBank.fullName}
+                      </span>
+                    </div>
+                    <div className="font-mono font-bold text-sm bg-gray-100 px-2 py-0.5 border border-gray-400">
+                      {installment.boletoProvider === 'mercadopago' ? '033-7' : `${currentBank.code}-${currentBank.digit}`}
+                    </div>
+                    <div className="font-mono text-xs sm:text-sm font-bold text-gray-900 tracking-tight">
+                      {activeLinhaDigitavel || '00000.00000 00000.000000 00000.000000 0 00000000000000'}
+                    </div>
+                  </div>
+
+                  {/* Boleto Grid */}
+                  <div className="border border-black text-[11px] mb-3">
+                    <div className="grid grid-cols-4 border-b border-black">
+                      <div className="col-span-3 border-r border-black p-1.5">
+                        <span className="text-[9px] text-gray-500 uppercase font-bold block">Local de Pagamento</span>
+                        <span className="text-gray-900 font-medium">Pagável em qualquer agência bancária, internet banking ou casas lotéricas até o vencimento.</span>
+                      </div>
+                      <div className="p-1.5 bg-gray-50">
+                        <span className="text-[9px] text-gray-500 uppercase font-bold block">Vencimento</span>
+                        <strong className="text-gray-900 font-bold text-xs">{formatDate(boletoDueDate || installment.dueDate)}</strong>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-4 border-b border-black">
+                      <div className="col-span-3 border-r border-black p-1.5">
+                        <span className="text-[9px] text-gray-500 uppercase font-bold block">Beneficiário</span>
+                        <strong className="text-gray-900">{officeSettings?.officeName || architectProfile?.officeName || architectProfile?.name || 'Meu Escritório'}</strong>
+                        <span className="text-gray-600 font-mono text-[10px] ml-2">CNPJ/CPF: {architectProfile?.cpfCnpj || '00.000.000/0001-00'}</span>
+                      </div>
+                      <div className="p-1.5 bg-gray-50">
+                        <span className="text-[9px] text-gray-500 uppercase font-bold block">Agência / Código Beneficiário</span>
+                        <span className="font-mono text-gray-800">{traditionalBoletoData?.agenciaCodigo || '0001 / 12345-6'}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-4 border-b border-black">
+                      <div className="border-r border-black p-1.5">
+                        <span className="text-[9px] text-gray-500 uppercase font-bold block">Data do Documento</span>
+                        <span>{traditionalBoletoData?.dataDocumento || new Date().toLocaleDateString('pt-BR')}</span>
+                      </div>
+                      <div className="border-r border-black p-1.5">
+                        <span className="text-[9px] text-gray-500 uppercase font-bold block">Número do Documento</span>
+                        <span className="font-mono">{traditionalBoletoData?.documentoNumero || `PARC-${installment.installmentNumber}`}</span>
+                      </div>
+                      <div className="border-r border-black p-1.5">
+                        <span className="text-[9px] text-gray-500 uppercase font-bold block">Espécie Doc.</span>
+                        <span>DM (Duplicata Mercantil)</span>
+                      </div>
+                      <div className="p-1.5 bg-gray-50">
+                        <span className="text-[9px] text-gray-500 uppercase font-bold block">(=) Valor do Documento</span>
+                        <strong className="text-gray-900 text-xs font-bold">{formatCurrency(boletoAmount || installment.amount)}</strong>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-4">
+                      <div className="col-span-3 border-r border-black p-2 min-h-[90px]">
+                        <span className="text-[9px] text-gray-500 uppercase font-bold block mb-1">
+                          Instruções (Texto de Responsabilidade do Beneficiário)
+                        </span>
+                        <p className="text-[10px] text-gray-700 leading-relaxed">
+                          • {customInstructions}
+                        </p>
+                        <p className="text-[10px] text-gray-600 mt-1">
+                          • Referente a: {boletoDescription || installment.projectTitle}
+                        </p>
+                      </div>
+                      <div className="p-1.5 bg-gray-50 space-y-2">
+                        <div>
+                          <span className="text-[9px] text-gray-500 uppercase font-bold block">(-) Desconto / Abatimento</span>
+                          <span className="text-gray-600 font-mono text-[10px]">R$ 0,00</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-gray-500 uppercase font-bold block">(+) Mora / Multa</span>
+                          <span className="text-gray-600 font-mono text-[10px]">R$ 0,00</span>
+                        </div>
+                        <div className="border-t border-gray-300 pt-1">
+                          <span className="text-[9px] text-gray-500 uppercase font-bold block">(=) Valor Cobrado</span>
+                          <strong className="text-gray-900 font-extrabold text-xs">{formatCurrency(boletoAmount || installment.amount)}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pagador Info */}
+                    <div className="border-t border-black p-2 bg-gray-50/70">
+                      <span className="text-[9px] text-gray-500 uppercase font-bold block mb-0.5">Pagador (Sacado)</span>
+                      <div className="flex flex-wrap items-center justify-between gap-1 text-[10px]">
+                        <div>
+                          <strong className="text-gray-900">{payerName || installment.clientName}</strong>
+                          {payerDoc && <span className="font-mono text-gray-700 ml-2">CPF/CNPJ: {payerDoc}</span>}
+                        </div>
+                        {payerPhone && <span className="text-gray-600">Tel: {payerPhone}</span>}
+                      </div>
+                      {(payerStreet || payerCity) && (
+                        <div className="text-gray-600 text-[9px] mt-0.5">
+                          {payerStreet} {payerNumber && `, Nº ${payerNumber}`} {payerNeighborhood && `- ${payerNeighborhood}`} • {payerCity}/{payerState} {payerZip && `• CEP: ${payerZip}`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Graphic Barcode & Pix */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                    <div className="flex-1">
+                      <div className="flex items-end h-14 w-full max-w-md bg-white overflow-hidden py-1">
+                        {barcodePattern.map((width, idx) => (
+                          <div
+                            key={idx}
+                            className="bg-black h-full"
+                            style={{
+                              width: `${width * 2}px`,
+                              marginRight: `${idx % 3 === 0 ? 2 : 1.2}px`,
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <div className="font-mono text-[9px] tracking-widest text-gray-600 mt-1">
+                        {traditionalBoletoData?.barcodeRaw || '2379105840000000100009876543217405912109'}
+                      </div>
+                    </div>
+
+                    {showPixQr && (
+                      <div className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-300 rounded-lg shrink-0">
+                        <div className="w-12 h-12 bg-white border border-gray-300 p-0.5 flex items-center justify-center shrink-0">
+                          <QrCode className="w-10 h-10 text-black" />
+                        </div>
+                        <div className="text-left text-[9px]">
+                          <span className="font-bold text-emerald-800 bg-emerald-100 px-1 py-0.5 rounded block mb-0.5">
+                            BolePix Instantâneo
+                          </span>
+                          <span className="text-gray-600 truncate max-w-[120px] block">
+                            {architectProfile?.pixKey || 'Chave Pix'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: DISPATCH / SEND TO CLIENT (WHATSAPP & EMAIL) */}
+          {activeTab === 'send' && (
+            <div className="space-y-5">
+              {/* WhatsApp Dispatch Section */}
+              <div className="p-5 rounded-2xl bg-[#121c15] border border-emerald-600/30 space-y-4">
+                <div className="flex items-center justify-between border-b border-emerald-600/20 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                      <MessageCircle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-emerald-300">Enviar Cobrança por WhatsApp</h4>
+                      <p className="text-[11px] text-emerald-400/70">Disparo com 1 clique para o número do cliente</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-emerald-300 bg-emerald-950/60 px-2 py-1 rounded border border-emerald-500/30">
+                      {payerPhone || installment.clientPhone || 'Sem telefone informado'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-medium text-emerald-300/90 block">
+                    Mensagem Formatada (com link do PDF e linha digitável):
+                  </label>
+                  <textarea
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
+                    rows={6}
+                    className="w-full bg-[#0a120d] border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-100 font-mono focus:outline-none focus:border-emerald-400 leading-relaxed"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                  <span className="text-[11px] text-emerald-400/70">
+                    O link do boleto e o código de barras já estão incluídos na mensagem.
+                  </span>
+                  <button
+                    onClick={handleSendWhatsApp}
+                    className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-lg transition-all cursor-pointer active:scale-95"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>Abrir WhatsApp e Enviar Cobrança</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Email Dispatch Section */}
+              <div className="p-5 rounded-2xl bg-[#0f1722] border border-sky-600/30 space-y-4">
+                <div className="flex items-center justify-between border-b border-sky-600/20 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-sky-300">Enviar Boleto por E-mail</h4>
+                      <p className="text-[11px] text-sky-400/70">Envia para o e-mail cadastrado do cliente com layout profissional</p>
+                    </div>
+                  </div>
+
+                  {matchedClient?.email && (
+                    <span className="text-[11px] text-sky-300/80 bg-sky-950/60 px-2.5 py-1 rounded border border-sky-500/30">
+                      Cadastrado: <strong>{matchedClient.email}</strong>
+                    </span>
+                  )}
+                </div>
+
+                {emailSuccess && (
+                  <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2 animate-in fade-in">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>{emailSuccess}</span>
+                  </div>
+                )}
+
+                {emailError && (
+                  <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2 animate-in fade-in">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{emailError}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-medium text-sky-300/90 block mb-1">
+                      Destinatário (E-mail do Cliente) *
+                    </label>
+                    <input
+                      type="email"
+                      value={payerEmail}
+                      onChange={(e) => setPayerEmail(e.target.value)}
+                      placeholder="cliente@email.com"
+                      className="w-full bg-[#09101a] border border-sky-500/30 rounded-xl px-3 py-2 text-xs text-sky-100 focus:outline-none focus:border-sky-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-medium text-sky-300/90 block mb-1">
+                      Assunto do E-mail
+                    </label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={`Boleto Bancário: Parcela ${installment.installmentNumber}/${installment.totalInstallments} - ${installment.projectTitle}`}
+                      className="w-full bg-[#09101a] border border-sky-500/30 rounded-xl px-3 py-2 text-xs text-sky-300/80 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#09101a] border border-sky-500/20 text-[11px] text-sky-200/80 space-y-1">
+                  <span className="font-bold text-sky-300 block">Resumo do E-mail a ser enviado:</span>
+                  <p>• <strong>Projeto:</strong> {installment.projectTitle}</p>
+                  <p>• <strong>Valor:</strong> {formatCurrency(boletoAmount || installment.amount)} • <strong>Vencimento:</strong> {formatDate(boletoDueDate || installment.dueDate)}</p>
+                  <p>• <strong>Botão de Ação:</strong> Visualizar e Imprimir Boleto Bancário (PDF)</p>
+                  <p>• <strong>Linha Digitável:</strong> {activeLinhaDigitavel || 'Disponível no boleto'}</p>
+                </div>
+
+                <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                  <button
+                    onClick={handleOpenMailClient}
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-[#141f2d] hover:bg-[#1a283b] text-sky-200 border border-sky-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Abrir no meu Aplicativo de E-mail</span>
+                  </button>
+
+                  <button
+                    onClick={handleSendEmail}
+                    disabled={isSendingEmail}
+                    className="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-black font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {isSendingEmail ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Enviando E-mail...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>Disparar E-mail para o Cliente</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: TRADITIONAL BOLETO SLIP & PRINT */}
           {activeTab === 'traditional' && traditionalBoletoData && (
             <div className="space-y-4">
               {savedSuccess && (
@@ -1056,286 +1635,64 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                     <Building2 className="w-3.5 h-3.5 text-[#c58a4b]" />
                     Conta Bancária:
                   </span>
+
                   <select
-                    value={selectedAccountId || `bank_${effectiveBankCode}`}
+                    value={selectedAccountId}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      if (val.startsWith('bank_')) {
-                        setSelectedAccountId('');
-                        setSelectedBankCode(val.replace('bank_', ''));
-                      } else {
-                        setSelectedAccountId(val);
-                        const acc = bankAccounts.find((a) => a.id === val);
-                        if (acc) {
-                          const code = acc.bankCode || getBankInfo(acc.name).code;
-                          setSelectedBankCode(code || '341');
-                        }
+                      const accId = e.target.value;
+                      setSelectedAccountId(accId);
+                      const found = bankAccounts.find((a) => a.id === accId);
+                      if (found) {
+                        const code = found.bankCode || getBankInfo(found.name).code;
+                        setSelectedBankCode(code || '341');
                       }
                     }}
-                    className="bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs font-semibold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#c58a4b] cursor-pointer max-w-[280px] sm:max-w-[340px] truncate"
+                    className="bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#c58a4b]"
                   >
-                    {bankAccounts.length > 0 && (
-                      <optgroup label="Minhas Contas Cadastradas">
-                        {bankAccounts.map((acc) => (
-                          <option key={acc.id} value={acc.id}>
-                            {acc.name} — Ag: {acc.agency || '0000'} CC: {acc.accountNumber || '00000'}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                    <optgroup label="Bancos Emissores">
-                      {Object.values(POPULAR_BANKS).map((bank) => (
-                        <option key={bank.code} value={`bank_${bank.code}`}>
-                          {bank.code} - {bank.name}
+                    {bankAccounts
+                      .filter((a) => a.type !== 'physical_cash')
+                      .map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name} ({acc.bankCode || getBankInfo(acc.name).code}) • {acc.agency}/{acc.accountNumber}
                         </option>
                       ))}
-                    </optgroup>
+                    <option value="">-- Configuração Manual de Banco --</option>
                   </select>
 
-                  <button
-                    type="button"
-                    onClick={() => setIsManageAccountsOpen(true)}
-                    className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#14110f] hover:bg-[#28221e] border border-[#3d342f] text-amber-400 hover:text-amber-300 flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Building2 className="w-3.5 h-3.5 text-[#c58a4b]" />
-                    <span>Gerenciar Contas</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowPixQr(!showPixQr)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-colors cursor-pointer ${
-                      showPixQr
-                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                        : 'bg-[#14110f] border-[#3d342f] text-[#a89c93] hover:text-[#fcf8f5]'
-                    }`}
-                  >
-                    <QrCode className="w-3.5 h-3.5" />
-                    <span>BolePix (QR Code)</span>
-                  </button>
+                  {!selectedAccountId && (
+                    <select
+                      value={selectedBankCode}
+                      onChange={(e) => setSelectedBankCode(e.target.value)}
+                      className="bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#c58a4b]"
+                    >
+                      {Object.values(POPULAR_BANKS).map((bank) => (
+                        <option key={bank.code} value={bank.code}>
+                          {bank.fullName} ({bank.code})
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleCopyLinha(traditionalBoletoData.linhaDigitavel)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                      copiedLinha
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-[#241e1b] hover:bg-[#2d2520] text-[#fcf8f5] border border-[#3d342f]'
-                    }`}
+                    onClick={() => setIsManageAccountsOpen(true)}
+                    className="text-xs text-[#c58a4b] hover:text-[#d4a373] hover:underline font-medium cursor-pointer"
                   >
-                    {copiedLinha ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5 text-[#c58a4b]" />}
-                    <span>{copiedLinha ? 'Copiada!' : 'Copiar Linha'}</span>
-                  </button>
-
-                  <button
-                    onClick={handlePrint}
-                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#241e1b] hover:bg-[#2d2520] text-[#fcf8f5] border border-[#3d342f] flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Printer className="w-3.5 h-3.5 text-[#c58a4b]" />
-                    <span>Imprimir</span>
+                    Gerenciar Contas
                   </button>
                 </div>
               </div>
 
-              {/* Printable White Slip */}
-              <div
-                id="printable-boleto"
-                ref={printRef}
-                className="bg-white text-black p-5 sm:p-7 rounded-xl shadow-lg font-sans text-xs border border-gray-300"
-                style={{ color: '#000', backgroundColor: '#fff' }}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between border-b-2 border-black pb-2 mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="font-bold text-lg tracking-tight font-serif flex items-center gap-1.5 text-black">
-                      <Building2 className="w-5 h-5 text-black" />
-                      <span>{currentBank.name.toUpperCase()}</span>
-                    </div>
-                    <div className="border-l-2 border-r-2 border-black px-3 py-0.5 text-lg font-black tracking-wider text-black">
-                      {currentBank.code}-{currentBank.digit}
-                    </div>
-                  </div>
-
-                  <div className="font-mono text-xs sm:text-sm font-bold tracking-tight text-right text-black select-all">
-                    {traditionalBoletoData.linhaDigitavel}
-                  </div>
-                </div>
-
-                {/* Slip Table */}
-                <div className="border border-black divide-y divide-black text-[11px]">
-                  <div className="grid grid-cols-12 divide-x divide-black">
-                    <div className="col-span-8 p-1.5">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Local de Pagamento</div>
-                      <div className="font-semibold text-black uppercase">
-                        Pagável em qualquer agência bancária ou internet banking até o vencimento
-                      </div>
-                    </div>
-                    <div className="col-span-4 p-1.5 bg-gray-100">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Vencimento</div>
-                      <div className="font-bold text-sm text-black">
-                        {formatDate(installment.dueDate)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 divide-x divide-black">
-                    <div className="col-span-8 p-1.5">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Beneficiário</div>
-                      <div className="font-bold text-black uppercase">
-                        {traditionalBoletoData.beneficiario}
-                      </div>
-                      <div className="text-[10px] text-gray-700">
-                        CNPJ/CPF: {traditionalBoletoData.beneficiarioDoc} • {traditionalBoletoData.beneficiarioEndereco}
-                      </div>
-                    </div>
-                    <div className="col-span-4 p-1.5">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Agência / Código Beneficiário</div>
-                      <div className="font-semibold text-black">
-                        {traditionalBoletoData.agenciaCodigo}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 divide-x divide-black">
-                    <div className="col-span-2 p-1.5">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Data Doc.</div>
-                      <div className="font-medium text-black">{traditionalBoletoData.dataDocumento}</div>
-                    </div>
-                    <div className="col-span-3 p-1.5">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Nº do Documento</div>
-                      <div className="font-medium text-black">{traditionalBoletoData.documentoNumero}</div>
-                    </div>
-                    <div className="col-span-2 p-1.5">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Espécie Doc.</div>
-                      <div className="font-medium text-black">DS - Serviços</div>
-                    </div>
-                    <div className="col-span-1 p-1.5">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Aceite</div>
-                      <div className="font-medium text-black">N</div>
-                    </div>
-                    <div className="col-span-4 p-1.5 bg-gray-50">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Nosso Número</div>
-                      <div className="font-bold text-black font-mono">{traditionalBoletoData.nossoNumero}</div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 divide-x divide-black">
-                    <div className="col-span-2 p-1.5">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Uso do Banco</div>
-                      <div className="font-medium text-black">000</div>
-                    </div>
-                    <div className="col-span-2 p-1.5">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Carteira</div>
-                      <div className="font-medium text-black">{traditionalBoletoData.carteira}</div>
-                    </div>
-                    <div className="col-span-2 p-1.5">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Espécie</div>
-                      <div className="font-medium text-black">R$</div>
-                    </div>
-                    <div className="col-span-2 p-1.5">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Quantidade</div>
-                      <div className="font-medium text-black">-</div>
-                    </div>
-                    <div className="col-span-4 p-1.5 bg-gray-100">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">(=) Valor do Documento</div>
-                      <div className="font-bold text-base text-black">
-                        {formatCurrency(installment.amount)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 divide-x divide-black">
-                    <div className="col-span-8 p-2.5 space-y-2">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">
-                        Instruções (Texto de Responsabilidade do Beneficiário)
-                      </div>
-                      <p className="text-[10px] leading-relaxed text-black font-medium">
-                        {customInstructions}
-                      </p>
-                      <p className="text-[10px] leading-relaxed text-gray-800">
-                        • Projeto: <strong>{installment.projectTitle}</strong>
-                        <br />• Descrição: <strong>{customNotes || installment.description}</strong> (Parcela {installment.installmentNumber} de {installment.totalInstallments})
-                      </p>
-                    </div>
-
-                    <div className="col-span-4 divide-y divide-black">
-                      <div className="p-1.5">
-                        <div className="text-[9px] uppercase text-gray-600">(-) Descontos</div>
-                        <div className="text-right text-xs text-black">-</div>
-                      </div>
-                      <div className="p-1.5">
-                        <div className="text-[9px] uppercase text-gray-600">(+) Juros / Multa</div>
-                        <div className="text-right text-xs text-black">-</div>
-                      </div>
-                      <div className="p-1.5 bg-gray-100">
-                        <div className="text-[9px] uppercase font-bold text-gray-700">(=) Valor Cobrado</div>
-                        <div className="text-right font-bold text-xs text-black">
-                          {formatCurrency(installment.amount)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="text-[9px] uppercase font-bold text-gray-700">Pagador (Sacado)</div>
-                      <div className="text-[9px] text-gray-600">
-                        CPF/CNPJ: <span className="font-semibold text-black">{clientDocument || installment.clientDocument || 'Não informado'}</span>
-                      </div>
-                    </div>
-                    <div className="font-bold text-black uppercase text-xs">
-                      {installment.clientName}
-                    </div>
-                    <div className="text-[10px] text-gray-700 flex flex-wrap items-center gap-4">
-                      {installment.clientPhone && <span>Tel / WhatsApp: {installment.clientPhone}</span>}
-                      <span>Referência: Projeto {installment.projectTitle}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Barcode Graphic & Pix */}
-                <div className="mt-4 pt-3 border-t-2 border-dashed border-gray-400 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex-1 w-full flex flex-col items-start">
-                    <div className="flex items-end h-16 w-full max-w-md bg-white overflow-hidden py-1">
-                      {barcodePattern.map((width, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-black h-full"
-                          style={{
-                            width: `${width * 2}px`,
-                            marginRight: `${idx % 3 === 0 ? 2 : 1.2}px`,
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <div className="font-mono text-[10px] tracking-widest text-gray-600 mt-1">
-                      {traditionalBoletoData.barcodeRaw}
-                    </div>
-                  </div>
-
-                  {showPixQr && (
-                    <div className="flex items-center gap-3 p-2.5 bg-gray-50 border border-gray-300 rounded-lg shrink-0">
-                      <div className="w-16 h-16 bg-white border border-gray-300 p-1 flex items-center justify-center shrink-0">
-                        <QrCode className="w-14 h-14 text-black" />
-                      </div>
-                      <div className="text-left">
-                        <div className="text-[9px] font-extrabold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded inline-block">
-                          BolePix Instantâneo
-                        </div>
-                        <div className="text-[10px] text-gray-600 mt-1 max-w-[150px] truncate">
-                          Chave: {architectProfile?.pixKey || 'Chave Pix'}
-                        </div>
-                        <button
-                          onClick={handleCopyPix}
-                          className="text-[10px] text-blue-700 font-bold hover:underline mt-0.5 cursor-pointer block"
-                        >
-                          {copiedPix ? 'Copiado!' : 'Copiar Chave Pix'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+              {/* Instructions and notes editor */}
+              <div className="p-4 bg-[#14110f] border border-[#3d342f] rounded-xl space-y-3 text-xs">
+                <span className="font-bold text-[#fcf8f5] block">Instruções Personalizadas do Boleto:</span>
+                <textarea
+                  value={customInstructions}
+                  onChange={(e) => setCustomInstructions(e.target.value)}
+                  rows={2}
+                  className="w-full bg-[#1c1815] border border-[#3d342f] rounded-xl p-2.5 text-xs text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]"
+                />
               </div>
             </div>
           )}
@@ -1346,12 +1703,12 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
           <div className="flex items-center gap-2 text-xs text-[#a89c93]">
             <Calendar className="w-4 h-4 text-[#c58a4b]" />
             <span>
-              Vencimento: <strong className="text-[#fcf8f5]">{formatDate(installment.dueDate)}</strong> • Valor:{' '}
-              <strong className="text-emerald-400 font-bold">{formatCurrency(installment.amount)}</strong>
+              Vencimento: <strong className="text-[#fcf8f5]">{formatDate(boletoDueDate || installment.dueDate)}</strong> • Valor:{' '}
+              <strong className="text-emerald-400 font-bold">{formatCurrency(boletoAmount || installment.amount)}</strong>
             </span>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
             <button
               onClick={onClose}
               className="px-4 py-2 rounded-xl text-xs font-semibold text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#241e1b] transition-colors cursor-pointer"
@@ -1359,18 +1716,19 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
               Fechar
             </button>
 
-            {activeTab === 'traditional' && (
-              <button
-                onClick={handleSaveTraditionalToInstallment}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-[#241e1b] hover:bg-[#2d2520] text-[#c58a4b] border border-[#3d342f] transition-colors cursor-pointer"
-              >
-                Salvar Dados na Parcela
-              </button>
-            )}
-
+            {/* Quick View and Print */}
             <button
-              onClick={handleSendWhatsApp}
-              className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-2 shadow-lg transition-all cursor-pointer active:scale-95"
+              onClick={() => setActiveTab('preview')}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Visualizar / Imprimir</span>
+            </button>
+
+            {/* Send to client */}
+            <button
+              onClick={() => setActiveTab('send')}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-lg transition-all cursor-pointer active:scale-95"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Enviar para o Cliente</span>
