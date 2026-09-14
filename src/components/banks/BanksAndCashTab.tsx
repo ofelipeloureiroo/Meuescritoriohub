@@ -1588,8 +1588,18 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="text-xs sm:text-sm font-bold text-emerald-700 hidden sm:inline">
-                  +{formatCurrency(recorrentesNetSum > 0 ? recorrentesNetSum : 16012)}
+                <span className={`text-xs sm:text-sm font-bold hidden sm:inline ${
+                  recorrentesNetSum > 0 
+                    ? 'text-emerald-700' 
+                    : recorrentesNetSum < 0 
+                    ? 'text-rose-700' 
+                    : 'text-[#73655c]'
+                }`}>
+                  {recorrentesNetSum > 0 
+                    ? `+${formatCurrency(recorrentesNetSum)}` 
+                    : recorrentesNetSum < 0 
+                    ? `-${formatCurrency(Math.abs(recorrentesNetSum))}` 
+                    : formatCurrency(0)}
                 </span>
                 <button className="text-[#9c8e85] hover:text-[#1a1614] p-1 cursor-pointer">
                   {isRecorrentesOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}

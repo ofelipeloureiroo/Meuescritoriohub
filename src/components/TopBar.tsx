@@ -224,8 +224,12 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {/* User Profile Info */}
           <button
-            onClick={onOpenSettings}
-            className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-xl hover:bg-[#201a17] border border-transparent hover:border-[#382f29] transition-all cursor-pointer text-left shrink-0"
+            onClick={() => setActiveTab?.('settings')}
+            className={`flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-xl transition-all cursor-pointer text-left shrink-0 ${
+              activeTab === 'settings'
+                ? 'bg-[#201a17] border border-[#382f29]'
+                : 'hover:bg-[#201a17] border border-transparent hover:border-[#382f29]'
+            }`}
             title="Abrir Configurações do Perfil"
           >
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full p-0.5 flex items-center justify-center overflow-hidden border border-[var(--theme-primary)]/40 shadow-xs shrink-0 bg-[#12100e]">
@@ -280,8 +284,12 @@ export const TopBar: React.FC<TopBarProps> = ({
 
           {/* Settings Shortcut Button */}
           <button
-            onClick={onOpenSettings}
-            className="p-1.5 sm:p-2 rounded-xl bg-[#1c1815] hover:bg-[#2c241f] border border-[#3d342f] text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer shrink-0"
+            onClick={() => setActiveTab?.('settings')}
+            className={`p-1.5 sm:p-2 rounded-xl border transition-all cursor-pointer shrink-0 ${
+              activeTab === 'settings'
+                ? 'bg-[var(--theme-primary)]/20 text-[var(--theme-primary)] border-[var(--theme-primary)]/50 shadow-xs'
+                : 'bg-[#1c1815] hover:bg-[#2c241f] border-[#3d342f] text-[#a89c93] hover:text-[#fcf8f5]'
+            }`}
             title="Configurações do Escritório"
           >
             <Settings className="w-4 h-4" />
