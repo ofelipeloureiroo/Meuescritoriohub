@@ -222,25 +222,25 @@ const AppContent: React.FC = () => {
 const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { logout } = useAuth();
   return (
-    <div className="min-h-screen bg-[#12100e] text-[#fcf8f5] flex flex-col font-sans antialiased">
-      <header className="bg-[#1a1614] border-b border-[#3d342f] sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#faf7f2] text-zinc-900 flex flex-col font-sans antialiased">
+      <header className="bg-white border-b border-zinc-200/90 sticky top-0 z-40 shadow-2xs">
+        <div className="w-full max-w-full px-4 sm:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-[var(--theme-primary)] rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 text-black" />
+              <div className="w-9 h-9 bg-[#b5986e] rounded-xl flex items-center justify-center text-white shadow-xs">
+                <Shield className="w-5 h-5 text-white" />
               </div>
-              <span className="font-serif font-bold text-lg text-[#fcf8f5] tracking-wide">
-                Admin | <span className="text-[var(--theme-primary)]">Escritório Online</span>
+              <span className="font-serif font-extrabold text-xl text-zinc-900 tracking-tight">
+                Admin <span className="text-zinc-400 font-sans text-sm font-normal">|</span> <span className="text-[#b5986e]">Escritório Online</span>
               </span>
             </div>
-            <div className="flex items-center gap-4">
-              <Link to="/app" className="text-sm font-bold text-[#a89c93] hover:text-[#fcf8f5] transition-colors">
+            <div className="flex items-center gap-3">
+              <Link to="/app" className="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs sm:text-sm transition-all shadow-2xs">
                 Voltar ao App
               </Link>
               <button
                 onClick={logout}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#3d342f] text-[#a89c93] hover:text-red-400 hover:border-red-500/30 transition-colors text-sm cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold transition-all text-xs sm:text-sm cursor-pointer shadow-2xs"
               >
                 <LogOut className="w-4 h-4" /> Sair
               </button>
@@ -248,7 +248,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
         </div>
       </header>
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 w-full max-w-full px-4 sm:px-8 py-6 sm:py-8">
         {children}
       </main>
     </div>

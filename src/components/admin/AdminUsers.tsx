@@ -52,28 +52,28 @@ const DashboardSubscriptions: React.FC<{ users: UserProfile[] }> = ({ users }) =
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
       {/* Cards de Resumo */}
       <div className="col-span-1 space-y-4">
-        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 relative overflow-hidden h-[130px] flex flex-col justify-center">
-          <div className="absolute -top-4 -right-4 p-4 opacity-10">
-            <PieChartIcon className="w-24 h-24 text-[var(--text-main)]" />
+        <div className="bg-white border border-zinc-200/90 rounded-2xl p-6 relative overflow-hidden h-[130px] flex flex-col justify-center shadow-2xs">
+          <div className="absolute -top-4 -right-4 p-4 opacity-5">
+            <PieChartIcon className="w-24 h-24 text-zinc-900" />
           </div>
-          <h3 className="text-[var(--text-muted)] text-xs font-bold uppercase tracking-wider mb-1">Total de Assinantes</h3>
-          <div className="text-4xl font-serif font-bold text-[var(--text-main)] mb-0.5">{totalSubscribers}</div>
-          <p className="text-[10px] text-[var(--text-muted)]">usuários cadastrados</p>
+          <h3 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">Total de Assinantes</h3>
+          <div className="text-4xl font-serif font-extrabold text-zinc-900 mb-0.5">{totalSubscribers}</div>
+          <p className="text-xs text-zinc-500 font-medium">usuários cadastrados</p>
         </div>
         
-        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 relative overflow-hidden h-[130px] flex flex-col justify-center">
+        <div className="bg-white border border-emerald-200/90 rounded-2xl p-6 relative overflow-hidden h-[130px] flex flex-col justify-center shadow-2xs">
           <div className="absolute -top-4 -right-4 p-4 opacity-10">
-            <TrendingUp className="w-24 h-24 text-emerald-500" />
+            <TrendingUp className="w-24 h-24 text-emerald-600" />
           </div>
-          <h3 className="text-[var(--text-muted)] text-xs font-bold uppercase tracking-wider mb-1">Assinaturas Ativas</h3>
-          <div className="text-4xl font-serif font-bold text-emerald-400 mb-0.5">{activeCount}</div>
-          <p className="text-[10px] text-emerald-400/70">mensalidades em dia</p>
+          <h3 className="text-emerald-800 text-xs font-bold uppercase tracking-wider mb-1">Assinaturas Ativas</h3>
+          <div className="text-4xl font-serif font-extrabold text-emerald-600 mb-0.5">{activeCount}</div>
+          <p className="text-xs text-emerald-700 font-semibold">mensalidades em dia</p>
         </div>
       </div>
 
       {/* Gráfico */}
-      <div className="col-span-1 lg:col-span-2 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 flex flex-col">
-        <h3 className="text-[var(--text-main)] font-serif font-bold text-lg mb-2">Status das Assinaturas</h3>
+      <div className="col-span-1 lg:col-span-2 bg-white border border-zinc-200/90 rounded-2xl p-6 flex flex-col shadow-2xs">
+        <h3 className="text-zinc-900 font-serif font-bold text-lg mb-2">Status das Assinaturas</h3>
         <div className="flex-1 min-h-[220px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -92,13 +92,13 @@ const DashboardSubscriptions: React.FC<{ users: UserProfile[] }> = ({ users }) =
                 ))}
               </Pie>
               <Tooltip 
-                contentStyle={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', borderRadius: '0.75rem', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
-                itemStyle={{ color: 'var(--text-main)', fontSize: '14px', fontWeight: 'bold' }}
+                contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7', borderRadius: '0.75rem', color: '#18181b', border: '1px solid #e4e4e7', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                itemStyle={{ color: '#18181b', fontSize: '14px', fontWeight: 'bold' }}
               />
               <Legend 
                 verticalAlign="bottom" 
                 height={36}
-                formatter={(value) => <span className="text-[var(--text-muted)] text-xs font-bold ml-1">{value}</span>}
+                formatter={(value) => <span className="text-zinc-700 text-xs font-bold ml-1">{value}</span>}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -737,7 +737,7 @@ export const AdminUsers: React.FC = () => {
           <div className="flex items-center gap-2 mb-4">
             <button 
               onClick={() => setActiveAdminTab('users')}
-              className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+              className="px-4 py-2 bg-white hover:bg-zinc-50 text-zinc-800 border border-zinc-300 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-2xs"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Voltar para Assinantes</span>
@@ -749,80 +749,80 @@ export const AdminUsers: React.FC = () => {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
             <div>
-              <h2 className="text-2xl font-serif font-bold text-[var(--text-main)]">Painel Financeiro & Assinantes</h2>
-              <p className="text-[var(--text-muted)] text-sm">Acompanhe seus assinantes, gerencie liberação após pagamento e permissões do sistema.</p>
+              <h2 className="text-2xl sm:text-3xl font-serif font-extrabold text-zinc-900 tracking-tight">Painel Financeiro & Assinantes</h2>
+              <p className="text-zinc-600 text-xs sm:text-sm font-medium">Acompanhe seus assinantes, gerencie liberação após pagamento e permissões do sistema.</p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2.5 shrink-0">
               <button
                 onClick={() => setActiveAdminTab('finance')}
-                className="px-4 py-2 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+                className="px-4 py-2 bg-white hover:bg-zinc-50 text-zinc-800 border border-zinc-300 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-2xs"
               >
                 <span>Controle Financeiro</span>
               </button>
               <button
                 onClick={handleManualRefresh}
                 disabled={refreshing}
-                className="px-4 py-2 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 bg-white hover:bg-zinc-50 text-zinc-800 border border-zinc-300 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-2xs"
               >
-                <RefreshCw className={`w-3.5 h-3.5 text-[var(--theme-primary)] ${refreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 text-[#b5986e] ${refreshing ? 'animate-spin' : ''}`} />
                 <span>{refreshing ? 'Sincronizando...' : 'Atualizar Lista'}</span>
               </button>
             </div>
           </div>
 
           {refreshSuccessMessage && (
-            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2 animate-in fade-in duration-200">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in duration-200 shadow-2xs">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>{refreshSuccessMessage}</span>
             </div>
           )}
           
           {/* Prominent Pending Access Requests Alert Box */}
           {pendingRequests.length > 0 && (
-            <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-5 space-y-4 shadow-lg animate-in fade-in duration-200">
-              <div className="flex items-center justify-between border-b border-amber-500/20 pb-3">
+            <div className="bg-amber-50/90 border-2 border-amber-300/90 rounded-2xl p-5 space-y-4 shadow-2xs animate-in fade-in duration-200">
+              <div className="flex items-center justify-between border-b border-amber-200 pb-3">
                 <div className="flex items-center gap-2.5">
                   <span className="relative flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
                   </span>
-                  <h3 className="font-serif font-bold text-base text-amber-300">
+                  <h3 className="font-serif font-extrabold text-base text-amber-950">
                     🔔 {pendingRequests.length} Solicitação(ões) de Acesso Aguardando Sua Liberação
                   </h3>
                 </div>
-                <span className="text-[11px] font-bold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg">
+                <span className="text-[11px] font-bold px-3 py-1 bg-amber-200/60 text-amber-900 border border-amber-300 rounded-lg shadow-2xs">
                   Aguardando Conferência de Pagamento
                 </span>
               </div>
     
-              <p className="text-xs text-[var(--text-muted)]">
+              <p className="text-xs text-amber-900 font-medium">
                 Os usuários abaixo fizeram cadastro ou login e estão aguardando você confirmar o pagamento. Escolha a duração para liberar o acesso:
               </p>
     
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {pendingRequests.map((pUser) => (
-                  <div key={pUser.uid} className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl p-4 flex flex-col justify-between gap-3 shadow-md">
+                  <div key={pUser.uid} className="bg-white border border-amber-200/90 rounded-xl p-4 flex flex-col justify-between gap-3 shadow-2xs">
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-[var(--text-main)]">{pUser.name || 'Novo Usuário'}</span>
-                        <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                        <span className="font-bold text-xs text-zinc-900">{pUser.name || 'Novo Usuário'}</span>
+                        <span className="text-[10px] text-amber-800 font-bold font-mono bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
                           Pendente
                         </span>
                       </div>
-                      <div className="text-xs font-mono text-[var(--theme-primary)] font-bold truncate">
+                      <div className="text-xs font-mono text-[#8c6b3e] font-extrabold truncate">
                         {pUser.email}
                       </div>
-                      <div className="text-[10px] text-[var(--text-muted)]">
+                      <div className="text-[10px] text-zinc-500 font-medium">
                         Cadastrado em: {pUser.createdAt ? new Date(pUser.createdAt).toLocaleDateString('pt-BR') : 'Hoje'}
                       </div>
                     </div>
     
-                    <div className="space-y-2 pt-2 border-t border-[var(--border-color)]">
-                      <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Selecione o Tempo da Assinatura:</div>
+                    <div className="space-y-2 pt-2 border-t border-zinc-100">
+                      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Selecione o Tempo da Assinatura:</div>
                       <div className="grid grid-cols-3 gap-1.5">
                         <button
                           onClick={() => approveWithDuration(pUser.uid, '1month')}
-                          className="py-2 px-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
+                          className="py-2 px-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-2xs cursor-pointer"
                           title="Liberar Acesso por 1 Mês (30 Dias)"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -831,7 +831,7 @@ export const AdminUsers: React.FC = () => {
     
                         <button
                           onClick={() => approveWithDuration(pUser.uid, '1year')}
-                          className="py-2 px-2 bg-emerald-400 hover:bg-emerald-300 text-black font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
+                          className="py-2 px-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-2xs cursor-pointer"
                           title="Liberar Acesso por 1 Ano (365 Dias)"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
@@ -845,17 +845,17 @@ export const AdminUsers: React.FC = () => {
                             defaultDate.setMonth(defaultDate.getMonth() + 1);
                             setCustomDateInput(defaultDate.toISOString().split('T')[0]);
                           }}
-                          className="py-2 px-2 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)] font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer"
+                          className="py-2 px-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-300 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
                           title="Definir Data Personalizada"
                         >
-                          <Calendar className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+                          <Calendar className="w-3.5 h-3.5 text-[#b5986e]" />
                           <span>Data</span>
                         </button>
                       </div>
     
                       <button
                         onClick={() => updateStatus(pUser.uid, 'inactive')}
-                        className="w-full py-1.5 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all border border-red-500/20 cursor-pointer"
+                        className="w-full py-1.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all border border-rose-200 cursor-pointer shadow-2xs"
                       >
                         <XCircle className="w-3.5 h-3.5" />
                         <span>Recusar / Bloquear Acesso</span>
@@ -868,33 +868,33 @@ export const AdminUsers: React.FC = () => {
           )}
 
           {/* Bar for Manual Approval by Email */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 space-y-3">
+          <div className="bg-white border border-zinc-200/90 rounded-2xl p-4 space-y-3 shadow-2xs">
             <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-[var(--theme-primary)]" />
-              <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">
+              <Mail className="w-4 h-4 text-[#b5986e]" />
+              <h3 className="text-xs font-bold text-zinc-700 uppercase tracking-wider">
                 Liberar Assinatura Manualmente por E-mail
               </h3>
             </div>
-            <form onSubmit={handleManualApproveByEmail} className="flex flex-col sm:flex-row items-center gap-2">
+            <form onSubmit={handleManualApproveByEmail} className="flex flex-col sm:flex-row items-center gap-2.5">
               <input
                 type="email"
                 value={manualEmailInput}
                 onChange={(e) => setManualEmailInput(e.target.value)}
                 placeholder="Digite o e-mail do assinante (ex: cliente@email.com)"
                 required
-                className="flex-1 w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3.5 py-2 text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-primary)]"
+                className="flex-1 w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3.5 py-2 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:bg-white focus:border-[#b5986e] font-medium"
               />
               <select
                 value={manualDuration}
                 onChange={(e) => setManualDuration(e.target.value as '1month' | '1year')}
-                className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
+                className="bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-xs text-zinc-900 font-semibold focus:outline-none focus:bg-white focus:border-[#b5986e] cursor-pointer"
               >
                 <option value="1month">Duração: 1 Mês (30 dias)</option>
                 <option value="1year">Duração: 1 Ano (365 dias)</option>
               </select>
               <button
                 type="submit"
-                className="w-full sm:w-auto px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                className="w-full sm:w-auto px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer whitespace-nowrap"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Liberar Acesso Agora</span>
@@ -903,16 +903,16 @@ export const AdminUsers: React.FC = () => {
           </div>
 
           {errorMessage && (
-            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between shadow-2xs">
               <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMessage}</span>
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span className="font-medium">{errorMessage}</span>
               </div>
               <button
                 onClick={() => window.location.reload()}
-                className="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold transition-colors"
+                className="px-3 py-1 rounded-lg bg-rose-200/60 hover:bg-rose-200 text-rose-900 font-bold transition-colors shadow-2xs"
               >
-                Recarregar Page
+                Recarregar Página
               </button>
             </div>
           )}
@@ -920,28 +920,28 @@ export const AdminUsers: React.FC = () => {
           <DashboardSubscriptions users={users} />
 
           {/* Filter and Search Bar */}
-      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-white border border-zinc-200/90 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs">
         <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
             type="text"
             placeholder="Buscar por email ou ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-primary)]"
+            className="w-full pl-10 pr-4 py-2 rounded-xl bg-zinc-50 border border-zinc-300 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:bg-white focus:border-[#b5986e] font-medium"
           />
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-          <span className="text-xs text-[var(--text-muted)] font-medium whitespace-nowrap">Status:</span>
+          <span className="text-xs text-zinc-500 font-bold whitespace-nowrap">Status:</span>
           {(['all', 'active', 'pending', 'inactive'] as const).map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 statusFilter === st
-                  ? 'bg-[var(--theme-primary)] text-black font-bold'
-                  : 'bg-[var(--bg-input)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-color)]'
+                  ? 'bg-[#b5986e] text-white shadow-2xs'
+                  : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 border border-zinc-200'
               }`}
             >
               {st === 'all' && 'Todos'}
@@ -954,56 +954,56 @@ export const AdminUsers: React.FC = () => {
       </div>
 
       {/* Users Table */}
-      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-zinc-200/90 rounded-2xl overflow-hidden shadow-2xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-[var(--bg-body)] border-b border-[var(--border-color)]">
+            <thead className="bg-zinc-50/80 border-b border-zinc-200">
               <tr>
-                <th className="px-6 py-4 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Usuário / Email</th>
-                <th className="px-6 py-4 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Função</th>
-                <th className="px-6 py-4 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Vencimento da Assinatura</th>
-                <th className="px-6 py-4 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider text-right">Ações</th>
+                <th className="px-6 py-4 text-xs font-bold text-zinc-600 uppercase tracking-wider">Usuário / Email</th>
+                <th className="px-6 py-4 text-xs font-bold text-zinc-600 uppercase tracking-wider">Função</th>
+                <th className="px-6 py-4 text-xs font-bold text-zinc-600 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-xs font-bold text-zinc-600 uppercase tracking-wider">Vencimento da Assinatura</th>
+                <th className="px-6 py-4 text-xs font-bold text-zinc-600 uppercase tracking-wider text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--border-color)]">
+            <tbody className="divide-y divide-zinc-100">
               {filteredUsers.map((u) => {
                 const isOverdue = u.subscriptionDueDate && new Date(u.subscriptionDueDate) < new Date();
 
                 return (
-                  <tr key={u.uid} className="hover:bg-[var(--bg-body)] transition-colors">
+                  <tr key={u.uid} className="hover:bg-amber-50/20 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[var(--bg-card-secondary)] border border-[var(--border-color)] flex items-center justify-center shrink-0 text-[var(--theme-primary)] font-bold font-serif text-sm">
+                        <div className="w-10 h-10 rounded-full bg-[#b5986e]/15 border border-[#b5986e]/30 flex items-center justify-center shrink-0 text-[#8c6b3e] font-bold font-serif text-sm">
                           {(u.email || 'U').slice(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-sm font-bold text-[var(--text-main)] truncate">
+                          <div className="text-sm font-bold text-zinc-900 truncate">
                             {u.name ? `${u.name} · ${u.email}` : u.email}
                           </div>
                           <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                            <span className="text-[10px] text-[var(--text-muted)] font-mono">
+                            <span className="text-[10px] text-zinc-500 font-mono">
                               ID: {u.uid.slice(0, 10)}...
                             </span>
                             {u.role === 'admin' ? (
-                              <span className="px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[9px] font-bold">
+                              <span className="px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold">
                                 👑 Gestor / Dono
                               </span>
                             ) : u.notes?.includes('Portal') ? (
-                              <span className="px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-bold">
+                              <span className="px-2 py-0.5 rounded-md bg-purple-50 border border-purple-200 text-purple-800 text-[10px] font-bold">
                                 🏢 Cliente Portal
                               </span>
                             ) : u.joinedOwnerUid || profile?.collaborators?.some(c => c.email?.toLowerCase() === u.email?.toLowerCase()) || u.notes?.includes('Membro') || u.notes?.includes('Sócia') || u.notes?.includes('Coordenadora') ? (
-                              <span className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] font-bold">
+                              <span className="px-2 py-0.5 rounded-md bg-sky-50 border border-sky-200 text-sky-800 text-[10px] font-bold">
                                 👥 Membro de Equipe
                               </span>
                             ) : (
-                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold">
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold">
                                 🌱 Assinante Autorizado
                               </span>
                             )}
                             {u.notes && (
-                              <span className="text-[10px] text-[var(--text-muted)] italic">
+                              <span className="text-[10px] text-zinc-500 italic">
                                 ({u.notes})
                               </span>
                             )}
@@ -1016,7 +1016,7 @@ export const AdminUsers: React.FC = () => {
                       <select
                         value={u.role || 'user'}
                         onChange={(e) => updateRole(u.uid, e.target.value as 'admin' | 'user')}
-                        className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-1.5 text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
+                        className="bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-1.5 text-xs text-zinc-900 font-semibold focus:outline-none focus:bg-white focus:border-[#b5986e] cursor-pointer"
                       >
                         <option value="user">Cliente / Assinante</option>
                         <option value="admin">Administrador</option>
@@ -1026,18 +1026,18 @@ export const AdminUsers: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         {u.status === 'active' && (
-                          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
-                            <CheckCircle2 className="w-3 h-3" /> Ativo
+                          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Ativo
                           </span>
                         )}
                         {u.status === 'pending' && (
-                          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold uppercase tracking-wider">
-                            <Clock className="w-3 h-3" /> Pendente
+                          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold uppercase tracking-wider">
+                            <Clock className="w-3.5 h-3.5 text-amber-600" /> Pendente
                           </span>
                         )}
                         {u.status === 'inactive' && (
-                          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider">
-                            <XCircle className="w-3 h-3" /> Inativo
+                          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-bold uppercase tracking-wider">
+                            <XCircle className="w-3.5 h-3.5 text-rose-600" /> Inativo
                           </span>
                         )}
                       </div>
@@ -1045,20 +1045,20 @@ export const AdminUsers: React.FC = () => {
 
                     <td className="px-6 py-4">
                       {u.role === 'admin' ? (
-                        <span className="text-xs text-[var(--text-muted)] font-semibold">Acesso Vitalício</span>
+                        <span className="text-xs text-amber-800 font-bold">Acesso Vitalício</span>
                       ) : u.joinedOwnerUid || profile?.collaborators?.some(c => c.email?.toLowerCase() === u.email?.toLowerCase()) ? (
-                        <span className="text-xs text-blue-400 font-semibold flex items-center gap-1">
+                        <span className="text-xs text-sky-700 font-bold flex items-center gap-1">
                           👥 Incluso na Equipe
                         </span>
                       ) : (
                         <div>
                           {u.subscriptionDueDate ? (
-                            <div className={`text-xs font-semibold ${isOverdue ? 'text-red-400' : 'text-[var(--text-main)]'}`}>
+                            <div className={`text-xs font-bold ${isOverdue ? 'text-rose-600' : 'text-zinc-900'}`}>
                               {new Date(u.subscriptionDueDate).toLocaleDateString('pt-BR')}
-                              {isOverdue && <span className="block text-[10px] uppercase text-red-500 font-bold">Atrasado</span>}
+                              {isOverdue && <span className="block text-[10px] uppercase text-rose-600 font-extrabold">Atrasado</span>}
                             </div>
                           ) : (
-                            <span className="text-xs text-[var(--text-muted)]">Sem data</span>
+                            <span className="text-xs text-zinc-400 font-medium">Sem data</span>
                           )}
                         </div>
                       )}
@@ -1073,7 +1073,7 @@ export const AdminUsers: React.FC = () => {
                               <>
                                 <button
                                   onClick={() => approveWithDuration(u.uid, '1month')}
-                                  className="px-2.5 py-1.5 bg-[var(--bg-card-secondary)] border border-[var(--border-color)] hover:border-[var(--theme-primary)] text-[var(--theme-primary)] text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                                  className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-bold rounded-xl transition-all shadow-2xs cursor-pointer"
                                   title="Adicionar ou Renovar +1 Mês (30 Dias)"
                                 >
                                   +1 Mês
@@ -1081,7 +1081,7 @@ export const AdminUsers: React.FC = () => {
 
                                 <button
                                   onClick={() => approveWithDuration(u.uid, '1year')}
-                                  className="px-2.5 py-1.5 bg-[var(--bg-card-secondary)] border border-[var(--border-color)] hover:border-emerald-500 text-emerald-400 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                                  className="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 text-[11px] font-bold rounded-xl transition-all shadow-2xs cursor-pointer"
                                   title="Adicionar ou Renovar +1 Ano (365 Dias)"
                                 >
                                   +1 Ano
@@ -1093,7 +1093,7 @@ export const AdminUsers: React.FC = () => {
                                     const curDate = u.subscriptionDueDate ? new Date(u.subscriptionDueDate) : new Date();
                                     setCustomDateInput(curDate.toISOString().split('T')[0]);
                                   }}
-                                  className="p-1.5 bg-[var(--bg-card-secondary)] border border-[var(--border-color)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-lg transition-colors cursor-pointer"
+                                  className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl transition-all cursor-pointer shadow-2xs"
                                   title="Definir Data de Vencimento Personalizada"
                                 >
                                   <Calendar className="w-3.5 h-3.5" />
@@ -1101,10 +1101,10 @@ export const AdminUsers: React.FC = () => {
 
                                 <button
                                   onClick={() => handleUnsubscribeUser(u)}
-                                  className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:border-rose-500/50 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
                                   title="Cancelar assinatura e desativar acesso deste usuário"
                                 >
-                                  <UserX className="w-3.5 h-3.5 text-rose-400" />
+                                  <UserX className="w-3.5 h-3.5 text-rose-600" />
                                   <span>Cancelar Assinatura</span>
                                 </button>
                               </>
@@ -1115,7 +1115,7 @@ export const AdminUsers: React.FC = () => {
                               <>
                                 <button
                                   onClick={() => handleReactivateUser(u, '1month')}
-                                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
                                   title="Reativar assinatura e liberar acesso por 30 dias"
                                 >
                                   <CheckCircle2 className="w-3.5 h-3.5" />
@@ -1124,7 +1124,7 @@ export const AdminUsers: React.FC = () => {
 
                                 <button
                                   onClick={() => handleReactivateUser(u, '1year')}
-                                  className="px-2.5 py-1.5 bg-[var(--bg-card-secondary)] border border-emerald-500/30 hover:border-emerald-500 text-emerald-400 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                                  className="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 text-[11px] font-bold rounded-xl transition-all shadow-2xs cursor-pointer"
                                   title="Reativar assinatura por 1 Ano"
                                 >
                                   +1 Ano
@@ -1137,13 +1137,13 @@ export const AdminUsers: React.FC = () => {
                               <>
                                 <button
                                   onClick={() => approveWithDuration(u.uid, '1month')}
-                                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
                                 >
                                   Aprovar (+1 Mês)
                                 </button>
                                 <button
                                   onClick={() => handleUnsubscribeUser(u)}
-                                  className="px-2.5 py-1.5 bg-[var(--bg-card-secondary)] hover:bg-red-500/20 text-[var(--text-muted)] hover:text-red-400 border border-[var(--border-color)] text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer"
                                 >
                                   Recusar
                                 </button>
@@ -1152,7 +1152,7 @@ export const AdminUsers: React.FC = () => {
 
                             <button
                               onClick={() => handleDeleteUser(u.uid, u.email)}
-                              className="p-1.5 text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                              className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-zinc-200 hover:border-rose-200 rounded-xl transition-all cursor-pointer shadow-2xs"
                               title="Remover Usuário"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -1167,7 +1167,7 @@ export const AdminUsers: React.FC = () => {
 
               {filteredUsers.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-[var(--text-muted)] text-sm">
+                  <td colSpan={5} className="px-6 py-12 text-center text-zinc-500 text-sm font-medium">
                     Nenhum usuário ou assinante encontrado para esta busca.
                   </td>
                 </tr>
@@ -1179,28 +1179,28 @@ export const AdminUsers: React.FC = () => {
 
       {/* Custom Date Modal */}
       {selectedUserForModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 w-full max-w-md space-y-5 shadow-2xl relative animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-zinc-200 rounded-3xl p-6 w-full max-w-md space-y-5 shadow-2xl relative animate-in zoom-in-95 duration-200 text-zinc-900">
+            <div className="flex items-center justify-between border-b border-zinc-200 pb-3">
               <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-[var(--theme-primary)]" />
-                <h3 className="font-serif font-bold text-lg text-[var(--text-main)]">Definir Vencimento do Assinante</h3>
+                <Calendar className="w-5 h-5 text-[#b5986e]" />
+                <h3 className="font-serif font-bold text-lg text-zinc-900">Definir Vencimento do Assinante</h3>
               </div>
               <button
                 onClick={() => setSelectedUserForModal(null)}
-                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-lg transition-colors cursor-pointer"
+                className="p-1 text-zinc-400 hover:text-zinc-700 rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-1 bg-[var(--bg-input)] border border-[var(--border-color)] p-3 rounded-xl">
-              <div className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Assinante Selecionado:</div>
-              <div className="text-sm font-bold text-[var(--text-main)] font-mono">{selectedUserForModal.email}</div>
+            <div className="space-y-1 bg-zinc-50 border border-zinc-200 p-3.5 rounded-xl">
+              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Assinante Selecionado:</div>
+              <div className="text-sm font-bold text-[#8c6b3e] font-mono">{selectedUserForModal.email}</div>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Atalhos Rápido de Duração:</label>
+              <label className="block text-xs font-bold text-zinc-600 uppercase tracking-wider">Atalhos Rápidos de Duração:</label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -1209,7 +1209,7 @@ export const AdminUsers: React.FC = () => {
                     d.setDate(d.getDate() + 30);
                     setCustomDateInput(d.toISOString().split('T')[0]);
                   }}
-                  className="py-2 px-3 bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-[var(--theme-primary)] rounded-xl text-xs font-bold text-[var(--text-main)] transition-colors cursor-pointer"
+                  className="py-2 px-3 bg-zinc-50 hover:bg-zinc-100 border border-zinc-300 hover:border-[#b5986e] rounded-xl text-xs font-bold text-zinc-800 transition-all cursor-pointer shadow-2xs"
                 >
                   1 Mês (30 Dias)
                 </button>
@@ -1220,7 +1220,7 @@ export const AdminUsers: React.FC = () => {
                     d.setDate(d.getDate() + 90);
                     setCustomDateInput(d.toISOString().split('T')[0]);
                   }}
-                  className="py-2 px-3 bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-[var(--theme-primary)] rounded-xl text-xs font-bold text-[var(--text-main)] transition-colors cursor-pointer"
+                  className="py-2 px-3 bg-zinc-50 hover:bg-zinc-100 border border-zinc-300 hover:border-[#b5986e] rounded-xl text-xs font-bold text-zinc-800 transition-all cursor-pointer shadow-2xs"
                 >
                   3 Meses (90 Dias)
                 </button>
@@ -1231,7 +1231,7 @@ export const AdminUsers: React.FC = () => {
                     d.setDate(d.getDate() + 180);
                     setCustomDateInput(d.toISOString().split('T')[0]);
                   }}
-                  className="py-2 px-3 bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-[var(--theme-primary)] rounded-xl text-xs font-bold text-[var(--text-main)] transition-colors cursor-pointer"
+                  className="py-2 px-3 bg-zinc-50 hover:bg-zinc-100 border border-zinc-300 hover:border-[#b5986e] rounded-xl text-xs font-bold text-zinc-800 transition-all cursor-pointer shadow-2xs"
                 >
                   6 Meses (180 Dias)
                 </button>
@@ -1242,7 +1242,7 @@ export const AdminUsers: React.FC = () => {
                     d.setDate(d.getDate() + 365);
                     setCustomDateInput(d.toISOString().split('T')[0]);
                   }}
-                  className="py-2 px-3 bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-emerald-500 rounded-xl text-xs font-bold text-[var(--text-main)] transition-colors cursor-pointer"
+                  className="py-2 px-3 bg-zinc-50 hover:bg-zinc-100 border border-zinc-300 hover:border-emerald-600 rounded-xl text-xs font-bold text-zinc-800 transition-all cursor-pointer shadow-2xs"
                 >
                   1 Ano (365 Dias)
                 </button>
@@ -1250,27 +1250,27 @@ export const AdminUsers: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Escolher Data de Vencimento Específica:</label>
+              <label className="block text-xs font-bold text-zinc-600 uppercase tracking-wider">Escolher Data de Vencimento Específica:</label>
               <input
                 type="date"
                 value={customDateInput}
                 onChange={(e) => setCustomDateInput(e.target.value)}
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]"
+                className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-4 py-2.5 text-sm text-zinc-900 focus:outline-none focus:bg-white focus:border-[#b5986e] font-semibold"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-color)]">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-200">
               <button
                 type="button"
                 onClick={() => setSelectedUserForModal(null)}
-                className="py-2 px-4 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-bold transition-colors cursor-pointer"
+                className="py-2 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={() => approveWithDuration(selectedUserForModal.uid, 'custom', customDateInput)}
-                className="py-2 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                className="py-2 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Confirmar e Salvar Acesso</span>
@@ -1281,47 +1281,47 @@ export const AdminUsers: React.FC = () => {
       )}
       {/* Modal de Confirmação de Exclusão de Usuário */}
       {userToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white border border-zinc-200 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl relative animate-in fade-in zoom-in duration-200 text-zinc-900">
             <button
               onClick={() => setUserToDelete(null)}
-              className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+              <div className="w-10 h-10 rounded-2xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600">
                 <Trash2 className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-[var(--text-main)]">Excluir Usuário</h3>
-                <p className="text-xs text-[var(--text-muted)]">Esta ação removerá o usuário do sistema</p>
+                <h3 className="text-base font-bold text-zinc-900">Excluir Usuário</h3>
+                <p className="text-xs text-zinc-500 font-medium">Esta ação removerá o usuário do sistema</p>
               </div>
             </div>
 
-            <div className="p-3.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl space-y-1">
-              <div className="text-xs text-[var(--text-main)] font-semibold">{userToDelete.name || userToDelete.email}</div>
-              <div className="text-xs font-mono text-[var(--theme-primary)]">{userToDelete.email}</div>
+            <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl space-y-1">
+              <div className="text-xs text-zinc-900 font-bold">{userToDelete.name || userToDelete.email}</div>
+              <div className="text-xs font-mono text-[#8c6b3e] font-bold">{userToDelete.email}</div>
             </div>
 
-            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-              Tem certeza que deseja excluir o usuário <span className="font-bold text-[var(--text-main)]">{userToDelete.email}</span>? 
+            <p className="text-xs text-zinc-600 leading-relaxed font-medium">
+              Tem certeza que deseja excluir o usuário <span className="font-bold text-zinc-900">{userToDelete.email}</span>? 
               A assinatura será cancelada e o registro removido da sua lista de assinantes.
             </p>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-color)]">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-200">
               <button
                 type="button"
                 onClick={() => setUserToDelete(null)}
-                className="py-2 px-4 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-bold transition-colors cursor-pointer"
+                className="py-2 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDeleteUser}
-                className="py-2 px-5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                className="py-2 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Confirmar Exclusão</span>
