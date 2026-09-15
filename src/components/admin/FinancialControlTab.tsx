@@ -65,7 +65,7 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
 
     const loadPlatformPayments = async () => {
       try {
-        const deletedSeeds: string[] = JSON.parse(localStorage.getItem(DELETED_SEEDS_KEY) || '[]');
+        const initialDeleted: string[] = JSON.parse(localStorage.getItem(DELETED_SEEDS_KEY) || '[]');
 
         // 1. Load local cache first for fast rendering
         const cached = localStorage.getItem(STORAGE_KEY);
@@ -73,7 +73,7 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
           try {
             const parsed: PlatformPayment[] = JSON.parse(cached);
             if (Array.isArray(parsed)) {
-              const validCached = parsed.filter(p => !deletedSeeds.includes(p.id));
+              const validCached = parsed.filter(p => !initialDeleted.includes(p.id));
               setPayments(validCached);
             }
           } catch (e) {
@@ -84,9 +84,12 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
         // 2. Subscribe to Firestore collection 'platform_payments'
         const colRef = collection(db, 'platform_payments');
         unsub = onSnapshot(colRef, (snapshot) => {
+          // Read fresh blacklist from localStorage on every snapshot tick
+          const freshDeleted: string[] = JSON.parse(localStorage.getItem(DELETED_SEEDS_KEY) || '[]');
+
           const docsData: PlatformPayment[] = [];
           snapshot.forEach((d) => {
-            if (!deletedSeeds.includes(d.id)) {
+            if (!freshDeleted.includes(d.id)) {
               docsData.push({ id: d.id, ...d.data() } as PlatformPayment);
             }
           });
@@ -110,14 +113,14 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
               }
             }
 
-            const filteredLocal = localParsed.filter(p => !deletedSeeds.includes(p.id));
+            const filteredLocal = localParsed.filter(p => !freshDeleted.includes(p.id));
 
             if (filteredLocal.length > 0) {
               setPayments(filteredLocal);
             } else {
               // Only seed if user has not explicitly cleared history or deleted seed items
               const userClearedAll = localStorage.getItem('user_cleared_all_payments') === 'true';
-              if (!userClearedAll && deletedSeeds.length === 0) {
+              if (!userClearedAll && freshDeleted.length === 0) {
                 const activeSubscribers = users.filter(u => u.role !== 'admin' && u.status === 'active');
                 if (activeSubscribers.length > 0) {
                   const seeded: PlatformPayment[] = activeSubscribers.map((u, idx) => ({
@@ -243,57 +246,63 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
   };
 
   // Confirm deletion of single payment entry
-  const confirmDeletePayment = async () => {
+  const confirmDeletePayment = () => {
     if (!paymentToDelete) return;
 
     const targetId = paymentToDelete.id;
     const targetEmail = paymentToDelete.subscriberEmail;
 
-    try {
-      // 1. Try deleting from Firestore
-      await deleteDoc(doc(db, 'platform_payments', targetId));
-    } catch (e) {
-      console.warn("Could not delete document from Firestore:", e);
+    // 1. Immediately blacklist in localStorage
+    const deletedList: string[] = JSON.parse(localStorage.getItem(DELETED_SEEDS_KEY) || '[]');
+    if (!deletedList.includes(targetId)) {
+      deletedList.push(targetId);
+      localStorage.setItem(DELETED_SEEDS_KEY, JSON.stringify(deletedList));
     }
 
-    // 2. Track deleted ID in localStorage black-list so it never re-appears
-    const deletedSeeds: string[] = JSON.parse(localStorage.getItem(DELETED_SEEDS_KEY) || '[]');
-    if (!deletedSeeds.includes(targetId)) {
-      deletedSeeds.push(targetId);
-      localStorage.setItem(DELETED_SEEDS_KEY, JSON.stringify(deletedSeeds));
-    }
-
-    // 3. Update React state & localStorage
-    const updated = payments.filter(p => p.id !== targetId);
-    setPayments(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    // 2. Immediately update local React state & storage
+    setPayments(prev => {
+      const updated = prev.filter(p => p.id !== targetId);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      if (updated.length === 0) {
+        localStorage.setItem('user_cleared_all_payments', 'true');
+      }
+      return updated;
+    });
 
     setPaymentToDelete(null);
     setSuccessMsg(`Lançamento de recebimento de ${targetEmail} excluído com sucesso!`);
     setTimeout(() => setSuccessMsg(null), 4000);
+
+    // 3. Try deleting from Firestore in background (non-blocking)
+    deleteDoc(doc(db, 'platform_payments', targetId)).catch((e) => {
+      console.warn("Could not delete document from Firestore:", e);
+    });
   };
 
   // Confirm Reset all platform financial data
-  const confirmReset = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, 'platform_payments'));
-      querySnapshot.forEach(async (d) => {
-        await deleteDoc(doc(db, 'platform_payments', d.id));
-      });
-    } catch (e) {
-      console.warn("Error deleting Firestore documents:", e);
-    }
-
-    // Track all current IDs as deleted
+  const confirmReset = () => {
+    // 1. Track all current IDs as deleted immediately
     const allIds = payments.map(p => p.id);
-    localStorage.setItem(DELETED_SEEDS_KEY, JSON.stringify(allIds));
+    const deletedList: string[] = JSON.parse(localStorage.getItem(DELETED_SEEDS_KEY) || '[]');
+    const newDeleted = Array.from(new Set([...deletedList, ...allIds]));
+    
+    localStorage.setItem(DELETED_SEEDS_KEY, JSON.stringify(newDeleted));
     localStorage.setItem('user_cleared_all_payments', 'true');
+    localStorage.removeItem(STORAGE_KEY);
 
     setPayments([]);
-    localStorage.removeItem(STORAGE_KEY);
     setShowResetModal(false);
     setSuccessMsg('Histórico financeiro de assinantes zerado com sucesso.');
     setTimeout(() => setSuccessMsg(null), 4000);
+
+    // 2. Clear Firestore in background
+    getDocs(collection(db, 'platform_payments'))
+      .then((querySnapshot) => {
+        querySnapshot.forEach((d) => {
+          deleteDoc(doc(db, 'platform_payments', d.id)).catch(console.warn);
+        });
+      })
+      .catch((e) => console.warn("Error clearing Firestore platform_payments:", e));
   };
 
   // Calculations for SaaS Metrics
