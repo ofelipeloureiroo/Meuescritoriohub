@@ -479,6 +479,24 @@ export const AdminUsers: React.FC = () => {
       setUsers(updatedList);
       persistSubscribersAcrossAllLayers(updatedList);
 
+      const targetUser = users.find(u => u.uid === uid);
+      if (targetUser?.email) {
+        const amount = durationType === '1year' ? 990.00 : 97.00;
+        const newDocId = `pay_${Date.now()}`;
+        const newPayment = {
+          id: newDocId,
+          subscriberEmail: targetUser.email.toLowerCase().trim(),
+          subscriberName: targetUser.name || targetUser.email.split('@')[0],
+          description: durationType === '1year' ? 'Assinatura Anual Plataforma' : 'Assinatura Mensal Plataforma',
+          plan: durationType,
+          amount,
+          date: new Date().toISOString().split('T')[0],
+          paymentMethod: 'PIX',
+          createdAt: new Date().toISOString()
+        };
+        setDoc(doc(db, 'platform_payments', newDocId), newPayment).catch(console.warn);
+      }
+
       alert(`Acesso liberado com sucesso! Vencimento definido para ${dueDate.toLocaleDateString('pt-BR')}.`);
       setSelectedUserForModal(null);
     } catch (error: any) {
@@ -528,6 +546,22 @@ export const AdminUsers: React.FC = () => {
 
       setUsers(updatedList);
       persistSubscribersAcrossAllLayers(updatedList);
+
+      // Auto-record platform subscription payment
+      const newDocId = `pay_${Date.now()}`;
+      const amount = manualDuration === '1year' ? 990.00 : 97.00;
+      const newPayment = {
+        id: newDocId,
+        subscriberEmail: cleanEmail,
+        subscriberName: cleanEmail.split('@')[0],
+        description: manualDuration === '1year' ? 'Assinatura Anual (Liberação Manual)' : 'Assinatura Mensal (Liberação Manual)',
+        plan: manualDuration,
+        amount,
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: 'PIX',
+        createdAt: new Date().toISOString()
+      };
+      setDoc(doc(db, 'platform_payments', newDocId), newPayment).catch(console.warn);
 
       setManualEmailInput('');
       setRefreshSuccessMessage(`Assinante ${cleanEmail} liberado com sucesso por ${manualDuration === '1month' ? '1 Mês' : '1 Ano'}!`);
@@ -743,7 +777,7 @@ export const AdminUsers: React.FC = () => {
               <span>Voltar para Assinantes</span>
             </button>
           </div>
-          <FinancialControlTab />
+          <FinancialControlTab users={users} />
         </div>
       ) : (
         <div className="space-y-6">
