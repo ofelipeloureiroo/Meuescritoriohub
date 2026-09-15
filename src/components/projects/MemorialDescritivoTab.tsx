@@ -351,6 +351,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
   // Print Preview Modal & Toast
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<MemorialItem | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -591,12 +592,23 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     resetForm();
   };
 
-  // Delete item
-  const handleDeleteItem = (id: string) => {
-    if (confirm('Tem certeza de que deseja remover este produto do memorial?')) {
-      const updatedItems = items.filter(item => item.id !== id);
-      updateArchitectureProject(project.id, { memorialItems: updatedItems });
+  // Delete item - open custom in-app confirmation modal
+  const handleDeleteItem = (item: MemorialItem) => {
+    setItemToDelete(item);
+  };
+
+  const confirmDeleteItem = () => {
+    if (!itemToDelete) return;
+    const idToRemove = itemToDelete.id;
+    const titleToRemove = itemToDelete.title;
+    const updatedItems = items.filter(item => item.id !== idToRemove);
+    updateArchitectureProject(project.id, { memorialItems: updatedItems });
+    setItemToDelete(null);
+    if (editingItem?.id === idToRemove) {
+      setIsModalOpen(false);
+      resetForm();
     }
+    showToast(`Produto "${titleToRemove}" removido com sucesso.`);
   };
 
   // Toggle item status
@@ -1026,9 +1038,13 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
 
                       {/* Delete */}
                       <button
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="p-1.5 rounded-lg bg-white text-red-400 hover:text-red-600 hover:bg-red-50 border border-zinc-200 transition-colors cursor-pointer"
-                        title="Remover"
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteItem(item);
+                        }}
+                        className="p-1.5 rounded-lg bg-white text-red-500 hover:text-red-700 hover:bg-red-50 border border-zinc-200 transition-colors cursor-pointer"
+                        title="Excluir produto do memorial"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -1315,23 +1331,72 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                 </div>
 
                 {/* Modal Actions Footer */}
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 hover:bg-zinc-100 transition-colors cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#8c7456] hover:bg-[#786044] transition-colors cursor-pointer shadow-xs"
-                  >
-                    {editingItem ? 'Salvar Alterações' : 'Especificar Produto'}
-                  </button>
+                <div className="flex items-center justify-between gap-2 pt-3 border-t border-zinc-100 shrink-0">
+                  {editingItem ? (
+                    <button
+                      type="button"
+                      onClick={() => setItemToDelete(editingItem)}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Excluir</span>
+                    </button>
+                  ) : <div />}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 hover:bg-zinc-100 transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#8c7456] hover:bg-[#786044] transition-colors cursor-pointer shadow-xs"
+                    >
+                      {editingItem ? 'Salvar Alterações' : 'Especificar Produto'}
+                    </button>
+                  </div>
                 </div>
               </form>
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {itemToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-zinc-200 p-6 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-bold text-zinc-900">
+                Excluir Produto?
+              </h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Tem certeza de que deseja remover <strong className="text-zinc-800 font-semibold">"{itemToDelete.title}"</strong> do memorial descritivo?
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setItemToDelete(null)}
+                className="flex-1 py-2.5 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteItem}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs"
+              >
+                Sim, Excluir
+              </button>
             </div>
           </div>
         </div>
