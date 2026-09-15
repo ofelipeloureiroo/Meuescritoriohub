@@ -406,10 +406,10 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
     ? new Date(activeViewingClient.createdAt).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
     : '—';
 
-  // CLIENT DETAIL VIEW (Matches Reference Screenshot)
-  if (activeViewingClient) {
-    return (
-      <div className="space-y-6 pb-12 font-sans bg-[#fbf9f5] min-h-screen p-3 sm:p-6 rounded-3xl">
+  return (
+    <>
+      {activeViewingClient ? (
+        <div className="space-y-6 pb-12 font-sans bg-[#fbf9f5] min-h-screen p-3 sm:p-6 rounded-3xl">
         {/* Breadcrumb Header */}
         <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 font-medium">
           <button
@@ -1184,12 +1184,9 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
             defaultClientId={newContractDefaultClientId}
           />
         )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6 pb-12 font-sans bg-[#fdfbf7] min-h-screen p-4 sm:p-6 rounded-3xl">
+        </div>
+      ) : (
+        <div className="space-y-6 pb-12 font-sans bg-[#fdfbf7] min-h-screen p-4 sm:p-6 rounded-3xl">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -2167,6 +2164,8 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
         }}
         initialClient={selectedClientForPortal}
       />
-    </div>
+        </div>
+      )}
+    </>
   );
 };
