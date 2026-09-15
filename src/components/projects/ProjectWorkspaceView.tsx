@@ -646,6 +646,17 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
           </button>
 
           <button
+            onClick={() => setActiveTab('memorial')}
+            className={`flex items-center gap-2 pb-3 text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap border-b-2 ${
+              activeTab === 'memorial'
+                ? 'border-[#8c7456] text-zinc-900 font-bold'
+                : 'border-transparent text-zinc-500 hover:text-zinc-800 font-medium'
+            }`}
+          >
+            <span>Memorial Descritivo</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('acoes')}
             className={`flex items-center gap-2 pb-3 text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap border-b-2 ${
               activeTab === 'acoes'
@@ -676,17 +687,6 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
             }`}
           >
             <span>Detalhes</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('memorial')}
-            className={`flex items-center gap-2 pb-3 text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap border-b-2 ${
-              activeTab === 'memorial'
-                ? 'border-[#8c7456] text-zinc-900 font-bold'
-                : 'border-transparent text-zinc-500 hover:text-zinc-800 font-medium'
-            }`}
-          >
-            <span>Memorial Descritivo</span>
           </button>
         </div>
 
@@ -1372,7 +1372,12 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
         </div>
       )}
 
-      {/* 7. TAB CONTENT: AÇÕES (Image 3) */}
+      {/* 7. TAB CONTENT: MEMORIAL DESCRITIVO */}
+      {activeTab === 'memorial' && (
+        <MemorialDescritivoTab project={project} />
+      )}
+
+      {/* 8. TAB CONTENT: AÇÕES (Image 3) */}
       {activeTab === 'acoes' && (
         <div className="space-y-4">
           {/* Top Filter and Action Bar */}
@@ -1557,7 +1562,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
         </div>
       )}
 
-      {/* 9. TAB CONTENT: DETALHES (Image 4) */}
+      {/* 10. TAB CONTENT: DETALHES (Image 4) */}
       {activeTab === 'detalhes' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Left Card: Clientes Vinculados (Image 4) */}
@@ -1706,10 +1711,6 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
             )}
           </div>
         </div>
-      )}
-
-      {activeTab === 'memorial' && (
-        <MemorialDescritivoTab project={project} />
       )}
 
       {/* Modal: Nova Ação (Image 5) */}
