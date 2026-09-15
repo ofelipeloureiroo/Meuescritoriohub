@@ -102,33 +102,33 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
   const getStageBadge = (stage: string) => {
     switch (stage) {
       case 'briefing':
-        return { label: 'Briefing & Levantamento', color: 'bg-blue-500/15 text-blue-300 border-blue-500/30' };
+        return { label: 'Briefing & Levantamento', color: 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-500/30' };
       case 'estudo_preliminar':
-        return { label: 'Estudo Preliminar', color: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' };
+        return { label: 'Estudo Preliminar', color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border-indigo-500/30' };
       case 'anteprojeto':
-        return { label: 'Anteprojeto 3D', color: 'bg-[#c58a4b]/20 text-[#d49454] border-[#c58a4b]/40' };
+        return { label: 'Anteprojeto 3D', color: 'bg-[#c58a4b]/15 text-[#c58a4b] dark:text-[#d49454] border-[#c58a4b]/30' };
       case 'executivo':
-        return { label: 'Projeto Executivo', color: 'bg-purple-500/15 text-purple-300 border-purple-500/30' };
+        return { label: 'Projeto Executivo', color: 'bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-500/30' };
       case 'obra':
-        return { label: 'Acompanhamento de Obra', color: 'bg-amber-500/15 text-amber-300 border-amber-500/30' };
+        return { label: 'Acompanhamento de Obra', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30' };
       case 'entregue':
-        return { label: 'Entregue / Concluído', color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' };
+        return { label: 'Entregue / Concluído', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30' };
       default:
-        return { label: stage, color: 'bg-[#241e1b] text-[#a89c93] border-[#3d342f]' };
+        return { label: stage, color: 'bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border-[var(--border-color)]' };
     }
   };
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case 'urgente':
-        return { label: 'Urgente', color: 'bg-rose-500/20 text-rose-300 border-rose-500/40' };
+        return { label: 'Urgente', color: 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/30' };
       case 'alta':
-        return { label: 'Alta', color: 'bg-amber-500/20 text-amber-300 border-amber-500/40' };
+        return { label: 'Alta', color: 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30' };
       case 'media':
-        return { label: 'Média', color: 'bg-blue-500/20 text-blue-300 border-blue-500/40' };
+        return { label: 'Média', color: 'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30' };
       case 'baixa':
       default:
-        return { label: 'Baixa', color: 'bg-[#241e1b] text-[#a89c93] border-[#3d342f]' };
+        return { label: 'Baixa', color: 'bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border-[var(--border-color)]' };
     }
   };
 
@@ -226,14 +226,14 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
             >
               Gestão de Projetos & Cobrança
             </span>
-            <span className="text-xs text-[#a89c93]">
+            <span className="text-xs text-[var(--text-muted)]">
               • {ongoingArchitectureProjects.length} Projetos Ativos
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#fcf8f5] tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[var(--text-main)] tracking-tight">
             Prazos, Entregas & Cobrança de Clientes
           </h1>
-          <p className="text-xs sm:text-sm text-[#a89c93] mt-1 max-w-3xl">
+          <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-1 max-w-3xl">
             Acompanhe o andamento de cada projeto, controle vencimentos de parcelas de honorários e avise seus clientes com mensagens prontas no WhatsApp com 1 clique.
           </p>
         </div>
@@ -242,9 +242,9 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => handleOpenNewMilestone()}
-            className="flex items-center gap-2 px-3.5 py-2.5 bg-[#241e1b] hover:bg-[#322924] text-[#fcf8f5] rounded-xl text-xs font-semibold border border-[#3d342f] transition-all cursor-pointer shadow-sm active:scale-95"
+            className="flex items-center gap-2 px-3.5 py-2.5 bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-[var(--text-main)] rounded-xl text-xs font-semibold border border-[var(--border-color)] transition-all cursor-pointer shadow-sm active:scale-95"
           >
-            <Clock className="w-4 h-4" style={{ color: 'var(--theme-accent)' }} />
+            <Clock className="w-4 h-4 text-[var(--theme-accent)]" />
             <span>+ Novo Prazo</span>
           </button>
 
@@ -268,18 +268,18 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
           onClick={() => setActiveSubTab('ongoing')}
           className={`p-4 rounded-2xl border transition-all cursor-pointer ${
             activeSubTab === 'ongoing'
-              ? 'bg-[#241e1b] border-[var(--theme-primary)]/60 shadow-lg ring-1 ring-[var(--theme-primary)]/30'
-              : 'bg-[#1a1614] border-[#3d342f] hover:border-[#a89c93]/40'
+              ? 'bg-[var(--bg-card-secondary)] border-[var(--theme-primary)]/60 shadow-lg ring-1 ring-[var(--theme-primary)]/30'
+              : 'bg-[var(--bg-card)] border-[var(--border-color)] hover:border-[var(--text-muted)]/40'
           }`}
         >
-          <div className="flex items-center justify-between text-[#a89c93] mb-2">
+          <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
             <span className="text-xs font-medium">Projetos Ativos</span>
-            <Building2 className="w-4 h-4" style={{ color: 'var(--theme-primary)' }} />
+            <Building2 className="w-4 h-4 text-[var(--theme-primary)]" />
           </div>
-          <div className="text-2xl font-serif font-bold text-[#fcf8f5]">
+          <div className="text-2xl font-serif font-bold text-[var(--text-main)]">
             {ongoingArchitectureProjects.length}
           </div>
-          <div className="text-[11px] text-[#a89c93] mt-1">
+          <div className="text-[11px] text-[var(--text-muted)] mt-1">
             {architectureProjects.length} projetos no total
           </div>
         </div>
@@ -292,18 +292,18 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
           }}
           className={`p-4 rounded-2xl border transition-all cursor-pointer ${
             dueSoonInstallments.length > 0
-              ? 'bg-amber-950/20 border-amber-600/40 hover:border-amber-500'
-              : 'bg-[#1a1614] border-[#3d342f]'
+              ? 'bg-amber-500/10 border-amber-600/40 hover:border-amber-500 text-amber-600 dark:text-amber-300'
+              : 'bg-[var(--bg-card)] border-[var(--border-color)] hover:border-[var(--text-muted)]/40'
           }`}
         >
-          <div className="flex items-center justify-between text-amber-400 mb-2">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium">Vencendo (7 dias)</span>
-            <Bell className="w-4 h-4 animate-bounce" />
+            <Bell className="w-4 h-4 animate-bounce text-amber-500" />
           </div>
-          <div className="text-2xl font-serif font-bold text-amber-300">
+          <div className="text-2xl font-serif font-bold text-amber-600 dark:text-amber-400">
             {dueSoonInstallments.length}
           </div>
-          <div className="text-[11px] text-amber-200/80 mt-1 font-semibold">
+          <div className="text-[11px] mt-1 font-semibold text-amber-500 dark:text-amber-300">
             {formatCurrency(dueSoonInstallments.reduce((s, i) => s + i.amount, 0))}
           </div>
         </div>
@@ -316,18 +316,18 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
           }}
           className={`p-4 rounded-2xl border transition-all cursor-pointer ${
             overdueInstallments.length > 0
-              ? 'bg-rose-950/25 border-rose-600/50 hover:border-rose-500 animate-pulse'
-              : 'bg-[#1a1614] border-[#3d342f]'
+              ? 'bg-rose-500/10 border-rose-600/50 hover:border-rose-500 animate-pulse text-rose-600 dark:text-rose-400'
+              : 'bg-[var(--bg-card)] border-[var(--border-color)] hover:border-[var(--text-muted)]/40'
           }`}
         >
-          <div className="flex items-center justify-between text-rose-400 mb-2">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium">Parcelas Vencidas</span>
-            <AlertCircle className="w-4 h-4" />
+            <AlertCircle className="w-4 h-4 text-rose-500" />
           </div>
-          <div className="text-2xl font-serif font-bold text-rose-400">
+          <div className="text-2xl font-serif font-bold text-rose-600 dark:text-rose-400">
             {overdueInstallments.length}
           </div>
-          <div className="text-[11px] text-rose-300/80 mt-1 font-semibold">
+          <div className="text-[11px] mt-1 font-semibold text-rose-500 dark:text-rose-300">
             {formatCurrency(overdueInstallments.reduce((s, i) => s + i.amount, 0))}
           </div>
         </div>
@@ -340,20 +340,20 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
           }}
           className={`p-4 rounded-2xl border transition-all cursor-pointer ${
             dueSoonMilestones.length > 0 || overdueMilestones.length > 0
-              ? 'bg-[#241e1b] border-[#d48b8e]/50'
-              : 'bg-[#1a1614] border-[#3d342f]'
+              ? 'bg-[var(--bg-card-secondary)] border-rose-500/30'
+              : 'bg-[var(--bg-card)] border-[var(--border-color)] hover:border-[var(--text-muted)]/40'
           }`}
         >
           <div className="flex items-center justify-between text-[#d48b8e] mb-2">
             <span className="text-xs font-medium">Prazos Próximos</span>
             <Clock className="w-4 h-4" />
           </div>
-          <div className="text-2xl font-serif font-bold text-[#fcf8f5]">
+          <div className="text-2xl font-serif font-bold text-[var(--text-main)]">
             {dueSoonMilestones.length + overdueMilestones.length}
           </div>
-          <div className="text-[11px] text-[#a89c93] mt-1">
+          <div className="text-[11px] text-[var(--text-muted)] mt-1">
             {overdueMilestones.length > 0 ? (
-              <span className="text-rose-400 font-semibold">{overdueMilestones.length} atrasado(s)</span>
+              <span className="text-rose-600 dark:text-rose-400 font-semibold">{overdueMilestones.length} atrasado(s)</span>
             ) : (
               'Entregas esta semana'
             )}
@@ -366,16 +366,16 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
             setActiveSubTab('installments');
             setInstallmentFilter('all');
           }}
-          className="col-span-2 lg:col-span-1 p-4 rounded-2xl bg-[#1a1614] border border-[#3d342f] hover:border-[#a89c93]/40 transition-all cursor-pointer"
+          className="col-span-2 lg:col-span-1 p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--text-muted)]/40 transition-all cursor-pointer"
         >
-          <div className="flex items-center justify-between text-emerald-400 mb-2">
+          <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 mb-2">
             <span className="text-xs font-medium">Total a Receber</span>
             <DollarSign className="w-4 h-4" />
           </div>
-          <div className="text-2xl font-serif font-bold text-emerald-400">
+          <div className="text-2xl font-serif font-bold text-emerald-600 dark:text-emerald-400">
             {formatCurrency(totalPendingInstallmentsAmount)}
           </div>
-          <div className="text-[11px] text-[#a89c93] mt-1">
+          <div className="text-[11px] text-[var(--text-muted)] mt-1">
             {formatCurrency(totalPaidInstallmentsAmount)} já recebido
           </div>
         </div>
@@ -387,25 +387,25 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
           {overdueInstallments.map((inst) => (
             <div
               key={inst.id}
-              className="p-4 rounded-2xl bg-rose-950/30 border border-rose-600/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg"
+              className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg"
             >
               <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0 mt-0.5 sm:mt-0">
+                <div className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-500 shrink-0 mt-0.5 sm:mt-0">
                   <AlertCircle className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-rose-300 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-rose-600 dark:text-rose-300 uppercase tracking-wider">
                       Cobrança Vencida
                     </span>
-                    <span className="text-xs text-rose-200/70">
+                    <span className="text-xs text-rose-600/75 dark:text-rose-200/70">
                       • Venceu em {formatDate(inst.dueDate)}
                     </span>
                   </div>
-                  <h4 className="text-sm font-bold text-[#fcf8f5]">
+                  <h4 className="text-sm font-bold text-[var(--text-main)]">
                     {inst.clientName} — {inst.projectTitle} ({formatCurrency(inst.amount)})
                   </h4>
-                  <p className="text-xs text-rose-200/80">
+                  <p className="text-xs text-[var(--text-muted)]">
                     Parcela {inst.installmentNumber}/{inst.totalInstallments}: {inst.description}
                   </p>
                 </div>
@@ -421,7 +421,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                 </button>
                 <button
                   onClick={() => handleOpenReceiveModal(inst)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-[#241e1b] hover:bg-[#322924] text-emerald-400 rounded-xl text-xs font-semibold border border-[#3d342f] transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-emerald-500 dark:text-emerald-400 rounded-xl text-xs font-semibold border border-[var(--border-color)] transition-colors cursor-pointer"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Dar Baixa</span>
@@ -435,25 +435,25 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
             return (
               <div
                 key={inst.id}
-                className="p-4 rounded-2xl bg-amber-950/25 border border-amber-600/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md"
+                className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md"
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300 shrink-0 mt-0.5 sm:mt-0">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0 mt-0.5 sm:mt-0">
                     <Clock className="w-5 h-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                      <span className="text-xs font-bold text-amber-600 dark:text-amber-300 uppercase tracking-wider">
                         Vencimento Próximo
                       </span>
-                      <span className="text-xs text-amber-200/70">
+                      <span className="text-xs text-amber-600/75 dark:text-amber-200/70">
                         • {diff === 0 ? 'Vence HOJE!' : diff === 1 ? 'Vence amanhã!' : `Vence em ${diff} dias (${formatDate(inst.dueDate)})`}
                       </span>
                     </div>
-                    <h4 className="text-sm font-bold text-[#fcf8f5]">
+                    <h4 className="text-sm font-bold text-[var(--text-main)]">
                       {inst.clientName} — {inst.projectTitle} ({formatCurrency(inst.amount)})
                     </h4>
-                    <p className="text-xs text-[#a89c93]">
+                    <p className="text-xs text-[var(--text-muted)]">
                       Parcela {inst.installmentNumber}/{inst.totalInstallments}: {inst.description}
                     </p>
                   </div>
@@ -469,7 +469,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                   </button>
                   <button
                     onClick={() => handleOpenReceiveModal(inst)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[#241e1b] hover:bg-[#322924] text-emerald-400 rounded-xl text-xs font-semibold border border-[#3d342f] transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-emerald-500 dark:text-emerald-400 rounded-xl text-xs font-semibold border border-[var(--border-color)] transition-colors cursor-pointer"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>Dar Baixa</span>
@@ -482,15 +482,15 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
       )}
 
       {/* Sub-Navigation & Filters */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-[#3d342f]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-[var(--border-color)]">
         {/* Navigation Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveSubTab('ongoing')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
               activeSubTab === 'ongoing'
-                ? 'bg-[#241e1b] font-bold shadow-sm'
-                : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1a1614]'
+                ? 'bg-[var(--bg-card-secondary)] font-bold shadow-sm'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)]'
             }`}
             style={
               activeSubTab === 'ongoing'
@@ -503,7 +503,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
           >
             <Building2 className="w-4 h-4" />
             <span>Projetos em Andamento</span>
-            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-[#14110f] text-[#a89c93]">
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-[var(--bg-card)] text-[var(--text-muted)]">
               {ongoingArchitectureProjects.length}
             </span>
           </button>
@@ -512,8 +512,8 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
             onClick={() => setActiveSubTab('installments')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
               activeSubTab === 'installments'
-                ? 'bg-[#241e1b] font-bold shadow-sm'
-                : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1a1614]'
+                ? 'bg-[var(--bg-card-secondary)] font-bold shadow-sm'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)]'
             }`}
             style={
               activeSubTab === 'installments'
@@ -527,7 +527,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
             <CreditCard className="w-4 h-4" />
             <span>Cobranças & Parcelas</span>
             {pendingInstallments.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-bold">
+              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/25 text-amber-500 dark:text-amber-300 font-bold">
                 {pendingInstallments.length}
               </span>
             )}
@@ -537,8 +537,8 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
             onClick={() => setActiveSubTab('milestones')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
               activeSubTab === 'milestones'
-                ? 'bg-[#241e1b] font-bold shadow-sm'
-                : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1a1614]'
+                ? 'bg-[var(--bg-card-secondary)] font-bold shadow-sm'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)]'
             }`}
             style={
               activeSubTab === 'milestones'
@@ -551,7 +551,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
           >
             <Clock className="w-4 h-4" />
             <span>Prazos & Entregas</span>
-            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-[#14110f] text-[#a89c93]">
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-[var(--bg-card)] text-[var(--text-muted)]">
               {projectMilestones.filter((m) => !m.completed).length}
             </span>
           </button>
@@ -560,24 +560,24 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
             onClick={() => setActiveSubTab('quick_notify')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
               activeSubTab === 'quick_notify'
-                ? 'bg-[#241e1b] text-emerald-400 border border-emerald-500/40 font-bold shadow-sm'
-                : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1a1614]'
+                ? 'bg-[var(--bg-card-secondary)] text-emerald-500 border border-emerald-500/40 font-bold shadow-sm'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)]'
             }`}
           >
-            <MessageCircle className="w-4 h-4 text-emerald-400" />
+            <MessageCircle className="w-4 h-4 text-emerald-500" />
             <span>Central WhatsApp</span>
           </button>
         </div>
 
         {/* Search Bar */}
         <div className="relative min-w-[240px]">
-          <Search className="w-3.5 h-3.5 text-[#a89c93] absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Buscar projeto, cliente ou etapa..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#1c1815] border border-[#3d342f] rounded-xl pl-9 pr-3 py-1.5 text-xs text-[#fcf8f5] placeholder-[#a89c93]/60 focus:outline-none focus:border-[#c58a4b]"
+            className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl pl-9 pr-3 py-1.5 text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-hidden focus:border-[var(--theme-primary)]"
           />
         </div>
       </div>
@@ -603,11 +603,11 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
               return (
                 <div
                   key={project.id}
-                  className="bg-[#1a1614] rounded-2xl border border-[#3d342f] overflow-hidden shadow-xl hover:border-[#c58a4b]/40 transition-all flex flex-col justify-between group"
+                  className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] overflow-hidden shadow-xl hover:border-[var(--theme-primary)]/40 transition-all flex flex-col justify-between group"
                 >
                   <div>
                     {/* Project Top Bar */}
-                    <div className="p-5 border-b border-[#3d342f] bg-[#14110f]/60">
+                    <div className="p-5 border-b border-[var(--border-color)] bg-[var(--bg-card-secondary)]/60">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <select
@@ -621,10 +621,10 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                             <option value="obra">Acompanhamento de Obra</option>
                             <option value="entregue">Entregue / Concluído</option>
                           </select>
-                          <h3 className="text-lg font-serif font-bold text-[#fcf8f5] mt-2 group-hover:text-[#c58a4b] transition-colors">
+                          <h3 className="text-lg font-serif font-bold text-[var(--text-main)] mt-2 group-hover:text-[var(--theme-primary)] transition-colors">
                             {project.title}
                           </h3>
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-[#a89c93] mt-1">
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)] mt-1">
                             <span className="flex items-center gap-1">
                               <User className="w-3.5 h-3.5 text-[#d49454]" />
                               {project.clientName}
@@ -640,7 +640,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
 
                         {/* Project Cover Thumbnail */}
                         {project.coverImage && (
-                          <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-[#3d342f]">
+                          <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-[var(--border-color)]">
                             <img
                               src={project.coverImage}
                               alt={project.title}
@@ -651,23 +651,23 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                       </div>
 
                       {/* Financial Progress Bar */}
-                      <div className="mt-4 pt-3 border-t border-[#3d342f]/80">
+                      <div className="mt-4 pt-3 border-t border-[var(--border-color)]">
                         <div className="flex items-center justify-between text-xs mb-1.5">
-                          <span className="text-[#a89c93]">Honorários do Projeto:</span>
+                          <span className="text-[var(--text-muted)]">Honorários do Projeto:</span>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-[#fcf8f5]">{formatCurrency(totalHonorarios)}</span>
-                            <span className="text-[11px] text-emerald-400 font-medium">({progressPct}% quitado)</span>
+                            <span className="font-bold text-[var(--text-main)]">{formatCurrency(totalHonorarios)}</span>
+                            <span className="text-[11px] text-emerald-500 font-medium">({progressPct}% quitado)</span>
                           </div>
                         </div>
-                        <div className="w-full bg-[#14110f] rounded-full h-2 overflow-hidden border border-[#3d342f]">
+                        <div className="w-full bg-[var(--bg-body)] rounded-full h-2 overflow-hidden border border-[var(--border-color)]">
                           <div
                             className="bg-gradient-to-r from-[#c58a4b] to-emerald-400 h-2 rounded-full transition-all duration-500"
                             style={{ width: `${progressPct}%` }}
                           />
                         </div>
-                        <div className="flex items-center justify-between text-[11px] text-[#a89c93] mt-1.5">
-                          <span>Recebido: <strong className="text-emerald-400">{formatCurrency(paidAmount)}</strong></span>
-                          <span>A Receber: <strong className="text-amber-300">{formatCurrency(pendingAmount)}</strong></span>
+                        <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] mt-1.5">
+                          <span>Recebido: <strong className="text-emerald-500">{formatCurrency(paidAmount)}</strong></span>
+                          <span>A Receber: <strong className="text-amber-500">{formatCurrency(pendingAmount)}</strong></span>
                         </div>
                       </div>
                     </div>
@@ -678,7 +678,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                       {(project.status === 'obra' || (project.reports && project.reports.length > 0)) && (
                         <div>
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-emerald-500 uppercase tracking-wider flex items-center gap-1.5">
                               <Sparkles className="w-3.5 h-3.5" />
                               Relatórios de Obra
                             </span>
@@ -687,28 +687,28 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                                 setSelectedProjectForReport(project);
                                 setNewReportModalOpen(true);
                               }}
-                              className="text-[11px] text-[#a89c93] hover:text-[#fcf8f5] flex items-center gap-1 cursor-pointer bg-[#28221e] px-2 py-1 rounded-md border border-[#3d342f]"
+                              className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center gap-1 cursor-pointer bg-[var(--bg-card)] px-2 py-1 rounded-md border border-[var(--border-color)]"
                             >
                               <Plus className="w-3 h-3" /> Novo Relatório
                             </button>
                           </div>
                           {(!project.reports || project.reports.length === 0) ? (
-                            <div className="text-xs text-[#a89c93]/60 italic py-1">
+                            <div className="text-xs text-[var(--text-muted)]/60 italic py-1">
                               Nenhum relatório de obra adicionado.
                             </div>
                           ) : (
                             <div className="space-y-1.5">
                               {project.reports.slice(0, 2).map((rep) => (
-                                <div key={rep.id} className="p-2.5 rounded-xl border bg-[#241e1b] border-[#3d342f] flex flex-col gap-1">
-                                  <div className="flex items-center justify-between text-[10px] text-[#a89c93]">
+                                <div key={rep.id} className="p-2.5 rounded-xl border bg-[var(--bg-card-secondary)] border-[var(--border-color)] flex flex-col gap-1">
+                                  <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
                                     <span>{formatDate(rep.date)}</span>
                                     {rep.images && rep.images.length > 0 && <span>{rep.images.length} fotos</span>}
                                   </div>
-                                  <p className="text-xs text-[#fcf8f5] line-clamp-2">{rep.text}</p>
+                                  <p className="text-xs text-[var(--text-main)] line-clamp-2">{rep.text}</p>
                                 </div>
                               ))}
                               {project.reports.length > 2 && (
-                                <div className="text-[10px] text-center text-[#a89c93] mt-1 cursor-pointer hover:text-[#fcf8f5]">
+                                <div className="text-[10px] text-center text-[var(--text-muted)] mt-1 cursor-pointer hover:text-[var(--text-main)]">
                                   Ver todos os {project.reports.length} relatórios
                                 </div>
                               )}
@@ -726,14 +726,14 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                           </span>
                           <button
                             onClick={() => handleOpenNewMilestone(project.id)}
-                            className="text-[11px] text-[#a89c93] hover:text-[#fcf8f5] flex items-center gap-1 cursor-pointer"
+                            className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center gap-1 cursor-pointer"
                           >
                             <Plus className="w-3 h-3" /> Adicionar Prazo
                           </button>
                         </div>
 
                         {projectMs.length === 0 ? (
-                          <div className="text-xs text-[#a89c93]/60 italic py-1">
+                          <div className="text-xs text-[var(--text-muted)]/60 italic py-1">
                             Nenhum prazo cadastrado para este projeto.
                           </div>
                         ) : (
@@ -746,10 +746,10 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                                   key={ms.id}
                                   className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-colors ${
                                     ms.completed
-                                      ? 'bg-[#14110f]/40 border-[#3d342f]/40 opacity-70'
+                                      ? 'bg-[var(--bg-card-secondary)]/40 border-[var(--border-color)]/40 opacity-70'
                                       : isOverdue
-                                      ? 'bg-rose-950/20 border-rose-600/30'
-                                      : 'bg-[#241e1b] border-[#3d342f]'
+                                      ? 'bg-rose-500/10 border-rose-500/30'
+                                      : 'bg-[var(--bg-card-secondary)] border-[var(--border-color)]'
                                   }`}
                                 >
                                   <div className="flex items-center gap-2.5">
@@ -757,15 +757,15 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                                       type="checkbox"
                                       checked={ms.completed}
                                       onChange={() => toggleProjectMilestone(ms.id)}
-                                      className="w-4 h-4 rounded text-[#c58a4b] bg-[#14110f] border-[#3d342f] focus:ring-[#c58a4b] cursor-pointer"
+                                      className="w-4 h-4 rounded text-[#c58a4b] bg-[var(--bg-body)] border-[var(--border-color)] focus:ring-[#c58a4b] cursor-pointer"
                                     />
                                     <div>
-                                      <span className={ms.completed ? 'line-through text-[#a89c93]' : 'font-medium text-[#fcf8f5]'}>
+                                      <span className={ms.completed ? 'line-through text-[var(--text-muted)]' : 'font-medium text-[var(--text-main)]'}>
                                         {ms.title}
                                       </span>
-                                      <div className="text-[10px] text-[#a89c93]">
+                                      <div className="text-[10px] text-[var(--text-muted)]">
                                         Data limite: {formatDate(ms.dueDate)}{' '}
-                                        {isOverdue && <span className="text-rose-400 font-bold">(Atrasado {Math.abs(diff)}d)</span>}
+                                        {isOverdue && <span className="text-rose-500 font-bold">(Atrasado {Math.abs(diff)}d)</span>}
                                       </div>
                                     </div>
                                   </div>
@@ -773,7 +773,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                                   <button
                                     onClick={() => handleOpenNotifyMilestone(ms)}
                                     title="Avisar cliente no WhatsApp"
-                                    className="p-1 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors cursor-pointer"
+                                    className="p-1 text-emerald-500 hover:bg-emerald-500/20 rounded-lg transition-colors cursor-pointer"
                                   >
                                     <MessageCircle className="w-3.5 h-3.5" />
                                   </button>
@@ -793,14 +793,14 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                           </span>
                           <button
                             onClick={() => handleOpenNewInstallment(project.id)}
-                            className="text-[11px] text-[#a89c93] hover:text-[#fcf8f5] flex items-center gap-1 cursor-pointer"
+                            className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center gap-1 cursor-pointer"
                           >
                             <Plus className="w-3 h-3" /> Nova Parcela
                           </button>
                         </div>
 
                         {projectInsts.length === 0 ? (
-                          <div className="text-xs text-[#a89c93]/60 italic py-1">
+                          <div className="text-xs text-[var(--text-muted)]/60 italic py-1">
                             Nenhuma parcela registrada.
                           </div>
                         ) : (
@@ -815,32 +815,32 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                                   key={inst.id}
                                   className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
                                     isPaid
-                                      ? 'bg-emerald-950/15 border-emerald-600/30 text-[#a89c93]'
+                                      ? 'bg-emerald-500/10 border-emerald-500/30 text-[var(--text-muted)]'
                                       : isOverdue
-                                      ? 'bg-rose-950/20 border-rose-600/30'
-                                      : 'bg-[#241e1b] border-[#3d342f]'
+                                      ? 'bg-rose-500/10 border-rose-500/30'
+                                      : 'bg-[var(--bg-card-secondary)] border-[var(--border-color)]'
                                   }`}
                                 >
                                   <div>
                                     <div className="flex items-center gap-2">
-                                      <span className="font-semibold text-[#fcf8f5]">
+                                      <span className="font-semibold text-[var(--text-main)]">
                                         {inst.installmentNumber}/{inst.totalInstallments} • {inst.description}
                                       </span>
                                       {isPaid ? (
-                                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">
+                                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">
                                           PAGO
                                         </span>
                                       ) : isOverdue ? (
-                                        <span className="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20">
+                                        <span className="text-[10px] font-bold text-rose-500 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20">
                                           VENCIDO
                                         </span>
                                       ) : (
-                                        <span className="text-[10px] text-amber-300 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
+                                        <span className="text-[10px] text-amber-500 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
                                           Vence {formatDate(inst.dueDate)}
                                         </span>
                                       )}
                                     </div>
-                                    <div className="text-[11px] text-emerald-400 font-bold mt-0.5">
+                                    <div className="text-[11px] text-emerald-500 font-bold mt-0.5">
                                       {formatCurrency(inst.amount)}
                                     </div>
                                   </div>
@@ -849,21 +849,21 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                                     {!isPaid && (
                                       <button
                                         onClick={() => handleOpenReceiveModal(inst)}
-                                        className="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 rounded-lg text-[11px] font-bold border border-emerald-500/30 transition-colors cursor-pointer"
+                                        className="px-2 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-500 rounded-lg text-[11px] font-bold border border-emerald-500/30 transition-colors cursor-pointer"
                                       >
                                         Dar Baixa
                                       </button>
                                     )}
                                     <button
                                       onClick={() => handleOpenBoletoModal(inst)}
-                                      className="p-1.5 text-amber-400 hover:bg-amber-500/20 rounded-lg transition-colors cursor-pointer"
+                                      className="p-1.5 text-amber-500 hover:bg-amber-500/20 rounded-lg transition-colors cursor-pointer"
                                       title="Gerar e Enviar Boleto Bancário"
                                     >
                                       <Barcode className="w-4 h-4" />
                                     </button>
                                     <button
                                       onClick={() => handleOpenNotifyInstallment(inst)}
-                                      className="p-1.5 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors cursor-pointer"
+                                      className="p-1.5 text-emerald-500 hover:bg-emerald-500/20 rounded-lg transition-colors cursor-pointer"
                                       title="Avisar no WhatsApp"
                                     >
                                       <MessageCircle className="w-4 h-4" />
@@ -879,9 +879,9 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                   </div>
 
                   {/* Project Card Footer */}
-                  <div className="px-5 py-3.5 bg-[#14110f] border-t border-[#3d342f] flex items-center justify-between text-xs">
-                    <div className="text-[#a89c93]">
-                      Cliente: <strong className="text-[#fcf8f5]">{project.clientName}</strong>
+                  <div className="px-5 py-3.5 bg-[var(--bg-card-secondary)] border-t border-[var(--border-color)] flex items-center justify-between text-xs">
+                    <div className="text-[var(--text-muted)]">
+                      Cliente: <strong className="text-[var(--text-main)]">{project.clientName}</strong>
                     </div>
                     <div className="flex items-center gap-2">
                       {project.clientPhone && (
@@ -889,7 +889,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                           href={`https://wa.me/55${project.clientPhone.replace(/\D/g, '')}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 transition-colors"
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500 border border-emerald-500/30 transition-colors"
                         >
                           <MessageCircle className="w-3 h-3" />
                           <span>WhatsApp</span>
@@ -910,16 +910,16 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
           {/* Sub-Filters */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#a89c93] flex items-center gap-1">
+              <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
                 <Filter className="w-3.5 h-3.5" /> Filtrar:
               </span>
-              <div className="flex items-center gap-1 bg-[#1c1815] p-1 rounded-xl border border-[#3d342f]">
+              <div className="flex items-center gap-1 bg-[var(--bg-card-secondary)] p-1 rounded-xl border border-[var(--border-color)]">
                 <button
                   onClick={() => setInstallmentFilter('all')}
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                     installmentFilter === 'all'
-                      ? 'bg-[#c58a4b] text-black font-bold'
-                      : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                      ? 'bg-[var(--theme-primary)] text-black font-bold'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
                   }`}
                 >
                   Todas ({projectInstallments.length})
@@ -929,7 +929,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                     installmentFilter === 'due_soon'
                       ? 'bg-amber-500 text-black font-bold'
-                      : 'text-amber-300 hover:text-amber-200'
+                      : 'text-amber-500 hover:text-amber-400 dark:text-amber-300 dark:hover:text-amber-200'
                   }`}
                 >
                   A Vencer ({dueSoonInstallments.length})
@@ -939,7 +939,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                     installmentFilter === 'overdue'
                       ? 'bg-rose-500 text-white font-bold'
-                      : 'text-rose-300 hover:text-rose-200'
+                      : 'text-rose-500 hover:text-rose-400 dark:text-rose-300 dark:hover:text-rose-200'
                   }`}
                 >
                   Vencidas ({overdueInstallments.length})
@@ -949,7 +949,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                     installmentFilter === 'paid'
                       ? 'bg-emerald-600 text-white font-bold'
-                      : 'text-emerald-400 hover:text-emerald-300'
+                      : 'text-emerald-500 hover:text-emerald-400 dark:text-emerald-300 dark:hover:text-emerald-200'
                   }`}
                 >
                   Pagas ({projectInstallments.filter((i) => i.status === 'paid').length})
@@ -959,7 +959,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
 
             <button
               onClick={() => handleOpenNewInstallment()}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#c58a4b] hover:bg-[#d49454] text-black font-bold rounded-xl text-xs shadow transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--theme-primary)] text-black font-bold rounded-xl text-xs shadow-sm transition-all cursor-pointer hover:brightness-110"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Adicionar Parcela</span>
@@ -967,13 +967,13 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
           </div>
 
           {/* Installments Table / Cards */}
-          <div className="bg-[#1a1614] rounded-2xl border border-[#3d342f] overflow-hidden shadow-xl">
-            <div className="divide-y divide-[#3d342f]">
+          <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] overflow-hidden shadow-xl">
+            <div className="divide-y divide-[var(--border-color)]">
               {filteredInstallments.length === 0 ? (
-                <div className="p-12 text-center text-[#a89c93]">
-                  <CreditCard className="w-12 h-12 text-[#3d342f] mx-auto mb-3" />
-                  <p className="text-sm font-medium text-[#fcf8f5]">Nenhuma parcela encontrada</p>
-                  <p className="text-xs text-[#a89c93] mt-1">
+                <div className="p-12 text-center text-[var(--text-muted)]">
+                  <CreditCard className="w-12 h-12 text-[var(--border-color)] mx-auto mb-3" />
+                  <p className="text-sm font-medium text-[var(--text-main)]">Nenhuma parcela encontrada</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
                     Tente ajustar o filtro ou adicione uma nova parcela de honorários.
                   </p>
                 </div>
@@ -986,50 +986,50 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                   return (
                     <div
                       key={inst.id}
-                      className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#241e1b]/50 transition-colors"
+                      className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[var(--bg-card-secondary)]/50 transition-colors"
                     >
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-serif font-bold text-base text-[#fcf8f5]">
+                          <span className="font-serif font-bold text-base text-[var(--text-main)]">
                             {inst.projectTitle}
                           </span>
-                          <span className="text-xs text-[#a89c93]">
+                          <span className="text-xs text-[var(--text-muted)]">
                             • Parcela {inst.installmentNumber} de {inst.totalInstallments}
                           </span>
                           {isPaid ? (
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                               Recebido em {inst.paidDate ? formatDate(inst.paidDate) : ''}
                             </span>
                           ) : isOverdue ? (
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-500 border border-rose-500/30">
                               Vencida há {Math.abs(diff)} dias
                             </span>
                           ) : diff <= 7 ? (
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30">
                               Vence em {diff} dias
                             </span>
                           ) : (
-                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#241e1b] text-[#a89c93] border border-[#3d342f]">
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border border-[var(--border-color)]">
                               Vence {formatDate(inst.dueDate)}
                             </span>
                           )}
                         </div>
 
-                        <p className="text-xs text-[#a89c93]">
-                          Cliente: <strong className="text-[#d49454]">{inst.clientName}</strong>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          Cliente: <strong className="text-[var(--theme-accent)]">{inst.clientName}</strong>
                           {inst.clientPhone && ` (${inst.clientPhone})`} • {inst.description}
                         </p>
 
                         {inst.notes && (
-                          <p className="text-[11px] text-[#a89c93]/80 italic">
+                          <p className="text-[11px] text-[var(--text-muted)]/80 italic">
                             Obs: {inst.notes}
                           </p>
                         )}
 
                         {inst.boletoBarcode && (
-                          <div className="inline-flex items-center gap-1.5 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md mt-1">
+                          <div className="inline-flex items-center gap-1.5 text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md mt-1">
                             <Barcode className="w-3 h-3" />
-                            <span>Boleto Gerado • Linha: <span className="font-mono text-amber-200">{inst.boletoBarcode.substring(0, 16)}...</span></span>
+                            <span>Boleto Gerado • Linha: <span className="font-mono text-amber-600 dark:text-amber-200">{inst.boletoBarcode.substring(0, 16)}...</span></span>
                           </div>
                         )}
                       </div>
@@ -1037,10 +1037,10 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                       {/* Right side: Amount & Action Buttons */}
                       <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
                         <div className="text-left sm:text-right">
-                          <div className="text-lg font-bold text-emerald-400 font-serif">
+                          <div className="text-lg font-bold text-emerald-500 font-serif">
                             {formatCurrency(inst.amount)}
                           </div>
-                          <div className="text-[11px] text-[#a89c93]">
+                          <div className="text-[11px] text-[var(--text-muted)]">
                             Vencimento: {formatDate(inst.dueDate)}
                           </div>
                         </div>
@@ -1054,7 +1054,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                               Dar Baixa
                             </button>
                           ) : (
-                            <span className="flex items-center gap-1 text-xs text-emerald-400 font-semibold px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                            <span className="flex items-center gap-1 text-xs text-emerald-500 font-semibold px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                               <Check className="w-3.5 h-3.5" /> Pago
                             </span>
                           )}
@@ -1063,7 +1063,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                           <button
                             onClick={() => handleOpenBoletoModal(inst)}
                             title="Gerar boleto e enviar para o cliente"
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#241e1b] hover:bg-[#322924] text-amber-400 hover:text-amber-300 rounded-xl text-xs font-bold border border-amber-500/30 hover:border-amber-500/60 shadow-xs transition-all cursor-pointer active:scale-95"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-amber-500 hover:text-amber-400 rounded-xl text-xs font-bold border border-amber-500/30 hover:border-amber-500/60 shadow-xs transition-all cursor-pointer active:scale-95"
                           >
                             <Barcode className="w-3.5 h-3.5" />
                             <span>Boleto</span>
@@ -1072,7 +1072,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                           <button
                             onClick={() => handleOpenNotifyInstallment(inst)}
                             title="Avisar cliente pelo WhatsApp"
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#241e1b] hover:bg-[#322924] text-emerald-400 rounded-xl text-xs font-semibold border border-[#3d342f] transition-colors cursor-pointer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-emerald-500 dark:text-emerald-400 rounded-xl text-xs font-semibold border border-[var(--border-color)] transition-colors cursor-pointer"
                           >
                             <MessageCircle className="w-3.5 h-3.5" />
                             <span className="hidden md:inline">WhatsApp</span>
@@ -1081,7 +1081,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                           <button
                             onClick={() => deleteProjectInstallment(inst.id)}
                             title="Excluir parcela"
-                            className="p-1.5 text-[#a89c93] hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1102,16 +1102,16 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
           {/* Sub-Filters */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#a89c93] flex items-center gap-1">
+              <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
                 <Filter className="w-3.5 h-3.5" /> Filtrar:
               </span>
-              <div className="flex items-center gap-1 bg-[#1c1815] p-1 rounded-xl border border-[#3d342f]">
+              <div className="flex items-center gap-1 bg-[var(--bg-card-secondary)] p-1 rounded-xl border border-[var(--border-color)]">
                 <button
                   onClick={() => setMilestoneFilter('all')}
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                     milestoneFilter === 'all'
-                      ? 'bg-[#d48b8e] text-black font-bold'
-                      : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                      ? 'bg-[var(--theme-accent)] text-black font-bold'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
                   }`}
                 >
                   Todos ({projectMilestones.length})
@@ -1121,7 +1121,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                     milestoneFilter === 'due_soon'
                       ? 'bg-amber-500 text-black font-bold'
-                      : 'text-amber-300 hover:text-amber-200'
+                      : 'text-amber-500 hover:text-amber-400 dark:text-amber-300 dark:hover:text-amber-200'
                   }`}
                 >
                   Próximos 7 dias ({dueSoonMilestones.length})
@@ -1131,7 +1131,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                     milestoneFilter === 'overdue'
                       ? 'bg-rose-500 text-white font-bold'
-                      : 'text-rose-300 hover:text-rose-200'
+                      : 'text-rose-500 hover:text-rose-400 dark:text-rose-300 dark:hover:text-rose-200'
                   }`}
                 >
                   Atrasados ({overdueMilestones.length})
@@ -1141,7 +1141,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                     milestoneFilter === 'completed'
                       ? 'bg-emerald-600 text-white font-bold'
-                      : 'text-emerald-400 hover:text-emerald-300'
+                      : 'text-emerald-500 hover:text-emerald-400 dark:text-emerald-300 dark:hover:text-emerald-200'
                   }`}
                 >
                   Concluídos ({projectMilestones.filter((m) => m.completed).length})
@@ -1151,7 +1151,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
 
             <button
               onClick={() => handleOpenNewMilestone()}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#d48b8e] hover:bg-[#e09fa2] text-black font-bold rounded-xl text-xs shadow transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--theme-accent)] text-black font-bold rounded-xl text-xs shadow-sm transition-all cursor-pointer hover:brightness-110"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Adicionar Prazo</span>
@@ -1159,13 +1159,13 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
           </div>
 
           {/* Milestones List */}
-          <div className="bg-[#1a1614] rounded-2xl border border-[#3d342f] overflow-hidden shadow-xl">
-            <div className="divide-y divide-[#3d342f]">
+          <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] overflow-hidden shadow-xl">
+            <div className="divide-y divide-[var(--border-color)]">
               {filteredMilestones.length === 0 ? (
-                <div className="p-12 text-center text-[#a89c93]">
-                  <Clock className="w-12 h-12 text-[#3d342f] mx-auto mb-3" />
-                  <p className="text-sm font-medium text-[#fcf8f5]">Nenhum prazo encontrado</p>
-                  <p className="text-xs text-[#a89c93] mt-1">
+                <div className="p-12 text-center text-[var(--text-muted)]">
+                  <Clock className="w-12 h-12 text-[var(--border-color)] mx-auto mb-3" />
+                  <p className="text-sm font-medium text-[var(--text-main)]">Nenhum prazo encontrado</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
                     Crie um novo prazo para acompanhar as entregas das etapas de projeto.
                   </p>
                 </div>
@@ -1179,20 +1179,20 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                   return (
                     <div
                       key={ms.id}
-                      className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#241e1b]/50 transition-colors"
+                      className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[var(--bg-card-secondary)]/50 transition-colors"
                     >
                       <div className="flex items-start gap-3.5">
                         <input
                           type="checkbox"
                           checked={ms.completed}
                           onChange={() => toggleProjectMilestone(ms.id)}
-                          className="w-5 h-5 rounded text-[#c58a4b] bg-[#14110f] border-[#3d342f] focus:ring-[#c58a4b] cursor-pointer shrink-0 mt-0.5"
+                          className="w-5 h-5 rounded text-[#c58a4b] bg-[var(--bg-body)] border-[var(--border-color)] focus:ring-[#c58a4b] cursor-pointer shrink-0 mt-0.5"
                         />
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span
                               className={`font-semibold text-sm ${
-                                ms.completed ? 'line-through text-[#a89c93]' : 'text-[#fcf8f5]'
+                                ms.completed ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-main)]'
                               }`}
                             >
                               {ms.title}
@@ -1205,12 +1205,12 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                             </span>
                           </div>
 
-                          <p className="text-xs text-[#a89c93]">
-                            Projeto: <strong className="text-[#fcf8f5]">{ms.projectTitle}</strong> • Cliente: {ms.clientName}
+                          <p className="text-xs text-[var(--text-muted)]">
+                            Projeto: <strong className="text-[var(--text-main)]">{ms.projectTitle}</strong> • Cliente: {ms.clientName}
                           </p>
 
                           {ms.notes && (
-                            <p className="text-[11px] text-[#a89c93]/80 italic">
+                            <p className="text-[11px] text-[var(--text-muted)]/80 italic">
                               Checklist: {ms.notes}
                             </p>
                           )}
@@ -1220,18 +1220,18 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                       {/* Right side: Due Date & WhatsApp Action */}
                       <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
                         <div className="text-left sm:text-right">
-                          <div className="text-xs font-semibold text-[#fcf8f5]">
+                          <div className="text-xs font-semibold text-[var(--text-main)]">
                             {formatDate(ms.dueDate)}
                           </div>
                           <div className="text-[11px]">
                             {ms.completed ? (
-                              <span className="text-emerald-400 font-bold">Concluído</span>
+                              <span className="text-emerald-500 font-bold">Concluído</span>
                             ) : isOverdue ? (
-                              <span className="text-rose-400 font-bold">Atrasado ({Math.abs(diff)} dias)</span>
+                              <span className="text-rose-500 font-bold">Atrasado ({Math.abs(diff)} dias)</span>
                             ) : diff <= 7 ? (
-                              <span className="text-amber-300 font-bold">Faltam {diff} dias</span>
+                              <span className="text-amber-500 font-bold">Faltam {diff} dias</span>
                             ) : (
-                              <span className="text-[#a89c93]">Em andamento</span>
+                              <span className="text-[var(--text-muted)]">Em andamento</span>
                             )}
                           </div>
                         </div>
@@ -1240,7 +1240,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                           <button
                             onClick={() => handleOpenNotifyMilestone(ms)}
                             title="Avisar cliente no WhatsApp"
-                            className="flex items-center gap-1 px-3 py-1.5 bg-[#241e1b] hover:bg-[#322924] text-emerald-400 rounded-xl text-xs font-semibold border border-[#3d342f] transition-colors cursor-pointer"
+                            className="flex items-center gap-1 px-3 py-1.5 bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-emerald-500 rounded-xl text-xs font-semibold border border-[var(--border-color)] transition-colors cursor-pointer"
                           >
                             <MessageCircle className="w-3.5 h-3.5" />
                             <span className="hidden sm:inline">Avisar</span>
@@ -1249,7 +1249,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                           <button
                             onClick={() => deleteProjectMilestone(ms.id)}
                             title="Excluir prazo"
-                            className="p-1.5 text-[#a89c93] hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1267,16 +1267,16 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
       {/* VIEW 4: CENTRAL DE NOTIFICAÇÕES & WHATSAPP */}
       {activeSubTab === 'quick_notify' && (
         <div className="space-y-6">
-          <div className="p-6 bg-[#1a1614] rounded-2xl border border-[#3d342f] shadow-xl">
+          <div className="p-6 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-xl">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
                 <MessageCircle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-serif font-bold text-lg text-[#fcf8f5]">
+                <h3 className="font-serif font-bold text-lg text-[var(--text-main)]">
                   Central de Comunicação & Notificações WhatsApp
                 </h3>
-                <p className="text-xs text-[#a89c93]">
+                <p className="text-xs text-[var(--text-muted)]">
                   Mensagens automáticas e padronizadas para manter uma comunicação elegante, transparente e profissional com seus clientes.
                 </p>
               </div>
@@ -1285,13 +1285,13 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
             {/* Quick Actions Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
               {/* Template Card 1: Próximo Vencimento */}
-              <div className="p-4 bg-[#241e1b] rounded-xl border border-[#3d342f] space-y-3 flex flex-col justify-between">
+              <div className="p-4 bg-[var(--bg-card-secondary)] rounded-xl border border-[var(--border-color)] space-y-3 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center gap-2 text-[#d49454] font-semibold text-xs mb-1">
+                  <div className="flex items-center gap-2 text-[var(--theme-accent)] font-semibold text-xs mb-1">
                     <Clock className="w-3.5 h-3.5" /> Lembrete de Parcela a Vencer
                   </div>
-                  <h4 className="text-sm font-bold text-[#fcf8f5]">Aviso de Vencimento Próximo</h4>
-                  <p className="text-xs text-[#a89c93] mt-1 leading-relaxed">
+                  <h4 className="text-sm font-bold text-[var(--text-main)]">Aviso de Vencimento Próximo</h4>
+                  <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
                     Lembrete cortês 3 a 5 dias antes do vencimento com valor, chave PIX e detalhes da etapa.
                   </p>
                 </div>
@@ -1308,13 +1308,13 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
               </div>
 
               {/* Template Card 2: Confirmação de Recebimento */}
-              <div className="p-4 bg-[#241e1b] rounded-xl border border-[#3d342f] space-y-3 flex flex-col justify-between">
+              <div className="p-4 bg-[var(--bg-card-secondary)] rounded-xl border border-[var(--border-color)] space-y-3 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs mb-1">
+                  <div className="flex items-center gap-2 text-emerald-500 font-semibold text-xs mb-1">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Confirmação & Recibo
                   </div>
-                  <h4 className="text-sm font-bold text-[#fcf8f5]">Agradecimento de Pagamento</h4>
-                  <p className="text-xs text-[#a89c93] mt-1 leading-relaxed">
+                  <h4 className="text-sm font-bold text-[var(--text-main)]">Agradecimento de Pagamento</h4>
+                  <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
                     Confirmação imediata do recebimento da parcela e reforço dos próximos passos do projeto.
                   </p>
                 </div>
@@ -1323,7 +1323,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                     const firstPaid = projectInstallments.find((i) => i.status === 'paid') || projectInstallments[0];
                     if (firstPaid) handleOpenNotifyInstallment(firstPaid);
                   }}
-                  className="w-full py-2 bg-[#1c1815] hover:bg-[#322924] text-emerald-400 rounded-lg text-xs font-bold border border-[#3d342f] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full py-2 bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-emerald-500 dark:text-emerald-400 rounded-lg text-xs font-bold border border-[var(--border-color)] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Gerar Recibo WhatsApp</span>
@@ -1331,13 +1331,13 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
               </div>
 
               {/* Template Card 3: Etapa Concluída */}
-              <div className="p-4 bg-[#241e1b] rounded-xl border border-[#3d342f] space-y-3 flex flex-col justify-between">
+              <div className="p-4 bg-[var(--bg-card-secondary)] rounded-xl border border-[var(--border-color)] space-y-3 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center gap-2 text-[#d48b8e] font-semibold text-xs mb-1">
+                  <div className="flex items-center gap-2 text-rose-500 font-semibold text-xs mb-1">
                     <Sparkles className="w-3.5 h-3.5" /> Entrega de Etapa
                   </div>
-                  <h4 className="text-sm font-bold text-[#fcf8f5]">Aviso de Etapa Pronta</h4>
-                  <p className="text-xs text-[#a89c93] mt-1 leading-relaxed">
+                  <h4 className="text-sm font-bold text-[var(--text-main)]">Aviso de Etapa Pronta</h4>
+                  <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
                     Notifica o cliente que o Anteprojeto 3D ou Projeto Executivo foi finalizado para apresentação.
                   </p>
                 </div>

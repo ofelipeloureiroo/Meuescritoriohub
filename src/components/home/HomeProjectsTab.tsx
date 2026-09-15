@@ -208,7 +208,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
   return (
     <div className="space-y-8 pb-16">
       {/* 1. Hero / Bio Presentation Card */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#241e1b] via-[#1c1815] to-[#14110f] border border-[#3d342f] p-6 sm:p-8 shadow-2xl">
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[var(--bg-card-secondary)] via-[var(--bg-card)] to-[var(--bg-body)] border border-[var(--border-color)] p-6 sm:p-8 shadow-2xl">
         {/* Subtle Decorative Background Accents */}
         <div
           className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl pointer-events-none opacity-20"
@@ -234,7 +234,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                   }}
                   title="Clique para trocar a foto de perfil"
                 >
-                  <div className="w-full h-full rounded-full overflow-hidden bg-[#1a1614] border-2 border-[#12100e] relative">
+                  <div className="w-full h-full rounded-full overflow-hidden bg-[var(--bg-card)] border-2 border-[var(--bg-body)] relative">
                     <img
                       src={
                         architectProfile.photoUrl ||
@@ -246,7 +246,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                     {/* Hover Overlay with Camera */}
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-200">
                       <Camera className="w-6 h-6 mb-1 drop-shadow" style={{ color: 'var(--theme-primary)' }} />
-                      <span className="text-[11px] font-bold text-[#fcf8f5] tracking-wide uppercase">
+                      <span className="text-[11px] font-bold text-white tracking-wide uppercase">
                         Trocar Foto
                       </span>
                     </div>
@@ -259,7 +259,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                     background: 'linear-gradient(135deg, var(--theme-gradient-from), var(--theme-gradient-to))',
                   }}
                 >
-                  <div className="w-full h-full rounded-full overflow-hidden bg-[#1a1614] border-2 border-[#12100e]">
+                  <div className="w-full h-full rounded-full overflow-hidden bg-[var(--bg-card)] border-2 border-[var(--bg-body)]">
                     <img
                       src={
                         architectProfile.photoUrl ||
@@ -277,7 +277,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsEditProfileModalOpen(true)}
-                  className="absolute -bottom-1 -right-1 p-2 rounded-full text-[#12100e] border-2 border-[#12100e] shadow-lg hover:scale-110 active:scale-90 transition-transform cursor-pointer"
+                  className="absolute -bottom-1 -right-1 p-2 rounded-full text-black border-2 border-[var(--bg-body)] shadow-lg hover:scale-110 active:scale-90 transition-transform cursor-pointer"
                   style={{
                     backgroundColor: 'var(--theme-primary)',
                   }}
@@ -291,7 +291,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
             {/* Bio Info */}
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-                <h1 className="text-2xl sm:text-3xl font-bold text-[#fcf8f5] font-serif tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-main)] font-serif tracking-tight">
                   {architectProfile.name}
                 </h1>
                 <span
@@ -309,7 +309,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsEditProfileModalOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#28221e] hover:bg-[#342c27] text-xs font-medium border border-[#3d342f] transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-xs font-medium border border-[var(--border-color)] transition-all cursor-pointer"
                     style={{ color: 'var(--theme-primary)' }}
                     title="Alterar foto e informações do perfil"
                   >
@@ -319,12 +319,12 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                 )}
               </div>
 
-              <p className="text-sm font-medium text-[#e8ded7] flex items-center justify-center sm:justify-start gap-1.5">
+              <p className="text-sm font-medium text-[var(--text-main)] flex items-center justify-center sm:justify-start gap-1.5">
                 <MapPin className="w-4 h-4" style={{ color: 'var(--theme-accent)' }} /> {architectProfile.location}
               </p>
 
-              <p className="text-xs text-[#a89c93] max-w-xl leading-relaxed">
-                <span className="mr-1.5">{currentNiche.icon}</span><strong className="text-[#fcf8f5]">{architectProfile.specialty}</strong>
+              <p className="text-xs text-[var(--text-muted)] max-w-xl leading-relaxed">
+                <span className="mr-1.5">{currentNiche.icon}</span><strong className="text-[var(--text-main)]">{architectProfile.specialty}</strong>
                 <br />
                 <span className="mr-1.5">✨</span><em>{architectProfile.tagline}</em> {architectProfile.description}
               </p>
@@ -339,14 +339,14 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                       href={targetUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#28221e] hover:bg-[#342c27] text-xs font-medium text-[#fcf8f5] border border-[#3d342f] transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-xs font-medium text-[var(--text-main)] border border-[var(--border-color)] transition-colors"
                     >
                       <Instagram className="w-3.5 h-3.5" style={{ color: 'var(--theme-accent)' }} />
                       {displayHandle}
-                      <ExternalLink className="w-3 h-3 text-[#a89c93]" />
+                      <ExternalLink className="w-3 h-3 text-[var(--text-muted)]" />
                     </a>
 
-                    <span className="text-xs text-[#a89c93] flex items-center gap-1">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" /> {architectProfile.rating.toFixed(1)}
                       {architectProfile.followersCount && ` • ${architectProfile.followersCount}`}
                     </span>
@@ -390,7 +390,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
             {canViewDeadlines && (
               <button
                 onClick={() => onNavigateTab('deadlines')}
-                className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-[#28221e] hover:bg-[#342c27] text-[#e8ded7] font-semibold text-xs flex items-center justify-center gap-2 border border-[#3d342f] hover:border-[var(--theme-primary)]/50 transition-all cursor-pointer"
+                className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] font-semibold text-xs flex items-center justify-center gap-2 border border-[var(--border-color)] hover:border-[var(--theme-primary)]/50 transition-all cursor-pointer"
               >
                 <Clock className="w-4 h-4" style={{ color: 'var(--theme-accent)' }} />
                 <span>Prazos & Cobranças</span>
@@ -405,7 +405,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
             {canViewFinance && (
               <button
                 onClick={() => onNavigateTab('overview')}
-                className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-[#28221e] hover:bg-[#342c27] text-[#e8ded7] font-semibold text-xs flex items-center justify-center gap-2 border border-[#3d342f] transition-colors cursor-pointer"
+                className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] font-semibold text-xs flex items-center justify-center gap-2 border border-[var(--border-color)] transition-colors cursor-pointer"
               >
                 <TrendingUp className="w-4 h-4" style={{ color: 'var(--theme-primary)' }} />
                 <span>Painel Financeiro Geral</span>
@@ -430,8 +430,8 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
         </div>
 
         {/* Highlight Badges */}
-        <div className="mt-6 pt-6 border-t border-[#3d342f]/80 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-3.5 rounded-2xl bg-[#14110f]/80 border border-[#3d342f] flex items-center gap-3">
+        <div className="mt-6 pt-6 border-t border-[var(--border-color)]/80 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-3.5 rounded-2xl bg-[var(--bg-input)]/80 border border-[var(--border-color)] flex items-center gap-3">
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center font-serif font-bold text-sm"
               style={{
@@ -443,12 +443,12 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
               R$
             </div>
             <div>
-              <span className="text-xs font-bold text-[#fcf8f5] block font-serif">Propostas Claras</span>
-              <span className="text-[11px] text-[#a89c93]">Orçamentos transparentes e condições alinhadas</span>
+              <span className="text-xs font-bold text-[var(--text-main)] block font-serif">Propostas Claras</span>
+              <span className="text-[11px] text-[var(--text-muted)]">Orçamentos transparentes e condições alinhadas</span>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-[#14110f]/80 border border-[#3d342f] flex items-center gap-3">
+          <div className="p-3.5 rounded-2xl bg-[var(--bg-input)]/80 border border-[var(--border-color)] flex items-center gap-3">
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
               style={{
@@ -460,18 +460,18 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
               ★
             </div>
             <div>
-              <span className="text-xs font-bold text-[#fcf8f5] block font-serif">Qualidade Comprovada</span>
-              <span className="text-[11px] text-[#a89c93]">Avaliações reais e compromisso com o resultado</span>
+              <span className="text-xs font-bold text-[var(--text-main)] block font-serif">Qualidade Comprovada</span>
+              <span className="text-[11px] text-[var(--text-muted)]">Avaliações reais e compromisso com o resultado</span>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-[#14110f]/80 border border-[#3d342f] flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#48322c] border border-[#6b4941] flex items-center justify-center text-[#e8ded7] font-bold text-sm">
+          <div className="p-3.5 rounded-2xl bg-[var(--bg-input)]/80 border border-[var(--border-color)] flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 font-bold text-sm">
               📋
             </div>
             <div>
-              <span className="text-xs font-bold text-[#fcf8f5] block font-serif">Contratos & Prazos</span>
-              <span className="text-[11px] text-[#a89c93]">Entregas pontuais com segurança jurídica</span>
+              <span className="text-xs font-bold text-[var(--text-main)] block font-serif">Contratos & Prazos</span>
+              <span className="text-[11px] text-[var(--text-muted)]">Entregas pontuais com segurança jurídica</span>
             </div>
           </div>
         </div>
@@ -481,7 +481,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
       {(dueSoonInstallments.length > 0 || overdueInstallments.length > 0 || dueSoonMilestones.length > 0) && (
         <section
           onClick={() => onNavigateTab('deadlines')}
-          className="p-4 rounded-2xl bg-gradient-to-r from-[#241e1b] via-[#2a201c] to-[#1c1815] border border-amber-500/40 hover:border-[var(--theme-primary)] transition-all cursor-pointer shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group"
+          className="p-4 rounded-2xl bg-gradient-to-r from-[var(--bg-card-secondary)] via-[var(--bg-card)] to-[var(--bg-body)] border border-amber-500/40 hover:border-[var(--theme-primary)] transition-all cursor-pointer shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300 shrink-0">
@@ -492,11 +492,11 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                 <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
                   Alertas de Prazos & Cobranças
                 </span>
-                <span className="text-[11px] text-[#a89c93]">
+                <span className="text-[11px] text-[var(--text-muted)]">
                   • {dueSoonInstallments.length + overdueInstallments.length} parcelas para atenção
                 </span>
               </div>
-              <p className="text-xs text-[#fcf8f5] mt-0.5">
+              <p className="text-xs text-[var(--text-main)] mt-0.5">
                 {overdueInstallments.length > 0 ? (
                   <strong className="text-rose-400 font-semibold">{overdueInstallments.length} parcela(s) vencida(s)</strong>
                 ) : null}
@@ -521,8 +521,8 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
 
       {/* 2. Studio Metrics Bar */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-[#1a1614] border border-[#3d342f] space-y-1">
-          <div className="flex items-center justify-between text-xs text-[#a89c93]">
+        <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] space-y-1">
+          <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
             <span>
               {shouldShowPortfolio
                 ? `Total de ${currentNiche.formConfig.itemLabel}s`
@@ -530,7 +530,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
             </span>
             <Building className="w-4 h-4" style={{ color: 'var(--theme-primary)' }} />
           </div>
-          <p className="text-2xl font-bold text-[#fcf8f5] font-serif">
+          <p className="text-2xl font-bold text-[var(--text-main)] font-serif">
             {shouldShowPortfolio ? architectureProjects.length : workContracts.length}
           </p>
           <span className="text-[11px]" style={{ color: 'var(--theme-accent)' }}>
@@ -540,8 +540,8 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#1a1614] border border-[#3d342f] space-y-1">
-          <div className="flex items-center justify-between text-xs text-[#a89c93]">
+        <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] space-y-1">
+          <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
             <span>
               {architectProfile.niche === 'arquitetura'
                 ? 'Área Total Projetada'
@@ -552,44 +552,44 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
             <Layers className="w-4 h-4" style={{ color: 'var(--theme-accent)' }} />
           </div>
           {architectProfile.niche === 'arquitetura' ? (
-            <p className="text-2xl font-bold text-[#fcf8f5] font-serif">
-              {totalM2} <span className="text-sm font-sans font-normal text-[#a89c93]">m²</span>
+            <p className="text-2xl font-bold text-[var(--text-main)] font-serif">
+              {totalM2} <span className="text-sm font-sans font-normal text-[var(--text-muted)]">m²</span>
             </p>
           ) : shouldShowPortfolio ? (
-            <p className="text-2xl font-bold text-[#fcf8f5] font-serif">
+            <p className="text-2xl font-bold text-[var(--text-main)] font-serif">
               {architectureProjects.length}{' '}
-              <span className="text-sm font-sans font-normal text-[#a89c93]">itens</span>
+              <span className="text-sm font-sans font-normal text-[var(--text-muted)]">itens</span>
             </p>
           ) : (
-            <p className="text-2xl font-bold text-[#fcf8f5] font-serif">
+            <p className="text-2xl font-bold text-[var(--text-main)] font-serif">
               {pendingMilestones.length}{' '}
-              <span className="text-sm font-sans font-normal text-[#a89c93]">etapas</span>
+              <span className="text-sm font-sans font-normal text-[var(--text-muted)]">etapas</span>
             </p>
           )}
-          <span className="text-[11px] text-[#a89c93]">
+          <span className="text-[11px] text-[var(--text-muted)]">
             {architectProfile.niche === 'arquitetura'
               ? 'Área total dos projetos'
               : currentNiche.label}
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#1a1614] border border-[#3d342f] space-y-1">
-          <div className="flex items-center justify-between text-xs text-[#a89c93]">
+        <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] space-y-1">
+          <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
             <span>Faturamento & Honorários</span>
             <TrendingUp className="w-4 h-4 text-emerald-400" />
           </div>
           <p className="text-2xl font-bold text-emerald-400 font-serif">
             {formatCurrency(totalHonorarios || monthlyIncomeFreelance)}
           </p>
-          <span className="text-[11px] text-[#a89c93]">Valor total contratado</span>
+          <span className="text-[11px] text-[var(--text-muted)]">Valor total contratado</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#1a1614] border border-[#3d342f] space-y-1">
-          <div className="flex items-center justify-between text-xs text-[#a89c93]">
+        <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] space-y-1">
+          <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
             <span>Clientes Atendidos</span>
             <Users className="w-4 h-4" style={{ color: 'var(--theme-primary)' }} />
           </div>
-          <p className="text-2xl font-bold text-[#fcf8f5] font-serif">{clients.length}</p>
+          <p className="text-2xl font-bold text-[var(--text-main)] font-serif">{clients.length}</p>
           <button
             onClick={() => onNavigateTab('freelance')}
             className="text-[11px] hover:underline flex items-center gap-0.5"
@@ -604,18 +604,18 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
       {!shouldShowPortfolio ? (
         <section className="space-y-6">
           {/* Header of Operational Hub */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-5 rounded-2xl bg-[#1a1614] border border-[#3d342f]">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)]">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-[var(--theme-primary)]" />
-                <h2 className="text-xl font-bold text-[#fcf8f5] font-serif">
+                <h2 className="text-xl font-bold text-[var(--text-main)] font-serif">
                   {currentNiche.projectSectionTitle}
                 </h2>
-                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-[#241e1b] text-[var(--theme-accent)] border border-[#3d342f]">
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-[var(--bg-card-secondary)] text-[var(--theme-accent)] border border-[var(--border-color)]">
                   Modo Gestão Ativo
                 </span>
               </div>
-              <p className="text-xs text-[#a89c93]">
+              <p className="text-xs text-[var(--text-muted)]">
                 {currentNiche.projectSectionSubtitle} (galeria de fotos desativada para manter o foco em contratos e finanças)
               </p>
             </div>
@@ -633,7 +633,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
               <button
                 type="button"
                 onClick={() => updateArchitectProfile({ ...architectProfile, showPortfolio: true })}
-                className="px-3.5 py-2.5 rounded-xl bg-[#28221e] hover:bg-[#342c27] text-[#a89c93] hover:text-[#fcf8f5] text-xs font-medium border border-[#3d342f] transition-colors cursor-pointer flex items-center gap-1.5"
+                className="px-3.5 py-2.5 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-medium border border-[var(--border-color)] transition-colors cursor-pointer flex items-center gap-1.5"
                 title="Habilitar galeria visual de fotos"
               >
                 <Camera className="w-3.5 h-3.5" />
@@ -645,7 +645,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
           {/* Active Work Contracts */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#fcf8f5] font-serif flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[var(--text-main)] font-serif flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-[var(--theme-primary)]" />
                 <span>Contratos & Atendimentos em Andamento</span>
               </h3>
@@ -662,8 +662,8 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {workContracts.slice(0, 6).map((c) => (
                   <div
-                    key={c.id}
-                    className="p-4 rounded-2xl bg-[#1a1614] border border-[#3d342f] hover:border-[var(--theme-primary)]/50 transition-all space-y-3 flex flex-col justify-between"
+                     key={c.id}
+                     className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--theme-primary)]/50 transition-all space-y-3 flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-start justify-between gap-2 mb-2">
@@ -680,25 +680,25 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                           {c.signatureStatus === 'signed' ? 'Assinado' : 'Pendente de Assinatura'}
                         </span>
                       </div>
-                      <h4 className="font-bold text-sm text-[#fcf8f5] line-clamp-1">
+                      <h4 className="font-bold text-sm text-[var(--text-main)] line-clamp-1">
                         {c.title}
                       </h4>
-                      <p className="text-xs text-[#a89c93] flex items-center gap-1 mt-1">
-                        <Users className="w-3.5 h-3.5 text-[#8a7c73]" />
+                      <p className="text-xs text-[var(--text-muted)] flex items-center gap-1 mt-1">
+                        <Users className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                         <span>{c.clientName}</span>
                       </p>
                     </div>
 
-                    <div className="pt-3 border-t border-[#2d2621] flex items-center justify-between">
+                    <div className="pt-3 border-t border-[var(--border-color)] flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] text-[#8a7c73] block">Valor Contratado</span>
+                        <span className="text-[10px] text-[var(--text-muted)] block">Valor Contratado</span>
                         <span className="text-sm font-bold text-emerald-400 font-serif">
                           {formatCurrency(c.totalValue)}
                         </span>
                       </div>
                       <button
                         onClick={() => onNavigateTab('freelance')}
-                        className="px-3 py-1.5 rounded-lg bg-[#28221e] hover:bg-[#342c27] text-xs font-semibold text-[#e8ded7] border border-[#3d342f] transition-colors cursor-pointer"
+                        className="px-3 py-1.5 rounded-lg bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-xs font-semibold text-[var(--text-main)] border border-[var(--border-color)] transition-colors cursor-pointer"
                       >
                         Abrir
                       </button>
@@ -707,14 +707,14 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                 ))}
               </div>
             ) : (
-              <div className="p-8 rounded-2xl bg-[#1a1614] border border-[#3d342f] text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-[#28221e] flex items-center justify-center mx-auto text-[#a89c93]">
+              <div className="p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-[var(--bg-card-secondary)] flex items-center justify-center mx-auto text-[var(--text-muted)]">
                   <FileText className="w-6 h-6" />
                 </div>
-                <h4 className="text-sm font-bold text-[#fcf8f5]">
+                <h4 className="text-sm font-bold text-[var(--text-main)]">
                   Nenhum contrato cadastrado ainda
                 </h4>
-                <p className="text-xs text-[#a89c93] max-w-md mx-auto">
+                <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto">
                   Cadastre clientes e emita contratos com assinatura digital, cobranças Pix e controle de pagamentos.
                 </p>
                 <button
@@ -733,7 +733,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
             {/* Next Receivables */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-[#fcf8f5] font-serif flex items-center gap-2">
+                <h3 className="text-sm font-bold text-[var(--text-main)] font-serif flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-emerald-400" />
                   <span>Próximos Recebimentos & Parcelas</span>
                 </h3>
@@ -754,13 +754,13 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                     .map((inst) => (
                       <div
                         key={inst.id}
-                        className="p-3.5 rounded-xl bg-[#1a1614] border border-[#3d342f] flex items-center justify-between gap-3"
+                        className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] flex items-center justify-between gap-3"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-[#fcf8f5] truncate">
+                          <p className="text-xs font-bold text-[var(--text-main)] truncate">
                             {inst.projectTitle}
                           </p>
-                          <p className="text-[11px] text-[#a89c93] truncate">
+                          <p className="text-[11px] text-[var(--text-muted)] truncate">
                             {inst.clientName} • Vencimento: {formatDate(inst.dueDate)}
                           </p>
                         </div>
@@ -782,7 +782,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                     ))}
                 </div>
               ) : (
-                <div className="p-5 rounded-xl bg-[#1a1614] border border-[#3d342f] text-center text-xs text-[#a89c93]">
+                <div className="p-5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-center text-xs text-[var(--text-muted)]">
                   Todas as parcelas e cobranças estão em dia.
                 </div>
               )}
@@ -791,7 +791,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
             {/* Upcoming Milestones */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-[#fcf8f5] font-serif flex items-center gap-2">
+                <h3 className="text-sm font-bold text-[var(--text-main)] font-serif flex items-center gap-2">
                   <Clock className="w-4 h-4" style={{ color: 'var(--theme-accent)' }} />
                   <span>Entregas & Prazos Agendados</span>
                 </h3>
@@ -812,13 +812,13 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                     .map((ms) => (
                       <div
                         key={ms.id}
-                        className="p-3.5 rounded-xl bg-[#1a1614] border border-[#3d342f] flex items-center justify-between gap-3"
+                        className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] flex items-center justify-between gap-3"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-[#fcf8f5] truncate">
+                          <p className="text-xs font-bold text-[var(--text-main)] truncate">
                             {ms.title}
                           </p>
-                          <p className="text-[11px] text-[#a89c93] truncate">
+                          <p className="text-[11px] text-[var(--text-muted)] truncate">
                             {ms.projectTitle} • Prazo: {formatDate(ms.dueDate)}
                           </p>
                         </div>
@@ -829,7 +829,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                     ))}
                 </div>
               ) : (
-                <div className="p-5 rounded-xl bg-[#1a1614] border border-[#3d342f] text-center text-xs text-[#a89c93]">
+                <div className="p-5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-center text-xs text-[var(--text-muted)]">
                   Nenhum prazo pendente no momento.
                 </div>
               )}
@@ -842,11 +842,11 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
           {/* Controls Bar: Search & Category Pills */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-[#fcf8f5] font-serif flex items-center gap-2">
+              <h2 className="text-xl font-bold text-[var(--text-main)] font-serif flex items-center gap-2">
                 <Camera className="w-5 h-5" style={{ color: 'var(--theme-primary)' }} />
                 <span>{currentNiche.projectSectionTitle}</span>
               </h2>
-              <p className="text-xs text-[#a89c93]">
+              <p className="text-xs text-[var(--text-muted)]">
                 {currentNiche.projectSectionSubtitle}
               </p>
             </div>
@@ -854,13 +854,13 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
             <div className="flex items-center gap-2.5">
               {/* Search Input */}
               <div className="relative flex-1 sm:w-64">
-                <Search className="w-4 h-4 text-[#a89c93] absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Buscar por projeto, cliente ou material..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#1a1614] border border-[#3d342f] text-xs text-[#fcf8f5] placeholder-[#a89c93] focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                  className="w-full pl-9 pr-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
                 />
               </div>
 
@@ -868,7 +868,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-[#1a1614] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                className="px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
               >
                 <option value="all">Todos os Status</option>
                 {currentNiche.statusOptions.map((st) => (
@@ -882,7 +882,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
               <button
                 type="button"
                 onClick={() => updateArchitectProfile({ ...architectProfile, showPortfolio: false })}
-                className="px-2.5 py-2 rounded-xl bg-[#28221e] hover:bg-[#342c27] text-xs text-[#a89c93] hover:text-[#fcf8f5] border border-[#3d342f] transition-colors whitespace-nowrap cursor-pointer"
+                className="px-2.5 py-2 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-color)] transition-colors whitespace-nowrap cursor-pointer"
                 title="Ocultar fotos e ativar modo gestão"
               >
                 Ocultar Fotos
@@ -901,7 +901,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                 className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   isSelected
                     ? 'text-black font-bold shadow-md'
-                    : 'bg-[#1a1614] text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#28221e] border border-[#3d342f]'
+                    : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)]'
                 }`}
                 style={
                   isSelected
@@ -919,14 +919,14 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
 
         {/* Projects Cards Grid */}
         {filteredProjects.length === 0 ? (
-          <div className="text-center py-16 px-4 bg-[#1a1614] border border-dashed border-[#3d342f] rounded-2xl">
+          <div className="text-center py-16 px-4 bg-[var(--bg-card)] border border-dashed border-[var(--border-color)] rounded-2xl">
             <Camera className="w-10 h-10 text-[var(--theme-primary)] mx-auto mb-3 opacity-70" />
-            <h3 className="text-base font-bold text-[#fcf8f5] font-serif mb-1">
+            <h3 className="text-base font-bold text-[var(--text-main)] font-serif mb-1">
               {architectureProjects.length === 0
                 ? `Seu espaço de ${currentNiche.label} está pronto para cadastros!`
                 : `Nenhum(a) ${currentNiche.formConfig.itemLabel.toLowerCase()} encontrado(a) para este filtro`}
             </h3>
-            <p className="text-xs text-[#a89c93] max-w-md mx-auto mb-5">
+            <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto mb-5">
               {architectureProjects.length === 0
                 ? `Cadastre seu primeiro item (${currentNiche.formConfig.itemLabel.toLowerCase()}), envie fotos e acompanhe ${currentNiche.formConfig.valueFieldLabel.toLowerCase().replace(' (r$)', '')}, ou explore o sistema.`
                 : 'Tente alterar os termos de busca ou remover os filtros de categoria/status.'}
@@ -947,7 +947,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
               {architectureProjects.length === 0 && (
                 <button
                   onClick={() => loadDemoData()}
-                  className="px-4 py-2.5 rounded-xl bg-[#28221e] hover:bg-[#342c27] text-[#fcf8f5] font-semibold text-xs border border-[#3d342f] transition-all cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] font-semibold text-xs border border-[var(--border-color)] transition-all cursor-pointer"
                 >
                   Carregar Demonstração
                 </button>
@@ -964,11 +964,11 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
               return (
                 <div
                   key={proj.id}
-                  className="group relative flex flex-col bg-[#1a1614] border border-[#3d342f] hover:border-[var(--theme-primary)]/60 rounded-2xl overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-1"
+                  className="group relative flex flex-col bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--theme-primary)]/60 rounded-2xl overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-1"
                 >
                   {/* Project Image & Overlay */}
                   <div
-                    className="relative aspect-video sm:h-56 w-full overflow-hidden bg-[#12100e] cursor-pointer"
+                    className="relative aspect-video sm:h-56 w-full overflow-hidden bg-[var(--bg-body)] cursor-pointer"
                     onClick={() => setSelectedProjectForDetail(proj)}
                   >
                     <img
@@ -976,7 +976,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                       alt={proj.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#14110f] via-transparent to-black/40 opacity-80 group-hover:opacity-90 transition-opacity" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-body)] via-transparent to-black/40 opacity-80 group-hover:opacity-90 transition-opacity" />
 
                     {/* Status badge */}
                     <div className="absolute top-3 left-3 flex items-center gap-1.5">
@@ -1007,7 +1007,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
 
                     {/* Quick Expand hover icon */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                      <div className="px-4 py-2 rounded-xl bg-black/80 text-[#fcf8f5] text-xs font-bold flex items-center gap-1.5 border border-[#3d342f] shadow-2xl backdrop-blur-md">
+                      <div className="px-4 py-2 rounded-xl bg-black/80 text-white text-xs font-bold flex items-center gap-1.5 border border-[var(--border-color)] shadow-2xl backdrop-blur-md">
                         <Eye className="w-4 h-4" style={{ color: 'var(--theme-primary)' }} /> Ver Galeria Completa
                       </div>
                     </div>
@@ -1024,7 +1024,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                           {proj.category.replace('_', ' ')}
                         </span>
                         {proj.areaM2 && (
-                          <span className="text-xs text-[#a89c93] flex items-center gap-1">
+                          <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
                             <Layers className="w-3 h-3" style={{ color: 'var(--theme-primary)' }} />{' '}
                             {currentNiche.id === 'arquitetura' || currentNiche.id === 'engenharia' || currentNiche.id === 'imobiliario'
                               ? `${proj.areaM2} m²`
@@ -1035,12 +1035,12 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
 
                       <h3
                         onClick={() => setSelectedProjectForDetail(proj)}
-                        className="text-lg font-bold text-[#fcf8f5] font-serif leading-snug hover:text-[var(--theme-primary)] transition-colors cursor-pointer"
+                        className="text-lg font-bold text-[var(--text-main)] font-serif leading-snug hover:text-[var(--theme-primary)] transition-colors cursor-pointer"
                       >
                         {proj.title}
                       </h3>
 
-                      <div className="flex items-center justify-between text-xs text-[#a89c93] pt-1">
+                      <div className="flex items-center justify-between text-xs text-[var(--text-muted)] pt-1">
                         <span className="flex items-center gap-1">
                           <User className="w-3.5 h-3.5" style={{ color: 'var(--theme-primary)' }} /> {proj.clientName}
                         </span>
@@ -1050,7 +1050,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                       </div>
 
                       {proj.description && (
-                        <p className="text-xs text-[#a89c93] line-clamp-2 pt-1 font-sans">
+                        <p className="text-xs text-[var(--text-muted)] line-clamp-2 pt-1 font-sans">
                           {proj.description}
                         </p>
                       )}
@@ -1062,7 +1062,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                         {proj.tags.slice(0, 3).map((tag, idx) => (
                           <span
                             key={idx}
-                            className="px-2 py-0.5 rounded-md bg-[#241e1b] text-[10px] text-[#e8ded7] border border-[#3d342f]"
+                            className="px-2 py-0.5 rounded-md bg-[var(--bg-card-secondary)] text-[10px] text-[var(--text-main)] border border-[var(--border-color)]"
                           >
                             #{tag}
                           </span>
@@ -1071,10 +1071,10 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                     )}
 
                     {/* Bottom Actions Bar */}
-                    <div className="pt-3 border-t border-[#2d2622] flex items-center justify-between gap-2">
+                    <div className="pt-3 border-t border-[var(--border-color)] flex items-center justify-between gap-2">
                       {proj.honorarios ? (
                         <div>
-                          <span className="text-[10px] text-[#a89c93] block">
+                          <span className="text-[10px] text-[var(--text-muted)] block">
                             {currentNiche.formConfig.valueFieldLabel.split(' ')[0] || 'Honorários'}
                           </span>
                           <span className="text-xs font-bold text-emerald-400">
@@ -1088,7 +1088,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleQuickAddPhoto(proj.id)}
-                          className="p-2 rounded-lg bg-[#28221e] hover:bg-[#3d342f] border border-[#3d342f] transition-colors"
+                          className="p-2 rounded-lg bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] transition-colors"
                           style={{ color: 'var(--theme-accent)' }}
                           title="Adicionar fotos a este projeto"
                         >
@@ -1099,7 +1099,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                             setEditingProject(proj);
                             setIsAddModalOpen(true);
                           }}
-                          className="px-2.5 py-1.5 rounded-lg bg-[#28221e] hover:bg-[#3d342f] text-xs font-medium text-[#fcf8f5] border border-[#3d342f] transition-colors"
+                          className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-xs font-medium text-[var(--text-main)] border border-[var(--border-color)] transition-colors"
                           title="Editar projeto"
                         >
                           Editar
@@ -1122,7 +1122,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                             e.stopPropagation();
                             setProjectToDelete(proj);
                           }}
-                          className="p-2 rounded-lg bg-[#28221e] hover:bg-rose-950/70 text-rose-400 hover:text-rose-300 border border-[#3d342f] hover:border-rose-800/60 transition-colors cursor-pointer"
+                          className="p-2 rounded-lg bg-[var(--bg-card-secondary)] hover:bg-rose-950/70 text-rose-400 hover:text-rose-300 border border-[var(--border-color)] hover:border-rose-800/60 transition-colors cursor-pointer"
                           title="Excluir projeto do portfólio"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1141,33 +1141,33 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
       {/* Custom Delete Confirmation Modal */}
       {projectToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-md bg-[#1a1614] border border-rose-900/50 rounded-2xl p-6 shadow-2xl space-y-4 animate-scaleUp">
+          <div className="w-full max-w-md bg-[var(--bg-card)] border border-rose-900/50 rounded-2xl p-6 shadow-2xl space-y-4 animate-scaleUp">
             <div className="flex items-center gap-3.5">
               <div className="w-11 h-11 rounded-xl bg-rose-950/70 border border-rose-900/60 flex items-center justify-center text-rose-400 shrink-0">
                 <Trash2 className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold font-serif text-[#fcf8f5]">Excluir Projeto</h3>
-                <p className="text-xs text-[#a89c93]">Esta ação removerá o projeto do portfólio</p>
+                <h3 className="text-base font-bold font-serif text-[var(--text-main)]">Excluir Projeto</h3>
+                <p className="text-xs text-[var(--text-muted)]">Esta ação removerá o projeto do portfólio</p>
               </div>
             </div>
 
-            <div className="bg-[#12100e] border border-[#3d342f] rounded-xl p-3.5 text-xs text-[#e8ded7] space-y-1">
-              <p className="font-bold text-[#fcf8f5] text-sm truncate">{projectToDelete.title}</p>
-              <p className="text-[#a89c93] flex items-center gap-1.5">
+            <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl p-3.5 text-xs text-[var(--text-main)] space-y-1">
+              <p className="font-bold text-[var(--text-main)] text-sm truncate">{projectToDelete.title}</p>
+              <p className="text-[var(--text-muted)] flex items-center gap-1.5">
                 <span>{projectToDelete.clientName || 'Cliente sem nome'}</span> • <span>{projectToDelete.location || 'Local não informado'}</span>
               </p>
             </div>
 
-            <p className="text-xs text-[#a89c93] leading-relaxed">
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
               Deseja realmente remover este projeto? Todas as fotos e registros vinculados serão excluídos permanentemente.
             </p>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#3d342f]">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border-color)]">
               <button
                 type="button"
                 onClick={() => setProjectToDelete(null)}
-                className="px-4 py-2.5 rounded-xl bg-[#28221e] hover:bg-[#342d28] text-xs font-semibold text-[#e8ded7] transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-xs font-semibold text-[var(--text-main)] transition-colors cursor-pointer"
               >
                 Cancelar
               </button>

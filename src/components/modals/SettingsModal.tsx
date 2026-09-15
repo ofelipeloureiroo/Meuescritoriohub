@@ -395,30 +395,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className={`w-full ${modalTab === 'advanced' || modalTab === 'collaborators' ? 'max-w-4xl' : 'max-w-xl'} rounded-2xl bg-[#1c1815] border border-[#3d342f] shadow-2xl flex flex-col max-h-[90vh] transition-all`}>
+      <div className={`w-full ${modalTab === 'advanced' || modalTab === 'collaborators' ? 'max-w-4xl' : 'max-w-xl'} rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-2xl flex flex-col max-h-[90vh] transition-all`}>
         
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#3d342f] bg-[#14110f]/40">
-          <div className="flex items-center gap-2 text-[#fcf8f5]">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)] bg-[var(--bg-input)]/40">
+          <div className="flex items-center gap-2 text-[var(--text-main)]">
             <Settings className="w-5 h-5 text-[var(--theme-primary)]" />
             <h2 className="text-base font-serif font-bold">Painel de Configurações do Escritório</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-[#3d342f] text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer"
+            className="p-1 rounded-lg hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Level Tab Navigation */}
-        <div className="flex border-b border-[#3d342f] px-4 bg-[#14110f]/20">
+        <div className="flex border-b border-[var(--border-color)] px-4 bg-[var(--bg-input)]/20">
           <button
             onClick={() => setModalTab('profile')}
             className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
               modalTab === 'profile'
                 ? 'border-[var(--theme-primary)] text-[var(--theme-primary)] font-extrabold'
-                : 'border-transparent text-[#a89c93] hover:text-[#fcf8f5]'
+                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
             Perfil, Tema & Backup
@@ -428,7 +428,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
               modalTab === 'advanced'
                 ? 'border-[var(--theme-primary)] text-[var(--theme-primary)] font-extrabold'
-                : 'border-transparent text-[#a89c93] hover:text-[#fcf8f5]'
+                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
@@ -439,7 +439,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
               modalTab === 'collaborators'
                 ? 'border-[var(--theme-primary)] text-[var(--theme-primary)] font-extrabold'
-                : 'border-transparent text-[#a89c93] hover:text-[#fcf8f5]'
+                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
@@ -459,9 +459,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 </h3>
 
                 {/* Foto de Perfil / Logotipo */}
-                <div className="p-3.5 rounded-2xl bg-[#09090b] border border-[#3d342f] flex flex-col sm:flex-row items-center gap-4">
+                <div className="p-3.5 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] flex flex-col sm:flex-row items-center gap-4">
                   <div className="relative group shrink-0">
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[var(--theme-primary)] bg-[#1a1614] flex items-center justify-center shadow-lg shadow-black/40">
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[var(--theme-primary)] bg-[var(--bg-card-secondary)] flex items-center justify-center shadow-lg shadow-black/40">
                       {photoUrl ? (
                         <img
                           src={photoUrl}
@@ -488,7 +488,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <div className="flex-1 w-full text-center sm:text-left space-y-1.5">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
-                        <h4 className="text-xs font-bold text-[#fcf8f5] flex items-center justify-center sm:justify-start gap-1.5">
+                        <h4 className="text-xs font-bold text-[var(--text-main)] flex items-center justify-center sm:justify-start gap-1.5">
                           <span>Foto de Perfil ou Logotipo</span>
                           {photoUrl && (
                             <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
@@ -496,7 +496,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             </span>
                           )}
                         </h4>
-                        <p className="text-[10px] text-[#a89c93]">
+                        <p className="text-[10px] text-[var(--text-muted)]">
                           Escolha sua foto profissional ou a logomarca do seu escritório.
                         </p>
                       </div>
@@ -532,8 +532,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     </div>
 
                     {/* Presets and URL link */}
-                    <div className="pt-2 border-t border-[#231d19] flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] text-[#786b62]">Avatares de exemplo:</span>
+                    <div className="pt-2 border-t border-[var(--border-color)] flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] text-[var(--text-muted)]">Avatares de exemplo:</span>
                       {PRESET_AVATARS.map((av) => (
                         <button
                           key={av.id}
@@ -545,14 +545,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           className={`w-6 h-6 rounded-lg overflow-hidden border transition-all cursor-pointer ${
                             photoUrl === av.url
                               ? 'border-[var(--theme-primary)] ring-2 ring-[var(--theme-primary)]/40 scale-105'
-                              : 'border-[#3d342f] opacity-60 hover:opacity-100 hover:border-white/40'
+                              : 'border-[var(--border-color)] opacity-60 hover:opacity-100 hover:border-white/40'
                           }`}
                           title={av.label}
                         >
                           <img src={av.url} alt={av.label} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         </button>
                       ))}
-                      <span className="text-[10px] text-[#554a43] mx-1">•</span>
+                      <span className="text-[10px] text-[var(--text-muted)] mx-1">•</span>
                       <button
                         type="button"
                         onClick={() => setShowUrlInput(!showUrlInput)}
@@ -570,7 +570,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           value={tempUrlInput}
                           onChange={(e) => setTempUrlInput(e.target.value)}
                           placeholder="https://exemplo.com/foto.jpg"
-                          className="flex-1 px-3 py-1.5 rounded-xl bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs focus:outline-none focus:border-[var(--theme-primary)]"
+                          className="flex-1 px-3 py-1.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--theme-primary)]"
                         />
                         <button
                           type="button"
@@ -582,7 +582,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                               setShowUrlInput(false);
                             }
                           }}
-                          className="px-3 py-1.5 rounded-xl bg-[#28221e] hover:bg-[#352d28] text-[#fcf8f5] text-xs font-bold border border-[#3d342f] cursor-pointer"
+                          className="px-3 py-1.5 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] text-xs font-bold border border-[var(--border-color)] cursor-pointer"
                         >
                           Aplicar
                         </button>
@@ -594,13 +594,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Nicho Selector */}
                   <div>
-                    <label className="block text-[10px] uppercase font-bold text-[#a89c93] mb-1">
+                    <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)] mb-1">
                       Nicho Operacional
                     </label>
                     <select
                       value={selectedNiche}
                       onChange={(e) => handleSelectNicheQuick(e.target.value as NicheType)}
-                      className="w-full px-3 py-2 rounded-xl bg-[#09090b] border border-[#3d342f] text-[#fcf8f5] text-xs font-semibold focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-semibold focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
                     >
                       {(Object.keys(NICHES) as NicheType[]).map((nk) => (
                         <option key={nk} value={nk}>
@@ -612,7 +612,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
                   {/* Profile Name & title */}
                   <div>
-                    <label className="block text-[10px] uppercase font-bold text-[#a89c93] mb-1">Nome do Negócio</label>
+                    <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)] mb-1">Nome do Negócio</label>
                     <input
                       type="text"
                       value={name}
@@ -626,7 +626,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           updateArchitectProfile({ name: name.trim() });
                         }
                       }}
-                      className="w-full px-3 py-2 rounded-xl bg-[#09090b] border border-[#3d342f] text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]"
                       placeholder="Ex: Studio Alvorada"
                     />
                   </div>
@@ -634,7 +634,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
                 {/* Theme Palette Swatches */}
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-[#a89c93] mb-1.5">
+                  <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)] mb-1.5">
                     Paleta Cromática do Painel
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -648,15 +648,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           onClick={() => handleSelectThemeQuick(tk)}
                           className={`flex items-center gap-2 p-2 rounded-xl border text-left transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-[#28221e] border-white/30 ring-1 ring-[var(--theme-primary)]'
-                              : 'bg-[#09090b] border-[#3d342f] hover:border-[#52443c]'
+                              ? 'bg-[var(--bg-card-secondary)] border-white/30 ring-1 ring-[var(--theme-primary)]'
+                              : 'bg-[var(--bg-input)] border border-[var(--border-color)] hover:border-[#52443c]'
                           }`}
                         >
                           <span
-                            className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0 animate-pulse"
-                            style={{ backgroundColor: th.primary }}
+                             className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0"
+                             style={{ backgroundColor: th.primary }}
                           />
-                          <span className="text-[11px] font-bold text-[#fcf8f5] truncate">
+                          <span className="text-[11px] font-bold text-[var(--text-main)] truncate">
                             {th.name.split(' ')[0]}
                           </span>
                         </button>
@@ -666,12 +666,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 </div>
 
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-[#a89c93] mb-1">Título Profissional</label>
+                  <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)] mb-1">Título Profissional</label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[#09090b] border border-[#3d342f] text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+                    className="w-full px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]"
                     placeholder="Ex: Consultoria, Reformas & Decoração"
                   />
                 </div>
@@ -686,27 +686,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </section>
 
               {/* Backup & System operations Section */}
-              <section className="space-y-3 pt-3 border-t border-[#2d2621]">
-                <h3 className="text-xs font-bold text-[#a89c93] uppercase tracking-wider">Cópia de Segurança & Integração</h3>
+              <section className="space-y-3 pt-3 border-t border-[var(--border-color)]">
+                <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Cópia de Segurança & Integração</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     onClick={() => exportDataJSON()}
-                    className="flex items-center justify-between p-3 rounded-xl bg-[#09090b] hover:bg-[#151210] border border-[#3d342f] hover:border-[var(--theme-primary)]/40 transition-all text-left cursor-pointer"
+                    className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-[var(--theme-primary)]/40 transition-all text-left cursor-pointer"
                   >
                     <div>
-                      <h4 className="font-bold text-[#fcf8f5] text-xs">Exportar Dados (Backup JSON)</h4>
-                      <p className="text-[10px] text-[#a89c93]">Baixa um arquivo com todos os dados.</p>
+                      <h4 className="font-bold text-[var(--text-main)] text-xs">Exportar Dados (Backup JSON)</h4>
+                      <p className="text-[10px] text-[var(--text-muted)]">Baixa um arquivo com todos os dados.</p>
                     </div>
                     <Download className="w-4 h-4 text-[var(--theme-primary)]" />
                   </button>
 
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center justify-between p-3 rounded-xl bg-[#09090b] hover:bg-[#151210] border border-[#3d342f] hover:border-blue-500/40 transition-all text-left cursor-pointer"
+                    className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-blue-500/40 transition-all text-left cursor-pointer"
                   >
                     <div>
-                      <h4 className="font-bold text-[#fcf8f5] text-xs">Importar Dados (JSON)</h4>
-                      <p className="text-[10px] text-[#a89c93]">Carrega um arquivo salvo anteriormente.</p>
+                      <h4 className="font-bold text-[var(--text-main)] text-xs">Importar Dados (JSON)</h4>
+                      <p className="text-[10px] text-[var(--text-muted)]">Carrega um arquivo salvo anteriormente.</p>
                     </div>
                     <Upload className="w-4 h-4 text-blue-400" />
                   </button>
@@ -721,9 +721,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </section>
 
               {/* Reset Data & Demo */}
-              <section className="space-y-3 pt-3 border-t border-[#2d2621]">
+              <section className="space-y-3 pt-3 border-t border-[var(--border-color)]">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-[#a89c93] uppercase tracking-wider">Gerenciamento & Limpeza de Dados</h3>
+                  <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Gerenciamento & Limpeza de Dados</h3>
                   {resetStatus && (
                     <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2.5 py-0.5 rounded-full animate-in fade-in">
                       {resetStatus}
@@ -732,14 +732,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 </div>
 
                 {/* Primary Quick Reset: Financeiro, Projetos, Equipe e Fornecedores */}
-                <div className="bg-[#14110f] border border-amber-900/40 rounded-xl p-3.5 space-y-2">
+                <div className="bg-[var(--bg-input)] border border-amber-900/40 rounded-xl p-3.5 space-y-2">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
-                      <h4 className="text-xs font-bold text-[#fcf8f5] flex items-center gap-1.5">
+                      <h4 className="text-xs font-bold text-[var(--text-main)] flex items-center gap-1.5">
                         <Trash2 className="w-3.5 h-3.5 text-amber-500" />
                         <span>Zerar Módulos Solicitados</span>
                       </h4>
-                      <p className="text-[10px] text-[#a89c93] mt-0.5">
+                      <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
                         Limpa Financeiro, Projetos, Equipe e Fornecedores para iniciar do zero.
                       </p>
                     </div>
@@ -753,32 +753,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   </div>
 
                   {/* Individual quick reset pills */}
-                  <div className="pt-2 border-t border-[#2d2621] flex flex-wrap gap-1.5">
+                  <div className="pt-2 border-t border-[var(--border-color)] flex flex-wrap gap-1.5">
                     <button
                       type="button"
                       onClick={handleResetFinance}
-                      className="px-2.5 py-1 rounded-lg bg-[#201a17] hover:bg-[#2d2420] border border-[#3d342f] text-[11px] text-[#fcf8f5] cursor-pointer transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] text-[11px] text-[var(--text-main)] cursor-pointer transition-colors"
                     >
                       Zerar Financeiro
                     </button>
                     <button
                       type="button"
                       onClick={handleResetProjects}
-                      className="px-2.5 py-1 rounded-lg bg-[#201a17] hover:bg-[#2d2420] border border-[#3d342f] text-[11px] text-[#fcf8f5] cursor-pointer transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] text-[11px] text-[var(--text-main)] cursor-pointer transition-colors"
                     >
                       Zerar Projetos
                     </button>
                     <button
                       type="button"
                       onClick={handleResetTeam}
-                      className="px-2.5 py-1 rounded-lg bg-[#201a17] hover:bg-[#2d2420] border border-[#3d342f] text-[11px] text-[#fcf8f5] cursor-pointer transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] text-[11px] text-[var(--text-main)] cursor-pointer transition-colors"
                     >
                       Zerar Equipe
                     </button>
                     <button
                       type="button"
                       onClick={handleResetSuppliers}
-                      className="px-2.5 py-1 rounded-lg bg-[#201a17] hover:bg-[#2d2420] border border-[#3d342f] text-[11px] text-[#fcf8f5] cursor-pointer transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] text-[11px] text-[var(--text-main)] cursor-pointer transition-colors"
                     >
                       Zerar Fornecedores
                     </button>
@@ -789,11 +789,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <button
                     type="button"
                     onClick={handleLoadDemo}
-                    className="flex items-center justify-between p-3 rounded-xl bg-[#201a17] hover:bg-[#2a221f] border border-[#3d342f] text-left cursor-pointer transition-colors"
+                    className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] text-left cursor-pointer transition-colors"
                   >
                     <div>
-                      <h4 className="font-bold text-[#fcf8f5]">Carregar Dados de Exemplo</h4>
-                      <p className="text-[10px] text-[#a89c93]">Simula projetos e fluxo financeiro para testes.</p>
+                      <h4 className="font-bold text-[var(--text-main)]">Carregar Dados de Exemplo</h4>
+                      <p className="text-[10px] text-[var(--text-muted)]">Simula projetos e fluxo financeiro para testes.</p>
                     </div>
                     <RefreshCw className="w-4 h-4 text-[var(--theme-primary)] shrink-0" />
                   </button>
@@ -804,14 +804,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     className={`flex items-center justify-between p-3 rounded-xl text-left border cursor-pointer transition-all ${
                       showResetConfirm
                         ? 'bg-rose-500/10 border-rose-500 text-rose-300 animate-pulse'
-                        : 'bg-[#09090b] border-[#3d342f] text-rose-400 hover:bg-rose-500/5'
+                        : 'bg-[var(--bg-input)] border border-[var(--border-color)] text-rose-400 hover:bg-rose-500/5'
                     }`}
                   >
                     <div>
                       <h4 className="font-bold">
                         {showResetConfirm ? '⚠️ Confirmar Limpeza Total?' : 'Zerar Todo o Escritório'}
                       </h4>
-                      <p className="text-[10px] text-[#a89c93]">Apaga permanentemente todos os registros.</p>
+                      <p className="text-[10px] text-[var(--text-muted)]">Apaga permanentemente todos os registros.</p>
                     </div>
                     <Trash2 className="w-4 h-4 text-rose-500 shrink-0" />
                   </button>
@@ -824,13 +824,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             // ADVANCED TAB CONSOLE (REPLICATING SCREENSHOTS 1, 2, 3, 4)
             <div className="flex flex-col md:flex-row gap-5 h-full min-h-[400px]">
               {/* Inner Sub tab bar */}
-              <div className="flex flex-row md:flex-col gap-1.5 md:w-56 overflow-x-auto md:overflow-x-visible pb-2.5 md:pb-0 border-b md:border-b-0 md:border-r border-[#3d342f] pr-0 md:pr-4">
+              <div className="flex flex-row md:flex-col gap-1.5 md:w-56 overflow-x-auto md:overflow-x-visible pb-2.5 md:pb-0 border-b md:border-b-0 md:border-r border-[var(--border-color)] pr-0 md:pr-4">
                 <button
                   onClick={() => setAdvSubTab('categories')}
                   className={`px-3 py-2 rounded-xl text-left text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     advSubTab === 'categories'
-                      ? 'bg-[#241e1b] text-[var(--theme-primary)] border border-[#3d342f]'
-                      : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1c1815]'
+                      ? 'bg-[var(--bg-card-secondary)] text-[var(--theme-primary)] border border-[var(--border-color)]'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
                   }`}
                 >
                   1. Categorias Financeiras
@@ -839,8 +839,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   onClick={() => setAdvSubTab('actions')}
                   className={`px-3 py-2 rounded-xl text-left text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     advSubTab === 'actions'
-                      ? 'bg-[#241e1b] text-[var(--theme-primary)] border border-[#3d342f]'
-                      : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1c1815]'
+                      ? 'bg-[var(--bg-card-secondary)] text-[var(--theme-primary)] border border-[var(--border-color)]'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
                   }`}
                 >
                   2. Matriz Área x Ações
@@ -849,8 +849,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   onClick={() => setAdvSubTab('leads')}
                   className={`px-3 py-2 rounded-xl text-left text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     advSubTab === 'leads'
-                      ? 'bg-[#241e1b] text-[var(--theme-primary)] border border-[#3d342f]'
-                      : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1c1815]'
+                      ? 'bg-[var(--bg-card-secondary)] text-[var(--theme-primary)] border border-[var(--border-color)]'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
                   }`}
                 >
                   3. Status Leads & Perdas
@@ -859,8 +859,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   onClick={() => setAdvSubTab('acquisition')}
                   className={`px-3 py-2 rounded-xl text-left text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     advSubTab === 'acquisition'
-                      ? 'bg-[#241e1b] text-[var(--theme-primary)] border border-[#3d342f]'
-                      : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1c1815]'
+                      ? 'bg-[var(--bg-card-secondary)] text-[var(--theme-primary)] border border-[var(--border-color)]'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
                   }`}
                 >
                   4. Canais & Etiquetas (Tags)
@@ -874,19 +874,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 {advSubTab === 'categories' && (
                   <div className="space-y-4 animate-in fade-in duration-200">
                     <div>
-                      <h4 className="text-sm font-serif font-bold text-[#fcf8f5]">Categorias Financeiras</h4>
-                      <p className="text-[10px] text-[#a89c93]">Classifique suas receitas, custos diretos e despesas para a DRE automática do seu painel.</p>
+                      <h4 className="text-sm font-serif font-bold text-[var(--text-main)]">Categorias Financeiras</h4>
+                      <p className="text-[10px] text-[var(--text-muted)]">Classifique suas receitas, custos diretos e despesas para a DRE automática do seu painel.</p>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                       {/* RECEITAS */}
-                      <div className="bg-[#14110f] border border-[#3d342f] rounded-2xl p-3.5 space-y-3">
-                        <span className="text-[10px] uppercase font-bold text-emerald-400 block tracking-wider border-b border-[#3d342f] pb-1">RECEITAS</span>
+                      <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl p-3.5 space-y-3">
+                        <span className="text-[10px] uppercase font-bold text-emerald-400 block tracking-wider border-b border-[var(--border-color)] pb-1">RECEITAS</span>
                         <div className="space-y-1.5 max-h-[180px] overflow-y-auto no-scrollbar">
                           {officeSettings.financialCategories.receitas.map(item => (
-                            <div key={item} className="flex items-center justify-between p-1.5 bg-[#1c1815] rounded-lg border border-[#3d342f]/55 text-[11px]">
-                              <span className="text-[#fcf8f5] font-medium">{item}</span>
-                              <button onClick={() => deleteFinancialCategory('receitas', item)} className="p-0.5 text-[#a89c93] hover:text-rose-400 cursor-pointer">
+                            <div key={item} className="flex items-center justify-between p-1.5 bg-[var(--bg-card)] rounded-lg border border-[var(--border-color)]/55 text-[11px]">
+                              <span className="text-[var(--text-main)] font-medium">{item}</span>
+                              <button onClick={() => deleteFinancialCategory('receitas', item)} className="p-0.5 text-[var(--text-muted)] hover:text-rose-400 cursor-pointer">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -898,7 +898,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             placeholder="Nova receita"
                             value={newReceita}
                             onChange={(e) => setNewReceita(e.target.value)}
-                            className="flex-1 bg-[#1c1815] border border-[#3d342f] rounded-lg px-2 py-1 text-xs text-[#fcf8f5] focus:outline-none"
+                            className="flex-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none"
                           />
                           <button
                             onClick={() => { addFinancialCategory('receitas', newReceita); setNewReceita(''); }}
@@ -910,13 +910,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       </div>
 
                       {/* CUSTO DIRETO */}
-                      <div className="bg-[#14110f] border border-[#3d342f] rounded-2xl p-3.5 space-y-3">
-                        <span className="text-[10px] uppercase font-bold text-amber-400 block tracking-wider border-b border-[#3d342f] pb-1">CUSTOS DIRETOS</span>
+                      <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl p-3.5 space-y-3">
+                        <span className="text-[10px] uppercase font-bold text-amber-400 block tracking-wider border-b border-[var(--border-color)] pb-1">CUSTOS DIRETOS</span>
                         <div className="space-y-1.5 max-h-[180px] overflow-y-auto no-scrollbar">
                           {officeSettings.financialCategories.custosDiretos.map(item => (
-                            <div key={item} className="flex items-center justify-between p-1.5 bg-[#1c1815] rounded-lg border border-[#3d342f]/55 text-[11px]">
-                              <span className="text-[#fcf8f5] font-medium">{item}</span>
-                              <button onClick={() => deleteFinancialCategory('custosDiretos', item)} className="p-0.5 text-[#a89c93] hover:text-rose-400 cursor-pointer">
+                            <div key={item} className="flex items-center justify-between p-1.5 bg-[var(--bg-card)] rounded-lg border border-[var(--border-color)]/55 text-[11px]">
+                              <span className="text-[var(--text-main)] font-medium">{item}</span>
+                              <button onClick={() => deleteFinancialCategory('custosDiretos', item)} className="p-0.5 text-[var(--text-muted)] hover:text-rose-400 cursor-pointer">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -928,7 +928,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             placeholder="Novo custo"
                             value={newCustoDireto}
                             onChange={(e) => setNewCustoDireto(e.target.value)}
-                            className="flex-1 bg-[#1c1815] border border-[#3d342f] rounded-lg px-2 py-1 text-xs text-[#fcf8f5] focus:outline-none"
+                            className="flex-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none"
                           />
                           <button
                             onClick={() => { addFinancialCategory('custosDiretos', newCustoDireto); setNewCustoDireto(''); }}
@@ -940,13 +940,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       </div>
 
                       {/* DESPESA OPERACIONAL */}
-                      <div className="bg-[#14110f] border border-[#3d342f] rounded-2xl p-3.5 space-y-3">
-                        <span className="text-[10px] uppercase font-bold text-rose-400 block tracking-wider border-b border-[#3d342f] pb-1">DESPESAS OPERACIONAIS</span>
+                      <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl p-3.5 space-y-3">
+                        <span className="text-[10px] uppercase font-bold text-rose-400 block tracking-wider border-b border-[var(--border-color)] pb-1">DESPESAS OPERACIONAIS</span>
                         <div className="space-y-1.5 max-h-[180px] overflow-y-auto no-scrollbar">
                           {officeSettings.financialCategories.despesasOperacionais.map(item => (
-                            <div key={item} className="flex items-center justify-between p-1.5 bg-[#1c1815] rounded-lg border border-[#3d342f]/55 text-[11px]">
-                              <span className="text-[#fcf8f5] font-medium">{item}</span>
-                              <button onClick={() => deleteFinancialCategory('despesasOperacionais', item)} className="p-0.5 text-[#a89c93] hover:text-rose-400 cursor-pointer">
+                            <div key={item} className="flex items-center justify-between p-1.5 bg-[var(--bg-card)] rounded-lg border border-[var(--border-color)]/55 text-[11px]">
+                              <span className="text-[var(--text-main)] font-medium">{item}</span>
+                              <button onClick={() => deleteFinancialCategory('despesasOperacionais', item)} className="p-0.5 text-[var(--text-muted)] hover:text-rose-400 cursor-pointer">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -958,7 +958,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             placeholder="Nova despesa"
                             value={newDespOperacional}
                             onChange={(e) => setNewDespOperacional(e.target.value)}
-                            className="flex-1 bg-[#1c1815] border border-[#3d342f] rounded-lg px-2 py-1 text-xs text-[#fcf8f5] focus:outline-none"
+                            className="flex-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none"
                           />
                           <button
                             onClick={() => { addFinancialCategory('despesasOperacionais', newDespOperacional); setNewDespOperacional(''); }}
@@ -976,35 +976,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 {advSubTab === 'actions' && (
                   <div className="space-y-4 animate-in fade-in duration-200">
                     <div>
-                      <h4 className="text-sm font-serif font-bold text-[#fcf8f5]">Matriz de Áreas & Tipos de Ação</h4>
-                      <p className="text-[10px] text-[#a89c93]">Defina quais vínculos comerciais e operacionais (Lead, Cliente, Projeto) estão conectados a cada área.</p>
+                      <h4 className="text-sm font-serif font-bold text-[var(--text-main)]">Matriz de Áreas & Tipos de Ação</h4>
+                      <p className="text-[10px] text-[var(--text-muted)]">Defina quais vínculos comerciais e operacionais (Lead, Cliente, Projeto) estão conectados a cada área.</p>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {/* Matrix Grid */}
-                      <div className="bg-[#14110f] border border-[#3d342f] rounded-2xl p-4 space-y-3">
-                        <span className="text-[10px] uppercase font-bold text-[var(--theme-primary)] block tracking-wider border-b border-[#3d342f] pb-1">MATRIZ ÁREA x VÍNCULO</span>
+                      <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl p-4 space-y-3">
+                        <span className="text-[10px] uppercase font-bold text-[var(--theme-primary)] block tracking-wider border-b border-[var(--border-color)] pb-1">MATRIZ ÁREA x VÍNCULO</span>
                         <div className="overflow-x-auto">
-                          <table className="w-full text-[11px] text-[#a89c93]">
+                          <table className="w-full text-[11px] text-[var(--text-muted)]">
                             <thead>
-                              <tr className="border-b border-[#3d342f]/60 text-[#fcf8f5]">
+                              <tr className="border-b border-[var(--border-color)]/60 text-[var(--text-main)]">
                                 <th className="text-left pb-2 font-serif font-bold">ÁREA</th>
                                 <th className="text-center pb-2">LEAD</th>
                                 <th className="text-center pb-2">CLIENTE</th>
                                 <th className="text-center pb-2">PROJETO</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-[#3d342f]/30">
+                            <tbody className="divide-y divide-[var(--border-color)]/30">
                               {(['comercial', 'operacao', 'financeiro'] as const).map(area => (
-                                <tr key={area} className="hover:bg-[#1c1815]/40 transition-colors">
-                                  <td className="py-2.5 font-bold text-[#fcf8f5] capitalize">{area}</td>
+                                <tr key={area} className="hover:bg-[var(--bg-card-hover)]/40 transition-colors">
+                                  <td className="py-2.5 font-bold text-[var(--text-main)] capitalize">{area}</td>
                                   {(['lead', 'cliente', 'projeto'] as const).map(vin => (
                                     <td key={vin} className="text-center py-2.5">
                                       <input
                                         type="checkbox"
                                         checked={officeSettings.actionMatrix[area][vin]}
                                         onChange={() => toggleMatrixCell(area, vin)}
-                                        className="rounded border-[#3d342f] bg-[#14110f] text-[var(--theme-primary)] focus:ring-[var(--theme-primary)]"
+                                        className="rounded border-[var(--border-color)] bg-[var(--bg-input)] text-[var(--theme-primary)] focus:ring-[var(--theme-primary)]"
                                       />
                                     </td>
                                   ))}
@@ -1016,14 +1016,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       </div>
 
                       {/* Action types list */}
-                      <div className="bg-[#14110f] border border-[#3d342f] rounded-2xl p-4 space-y-3">
-                        <span className="text-[10px] uppercase font-bold text-[var(--theme-primary)] block tracking-wider border-b border-[#3d342f] pb-1">TIPOS DE AÇÃO</span>
+                      <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl p-4 space-y-3">
+                        <span className="text-[10px] uppercase font-bold text-[var(--theme-primary)] block tracking-wider border-b border-[var(--border-color)] pb-1">TIPOS DE AÇÃO</span>
                         <div className="space-y-1.5 max-h-[170px] overflow-y-auto no-scrollbar">
                           {officeSettings.actionTypes.map(act => (
-                            <div key={act.id} className="flex items-center justify-between p-1.5 bg-[#1c1815] rounded-lg border border-[#3d342f]/55 text-[11px]">
+                            <div key={act.id} className="flex items-center justify-between p-1.5 bg-[var(--bg-card)] rounded-lg border border-[var(--border-color)]/55 text-[11px]">
                               <div className="flex flex-col">
-                                <span className="text-[#fcf8f5] font-semibold">{act.name}</span>
-                                <span className="text-[9px] text-[#a89c93]">Áreas: {act.areas.join(', ')}</span>
+                                <span className="text-[var(--text-main)] font-semibold">{act.name}</span>
+                                <span className="text-[9px] text-[var(--text-muted)]">Áreas: {act.areas.join(', ')}</span>
                               </div>
                               <div className="flex items-center gap-1.5">
                                 {['Comercial', 'Operação', 'Financeiro'].map(ar => {
@@ -1035,14 +1035,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                       className={`text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded ${
                                         isActive 
                                           ? 'bg-[var(--theme-primary)]/15 text-[var(--theme-primary)] border border-[var(--theme-primary)]/20' 
-                                          : 'bg-[#14110f] text-[#a89c93] border border-[#3d342f]'
+                                          : 'bg-[var(--bg-input)] text-[var(--text-muted)] border border-[var(--border-color)]'
                                       }`}
                                     >
                                       {ar[0]}
                                     </button>
                                   );
                                 })}
-                                <button onClick={() => deleteActionType(act.id)} className="p-0.5 text-[#a89c93] hover:text-rose-400 cursor-pointer">
+                                <button onClick={() => deleteActionType(act.id)} className="p-0.5 text-[var(--text-muted)] hover:text-rose-400 cursor-pointer">
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
@@ -1055,7 +1055,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             placeholder="Tipo de Ação (ex: Agendar visita)"
                             value={newActionType}
                             onChange={(e) => setNewActionType(e.target.value)}
-                            className="flex-1 bg-[#1c1815] border border-[#3d342f] rounded-lg px-2 py-1 text-xs text-[#fcf8f5] focus:outline-none"
+                            className="flex-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none"
                           />
                           <button
                             onClick={addActionType}
@@ -1073,25 +1073,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 {advSubTab === 'leads' && (
                   <div className="space-y-4 animate-in fade-in duration-200">
                     <div>
-                      <h4 className="text-sm font-serif font-bold text-[#fcf8f5]">Status do Funil & Motivos de Perda</h4>
-                      <p className="text-[10px] text-[#a89c93]">Personalize os status de prospecção comercial (CRM de Leads) e gerencie motivos para desistências.</p>
+                      <h4 className="text-sm font-serif font-bold text-[var(--text-main)]">Status do Funil & Motivos de Perda</h4>
+                      <p className="text-[10px] text-[var(--text-muted)]">Personalize os status de prospecção comercial (CRM de Leads) e gerencie motivos para desistências.</p>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {/* Lead Stages */}
-                      <div className="bg-[#14110f] border border-[#3d342f] rounded-2xl p-4 space-y-3">
-                        <span className="text-[10px] uppercase font-bold text-[var(--theme-primary)] block tracking-wider border-b border-[#3d342f] pb-1">ETAPAS DO FUNIL DE LEADS</span>
+                      <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl p-4 space-y-3">
+                        <span className="text-[10px] uppercase font-bold text-[var(--theme-primary)] block tracking-wider border-b border-[var(--border-color)] pb-1">ETAPAS DO FUNIL DE LEADS</span>
                         <div className="space-y-1.5 max-h-[220px] overflow-y-auto no-scrollbar">
                           {officeSettings.leadStages.map(stg => (
-                            <div key={stg.id} className="flex items-center justify-between p-2 bg-[#1c1815] rounded-xl border border-[#3d342f]/55 text-[11px]">
+                            <div key={stg.id} className="flex items-center justify-between p-2 bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)]/55 text-[11px]">
                               <div className="flex items-center gap-2">
                                 <span className={`w-2.5 h-2.5 rounded-full ${stg.status === 'Ganho' ? 'bg-emerald-400' : stg.status === 'Perdido' ? 'bg-rose-400' : 'bg-amber-400'}`} />
-                                <span className="font-bold text-[#fcf8f5]">{stg.name}</span>
-                                <span className="text-[9px] text-[#a89c93] italic">({stg.status})</span>
+                                <span className="font-bold text-[var(--text-main)]">{stg.name}</span>
+                                <span className="text-[9px] text-[var(--text-muted)] italic">({stg.status})</span>
                               </div>
                               <button
                                 onClick={() => toggleLeadStage(stg.id)}
-                                className={`text-[9px] font-bold px-2 py-0.5 rounded-full border cursor-pointer ${stg.enabled ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-[#14110f] text-[#a89c93] border-[#3d342f]'}`}
+                                className={`text-[9px] font-bold px-2 py-0.5 rounded-full border cursor-pointer ${stg.enabled ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-[var(--bg-input)] text-[var(--text-muted)] border border-[var(--border-color)]'}`}
                               >
                                 {stg.enabled ? 'Ativado' : 'Desativado'}
                               </button>
@@ -1101,13 +1101,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       </div>
 
                       {/* Loss reasons list */}
-                      <div className="bg-[#14110f] border border-[#3d342f] rounded-2xl p-4 space-y-3">
-                        <span className="text-[10px] uppercase font-bold text-rose-400 block tracking-wider border-b border-[#3d342f] pb-1">MOTIVOS DE PERDA DE ORÇAMENTOS</span>
+                      <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl p-4 space-y-3">
+                        <span className="text-[10px] uppercase font-bold text-rose-400 block tracking-wider border-b border-[var(--border-color)] pb-1">MOTIVOS DE PERDA DE ORÇAMENTOS</span>
                         <div className="space-y-1.5 max-h-[160px] overflow-y-auto no-scrollbar">
                           {officeSettings.lossReasons.map(item => (
-                            <div key={item} className="flex items-center justify-between p-1.5 bg-[#1c1815] rounded-lg border border-[#3d342f]/55 text-[11px]">
-                              <span className="text-[#fcf8f5] font-medium truncate max-w-[200px]">{item}</span>
-                              <button onClick={() => deleteLossReason(item)} className="p-0.5 text-[#a89c93] hover:text-rose-400 cursor-pointer">
+                            <div key={item} className="flex items-center justify-between p-1.5 bg-[var(--bg-card)] rounded-lg border border-[var(--border-color)]/55 text-[11px]">
+                              <span className="text-[var(--text-main)] font-medium truncate max-w-[200px]">{item}</span>
+                              <button onClick={() => deleteLossReason(item)} className="p-0.5 text-[var(--text-muted)] hover:text-rose-400 cursor-pointer">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -1119,7 +1119,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             placeholder="Adicionar motivo de perda..."
                             value={newLossReason}
                             onChange={(e) => setNewLossReason(e.target.value)}
-                            className="flex-1 bg-[#1c1815] border border-[#3d342f] rounded-lg px-2 py-1 text-xs text-[#fcf8f5] focus:outline-none"
+                            className="flex-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none"
                           />
                           <button
                             onClick={addLossReason}
@@ -1137,19 +1137,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 {advSubTab === 'acquisition' && (
                   <div className="space-y-4 animate-in fade-in duration-200">
                     <div>
-                      <h4 className="text-sm font-serif font-bold text-[#fcf8f5]">Canais de Aquisição & Etiquetas (Tags)</h4>
-                      <p className="text-[10px] text-[#a89c93]">Mapeie as vias de captação de clientes (de onde vêm as vendas) e crie etiquetas gerais.</p>
+                      <h4 className="text-sm font-serif font-bold text-[var(--text-main)]">Canais de Aquisição & Etiquetas (Tags)</h4>
+                      <p className="text-[10px] text-[var(--text-muted)]">Mapeie as vias de captação de clientes (de onde vêm as vendas) e crie etiquetas gerais.</p>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {/* Acquisition Channels */}
-                      <div className="bg-[#14110f] border border-[#3d342f] rounded-2xl p-4 space-y-3">
-                        <span className="text-[10px] uppercase font-bold text-[var(--theme-primary)] block tracking-wider border-b border-[#3d342f] pb-1">CANAIS DE AQUISIÇÃO</span>
+                      <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl p-4 space-y-3">
+                        <span className="text-[10px] uppercase font-bold text-[var(--theme-primary)] block tracking-wider border-b border-[var(--border-color)] pb-1">CANAIS DE AQUISIÇÃO</span>
                         <div className="space-y-1.5 max-h-[160px] overflow-y-auto no-scrollbar">
                           {officeSettings.acquisitionChannels.map(item => (
-                            <div key={item} className="flex items-center justify-between p-1.5 bg-[#1c1815] rounded-lg border border-[#3d342f]/55 text-[11px]">
-                              <span className="text-[#fcf8f5] font-medium">{item}</span>
-                              <button onClick={() => deleteAcquisitionChannel(item)} className="p-0.5 text-[#a89c93] hover:text-rose-400 cursor-pointer">
+                            <div key={item} className="flex items-center justify-between p-1.5 bg-[var(--bg-card)] rounded-lg border border-[var(--border-color)]/55 text-[11px]">
+                              <span className="text-[var(--text-main)] font-medium">{item}</span>
+                              <button onClick={() => deleteAcquisitionChannel(item)} className="p-0.5 text-[var(--text-muted)] hover:text-rose-400 cursor-pointer">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -1161,7 +1161,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             placeholder="Canal (ex: Indicação, Google)"
                             value={newChannel}
                             onChange={(e) => setNewChannel(e.target.value)}
-                            className="flex-1 bg-[#1c1815] border border-[#3d342f] rounded-lg px-2 py-1 text-xs text-[#fcf8f5] focus:outline-none"
+                            className="flex-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none"
                           />
                           <button
                             onClick={addAcquisitionChannel}
@@ -1173,17 +1173,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       </div>
 
                       {/* Tags list */}
-                      <div className="bg-[#14110f] border border-[#3d342f] rounded-2xl p-4 space-y-3">
-                        <span className="text-[10px] uppercase font-bold text-[var(--theme-primary)] block tracking-wider border-b border-[#3d342f] pb-1">ETIQUETAS DO ESCRITÓRIO (TAGS)</span>
+                      <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl p-4 space-y-3">
+                        <span className="text-[10px] uppercase font-bold text-[var(--theme-primary)] block tracking-wider border-b border-[var(--border-color)] pb-1">ETIQUETAS DO ESCRITÓRIO (TAGS)</span>
                         
-                        <div className="flex flex-wrap gap-1.5 min-h-[110px] p-2 bg-[#1c1815] border border-[#3d342f]/60 rounded-xl max-h-[150px] overflow-y-auto no-scrollbar">
+                        <div className="flex flex-wrap gap-1.5 min-h-[110px] p-2 bg-[var(--bg-card)] border border-[var(--border-color)]/60 rounded-xl max-h-[150px] overflow-y-auto no-scrollbar">
                           {officeSettings.tags.length === 0 ? (
-                            <span className="text-[10px] text-[#a89c93] italic p-2">Nenhuma etiqueta customizada criada ainda.</span>
+                            <span className="text-[10px] text-[var(--text-muted)] italic p-2">Nenhuma etiqueta customizada criada ainda.</span>
                           ) : (
                             officeSettings.tags.map(item => (
                               <div key={item} className="flex items-center gap-1 px-2 py-0.5 bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)] rounded-full text-[10px]">
                                 <span>{item}</span>
-                                <button onClick={() => deleteOfficeTag(item)} className="hover:text-rose-400 cursor-pointer text-[#a89c93] text-xs font-bold font-serif leading-none">
+                                <button onClick={() => deleteOfficeTag(item)} className="hover:text-rose-400 cursor-pointer text-[var(--text-muted)] text-xs font-bold font-serif leading-none">
                                   ×
                                 </button>
                               </div>
@@ -1198,7 +1198,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             value={newTag}
                             onChange={(e) => setNewTag(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') { addOfficeTag(); } }}
-                            className="flex-1 bg-[#1c1815] border border-[#3d342f] rounded-lg px-2 py-1 text-xs text-[#fcf8f5] focus:outline-none"
+                            className="flex-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none"
                           />
                           <button
                             onClick={addOfficeTag}
@@ -1222,13 +1222,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               {/* CASE 1: Collaborator Connected to an Office */}
               {profile?.joinedOwnerUid ? (
                 <div className="space-y-6">
-                  <div className="p-4 bg-[#14110f] border border-[#3d342f] rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="space-y-1 text-center md:text-left">
-                      <h4 className="text-sm font-serif font-bold text-[#fcf8f5] flex items-center justify-center md:justify-start gap-2">
+                      <h4 className="text-sm font-serif font-bold text-[var(--text-main)] flex items-center justify-center md:justify-start gap-2">
                         <Shield className="w-4 h-4 text-emerald-400" />
                         Escritório Vinculado
                       </h4>
-                      <p className="text-xs text-[#a89c93]">
+                      <p className="text-xs text-[var(--text-muted)]">
                         Você está conectado como colaborador. Todos os seus dados de projetos e finanças estão sincronizados com este escritório.
                       </p>
                       <p className="text-[10px] text-[var(--theme-primary)] font-mono font-semibold">
@@ -1248,10 +1248,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     </button>
                   </div>
 
-                  <div className="bg-[#14110f] border border-[#3d342f] rounded-2xl p-5 space-y-4">
-                    <div className="border-b border-[#3d342f] pb-2">
-                      <h4 className="text-xs uppercase font-bold text-[#a89c93] tracking-wider">Suas Permissões de Acesso</h4>
-                      <p className="text-[10px] text-[#a89c93]">As permissões abaixo foram atribuídas a você pelo proprietário do escritório.</p>
+                  <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl p-5 space-y-4">
+                    <div className="border-b border-[var(--border-color)] pb-2">
+                      <h4 className="text-xs uppercase font-bold text-[var(--text-muted)] tracking-wider">Suas Permissões de Acesso</h4>
+                      <p className="text-[10px] text-[var(--text-muted)]">As permissões abaixo foram atribuídas a você pelo proprietário do escritório.</p>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1277,13 +1277,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             className={`p-3 rounded-xl border flex items-center gap-2.5 transition-all ${
                               hasAccess 
                                 ? 'bg-emerald-500/5 border-emerald-500/30 text-emerald-300' 
-                                : 'bg-[#1c1815] border-[#3d342f] text-[#a89c93]'
+                                : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)]'
                             }`}
                           >
                             <span className={`w-2 h-2 rounded-full ${hasAccess ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600'}`} />
                             <div className="truncate">
                               <p className="text-[11px] font-bold truncate leading-none">{label}</p>
-                              <p className="text-[9px] text-[#a89c93]">{hasAccess ? 'Acesso Permitido' : 'Sem Acesso'}</p>
+                              <p className="text-[9px] text-[var(--text-muted)]">{hasAccess ? 'Acesso Permitido' : 'Sem Acesso'}</p>
                             </div>
                           </div>
                         );
@@ -1297,15 +1297,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <div className="lg:col-span-1 space-y-5">
                     
                     {/* Invite Code Card */}
-                    <div className="bg-[#14110f] border border-[#3d342f] rounded-2xl p-5 space-y-4">
+                    <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl p-5 space-y-4">
                       <div className="space-y-1">
-                        <h4 className="text-xs uppercase font-bold text-[#a89c93] tracking-wider">Convidar Colaboradores</h4>
-                        <p className="text-[10px] text-[#a89c93]">
+                        <h4 className="text-xs uppercase font-bold text-[var(--text-muted)] tracking-wider">Convidar Colaboradores</h4>
+                        <p className="text-[10px] text-[var(--text-muted)]">
                           Compartilhe o código abaixo para que outros usuários possam entrar e gerenciar o escritório com você.
                         </p>
                       </div>
 
-                      <div className="p-3 bg-[#09090b] border border-[#3d342f] rounded-xl flex items-center justify-between gap-2.5">
+                      <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl flex items-center justify-between gap-2.5">
                         <span className="text-base font-mono font-bold text-[var(--theme-primary)] tracking-widest pl-1.5 uppercase select-all">
                           {profile?.inviteCode || '...'}
                         </span>
@@ -1317,19 +1317,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                               setTimeout(() => setIsCopiedCode(false), 2000);
                             }
                           }}
-                          className="p-2 bg-[#241e1b] hover:bg-[#3d342f] text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 border border-[#3d342f] hover:text-[var(--theme-primary)]"
+                          className="p-2 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 border border-[var(--border-color)] hover:text-[var(--theme-primary)]"
                           title="Copiar Código"
                         >
-                          {isCopiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#a89c93]" />}
+                          {isCopiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
                           <span className="text-[10px]">{isCopiedCode ? 'Copiado!' : 'Copiar'}</span>
                         </button>
                       </div>
 
                       {/* Connect option (if they are not connected and want to join someone else's space instead) */}
-                      <div className="border-t border-[#3d342f]/45 pt-4 space-y-3">
+                      <div className="border-t border-[var(--border-color)]/45 pt-4 space-y-3">
                         <div className="space-y-1">
-                          <h5 className="text-[10px] uppercase font-bold text-[#a89c93]">Entrar em outro escritório</h5>
-                          <p className="text-[9px] text-[#a89c93]">Quer se conectar ao escritório de outro usuário?</p>
+                          <h5 className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Entrar em outro escritório</h5>
+                          <p className="text-[9px] text-[var(--text-muted)]">Quer se conectar ao escritório de outro usuário?</p>
                         </div>
 
                         <form onSubmit={handleJoinOffice} className="flex gap-2">
@@ -1338,7 +1338,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             placeholder="Código"
                             value={inviteCodeInput}
                             onChange={(e) => setInviteCodeInput(e.target.value.toUpperCase())}
-                            className="bg-[#09090b] border border-[#3d342f] rounded-xl px-2.5 py-1.5 text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] w-full font-mono uppercase tracking-widest"
+                            className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-2.5 py-1.5 text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] w-full font-mono uppercase tracking-widest"
                           />
                           <button
                             type="submit"
@@ -1354,10 +1354,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     </div>
 
                     {/* Team Slots Limit Info */}
-                    <div className="bg-[#14110f] border border-[#3d342f] rounded-2xl p-5 space-y-4">
+                    <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl p-5 space-y-4">
                       <div className="space-y-1">
-                        <h4 className="text-xs uppercase font-bold text-[#a89c93] tracking-wider">Capacidade da Equipe</h4>
-                        <p className="text-[10px] text-[#a89c93]">
+                        <h4 className="text-xs uppercase font-bold text-[var(--text-muted)] tracking-wider">Capacidade da Equipe</h4>
+                        <p className="text-[10px] text-[var(--text-muted)]">
                           Cada conta do escritório permite a participação de até 4 membros colaboradores.
                         </p>
                       </div>
@@ -1370,12 +1370,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         return (
                           <div className="space-y-3.5">
                             <div className="flex justify-between items-center text-[11px] font-bold">
-                              <span className="text-[#fcf8f5]">Membros Conectados</span>
+                              <span className="text-[var(--text-main)]">Membros Conectados</span>
                               <span className="text-[var(--theme-primary)]">{joinedCount} / {totalSlots}</span>
                             </div>
 
                             {/* Progress bar */}
-                            <div className="w-full bg-[#09090b] rounded-full h-2 overflow-hidden border border-[#3d342f]/45">
+                            <div className="w-full bg-[var(--bg-input)] rounded-full h-2 overflow-hidden border border-[var(--border-color)]/45">
                               <div 
                                 className="h-full bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-primary-hover)] transition-all duration-300 rounded-full"
                                 style={{ width: `${pct}%` }}
@@ -1390,20 +1390,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
                   {/* Right panel: Active Collaborators List and Access Control */}
                   <div className="lg:col-span-2 space-y-4">
-                    <div className="bg-[#14110f] border border-[#3d342f] rounded-2xl p-5 space-y-4 min-h-[400px]">
-                      <div className="border-b border-[#3d342f] pb-2">
-                        <h4 className="text-sm font-serif font-bold text-[#fcf8f5]">Gerenciamento de Acessos</h4>
-                        <p className="text-[10px] text-[#a89c93]">Configure exatamente as abas e recursos que cada convidado pode ver e editar.</p>
+                    <div className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl p-5 space-y-4 min-h-[400px]">
+                      <div className="border-b border-[var(--border-color)] pb-2">
+                        <h4 className="text-sm font-serif font-bold text-[var(--text-main)]">Gerenciamento de Acessos</h4>
+                        <p className="text-[10px] text-[var(--text-muted)]">Configure exatamente as abas e recursos que cada convidado pode ver e editar.</p>
                       </div>
 
                       {(!profile?.collaborators || profile.collaborators.length === 0) ? (
                         <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
-                          <div className="w-12 h-12 rounded-full bg-[#1c1815] border border-[#3d342f] flex items-center justify-center text-[#a89c93]">
+                          <div className="w-12 h-12 rounded-full bg-[var(--bg-card)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)]">
                             <Users className="w-6 h-6" />
                           </div>
                           <div className="max-w-[280px]">
-                            <h5 className="font-bold text-[#fcf8f5] text-xs">Nenhum Colaborador Ativo</h5>
-                            <p className="text-[10px] text-[#a89c93] mt-1">
+                            <h5 className="font-bold text-[var(--text-main)] text-xs">Nenhum Colaborador Ativo</h5>
+                            <p className="text-[10px] text-[var(--text-muted)] mt-1">
                               Sua equipe ainda não tem membros. Envie o código do seu escritório para seus parceiros de projeto.
                             </p>
                           </div>
@@ -1413,13 +1413,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           {profile.collaborators.map((collab) => (
                             <div 
                               key={collab.uid} 
-                              className="bg-[#1c1815] border border-[#3d342f] rounded-xl p-4 space-y-3"
+                              className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-4 space-y-3"
                             >
                               {/* Collaborator header */}
-                              <div className="flex items-center justify-between border-b border-[#3d342f]/50 pb-2 gap-2">
+                              <div className="flex items-center justify-between border-b border-[var(--border-color)]/50 pb-2 gap-2">
                                 <div className="space-y-0.5">
-                                  <h5 className="font-bold text-[#fcf8f5] text-xs font-mono">{collab.email}</h5>
-                                  <p className="text-[9px] text-[#a89c93]">
+                                  <h5 className="font-bold text-[var(--text-main)] text-xs font-mono">{collab.email}</h5>
+                                  <p className="text-[9px] text-[var(--text-muted)]">
                                     Conectado em: {collab.joinedAt ? new Date(collab.joinedAt).toLocaleDateString('pt-BR') : 'Data não informada'}
                                   </p>
                                 </div>
@@ -1438,7 +1438,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
                               {/* Matrix permissions toggle */}
                               <div className="space-y-2">
-                                <span className="text-[9px] uppercase font-bold text-[#a89c93] block tracking-wider">Permissões de Abas Autorizadas:</span>
+                                <span className="text-[9px] uppercase font-bold text-[var(--text-muted)] block tracking-wider">Permissões de Abas Autorizadas:</span>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                   {[
                                     { key: 'today', label: 'Meu Dia & Agenda' },
@@ -1462,7 +1462,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                         className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer select-none transition-all ${
                                           hasPerm 
                                             ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-300' 
-                                            : 'bg-[#14110f]/60 border-[#3d342f] text-[#a89c93]'
+                                            : 'bg-[var(--bg-input)]/60 border-[var(--border-color)] text-[var(--text-muted)]'
                                         }`}
                                       >
                                         <input
@@ -1475,7 +1475,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                             };
                                             updateCollaboratorPermissions(collab.uid, updatedPerms);
                                           }}
-                                          className="rounded border-[#3d342f] bg-[#09090b] text-[var(--theme-primary)] focus:ring-[var(--theme-primary)] cursor-pointer"
+                                          className="rounded border-[var(--border-color)] bg-[var(--bg-input)] text-[var(--theme-primary)] focus:ring-[var(--theme-primary)] cursor-pointer"
                                         />
                                         <span className="text-[10px] font-semibold truncate">{label}</span>
                                       </label>
@@ -1499,14 +1499,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[#3d342f] flex justify-between bg-[#14110f]/40">
-          <p className="text-[10px] text-[#a89c93] flex items-center gap-1">
+        <div className="p-4 border-t border-[var(--border-color)] flex justify-between bg-[var(--bg-input)]/40">
+          <p className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
             <Shield className="w-3.5 h-3.5 text-emerald-400" />
             Sincronização Cloud Ativa
           </p>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-[#241e1b] hover:bg-[#3d342f] text-[#fcf8f5] rounded-xl font-bold transition-all text-xs border border-[#3d342f] cursor-pointer"
+            className="px-4 py-1.5 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] rounded-xl font-bold transition-all text-xs border border-[var(--border-color)] cursor-pointer"
           >
             Fechar Painel
           </button>

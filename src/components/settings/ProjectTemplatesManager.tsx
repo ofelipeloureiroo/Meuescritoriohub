@@ -319,16 +319,16 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
   return (
     <div className="space-y-6">
       {/* CARD 1: Templates de Projeto */}
-      <div className="bg-[#1c1815] border border-[#302722] rounded-2xl p-5 space-y-4">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-5 space-y-4">
         
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#302722] pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4">
           <div>
-            <h3 className="font-serif font-bold text-[#fcf8f5] text-sm flex items-center gap-2">
+            <h3 className="font-serif font-bold text-[var(--text-main)] text-sm flex items-center gap-2">
               <Layers className="w-4 h-4 text-[var(--theme-primary)]" />
               Templates de Projeto
             </h3>
-            <p className="text-[11px] text-[#a89c93] mt-0.5">
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
               Padronize as etapas e tarefas detalhadas dos projetos criados no seu escritório
             </p>
           </div>
@@ -345,7 +345,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[420px]">
           
           {/* LEFT SIDEBAR */}
-          <div className="lg:col-span-4 border-r border-[#302722] pr-4 space-y-4">
+          <div className="lg:col-span-4 border-r border-[var(--border-color)] pr-4 space-y-4">
             
             {/* 1. TEMPLATES DA EMPRESA */}
             <div className="space-y-2">
@@ -356,7 +356,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
               </div>
 
               {companyTemplates.length === 0 ? (
-                <div className="p-3.5 bg-[#12100e]/60 border border-dashed border-[#302722] rounded-xl text-[10px] text-[#a89c93] leading-relaxed">
+                <div className="p-3.5 bg-[var(--bg-input)]/60 border border-dashed border-[var(--border-color)] rounded-xl text-[10px] text-[var(--text-muted)] leading-relaxed">
                   A empresa ainda não possui templates personalizados. Duplique um template padrão ou crie um novo acima.
                 </div>
               ) : (
@@ -371,12 +371,12 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                         onClick={() => setSelectedTemplateId(t.id)}
                         className={`w-full text-left p-3 rounded-xl border transition-all flex flex-col gap-1 cursor-pointer group ${
                           isSelected 
-                            ? 'bg-[#28221e] border-[var(--theme-primary)]/60 text-[#fcf8f5] shadow-lg' 
-                            : 'bg-[#12100e]/40 border-[#302722]/60 text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1a1613]'
+                            ? 'bg-[var(--bg-card-secondary)] border-[var(--theme-primary)]/60 text-[var(--text-main)] shadow-lg' 
+                            : 'bg-[var(--bg-input)]/40 border-[var(--border-color)]/60 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs truncate text-[#fcf8f5]">{t.name}</span>
+                          <span className="font-bold text-xs truncate text-[var(--text-main)]">{t.name}</span>
                           <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
                             Empresa
                           </span>
@@ -408,12 +408,12 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                       onClick={() => setSelectedTemplateId(t.id)}
                       className={`w-full text-left p-3 rounded-xl border transition-all flex flex-col gap-1 cursor-pointer group ${
                         isSelected 
-                          ? 'bg-[#28221e] border-[var(--theme-primary)]/60 text-[#fcf8f5] shadow-lg' 
-                          : 'bg-[#12100e]/40 border-[#302722]/60 text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1a1613]'
+                          ? 'bg-[var(--bg-card-secondary)] border-[var(--theme-primary)]/60 text-[var(--text-main)] shadow-lg' 
+                          : 'bg-[var(--bg-input)]/40 border-[var(--border-color)]/60 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs truncate flex items-center gap-1.5 text-[#fcf8f5]">
+                        <span className="font-bold text-xs truncate flex items-center gap-1.5 text-[var(--text-main)]">
                           <Lock className="w-3 h-3 text-amber-400/80 shrink-0" />
                           {t.name}
                         </span>
@@ -460,7 +460,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                 )}
 
                 {/* TEMPLATE TITLE & METADATA */}
-                <div className="flex items-start justify-between border-b border-[#302722] pb-3 gap-3">
+                <div className="flex items-start justify-between border-b border-[var(--border-color)] pb-3 gap-3">
                   <div className="space-y-1">
                     {isEditingHeader && !selectedTpl.isSystem ? (
                       <div className="flex items-center gap-2">
@@ -468,12 +468,12 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                           type="text"
                           value={editHeaderName}
                           onChange={e => setEditHeaderName(e.target.value)}
-                          className="px-2.5 py-1 rounded bg-[#12100e] border border-[var(--theme-primary)] text-sm font-bold text-[#fcf8f5]"
+                          className="px-2.5 py-1 rounded bg-[var(--bg-input)] border border-[var(--theme-primary)] text-sm font-bold text-[var(--text-main)]"
                         />
                         <select
                           value={editHeaderType}
                           onChange={e => setEditHeaderType(e.target.value)}
-                          className="px-2 py-1 rounded bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5]"
+                          className="px-2 py-1 rounded bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-main)]"
                         >
                           {projectTypes.map(pt => (
                             <option key={pt} value={pt}>{pt}</option>
@@ -502,7 +502,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <h4 className="font-serif font-bold text-[#fcf8f5] text-base flex items-center gap-2">
+                        <h4 className="font-serif font-bold text-[var(--text-main)] text-base flex items-center gap-2">
                           {selectedTpl.name}
                           {!selectedTpl.isSystem && (
                             <button
@@ -520,8 +520,8 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                         </h4>
                       </div>
                     )}
-                    <div className="flex items-center gap-3 text-[11px] text-[#a89c93]">
-                      <span>Tipo recomendado: <strong className="text-[#fcf8f5] font-semibold">{selectedTpl.type}</strong></span>
+                    <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)]">
+                      <span>Tipo recomendado: <strong className="text-[var(--text-main)] font-semibold">{selectedTpl.type}</strong></span>
                       <span>•</span>
                       <span>{selectedTpl.stages.length} etapas ({countTemplateItems(selectedTpl)} tarefas)</span>
                     </div>
@@ -544,7 +544,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                 {/* STAGES LIST & ACCORDION */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
                       ETAPAS SINCRONIZADAS DO FLUXO ({selectedTpl.stages.length}):
                     </span>
                     {!selectedTpl.isSystem && (
@@ -560,14 +560,14 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
 
                   {/* FORM TO ADD NEW STAGE */}
                   {isAddingStage && !selectedTpl.isSystem && (
-                    <div className="p-3 bg-[#12100e] border border-[var(--theme-primary)]/50 rounded-xl flex items-center gap-2">
+                    <div className="p-3 bg-[var(--bg-input)] border border-[var(--theme-primary)]/50 rounded-xl flex items-center gap-2">
                       <input
                         type="text"
                         placeholder="Nome da nova etapa (ex: Detalhamento Técnico)..."
                         value={newStageName}
                         onChange={e => setNewStageName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleAddStage()}
-                        className="flex-1 px-3 py-1.5 rounded-lg bg-[#1c1815] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+                        className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-color)] text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]"
                         autoFocus
                       />
                       <button
@@ -578,7 +578,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                       </button>
                       <button
                         onClick={() => setIsAddingStage(false)}
-                        className="p-1.5 text-zinc-400 hover:bg-zinc-800 rounded-lg cursor-pointer"
+                        className="p-1.5 text-[var(--text-muted)] hover:bg-[var(--bg-card-secondary)] rounded-lg cursor-pointer"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -594,19 +594,19 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                       return (
                         <div 
                           key={stage.id} 
-                          className="bg-[#12100e] border border-[#302722] rounded-xl overflow-hidden transition-all"
+                          className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl overflow-hidden transition-all"
                         >
                           {/* Stage Header Bar */}
-                          <div className="flex items-center justify-between p-3 bg-[#181411] border-b border-[#302722]/50 hover:bg-[#1f1a16] transition-colors">
+                          <div className="flex items-center justify-between p-3 bg-[var(--bg-card-secondary)] border-b border-[var(--border-color)]/50 hover:bg-[var(--bg-card-hover)] transition-colors">
                             <div 
                               onClick={() => toggleStageExpand(stage.id)}
                               className="flex items-center gap-3 cursor-pointer flex-1"
                             >
-                              <span className="w-6 h-6 rounded-full bg-[#28221e] border border-[#3d342f] text-[11px] font-bold text-[var(--theme-primary)] flex items-center justify-center shrink-0">
+                              <span className="w-6 h-6 rounded-full bg-[var(--bg-card)] border border-[var(--border-color)] text-[11px] font-bold text-[var(--theme-primary)] flex items-center justify-center shrink-0">
                                 {sIdx + 1}
                               </span>
-                              <span className="font-bold text-xs text-[#fcf8f5]">{stage.name}</span>
-                              <span className="text-[10px] text-[#a89c93] bg-[#221c18] px-2 py-0.5 rounded-full border border-[#302722]">
+                              <span className="font-bold text-xs text-[var(--text-main)]">{stage.name}</span>
+                              <span className="text-[10px] text-[var(--text-muted)] bg-[var(--bg-card)] px-2 py-0.5 rounded-full border border-[var(--border-color)]">
                                 {items.length} {items.length === 1 ? 'item' : 'itens'}
                               </span>
                             </div>
@@ -617,7 +617,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                                   <button
                                     onClick={() => handleMoveStage(sIdx, 'up')}
                                     disabled={sIdx === 0}
-                                    className="p-1 text-zinc-500 hover:text-[#fcf8f5] disabled:opacity-20 cursor-pointer"
+                                    className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] disabled:opacity-20 cursor-pointer"
                                     title="Mover para cima"
                                   >
                                     <ArrowUp className="w-3.5 h-3.5" />
@@ -625,7 +625,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                                   <button
                                     onClick={() => handleMoveStage(sIdx, 'down')}
                                     disabled={sIdx === selectedTpl.stages.length - 1}
-                                    className="p-1 text-zinc-500 hover:text-[#fcf8f5] disabled:opacity-20 cursor-pointer"
+                                    className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] disabled:opacity-20 cursor-pointer"
                                     title="Mover para baixo"
                                   >
                                     <ArrowDown className="w-3.5 h-3.5" />
@@ -645,7 +645,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
 
                               <button
                                 onClick={() => toggleStageExpand(stage.id)}
-                                className="p-1 text-zinc-400 hover:text-[#fcf8f5] cursor-pointer ml-1"
+                                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer ml-1"
                               >
                                 {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                               </button>
@@ -654,9 +654,9 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
 
                           {/* Stage Items List */}
                           {isExpanded && (
-                            <div className="p-3 space-y-2 bg-[#12100e]">
+                            <div className="p-3 space-y-2 bg-[var(--bg-input)]">
                               {items.length === 0 ? (
-                                <p className="text-[11px] text-zinc-500 italic py-1 px-2">
+                                <p className="text-[11px] text-[var(--text-muted)] italic py-1 px-2">
                                   Nenhum item/tarefa nesta etapa ainda.
                                 </p>
                               ) : (
@@ -672,23 +672,23 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                                           isReadOnly: selectedTpl.isSystem
                                         });
                                       }}
-                                      className="flex items-center justify-between p-2.5 rounded-lg bg-[#1a1613] border border-[#2d2520] hover:border-[#3d342f] hover:bg-[#221c18] transition-all cursor-pointer group"
+                                      className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--theme-primary)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer group"
                                     >
                                       <div className="flex items-center gap-2.5 min-w-0">
                                         <span className="w-2 h-2 rounded-full bg-[var(--theme-primary)] shrink-0" />
-                                        <span className="text-xs font-semibold text-[#fcf8f5] truncate">
+                                        <span className="text-xs font-semibold text-[var(--text-main)] truncate">
                                           {task.name}
                                         </span>
                                       </div>
 
                                       <div className="flex items-center gap-2 text-[10px] shrink-0">
                                         {task.estimatedDays ? (
-                                          <span className="px-1.5 py-0.5 rounded bg-zinc-800/80 text-zinc-300 font-medium flex items-center gap-1">
+                                          <span className="px-1.5 py-0.5 rounded bg-[var(--bg-card-secondary)] text-[var(--text-muted)] font-medium flex items-center gap-1">
                                             <Clock className="w-3 h-3 text-amber-400" />
                                             {task.estimatedDays} {task.dayType === 'calendar' ? 'dias corr.' : 'dias úteis'}
                                           </span>
                                         ) : (
-                                          <span className="text-zinc-600">0d</span>
+                                          <span className="text-[var(--text-muted)]">0d</span>
                                         )}
 
                                         {!selectedTpl.isSystem && (
@@ -721,11 +721,11 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                                       setQuickTaskName(prev => ({ ...prev, [stage.id]: val }));
                                     }}
                                     onKeyDown={e => e.key === 'Enter' && handleQuickAddTask(stage.id)}
-                                    className="flex-1 px-3 py-1.5 bg-[#181411] border border-[#302722] rounded-lg text-xs text-[#fcf8f5] placeholder-zinc-600 focus:outline-none focus:border-[var(--theme-primary)]"
+                                    className="flex-1 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg text-xs text-[var(--text-main)] placeholder-[var(--text-muted)]/50 focus:outline-none focus:border-[var(--theme-primary)]"
                                   />
                                   <button
                                     onClick={() => handleQuickAddTask(stage.id)}
-                                    className="px-3 py-1.5 bg-[#25201d] border border-[#3d342f] hover:bg-[#302824] text-xs font-bold text-[#fcf8f5] rounded-lg cursor-pointer"
+                                    className="px-3 py-1.5 bg-[var(--bg-card-secondary)] border border-[var(--border-color)] hover:bg-[var(--bg-card-hover)] text-xs font-bold text-[var(--text-main)] rounded-lg cursor-pointer"
                                   >
                                     Adicionar
                                   </button>
@@ -748,10 +748,10 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
       </div>
 
       {/* CARD 2: Template por Tipo de Projeto */}
-      <div className="bg-[#1c1815] border border-[#302722] rounded-2xl p-5 space-y-4">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-5 space-y-4">
         <div>
-          <h3 className="font-serif font-bold text-[#fcf8f5] text-sm">Template por Tipo de Projeto</h3>
-          <p className="text-[11px] text-[#a89c93]">
+          <h3 className="font-serif font-bold text-[var(--text-main)] text-sm">Template por Tipo de Projeto</h3>
+          <p className="text-[11px] text-[var(--text-muted)]">
             Vincule um template padrão a cada tipo. Será aplicado automaticamente ao criar novos projetos no sistema.
           </p>
         </div>
@@ -760,12 +760,12 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
           {projectTypes.map(type => {
             const currentTplId = templateBindings[type] || '';
             return (
-              <div key={type} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 bg-[#12100e] border border-[#302722] rounded-2xl text-xs">
-                <span className="font-bold text-[#fcf8f5]">{type}</span>
+              <div key={type} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl text-xs">
+                <span className="font-bold text-[var(--text-main)]">{type}</span>
                 <select
                   value={currentTplId}
                   onChange={(e) => handleUpdateTemplateBinding(type, e.target.value)}
-                  className="px-3 py-1.5 rounded-lg bg-[#1c1815] border border-[#3d342f] text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] text-xs font-semibold cursor-pointer max-w-xs"
+                  className="px-3 py-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] text-xs font-semibold cursor-pointer max-w-xs"
                 >
                   <option value="">Sem template padrão</option>
                   {projectTemplates.map(tpl => (
@@ -783,15 +783,15 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
       {/* MODAL 1: CREATE NEW TEMPLATE */}
       {isCreatingTemplateModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1c1815] border border-[#302722] rounded-2xl p-6 max-w-md w-full space-y-5 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-[#302722] pb-3">
-              <h3 className="font-serif font-bold text-[#fcf8f5] text-base flex items-center gap-2">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 max-w-md w-full space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+              <h3 className="font-serif font-bold text-[var(--text-main)] text-base flex items-center gap-2">
                 <Plus className="w-5 h-5 text-[var(--theme-primary)]" />
                 Criar Novo Template
               </h3>
               <button
                 onClick={() => setIsCreatingTemplateModal(false)}
-                className="p-1 text-zinc-400 hover:text-white rounded-lg cursor-pointer"
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -799,7 +799,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
 
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-[#a89c93] block mb-1">
+                <label className="text-xs font-bold text-[var(--text-muted)] block mb-1">
                   Nome do Template *
                 </label>
                 <input
@@ -807,19 +807,19 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                   placeholder="Ex: Projeto Comercial Express, Consultoria Residencial..."
                   value={newTemplateName}
                   onChange={e => setNewTemplateName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+                  className="w-full px-3.5 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]"
                   autoFocus
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-[#a89c93] block mb-1">
+                <label className="text-xs font-bold text-[var(--text-muted)] block mb-1">
                   Tipo Recomendado
                 </label>
                 <select
                   value={newTemplateType}
                   onChange={e => setNewTemplateType(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+                  className="w-full px-3.5 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]"
                 >
                   {projectTypes.map(pt => (
                     <option key={pt} value={pt}>{pt}</option>
@@ -828,10 +828,10 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#302722]">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border-color)]">
               <button
                 onClick={() => setIsCreatingTemplateModal(false)}
-                className="px-4 py-2 rounded-xl border border-[#3d342f] text-xs font-bold text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#25201d] transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-[var(--border-color)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
               >
                 Cancelar
               </button>
@@ -850,14 +850,14 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
       {/* MODAL 2: DUPLICAR E PERSONALIZAR (Image 3) */}
       {duplicatingTemplate && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1c1815] border border-amber-500/30 rounded-2xl p-6 max-w-lg w-full space-y-5 shadow-2xl">
+          <div className="bg-[var(--bg-card)] border border-amber-500/30 rounded-2xl p-6 max-w-lg w-full space-y-5 shadow-2xl">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
                   <ShieldAlert className="w-5 h-5 text-amber-400" />
                 </div>
                 <div>
-                  <h3 className="font-serif font-bold text-[#fcf8f5] text-base">
+                  <h3 className="font-serif font-bold text-[var(--text-main)] text-base">
                     Template padrão do sistema
                   </h3>
                   <p className="text-xs text-amber-400/80 mt-0.5">
@@ -867,27 +867,27 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
               </div>
               <button
                 onClick={() => setDuplicatingTemplate(null)}
-                className="p-1 text-zinc-400 hover:text-white rounded-lg cursor-pointer"
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-4 bg-[#12100e] border border-[#302722] rounded-xl space-y-1.5">
-              <span className="font-bold text-sm text-[#fcf8f5] block">{duplicatingTemplate.name}</span>
-              <p className="text-xs text-[#a89c93]">
+            <div className="p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl space-y-1.5">
+              <span className="font-bold text-sm text-[var(--text-main)] block">{duplicatingTemplate.name}</span>
+              <p className="text-xs text-[var(--text-muted)]">
                 {duplicatingTemplate.stages.length} etapas • {countTemplateItems(duplicatingTemplate)} itens
               </p>
             </div>
 
-            <p className="text-xs text-[#a89c93] leading-relaxed">
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
               Para personalizar este template, o sistema criará uma cópia exclusiva para o seu escritório. O template original permanecerá intacto.
             </p>
 
-            <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#302722]">
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-[var(--border-color)]">
               <button
                 onClick={() => setDuplicatingTemplate(null)}
-                className="px-4 py-2 rounded-xl border border-[#3d342f] text-xs font-bold text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#25201d] transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-[var(--border-color)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
               >
                 Cancelar
               </button>
@@ -906,15 +906,15 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
       {/* MODAL 3: DETALHES DA TAREFA (Image 2) */}
       {editingTask && selectedTpl && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1c1815] border border-[#302722] rounded-2xl p-6 max-w-lg w-full space-y-5 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-[#302722] pb-3">
-              <h3 className="font-serif font-bold text-[#fcf8f5] text-base flex items-center gap-2">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 max-w-lg w-full space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+              <h3 className="font-serif font-bold text-[var(--text-main)] text-base flex items-center gap-2">
                 <Edit3 className="w-5 h-5 text-[var(--theme-primary)]" />
                 Detalhes da tarefa
               </h3>
               <button
                 onClick={() => setEditingTask(null)}
-                className="p-1 text-zinc-400 hover:text-white rounded-lg cursor-pointer"
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -923,7 +923,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
             <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1 no-scrollbar">
               {/* Nome da Tarefa */}
               <div>
-                <label className="text-xs font-bold text-[#a89c93] block mb-1">
+                <label className="text-xs font-bold text-[var(--text-muted)] block mb-1">
                   Nome da tarefa *
                 </label>
                 <input
@@ -935,13 +935,13 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                     task: { ...editingTask.task, name: e.target.value }
                   })}
                   placeholder="Ex: Receber dados do cliente, Medição presencial..."
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] disabled:opacity-60"
+                  className="w-full px-3.5 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] disabled:opacity-60"
                 />
               </div>
 
               {/* Etapa Dropdown */}
               <div>
-                <label className="text-xs font-bold text-[#a89c93] block mb-1">
+                <label className="text-xs font-bold text-[var(--text-muted)] block mb-1">
                   Etapa
                 </label>
                 <select
@@ -951,7 +951,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                     ...editingTask,
                     stageId: e.target.value
                   })}
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] disabled:opacity-60"
+                  className="w-full px-3.5 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] disabled:opacity-60"
                 >
                   {(selectedTpl.stages as TemplateStage[]).map(stg => (
                     <option key={stg.id} value={stg.id}>{stg.name}</option>
@@ -961,7 +961,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
 
               {/* Descrição da Tarefa */}
               <div>
-                <label className="text-xs font-bold text-[#a89c93] block mb-1">
+                <label className="text-xs font-bold text-[var(--text-muted)] block mb-1">
                   Descrição da tarefa
                 </label>
                 <textarea
@@ -973,19 +973,19 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                     task: { ...editingTask.task, description: e.target.value }
                   })}
                   placeholder="Instruções detalhadas, critérios de execução, orientações para a equipe..."
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] resize-none disabled:opacity-60"
+                  className="w-full px-3.5 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] resize-none disabled:opacity-60"
                 />
               </div>
 
               {/* Duração e Cronograma Section */}
-              <div className="p-4 bg-[#12100e] border border-[#302722] rounded-xl space-y-3">
+              <div className="p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl space-y-3">
                 <span className="text-xs font-bold text-[var(--theme-primary)] block">
                   Duração e cronograma
                 </span>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-semibold text-[#a89c93] block mb-1">
+                    <label className="text-[11px] font-semibold text-[var(--text-muted)] block mb-1">
                       Duração estimada (0 = sem data)
                     </label>
                     <input
@@ -997,12 +997,12 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                         ...editingTask,
                         task: { ...editingTask.task, estimatedDays: parseInt(e.target.value) || 0 }
                       })}
-                      className="w-full px-3 py-1.5 rounded-lg bg-[#1c1815] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] disabled:opacity-60"
+                      className="w-full px-3 py-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-color)] text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] disabled:opacity-60"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold text-[#a89c93] block mb-1">
+                    <label className="text-[11px] font-semibold text-[var(--text-muted)] block mb-1">
                       Contagem
                     </label>
                     <select
@@ -1012,7 +1012,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                         ...editingTask,
                         task: { ...editingTask.task, dayType: e.target.value as 'business' | 'calendar' }
                       })}
-                      className="w-full px-3 py-1.5 rounded-lg bg-[#1c1815] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] disabled:opacity-60"
+                      className="w-full px-3 py-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-color)] text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] disabled:opacity-60"
                     >
                       <option value="business">Dias úteis</option>
                       <option value="calendar">Dias corridos</option>
@@ -1022,7 +1022,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
 
                 {/* Modo de Início Toggle */}
                 <div>
-                  <label className="text-[11px] font-semibold text-[#a89c93] block mb-1.5">
+                  <label className="text-[11px] font-semibold text-[var(--text-muted)] block mb-1.5">
                     Modo de início
                   </label>
                   <div className="flex items-center gap-2">
@@ -1036,7 +1036,7 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                       className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold border transition-all ${
                         editingTask.task.startMode === 'automatic' || !editingTask.task.startMode
                           ? 'bg-[var(--theme-primary)]/20 border-[var(--theme-primary)] text-[var(--theme-primary)]'
-                          : 'bg-[#1c1815] border-[#3d342f] text-[#a89c93]'
+                          : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)]'
                       }`}
                     >
                       Automático (início do projeto)
@@ -1051,13 +1051,13 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                       className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold border transition-all ${
                         editingTask.task.startMode === 'manual'
                           ? 'bg-[var(--theme-primary)]/20 border-[var(--theme-primary)] text-[var(--theme-primary)]'
-                          : 'bg-[#1c1815] border-[#3d342f] text-[#a89c93]'
+                          : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)]'
                       }`}
                     >
                       Manual
                     </button>
                   </div>
-                  <p className="text-[10px] text-[#a89c93] mt-1.5 leading-tight flex items-start gap-1">
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1.5 leading-tight flex items-start gap-1">
                     <Info className="w-3 h-3 text-[var(--theme-primary)] shrink-0 mt-0.5" />
                     Automático: a data de início é calculada a partir do início do projeto. Manual: a data é definida após a criação do projeto.
                   </p>
@@ -1067,10 +1067,10 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#302722]">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-color)]">
               <button
                 onClick={() => setEditingTask(null)}
-                className="px-4 py-2 rounded-xl border border-[#3d342f] text-xs font-bold text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#25201d] transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-[var(--border-color)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
               >
                 {editingTask.isReadOnly ? 'Fechar' : 'Cancelar'}
               </button>
@@ -1090,13 +1090,13 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
       {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1c1815] border border-rose-500/30 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-[var(--bg-card)] border border-rose-500/30 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shrink-0">
                 <Trash2 className="w-5 h-5 text-rose-400" />
               </div>
               <div>
-                <h3 className="font-serif font-bold text-[#fcf8f5] text-base">
+                <h3 className="font-serif font-bold text-[var(--text-main)] text-base">
                   {confirmDelete.title}
                 </h3>
                 <p className="text-xs text-rose-400/80 mt-0.5 font-medium">
@@ -1105,14 +1105,14 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
               </div>
             </div>
 
-            <p className="text-xs text-[#fcf8f5] leading-relaxed bg-[#12100e] p-3.5 rounded-xl border border-[#302722]">
+            <p className="text-xs text-[var(--text-main)] leading-relaxed bg-[var(--bg-input)] p-3.5 rounded-xl border border-[var(--border-color)]">
               {confirmDelete.message}
             </p>
 
-            <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#302722]">
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-[var(--border-color)]">
               <button
                 onClick={() => setConfirmDelete(null)}
-                className="px-4 py-2 rounded-xl border border-[#3d342f] text-xs font-bold text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#25201d] transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-[var(--border-color)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
               >
                 Cancelar
               </button>

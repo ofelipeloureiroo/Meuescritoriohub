@@ -46,34 +46,34 @@ const DashboardSubscriptions: React.FC<{ users: UserProfile[] }> = ({ users }) =
     { name: 'Atrasados / Bloqueados', value: totalOverdueOrInactive, color: '#f87171' },
   ].filter(d => d.value > 0);
 
-  const renderData = data.length > 0 ? data : [{ name: 'Sem Assinantes', value: 1, color: '#3d342f' }];
+  const renderData = data.length > 0 ? data : [{ name: 'Sem Assinantes', value: 1, color: 'var(--border-color)' }];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
       {/* Cards de Resumo */}
       <div className="col-span-1 space-y-4">
-        <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-6 relative overflow-hidden h-[130px] flex flex-col justify-center">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 relative overflow-hidden h-[130px] flex flex-col justify-center">
           <div className="absolute -top-4 -right-4 p-4 opacity-10">
-            <PieChartIcon className="w-24 h-24 text-[#fcf8f5]" />
+            <PieChartIcon className="w-24 h-24 text-[var(--text-main)]" />
           </div>
-          <h3 className="text-[#a89c93] text-xs font-bold uppercase tracking-wider mb-1">Total de Assinantes</h3>
-          <div className="text-4xl font-serif font-bold text-[#fcf8f5] mb-0.5">{totalSubscribers}</div>
-          <p className="text-[10px] text-[#a89c93]">usuários cadastrados</p>
+          <h3 className="text-[var(--text-muted)] text-xs font-bold uppercase tracking-wider mb-1">Total de Assinantes</h3>
+          <div className="text-4xl font-serif font-bold text-[var(--text-main)] mb-0.5">{totalSubscribers}</div>
+          <p className="text-[10px] text-[var(--text-muted)]">usuários cadastrados</p>
         </div>
         
-        <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-6 relative overflow-hidden h-[130px] flex flex-col justify-center">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 relative overflow-hidden h-[130px] flex flex-col justify-center">
           <div className="absolute -top-4 -right-4 p-4 opacity-10">
             <TrendingUp className="w-24 h-24 text-emerald-500" />
           </div>
-          <h3 className="text-[#a89c93] text-xs font-bold uppercase tracking-wider mb-1">Assinaturas Ativas</h3>
+          <h3 className="text-[var(--text-muted)] text-xs font-bold uppercase tracking-wider mb-1">Assinaturas Ativas</h3>
           <div className="text-4xl font-serif font-bold text-emerald-400 mb-0.5">{activeCount}</div>
           <p className="text-[10px] text-emerald-400/70">mensalidades em dia</p>
         </div>
       </div>
 
       {/* Gráfico */}
-      <div className="col-span-1 lg:col-span-2 bg-[#1a1614] border border-[#3d342f] rounded-2xl p-6 flex flex-col">
-        <h3 className="text-[#fcf8f5] font-serif font-bold text-lg mb-2">Status das Assinaturas</h3>
+      <div className="col-span-1 lg:col-span-2 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 flex flex-col">
+        <h3 className="text-[var(--text-main)] font-serif font-bold text-lg mb-2">Status das Assinaturas</h3>
         <div className="flex-1 min-h-[220px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -92,13 +92,13 @@ const DashboardSubscriptions: React.FC<{ users: UserProfile[] }> = ({ users }) =
                 ))}
               </Pie>
               <Tooltip 
-                contentStyle={{ backgroundColor: '#14110f', borderColor: '#3d342f', borderRadius: '0.75rem', color: '#fcf8f5', border: '1px solid #3d342f' }}
-                itemStyle={{ color: '#fcf8f5', fontSize: '14px', fontWeight: 'bold' }}
+                contentStyle={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', borderRadius: '0.75rem', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
+                itemStyle={{ color: 'var(--text-main)', fontSize: '14px', fontWeight: 'bold' }}
               />
               <Legend 
                 verticalAlign="bottom" 
                 height={36}
-                formatter={(value) => <span className="text-[#a89c93] text-xs font-bold ml-1">{value}</span>}
+                formatter={(value) => <span className="text-[var(--text-muted)] text-xs font-bold ml-1">{value}</span>}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -749,20 +749,20 @@ export const AdminUsers: React.FC = () => {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
             <div>
-              <h2 className="text-2xl font-serif font-bold text-[#fcf8f5]">Painel Financeiro & Assinantes</h2>
-              <p className="text-[#a89c93] text-sm">Acompanhe seus assinantes, gerencie liberação após pagamento e permissões do sistema.</p>
+              <h2 className="text-2xl font-serif font-bold text-[var(--text-main)]">Painel Financeiro & Assinantes</h2>
+              <p className="text-[var(--text-muted)] text-sm">Acompanhe seus assinantes, gerencie liberação após pagamento e permissões do sistema.</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setActiveAdminTab('finance')}
-                className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+                className="px-4 py-2 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
               >
                 <span>Controle Financeiro</span>
               </button>
               <button
                 onClick={handleManualRefresh}
                 disabled={refreshing}
-                className="px-4 py-2 bg-[#241e1b] hover:bg-[#322a26] text-[#fcf8f5] border border-[#3d342f] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)] rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 text-[var(--theme-primary)] ${refreshing ? 'animate-spin' : ''}`} />
                 <span>{refreshing ? 'Sincronizando...' : 'Atualizar Lista'}</span>
@@ -795,16 +795,16 @@ export const AdminUsers: React.FC = () => {
                 </span>
               </div>
     
-              <p className="text-xs text-[#d1c7bd]">
+              <p className="text-xs text-[var(--text-muted)]">
                 Os usuários abaixo fizeram cadastro ou login e estão aguardando você confirmar o pagamento. Escolha a duração para liberar o acesso:
               </p>
     
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {pendingRequests.map((pUser) => (
-                  <div key={pUser.uid} className="bg-[#12100e] border border-[#3d342f] rounded-xl p-4 flex flex-col justify-between gap-3 shadow-md">
+                  <div key={pUser.uid} className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl p-4 flex flex-col justify-between gap-3 shadow-md">
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-[#fcf8f5]">{pUser.name || 'Novo Usuário'}</span>
+                        <span className="font-bold text-xs text-[var(--text-main)]">{pUser.name || 'Novo Usuário'}</span>
                         <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
                           Pendente
                         </span>
@@ -812,13 +812,13 @@ export const AdminUsers: React.FC = () => {
                       <div className="text-xs font-mono text-[var(--theme-primary)] font-bold truncate">
                         {pUser.email}
                       </div>
-                      <div className="text-[10px] text-[#a89c93]">
+                      <div className="text-[10px] text-[var(--text-muted)]">
                         Cadastrado em: {pUser.createdAt ? new Date(pUser.createdAt).toLocaleDateString('pt-BR') : 'Hoje'}
                       </div>
                     </div>
     
-                    <div className="space-y-2 pt-2 border-t border-[#2a2420]">
-                      <div className="text-[10px] font-bold text-[#a89c93] uppercase tracking-wider">Selecione o Tempo da Assinatura:</div>
+                    <div className="space-y-2 pt-2 border-t border-[var(--border-color)]">
+                      <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Selecione o Tempo da Assinatura:</div>
                       <div className="grid grid-cols-3 gap-1.5">
                         <button
                           onClick={() => approveWithDuration(pUser.uid, '1month')}
@@ -845,7 +845,7 @@ export const AdminUsers: React.FC = () => {
                             defaultDate.setMonth(defaultDate.getMonth() + 1);
                             setCustomDateInput(defaultDate.toISOString().split('T')[0]);
                           }}
-                          className="py-2 px-2 bg-[#2a2420] hover:bg-[#382f2a] text-[#fcf8f5] border border-[#3d342f] font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer"
+                          className="py-2 px-2 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)] font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer"
                           title="Definir Data Personalizada"
                         >
                           <Calendar className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
@@ -868,10 +868,10 @@ export const AdminUsers: React.FC = () => {
           )}
 
           {/* Bar for Manual Approval by Email */}
-          <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 space-y-3">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-[var(--theme-primary)]" />
-              <h3 className="text-xs font-bold text-[#fcf8f5] uppercase tracking-wider">
+              <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">
                 Liberar Assinatura Manualmente por E-mail
               </h3>
             </div>
@@ -882,12 +882,12 @@ export const AdminUsers: React.FC = () => {
                 onChange={(e) => setManualEmailInput(e.target.value)}
                 placeholder="Digite o e-mail do assinante (ex: cliente@email.com)"
                 required
-                className="flex-1 w-full bg-[#12100e] border border-[#3d342f] rounded-xl px-3.5 py-2 text-xs text-[#fcf8f5] placeholder-[#8c827a] focus:outline-none focus:border-[var(--theme-primary)]"
+                className="flex-1 w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3.5 py-2 text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-primary)]"
               />
               <select
                 value={manualDuration}
                 onChange={(e) => setManualDuration(e.target.value as '1month' | '1year')}
-                className="bg-[#12100e] border border-[#3d342f] rounded-xl px-3 py-2 text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
+                className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
               >
                 <option value="1month">Duração: 1 Mês (30 dias)</option>
                 <option value="1year">Duração: 1 Ano (365 dias)</option>
@@ -920,20 +920,20 @@ export const AdminUsers: React.FC = () => {
           <DashboardSubscriptions users={users} />
 
           {/* Filter and Search Bar */}
-      <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a89c93]" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
             type="text"
             placeholder="Buscar por email ou ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5] placeholder-[#8c827a] focus:outline-none focus:border-[var(--theme-primary)]"
+            className="w-full pl-10 pr-4 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-primary)]"
           />
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-          <span className="text-xs text-[#a89c93] font-medium whitespace-nowrap">Status:</span>
+          <span className="text-xs text-[var(--text-muted)] font-medium whitespace-nowrap">Status:</span>
           {(['all', 'active', 'pending', 'inactive'] as const).map((st) => (
             <button
               key={st}
@@ -941,7 +941,7 @@ export const AdminUsers: React.FC = () => {
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                 statusFilter === st
                   ? 'bg-[var(--theme-primary)] text-black font-bold'
-                  : 'bg-[#12100e] text-[#a89c93] hover:text-[#fcf8f5] border border-[#3d342f]'
+                  : 'bg-[var(--bg-input)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-color)]'
               }`}
             >
               {st === 'all' && 'Todos'}
@@ -954,35 +954,35 @@ export const AdminUsers: React.FC = () => {
       </div>
 
       {/* Users Table */}
-      <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-[#14110f] border-b border-[#3d342f]">
+            <thead className="bg-[var(--bg-body)] border-b border-[var(--border-color)]">
               <tr>
-                <th className="px-6 py-4 text-xs font-bold text-[#a89c93] uppercase tracking-wider">Usuário / Email</th>
-                <th className="px-6 py-4 text-xs font-bold text-[#a89c93] uppercase tracking-wider">Função</th>
-                <th className="px-6 py-4 text-xs font-bold text-[#a89c93] uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-[#a89c93] uppercase tracking-wider">Vencimento da Assinatura</th>
-                <th className="px-6 py-4 text-xs font-bold text-[#a89c93] uppercase tracking-wider text-right">Ações</th>
+                <th className="px-6 py-4 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Usuário / Email</th>
+                <th className="px-6 py-4 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Função</th>
+                <th className="px-6 py-4 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Vencimento da Assinatura</th>
+                <th className="px-6 py-4 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#3d342f]">
+            <tbody className="divide-y divide-[var(--border-color)]">
               {filteredUsers.map((u) => {
                 const isOverdue = u.subscriptionDueDate && new Date(u.subscriptionDueDate) < new Date();
 
                 return (
-                  <tr key={u.uid} className="hover:bg-[#14110f] transition-colors">
+                  <tr key={u.uid} className="hover:bg-[var(--bg-body)] transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#241e1b] border border-[#3d342f] flex items-center justify-center shrink-0 text-[var(--theme-primary)] font-bold font-serif text-sm">
+                        <div className="w-10 h-10 rounded-full bg-[var(--bg-card-secondary)] border border-[var(--border-color)] flex items-center justify-center shrink-0 text-[var(--theme-primary)] font-bold font-serif text-sm">
                           {(u.email || 'U').slice(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-sm font-bold text-[#fcf8f5] truncate">
+                          <div className="text-sm font-bold text-[var(--text-main)] truncate">
                             {u.name ? `${u.name} · ${u.email}` : u.email}
                           </div>
                           <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                            <span className="text-[10px] text-[#a89c93] font-mono">
+                            <span className="text-[10px] text-[var(--text-muted)] font-mono">
                               ID: {u.uid.slice(0, 10)}...
                             </span>
                             {u.role === 'admin' ? (
@@ -1003,7 +1003,7 @@ export const AdminUsers: React.FC = () => {
                               </span>
                             )}
                             {u.notes && (
-                              <span className="text-[10px] text-[#8c827a] italic">
+                              <span className="text-[10px] text-[var(--text-muted)] italic">
                                 ({u.notes})
                               </span>
                             )}
@@ -1016,7 +1016,7 @@ export const AdminUsers: React.FC = () => {
                       <select
                         value={u.role || 'user'}
                         onChange={(e) => updateRole(u.uid, e.target.value as 'admin' | 'user')}
-                        className="bg-[#12100e] border border-[#3d342f] rounded-lg px-3 py-1.5 text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
+                        className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-1.5 text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
                       >
                         <option value="user">Cliente / Assinante</option>
                         <option value="admin">Administrador</option>
@@ -1045,7 +1045,7 @@ export const AdminUsers: React.FC = () => {
 
                     <td className="px-6 py-4">
                       {u.role === 'admin' ? (
-                        <span className="text-xs text-[#a89c93] font-semibold">Acesso Vitalício</span>
+                        <span className="text-xs text-[var(--text-muted)] font-semibold">Acesso Vitalício</span>
                       ) : u.joinedOwnerUid || profile?.collaborators?.some(c => c.email?.toLowerCase() === u.email?.toLowerCase()) ? (
                         <span className="text-xs text-blue-400 font-semibold flex items-center gap-1">
                           👥 Incluso na Equipe
@@ -1053,12 +1053,12 @@ export const AdminUsers: React.FC = () => {
                       ) : (
                         <div>
                           {u.subscriptionDueDate ? (
-                            <div className={`text-xs font-semibold ${isOverdue ? 'text-red-400' : 'text-[#fcf8f5]'}`}>
+                            <div className={`text-xs font-semibold ${isOverdue ? 'text-red-400' : 'text-[var(--text-main)]'}`}>
                               {new Date(u.subscriptionDueDate).toLocaleDateString('pt-BR')}
                               {isOverdue && <span className="block text-[10px] uppercase text-red-500 font-bold">Atrasado</span>}
                             </div>
                           ) : (
-                            <span className="text-xs text-[#a89c93]">Sem data</span>
+                            <span className="text-xs text-[var(--text-muted)]">Sem data</span>
                           )}
                         </div>
                       )}
@@ -1073,7 +1073,7 @@ export const AdminUsers: React.FC = () => {
                               <>
                                 <button
                                   onClick={() => approveWithDuration(u.uid, '1month')}
-                                  className="px-2.5 py-1.5 bg-[#1c1815] border border-[#3d342f] hover:border-[var(--theme-primary)] text-[var(--theme-primary)] text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                                  className="px-2.5 py-1.5 bg-[var(--bg-card-secondary)] border border-[var(--border-color)] hover:border-[var(--theme-primary)] text-[var(--theme-primary)] text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
                                   title="Adicionar ou Renovar +1 Mês (30 Dias)"
                                 >
                                   +1 Mês
@@ -1081,7 +1081,7 @@ export const AdminUsers: React.FC = () => {
 
                                 <button
                                   onClick={() => approveWithDuration(u.uid, '1year')}
-                                  className="px-2.5 py-1.5 bg-[#1c1815] border border-[#3d342f] hover:border-emerald-500 text-emerald-400 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                                  className="px-2.5 py-1.5 bg-[var(--bg-card-secondary)] border border-[var(--border-color)] hover:border-emerald-500 text-emerald-400 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
                                   title="Adicionar ou Renovar +1 Ano (365 Dias)"
                                 >
                                   +1 Ano
@@ -1093,7 +1093,7 @@ export const AdminUsers: React.FC = () => {
                                     const curDate = u.subscriptionDueDate ? new Date(u.subscriptionDueDate) : new Date();
                                     setCustomDateInput(curDate.toISOString().split('T')[0]);
                                   }}
-                                  className="p-1.5 bg-[#1c1815] border border-[#3d342f] hover:bg-[#25201d] text-[#a89c93] hover:text-[#fcf8f5] rounded-lg transition-colors cursor-pointer"
+                                  className="p-1.5 bg-[var(--bg-card-secondary)] border border-[var(--border-color)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-lg transition-colors cursor-pointer"
                                   title="Definir Data de Vencimento Personalizada"
                                 >
                                   <Calendar className="w-3.5 h-3.5" />
@@ -1124,7 +1124,7 @@ export const AdminUsers: React.FC = () => {
 
                                 <button
                                   onClick={() => handleReactivateUser(u, '1year')}
-                                  className="px-2.5 py-1.5 bg-[#1c1815] border border-emerald-500/30 hover:border-emerald-500 text-emerald-400 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                                  className="px-2.5 py-1.5 bg-[var(--bg-card-secondary)] border border-emerald-500/30 hover:border-emerald-500 text-emerald-400 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
                                   title="Reativar assinatura por 1 Ano"
                                 >
                                   +1 Ano
@@ -1143,7 +1143,7 @@ export const AdminUsers: React.FC = () => {
                                 </button>
                                 <button
                                   onClick={() => handleUnsubscribeUser(u)}
-                                  className="px-2.5 py-1.5 bg-[#241e1b] hover:bg-red-500/20 text-[#a89c93] hover:text-red-400 border border-[#3d342f] text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                                  className="px-2.5 py-1.5 bg-[var(--bg-card-secondary)] hover:bg-red-500/20 text-[var(--text-muted)] hover:text-red-400 border border-[var(--border-color)] text-xs font-bold rounded-lg transition-colors cursor-pointer"
                                 >
                                   Recusar
                                 </button>
@@ -1152,7 +1152,7 @@ export const AdminUsers: React.FC = () => {
 
                             <button
                               onClick={() => handleDeleteUser(u.uid, u.email)}
-                              className="p-1.5 text-[#a89c93] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                              className="p-1.5 text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
                               title="Remover Usuário"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -1167,7 +1167,7 @@ export const AdminUsers: React.FC = () => {
 
               {filteredUsers.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-[#a89c93] text-sm">
+                  <td colSpan={5} className="px-6 py-12 text-center text-[var(--text-muted)] text-sm">
                     Nenhum usuário ou assinante encontrado para esta busca.
                   </td>
                 </tr>
@@ -1180,27 +1180,27 @@ export const AdminUsers: React.FC = () => {
       {/* Custom Date Modal */}
       {selectedUserForModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-6 w-full max-w-md space-y-5 shadow-2xl relative animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-[#3d342f] pb-3">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 w-full max-w-md space-y-5 shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
               <div className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-[var(--theme-primary)]" />
-                <h3 className="font-serif font-bold text-lg text-[#fcf8f5]">Definir Vencimento do Assinante</h3>
+                <h3 className="font-serif font-bold text-lg text-[var(--text-main)]">Definir Vencimento do Assinante</h3>
               </div>
               <button
                 onClick={() => setSelectedUserForModal(null)}
-                className="p-1 text-[#a89c93] hover:text-[#fcf8f5] rounded-lg transition-colors cursor-pointer"
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-1 bg-[#12100e] border border-[#3d342f] p-3 rounded-xl">
-              <div className="text-[10px] text-[#a89c93] font-bold uppercase tracking-wider">Assinante Selecionado:</div>
-              <div className="text-sm font-bold text-[#fcf8f5] font-mono">{selectedUserForModal.email}</div>
+            <div className="space-y-1 bg-[var(--bg-input)] border border-[var(--border-color)] p-3 rounded-xl">
+              <div className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Assinante Selecionado:</div>
+              <div className="text-sm font-bold text-[var(--text-main)] font-mono">{selectedUserForModal.email}</div>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-[#a89c93] uppercase tracking-wider">Atalhos Rápido de Duração:</label>
+              <label className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Atalhos Rápido de Duração:</label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -1209,7 +1209,7 @@ export const AdminUsers: React.FC = () => {
                     d.setDate(d.getDate() + 30);
                     setCustomDateInput(d.toISOString().split('T')[0]);
                   }}
-                  className="py-2 px-3 bg-[#12100e] hover:bg-[#25201d] border border-[#3d342f] hover:border-[var(--theme-primary)] rounded-xl text-xs font-bold text-[#fcf8f5] transition-colors cursor-pointer"
+                  className="py-2 px-3 bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-[var(--theme-primary)] rounded-xl text-xs font-bold text-[var(--text-main)] transition-colors cursor-pointer"
                 >
                   1 Mês (30 Dias)
                 </button>
@@ -1220,7 +1220,7 @@ export const AdminUsers: React.FC = () => {
                     d.setDate(d.getDate() + 90);
                     setCustomDateInput(d.toISOString().split('T')[0]);
                   }}
-                  className="py-2 px-3 bg-[#12100e] hover:bg-[#25201d] border border-[#3d342f] hover:border-[var(--theme-primary)] rounded-xl text-xs font-bold text-[#fcf8f5] transition-colors cursor-pointer"
+                  className="py-2 px-3 bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-[var(--theme-primary)] rounded-xl text-xs font-bold text-[var(--text-main)] transition-colors cursor-pointer"
                 >
                   3 Meses (90 Dias)
                 </button>
@@ -1231,7 +1231,7 @@ export const AdminUsers: React.FC = () => {
                     d.setDate(d.getDate() + 180);
                     setCustomDateInput(d.toISOString().split('T')[0]);
                   }}
-                  className="py-2 px-3 bg-[#12100e] hover:bg-[#25201d] border border-[#3d342f] hover:border-[var(--theme-primary)] rounded-xl text-xs font-bold text-[#fcf8f5] transition-colors cursor-pointer"
+                  className="py-2 px-3 bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-[var(--theme-primary)] rounded-xl text-xs font-bold text-[var(--text-main)] transition-colors cursor-pointer"
                 >
                   6 Meses (180 Dias)
                 </button>
@@ -1242,7 +1242,7 @@ export const AdminUsers: React.FC = () => {
                     d.setDate(d.getDate() + 365);
                     setCustomDateInput(d.toISOString().split('T')[0]);
                   }}
-                  className="py-2 px-3 bg-[#12100e] hover:bg-[#25201d] border border-[#3d342f] hover:border-emerald-500 rounded-xl text-xs font-bold text-[#fcf8f5] transition-colors cursor-pointer"
+                  className="py-2 px-3 bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-emerald-500 rounded-xl text-xs font-bold text-[var(--text-main)] transition-colors cursor-pointer"
                 >
                   1 Ano (365 Dias)
                 </button>
@@ -1250,20 +1250,20 @@ export const AdminUsers: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-[#a89c93] uppercase tracking-wider">Escolher Data de Vencimento Específica:</label>
+              <label className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Escolher Data de Vencimento Específica:</label>
               <input
                 type="date"
                 value={customDateInput}
                 onChange={(e) => setCustomDateInput(e.target.value)}
-                className="w-full bg-[#12100e] border border-[#3d342f] rounded-xl px-4 py-2.5 text-sm text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#3d342f]">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-color)]">
               <button
                 type="button"
                 onClick={() => setSelectedUserForModal(null)}
-                className="py-2 px-4 rounded-xl bg-[#241e1b] hover:bg-[#322a26] text-[#a89c93] hover:text-[#fcf8f5] text-xs font-bold transition-colors cursor-pointer"
+                className="py-2 px-4 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-bold transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1282,10 +1282,10 @@ export const AdminUsers: React.FC = () => {
       {/* Modal de Confirmação de Exclusão de Usuário */}
       {userToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl relative animate-in fade-in zoom-in duration-200">
             <button
               onClick={() => setUserToDelete(null)}
-              className="absolute top-4 right-4 text-[#a89c93] hover:text-[#fcf8f5] p-1 rounded-lg hover:bg-[#25201d] transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -1295,26 +1295,26 @@ export const AdminUsers: React.FC = () => {
                 <Trash2 className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-[#fcf8f5]">Excluir Usuário</h3>
-                <p className="text-xs text-[#a89c93]">Esta ação removerá o usuário do sistema</p>
+                <h3 className="text-base font-bold text-[var(--text-main)]">Excluir Usuário</h3>
+                <p className="text-xs text-[var(--text-muted)]">Esta ação removerá o usuário do sistema</p>
               </div>
             </div>
 
-            <div className="p-3.5 bg-[#12100e] border border-[#2d2520] rounded-xl space-y-1">
-              <div className="text-xs text-[#fcf8f5] font-semibold">{userToDelete.name || userToDelete.email}</div>
+            <div className="p-3.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl space-y-1">
+              <div className="text-xs text-[var(--text-main)] font-semibold">{userToDelete.name || userToDelete.email}</div>
               <div className="text-xs font-mono text-[var(--theme-primary)]">{userToDelete.email}</div>
             </div>
 
-            <p className="text-xs text-[#ded5cc] leading-relaxed">
-              Tem certeza que deseja excluir o usuário <span className="font-bold text-white">{userToDelete.email}</span>? 
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+              Tem certeza que deseja excluir o usuário <span className="font-bold text-[var(--text-main)]">{userToDelete.email}</span>? 
               A assinatura será cancelada e o registro removido da sua lista de assinantes.
             </p>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#3d342f]">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-color)]">
               <button
                 type="button"
                 onClick={() => setUserToDelete(null)}
-                className="py-2 px-4 rounded-xl bg-[#241e1b] hover:bg-[#322a26] text-[#a89c93] hover:text-[#fcf8f5] text-xs font-bold transition-colors cursor-pointer"
+                className="py-2 px-4 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-bold transition-colors cursor-pointer"
               >
                 Cancelar
               </button>

@@ -227,40 +227,40 @@ export const ListsTab: React.FC = () => {
       {/* HEADER BAR */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-serif font-bold text-[#fcf8f5]">Listas</h1>
-          <p className="text-xs text-[#a89c93] mt-0.5">
+          <h1 className="text-2xl font-serif font-bold text-[var(--text-main)]">Listas</h1>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">
             Lembretes rápidos para o dia a dia do escritório.
           </p>
         </div>
 
         <button
           onClick={handleOpenNewListModal}
-          className="px-4 py-2.5 bg-[#1c352d] hover:bg-[#25463c] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer border border-[#2d5246]"
+          className="px-4 py-2.5 bg-[var(--theme-primary)] text-black font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer hover:brightness-110"
         >
-          <Plus className="w-4 h-4 text-[#85e3c1]" />
+          <Plus className="w-4 h-4 text-black" />
           <span>Nova lista</span>
         </button>
       </div>
 
       {/* EMPTY STATE */}
       {lists.length === 0 ? (
-        <div className="bg-[#1a1614] border border-[#302722] rounded-2xl p-12 text-center max-w-2xl mx-auto my-8 space-y-5 shadow-xl">
-          <div className="w-16 h-16 rounded-full bg-[#25201d] border border-[#3d342f] text-[#85e3c1] flex items-center justify-center mx-auto shadow-inner">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-12 text-center max-w-2xl mx-auto my-8 space-y-5 shadow-xl">
+          <div className="w-16 h-16 rounded-full bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-[var(--theme-primary)] flex items-center justify-center mx-auto shadow-inner">
             <PlusCircle className="w-8 h-8" />
           </div>
 
           <div className="space-y-1.5">
-            <h3 className="text-lg font-serif font-bold text-[#fcf8f5]">Crie sua primeira lista</h3>
-            <p className="text-xs text-[#a89c93] max-w-sm mx-auto leading-relaxed">
+            <h3 className="text-lg font-serif font-bold text-[var(--text-main)]">Crie sua primeira lista</h3>
+            <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto leading-relaxed">
               Compras, materiais ou lembretes em poucos toques.
             </p>
           </div>
 
           <button
             onClick={handleOpenNewListModal}
-            className="px-6 py-3 bg-[#1c352d] hover:bg-[#25463c] text-white rounded-xl text-xs font-bold transition-all shadow-lg cursor-pointer border border-[#2d5246] inline-flex items-center gap-2"
+            className="px-6 py-3 bg-[var(--theme-primary)] text-black font-bold rounded-xl text-xs transition-all shadow-lg cursor-pointer inline-flex items-center gap-2 hover:brightness-110"
           >
-            <Plus className="w-4 h-4 text-[#85e3c1]" />
+            <Plus className="w-4 h-4 text-black" />
             <span>Criar lista</span>
           </button>
         </div>
@@ -268,15 +268,15 @@ export const ListsTab: React.FC = () => {
         /* MAIN LISTS CONTENT */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* SIDEBAR LIST OF LISTS */}
-          <div className="lg:col-span-4 bg-[#1a1614] border border-[#302722] rounded-2xl p-4 space-y-3">
+          <div className="lg:col-span-4 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 space-y-3">
             <div className="relative">
-              <Search className="w-4 h-4 text-[#8c7e73] absolute left-3 top-2.5" />
+              <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-2.5" />
               <input
                 type="text"
                 placeholder="Buscar lista..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-[#12100e] border border-[#382f29] rounded-xl text-xs text-[#fcf8f5] placeholder-[#73655c] focus:outline-none focus:border-[#85e3c1]"
+                className="w-full pl-9 pr-3 py-2 bg-[var(--bg-body)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] placeholder-[var(--text-muted)]/60 focus:outline-none focus:border-[var(--theme-primary)]"
               />
             </div>
 
@@ -293,24 +293,24 @@ export const ListsTab: React.FC = () => {
                     onClick={() => setActiveListId(list.id)}
                     className={`group p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                       isActive
-                        ? 'bg-[#25201d] border-[var(--theme-primary)] text-[#fcf8f5] shadow-md'
-                        : 'bg-[#12100e]/70 border-[#2a221d] text-[#a89c93] hover:bg-[#1f1a17] hover:text-[#fcf8f5]'
+                        ? 'bg-[var(--bg-card-secondary)] border-[var(--theme-primary)] text-[var(--text-main)] shadow-md'
+                        : 'bg-[var(--bg-body)]/70 border-[var(--border-color)] text-[var(--text-muted)] hover:bg-[var(--bg-card-secondary)] hover:text-[var(--text-main)]'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div
                         className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
                           isActive
-                            ? 'bg-[#1c352d] border-[#2d5246] text-[#85e3c1]'
-                            : 'bg-[#1a1614] border-[#382f29] text-[#a89c93]'
+                            ? 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)]/30 text-[var(--theme-primary)]'
+                            : 'bg-[var(--bg-card-secondary)] border-[var(--border-color)] text-[var(--text-muted)]'
                         }`}
                       >
                         <IconComp className="w-4 h-4" />
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-xs truncate text-[#fcf8f5]">{list.title}</p>
-                        <p className="text-[10px] text-[#8c7e73] mt-0.5">
+                        <p className="font-bold text-xs truncate text-[var(--text-main)]">{list.title}</p>
+                        <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
                           {totalCount === 0
                             ? 'Nenhum item'
                             : `${completedCount}/${totalCount} concluídos`}
@@ -321,14 +321,14 @@ export const ListsTab: React.FC = () => {
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={(e) => handleOpenEditListModal(list, e)}
-                        className="p-1.5 text-[#8c7e73] hover:text-[#fcf8f5] hover:bg-[#2d2520] rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)] rounded-lg transition-colors cursor-pointer"
                         title="Editar lista"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={(e) => handleDeleteList(list.id, e)}
-                        className="p-1.5 text-rose-400/80 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-rose-500/80 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
                         title="Excluir lista"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -342,23 +342,23 @@ export const ListsTab: React.FC = () => {
 
           {/* ACTIVE LIST DETAIL PANEL */}
           {activeList && (
-            <div className="lg:col-span-8 bg-[#1a1614] border border-[#302722] rounded-2xl p-6 space-y-6">
+            <div className="lg:col-span-8 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 space-y-6">
               {/* LIST HEADER */}
-              <div className="flex items-center justify-between pb-4 border-b border-[#302722]">
+              <div className="flex items-center justify-between pb-4 border-b border-[var(--border-color)]">
                 <div className="flex items-center gap-3">
                   {(() => {
                     const ActiveIcon = getIconComponent(activeList.iconId);
                     return (
-                      <div className="w-11 h-11 rounded-2xl bg-[#1c352d] border border-[#2d5246] text-[#85e3c1] flex items-center justify-center shrink-0 shadow-md">
+                      <div className="w-11 h-11 rounded-2xl bg-[var(--theme-primary)]/10 border border-[var(--theme-primary)]/30 text-[var(--theme-primary)] flex items-center justify-center shrink-0 shadow-md">
                         <ActiveIcon className="w-5 h-5" />
                       </div>
                     );
                   })()}
                   <div>
-                    <h2 className="text-lg font-serif font-bold text-[#fcf8f5]">
+                    <h2 className="text-lg font-serif font-bold text-[var(--text-main)]">
                       {activeList.title}
                     </h2>
-                    <p className="text-xs text-[#a89c93] mt-0.5">
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5">
                       {activeList.items.length === 0
                         ? 'Lista vazia. Adicione lembretes abaixo.'
                         : `${activeList.items.filter((i) => i.completed).length} de ${
@@ -371,14 +371,14 @@ export const ListsTab: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={(e) => handleOpenEditListModal(activeList, e)}
-                    className="p-2 border border-[#382f29] text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#25201d] rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+                    className="p-2 border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)] rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Editar</span>
                   </button>
                   <button
                     onClick={(e) => handleDeleteList(activeList.id, e)}
-                    className="p-2 border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+                    className="p-2 border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Excluir</span>
@@ -393,14 +393,14 @@ export const ListsTab: React.FC = () => {
                   placeholder="Adicionar novo item ou lembrete..."
                   value={newItemText}
                   onChange={(e) => setNewItemText(e.target.value)}
-                  className="flex-1 px-4 py-2.5 bg-[#12100e] border border-[#382f29] rounded-xl text-xs text-[#fcf8f5] placeholder-[#73655c] focus:outline-none focus:border-[#85e3c1] transition-all"
+                  className="flex-1 px-4 py-2.5 bg-[var(--bg-body)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] placeholder-[var(--text-muted)]/60 focus:outline-none focus:border-[var(--theme-primary)] transition-all"
                 />
                 <button
                   type="submit"
                   disabled={!newItemText.trim()}
-                  className="px-5 py-2.5 bg-[#1c352d] hover:bg-[#25463c] disabled:opacity-40 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-[#2d5246]"
+                  className="px-5 py-2.5 bg-[var(--theme-primary)] hover:brightness-110 disabled:opacity-40 text-black font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer border border-[var(--border-color)]"
                 >
-                  <Plus className="w-4 h-4 text-[#85e3c1]" />
+                  <Plus className="w-4 h-4 text-black" />
                   <span>Adicionar</span>
                 </button>
               </form>
@@ -408,8 +408,8 @@ export const ListsTab: React.FC = () => {
               {/* ITEMS LIST */}
               <div className="space-y-2 pt-2">
                 {activeList.items.length === 0 ? (
-                  <div className="p-8 text-center bg-[#12100e] rounded-xl border border-dashed border-[#302722]">
-                    <p className="text-xs text-[#8c7e73]">
+                  <div className="p-8 text-center bg-[var(--bg-body)] rounded-xl border border-dashed border-[var(--border-color)]">
+                    <p className="text-xs text-[var(--text-muted)]">
                       Nenhum item nesta lista ainda. Digite um lembrete acima.
                     </p>
                   </div>
@@ -421,8 +421,8 @@ export const ListsTab: React.FC = () => {
                         onClick={() => handleToggleItem(activeList.id, item.id)}
                         className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                           item.completed
-                            ? 'bg-[#12100e]/50 border-[#25201d] text-[#73655c]'
-                            : 'bg-[#12100e] border-[#302722] text-[#fcf8f5] hover:border-[#3d342f]'
+                            ? 'bg-[var(--bg-body)]/50 border-[var(--border-color)]/50 text-[var(--text-muted)]/60'
+                            : 'bg-[var(--bg-body)] border border-[var(--border-color)] text-[var(--text-main)] hover:border-[var(--theme-primary)]/30'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -434,8 +434,8 @@ export const ListsTab: React.FC = () => {
                             }}
                             className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-colors ${
                               item.completed
-                                ? 'bg-[#1c352d] text-[#85e3c1] border border-[#2d5246]'
-                                : 'border border-[#3d342f] text-transparent hover:border-[#85e3c1]'
+                                ? 'bg-[var(--theme-primary)] text-black border border-[var(--theme-primary)]/50'
+                                : 'border border-[var(--border-color)] text-transparent hover:border-[var(--theme-primary)]'
                             }`}
                           >
                             <Check className="w-3.5 h-3.5 stroke-[3]" />
@@ -443,7 +443,7 @@ export const ListsTab: React.FC = () => {
 
                           <span
                             className={`text-xs leading-relaxed select-none ${
-                              item.completed ? 'line-through text-[#73655c]' : 'text-[#fcf8f5]'
+                              item.completed ? 'line-through text-[var(--text-muted)]/60' : 'text-[var(--text-main)]'
                             }`}
                           >
                             {item.text}
@@ -456,7 +456,7 @@ export const ListsTab: React.FC = () => {
                             e.stopPropagation();
                             handleDeleteItem(activeList.id, item.id);
                           }}
-                          className="p-1 text-[#73655c] hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors cursor-pointer"
+                          className="p-1 text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 rounded transition-colors cursor-pointer"
                           title="Remover item"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -474,14 +474,14 @@ export const ListsTab: React.FC = () => {
       {/* MODAL NOVA / EDITAR LISTA */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1a1614] border border-[#302722] rounded-2xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-[#302722]">
-              <h3 className="font-serif font-bold text-[#fcf8f5] text-base">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color)]">
+              <h3 className="font-serif font-bold text-[var(--text-main)] text-base">
                 {editingList ? 'Editar lista' : 'Nova lista'}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 text-[#8c7e73] hover:text-[#fcf8f5] rounded-lg transition-colors cursor-pointer"
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -490,7 +490,7 @@ export const ListsTab: React.FC = () => {
             <form onSubmit={handleSaveList} className="space-y-5">
               {/* INPUT NOME DA LISTA */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#fcf8f5] block">Nome da lista</label>
+                <label className="text-xs font-bold text-[var(--text-main)] block">Nome da lista</label>
                 <input
                   type="text"
                   placeholder="Nome da lista"
@@ -498,14 +498,14 @@ export const ListsTab: React.FC = () => {
                   onChange={(e) => setListNameInput(e.target.value)}
                   autoFocus
                   required
-                  className="w-full px-3.5 py-2.5 bg-[#12100e] border border-[#382f29] rounded-xl text-xs text-[#fcf8f5] placeholder-[#73655c] focus:outline-none focus:border-[#85e3c1]"
+                  className="w-full px-3.5 py-2.5 bg-[var(--bg-body)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] placeholder-[var(--text-muted)]/60 focus:outline-none focus:border-[var(--theme-primary)]"
                 />
               </div>
 
               {/* ICON SELECTOR GRID */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-[#fcf8f5] block">Ícone</label>
-                <div className="grid grid-cols-5 gap-2 max-h-[220px] overflow-y-auto pr-1 no-scrollbar p-1 bg-[#12100e] rounded-xl border border-[#302722]">
+                <label className="text-xs font-bold text-[var(--text-main)] block">Ícone</label>
+                <div className="grid grid-cols-5 gap-2 max-h-[220px] overflow-y-auto pr-1 no-scrollbar p-1 bg-[var(--bg-body)] rounded-xl border border-[var(--border-color)]">
                   {ICON_OPTIONS.map((opt) => {
                     const IconComp = opt.icon;
                     const isSelected = selectedIconId === opt.id;
@@ -516,8 +516,8 @@ export const ListsTab: React.FC = () => {
                         onClick={() => setSelectedIconId(opt.id)}
                         className={`w-full aspect-square rounded-xl flex items-center justify-center transition-all cursor-pointer border ${
                           isSelected
-                            ? 'bg-[#1c352d] border-[#85e3c1] text-[#85e3c1] shadow-md'
-                            : 'bg-[#1a1614] border-[#2f2722] text-[#8c7e73] hover:text-[#fcf8f5] hover:bg-[#25201d]'
+                            ? 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)] text-[var(--theme-primary)] shadow-md'
+                            : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)]'
                         }`}
                         title={opt.label}
                       >
@@ -529,18 +529,18 @@ export const ListsTab: React.FC = () => {
               </div>
 
               {/* MODAL ACTIONS */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#302722]">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-color)]">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-[#382f29] text-xs font-bold text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#25201d] transition-all cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-[var(--border-color)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)] transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={!listNameInput.trim()}
-                  className="px-5 py-2.5 bg-[#1c352d] hover:bg-[#25463c] disabled:opacity-40 text-white text-xs font-bold rounded-xl transition-all cursor-pointer border border-[#2d5246] shadow-md"
+                  className="px-5 py-2.5 bg-[var(--theme-primary)] hover:brightness-110 disabled:opacity-40 text-black text-xs font-bold rounded-xl transition-all cursor-pointer border border-[var(--border-color)] shadow-md"
                 >
                   Salvar
                 </button>
@@ -553,27 +553,27 @@ export const ListsTab: React.FC = () => {
       {/* CONFIRM DELETE MODAL */}
       {deletingListId && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1a1614] border border-rose-500/30 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+          <div className="bg-[var(--bg-card)] border border-rose-500/30 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shrink-0">
-                <Trash2 className="w-5 h-5 text-rose-400" />
+                <Trash2 className="w-5 h-5 text-rose-500" />
               </div>
               <div>
-                <h3 className="font-serif font-bold text-[#fcf8f5] text-base">Excluir lista</h3>
-                <p className="text-xs text-rose-400/80 mt-0.5 font-medium">
+                <h3 className="font-serif font-bold text-[var(--text-main)] text-base">Excluir lista</h3>
+                <p className="text-xs text-rose-500 mt-0.5 font-medium">
                   Esta ação não pode ser desfeita
                 </p>
               </div>
             </div>
 
-            <p className="text-xs text-[#fcf8f5] leading-relaxed bg-[#12100e] p-3.5 rounded-xl border border-[#302722]">
+            <p className="text-xs text-[var(--text-main)] leading-relaxed bg-[var(--bg-body)] p-3.5 rounded-xl border border-[var(--border-color)]">
               Tem certeza que deseja excluir permanentemente esta lista e todos os seus lembretes?
             </p>
 
-            <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#302722]">
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-[var(--border-color)]">
               <button
                 onClick={() => setDeletingListId(null)}
-                className="px-4 py-2 rounded-xl border border-[#382f29] text-xs font-bold text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#25201d] transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-[var(--border-color)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)] transition-all cursor-pointer"
               >
                 Cancelar
               </button>

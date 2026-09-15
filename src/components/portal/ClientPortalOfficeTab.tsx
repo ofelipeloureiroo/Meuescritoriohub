@@ -174,7 +174,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
     <div className="space-y-6 pb-12">
       
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-[#1c1815] to-[#26201b] border border-[#3d342f] rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[var(--bg-card)] to-[var(--bg-card-secondary)] border border-[var(--border-color)] rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-[var(--theme-primary)]/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
         
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -183,10 +183,10 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Painel de Gestão do Escritório</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#fcf8f5] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[var(--text-main)] tracking-tight">
               Radar do Cliente & Transparência
             </h1>
-            <p className="text-xs sm:text-sm text-[#a89c93] leading-relaxed">
+            <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">
               Crie acessos exclusivos para os clientes acompanharem as etapas dos projetos, baixarem plantas e documentos aprovados, e trocarem mensagens com sua equipe de forma centralizada.
             </p>
           </div>
@@ -208,57 +208,57 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm">
           <div className="w-12 h-12 rounded-xl bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] flex items-center justify-center shrink-0 border border-[var(--theme-primary)]/20">
             <KeyRound className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[11px] font-bold text-[#a89c93] uppercase tracking-wider block">
+            <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
               Portais Ativos
             </span>
-            <span className="text-xl sm:text-2xl font-bold text-[#fcf8f5]">
+            <span className="text-xl sm:text-2xl font-bold text-[var(--text-main)]">
               {activeCount}
             </span>
           </div>
         </div>
 
-        <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-500 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20">
             <FolderOpen className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[11px] font-bold text-[#a89c93] uppercase tracking-wider block">
+            <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
               Projetos no Portal
             </span>
-            <span className="text-xl sm:text-2xl font-bold text-[#fcf8f5]">
+            <span className="text-xl sm:text-2xl font-bold text-[var(--text-main)]">
               {totalProjectsInPortals}
             </span>
           </div>
         </div>
 
-        <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
             <FileText className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[11px] font-bold text-[#a89c93] uppercase tracking-wider block">
+            <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
               Documentos & Plantas
             </span>
-            <span className="text-xl sm:text-2xl font-bold text-[#fcf8f5]">
+            <span className="text-xl sm:text-2xl font-bold text-[var(--text-main)]">
               {totalDocumentsInPortals}
             </span>
           </div>
         </div>
 
-        <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/20">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/20">
             <MessageSquare className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[11px] font-bold text-[#a89c93] uppercase tracking-wider block">
+            <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
               Mensagens Trocadas
             </span>
-            <span className="text-xl sm:text-2xl font-bold text-[#fcf8f5]">
+            <span className="text-xl sm:text-2xl font-bold text-[var(--text-main)]">
               {totalMessages}
             </span>
           </div>
@@ -266,29 +266,29 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-[#a89c93] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             placeholder="Buscar por cliente, projeto ou e-mail..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#12100e] border border-[#3d342f] rounded-xl pl-9 pr-4 py-2 text-xs text-[#fcf8f5] placeholder-[#6b625b] focus:outline-none focus:border-[var(--theme-primary)]"
+            className="w-full bg-[var(--bg-card-secondary)] border border-[var(--border-color)] rounded-xl pl-9 pr-4 py-2 text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-hidden focus:border-[var(--theme-primary)]"
           />
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <span className="text-xs text-[#a89c93] flex items-center gap-1">
+          <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
             <SlidersHorizontal className="w-3.5 h-3.5" /> Status:
           </span>
-          <div className="flex bg-[#12100e] p-1 rounded-xl border border-[#3d342f]">
+          <div className="flex bg-[var(--bg-card-secondary)] p-1 rounded-xl border border-[var(--border-color)]">
             <button
               onClick={() => setStatusFilter('all')}
               className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 statusFilter === 'all'
                   ? 'bg-[var(--theme-primary)] text-black font-bold'
-                  : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
               Todos ({displayPortals.length})
@@ -297,8 +297,8 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
               onClick={() => setStatusFilter('active')}
               className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 statusFilter === 'active'
-                  ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40'
-                  : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                  ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold border border-emerald-500/40'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
               Ativos ({displayPortals.filter(p => p.status === 'active').length})
@@ -307,8 +307,8 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
               onClick={() => setStatusFilter('inactive')}
               className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 statusFilter === 'inactive'
-                  ? 'bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40'
-                  : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                  ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300 font-bold border border-rose-500/40'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
               Suspensos ({displayPortals.filter(p => p.status === 'inactive').length})
@@ -320,18 +320,18 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
       {/* Portals List Cards */}
       <div className="space-y-4">
         {filteredPortals.length === 0 ? (
-          <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-10 sm:p-14 text-center space-y-4 shadow-sm flex flex-col items-center justify-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#241e1b] border border-[#3d342f] text-[var(--theme-primary)] flex items-center justify-center shadow-inner">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-10 sm:p-14 text-center space-y-4 shadow-sm flex flex-col items-center justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-[var(--theme-primary)] flex items-center justify-center shadow-inner">
               <Users className="w-8 h-8 opacity-75 text-[var(--theme-primary)]" />
             </div>
             
             <div className="space-y-1.5 max-w-md">
-              <h3 className="text-base sm:text-lg font-bold text-[#fcf8f5]">
+              <h3 className="text-base sm:text-lg font-bold text-[var(--text-main)]">
                 {clients.length === 0
                   ? 'Nenhum cliente cadastrado no escritório'
                   : 'Nenhum radar encontrado para esta busca'}
               </h3>
-              <p className="text-xs sm:text-sm text-[#a89c93] leading-relaxed">
+              <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">
                 {clients.length === 0
                   ? 'O Radar do Cliente exibe e sincroniza os acessos dos clientes cadastrados no seu escritório. Cadastre seus clientes e vincule projetos para liberar o acompanhamento exclusivo em tempo real.'
                   : 'Tente alterar os termos da busca ou os filtros de status acima.'}
@@ -377,43 +377,43 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
             return (
               <div
                 key={p.id}
-                className={`bg-[#1a1614] border rounded-2xl p-5 sm:p-6 transition-all hover:border-[var(--theme-primary)]/50 space-y-4 shadow-sm ${
-                  p.status === 'active' ? 'border-[#3d342f]' : 'border-rose-900/40 opacity-80'
+                className={`bg-[var(--bg-card)] border rounded-2xl p-5 sm:p-6 transition-all hover:border-[var(--theme-primary)]/50 space-y-4 shadow-sm ${
+                  p.status === 'active' ? 'border-[var(--border-color)]' : 'border-rose-900/40 opacity-80'
                 }`}
               >
                 {/* Header row */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#3d342f]/60">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--border-color)]">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#241e1b] border border-[#3d342f] text-[var(--theme-primary)] flex items-center justify-center font-bold text-base">
+                    <div className="w-10 h-10 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-[var(--theme-primary)] flex items-center justify-center font-bold text-base">
                       {p.clientName ? p.clientName.charAt(0).toUpperCase() : 'C'}
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-[#fcf8f5] text-base">
+                        <h3 className="font-bold text-[var(--text-main)] text-base">
                           {p.clientName}
                         </h3>
                         {isSample && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/30">
                             Modelo / Demonstração
                           </span>
                         )}
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                           p.status === 'active' 
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
-                            : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                            ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/30' 
+                            : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/30'
                         }`}>
                           {p.status === 'active' ? '● Acesso Liberado' : '○ Acesso Suspenso'}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-4 text-xs text-[#a89c93] mt-0.5">
+                      <div className="flex items-center gap-4 text-xs text-[var(--text-muted)] mt-0.5">
                         <span className="flex items-center gap-1">
-                          <Mail className="w-3 h-3 text-[#a89c93]" />
+                          <Mail className="w-3 h-3 text-[var(--text-muted)]" />
                           {p.clientEmail}
                         </span>
                         {p.clientPhone && (
                           <span className="flex items-center gap-1">
-                            <Phone className="w-3 h-3 text-[#a89c93]" />
+                            <Phone className="w-3 h-3 text-[var(--text-muted)]" />
                             {p.clientPhone}
                           </span>
                         )}
@@ -422,25 +422,25 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                       {/* Office Connection Badges */}
                       <div className="flex items-center gap-2 flex-wrap mt-2">
                         {linkedOfficeClient ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/25">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />
                             <span>Cliente conectado ao cadastro</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[#241e1b] text-[#a89c93] border border-[#3d342f]">
-                            <Building2 className="w-3 h-3 text-[#a89c93]" />
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border border-[var(--border-color)]">
+                            <Building2 className="w-3 h-3 text-[var(--text-muted)]" />
                             <span>Cliente não vinculado</span>
                           </span>
                         )}
 
                         {linkedOfficeProject ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/25">
-                            <FolderOpen className="w-3 h-3 text-blue-400" />
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/25">
+                            <FolderOpen className="w-3 h-3 text-blue-500 dark:text-blue-400" />
                             <span>Projeto vinculado: {linkedOfficeProject.title}</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[#241e1b] text-[#a89c93] border border-[#3d342f]">
-                            <FolderOpen className="w-3 h-3 text-[#a89c93]" />
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border border-[var(--border-color)]">
+                            <FolderOpen className="w-3 h-3 text-[var(--text-muted)]" />
                             <span>Projeto local</span>
                           </span>
                         )}
@@ -452,7 +452,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
                       onClick={() => handleOpenClientPortal(p)}
-                      className="px-3 py-1.5 rounded-xl bg-[#251f1b] hover:bg-[#322a24] text-[#fcf8f5] hover:text-[var(--theme-primary)] border border-[#3d342f] hover:border-[var(--theme-primary)] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-[var(--bg-card-secondary)] hover:opacity-90 text-[var(--text-main)] border border-[var(--border-color)] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                       title="Visualizar o portal como o cliente visualiza"
                     >
                       <ExternalLink className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
@@ -464,10 +464,10 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                         setSelectedPortalForEdit(p);
                         setIsManagerModalOpen(true);
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-[#241e1b] hover:bg-[#2d2521] text-[#fcf8f5] border border-[#3d342f] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-[var(--bg-card-secondary)] hover:opacity-90 text-[var(--text-main)] border border-[var(--border-color)] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                       title="Gerenciar fases, documentos e configurações"
                     >
-                      <Settings2 className="w-3.5 h-3.5 text-[#a89c93]" />
+                      <Settings2 className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                       <span>Gerenciar Portal</span>
                     </button>
 
@@ -475,7 +475,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                       onClick={() => handleToggleStatus(p)}
                       className={`p-1.5 rounded-xl border transition-colors cursor-pointer ${
                         p.status === 'active'
-                          ? 'border-[#3d342f] text-[#a89c93] hover:text-rose-400 hover:border-rose-500/30'
+                          ? 'border-[var(--border-color)] text-[var(--text-muted)] hover:text-rose-400 hover:border-rose-500/30'
                           : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
                       }`}
                       title={p.status === 'active' ? 'Suspender Acesso' : 'Ativar Acesso'}
@@ -486,7 +486,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                     {!isSample && (
                       <button
                         onClick={() => handleDeletePortal(p)}
-                        className="p-1.5 rounded-xl border border-[#3d342f] text-[#a89c93] hover:text-rose-400 hover:border-rose-500/30 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-xl border border-[var(--border-color)] text-[var(--text-muted)] hover:text-rose-400 hover:border-rose-500/30 transition-colors cursor-pointer"
                         title="Excluir Acesso"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -500,7 +500,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                   
                   {/* Projects Column */}
                   <div className="md:col-span-2 space-y-2">
-                    <span className="text-[10px] font-bold text-[#a89c93] uppercase tracking-wider block">
+                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
                       Projetos Vinculados ({p.projects?.length || 0})
                     </span>
                     
@@ -508,18 +508,18 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                       {(p.projects || []).map((proj) => (
                         <div
                           key={proj.id}
-                          className="bg-[#14110f] border border-[#3d342f] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                          className="bg-[var(--bg-card-secondary)] border border-[var(--border-color)] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                         >
                           <div className="space-y-1">
-                            <span className="font-bold text-[#fcf8f5] block">
+                            <span className="font-bold text-[var(--text-main)] block">
                               {proj.title}
                             </span>
-                            <div className="flex items-center gap-2 flex-wrap text-[11px] text-[#a89c93]">
-                              <span className="px-2 py-0.5 rounded-md bg-[#241e1b] border border-[#3d342f] text-[var(--theme-primary)] font-medium">
+                            <div className="flex items-center gap-2 flex-wrap text-[11px] text-[var(--text-muted)]">
+                              <span className="px-2 py-0.5 rounded-md bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--theme-primary)] font-medium">
                                 Fase: {proj.currentStageName || proj.status}
                               </span>
                               <span>•</span>
-                              <span>Progresso: <strong className="text-[#fcf8f5]">{proj.progressPercent || 0}%</strong></span>
+                              <span>Progresso: <strong className="text-[var(--text-main)]">{proj.progressPercent || 0}%</strong></span>
                               {proj.deliveryDate && (
                                 <>
                                   <span>•</span>
@@ -531,7 +531,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
 
                           {/* Progress mini bar */}
                           <div className="w-full sm:w-28 space-y-1">
-                            <div className="h-1.5 w-full bg-[#241e1b] rounded-full overflow-hidden border border-[#3d342f]">
+                            <div className="h-1.5 w-full bg-[var(--bg-card)] rounded-full overflow-hidden border border-[var(--border-color)]">
                               <div 
                                 className="h-full bg-[var(--theme-primary)] rounded-full transition-all"
                                 style={{ width: `${proj.progressPercent || 0}%` }}
@@ -544,15 +544,15 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                   </div>
 
                   {/* Access Credentials & Sharing Column */}
-                  <div className="bg-[#14110f] border border-[#3d342f] rounded-xl p-3.5 space-y-3 flex flex-col justify-between">
+                  <div className="bg-[var(--bg-card-secondary)] border border-[var(--border-color)] rounded-xl p-3.5 space-y-3 flex flex-col justify-between">
                     <div className="space-y-2">
-                      <span className="text-[10px] font-bold text-[#a89c93] uppercase tracking-wider block">
+                      <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
                         Credenciais do Cliente
                       </span>
 
                       <div className="space-y-1.5">
-                        <div className="flex items-center justify-between bg-[#1c1815] px-2.5 py-1.5 rounded-lg border border-[#3d342f]">
-                          <span className="text-[11px] text-[#a89c93]">Código / Senha:</span>
+                        <div className="flex items-center justify-between bg-[var(--bg-card)] px-2.5 py-1.5 rounded-lg border border-[var(--border-color)]">
+                          <span className="text-[11px] text-[var(--text-muted)]">Código / Senha:</span>
                           <div className="flex items-center gap-2">
                             <span className="font-mono font-bold text-[var(--theme-primary)] text-xs">
                               {showPassword ? p.accessCode : '••••••••'}
@@ -560,7 +560,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                             <button
                               type="button"
                               onClick={() => toggleShowPassword(p.id)}
-                              className="text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer"
+                              className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
                               title={showPassword ? 'Ocultar código' : 'Ver código'}
                             >
                               <Eye className="w-3.5 h-3.5" />
@@ -571,17 +571,17 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                         <div className="flex items-center gap-2 pt-1">
                           <button
                             onClick={() => handleCopyCredentials(p)}
-                            className="flex-1 py-1.5 px-2 bg-[#241e1b] hover:bg-[#2e2622] text-[#fcf8f5] border border-[#3d342f] rounded-lg font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                            className="flex-1 py-1.5 px-2 bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-[var(--text-main)] border border-[var(--border-color)] rounded-lg font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
                             title="Copiar mensagem com credenciais completas"
                           >
                             {copiedId === p.id + '-text' ? (
                               <>
-                                <Check className="w-3 h-3 text-emerald-400" />
-                                <span className="text-emerald-400">Copiado!</span>
+                                <Check className="w-3 h-3 text-emerald-500" />
+                                <span className="text-emerald-500">Copiado!</span>
                               </>
                             ) : (
                               <>
-                                <Copy className="w-3 h-3 text-[#a89c93]" />
+                                <Copy className="w-3 h-3 text-[var(--text-muted)]" />
                                 <span>Copiar Texto</span>
                               </>
                             )}
@@ -589,17 +589,17 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
 
                           <button
                             onClick={() => handleCopyLink(p)}
-                            className="flex-1 py-1.5 px-2 bg-[#241e1b] hover:bg-[#2e2622] text-[#fcf8f5] border border-[#3d342f] rounded-lg font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                            className="flex-1 py-1.5 px-2 bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-[var(--text-main)] border border-[var(--border-color)] rounded-lg font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
                             title="Copiar link direto para envio"
                           >
                             {copiedId === p.id + '-link' ? (
                               <>
-                                <Check className="w-3 h-3 text-emerald-400" />
-                                <span className="text-emerald-400">Link Copiado!</span>
+                                <Check className="w-3 h-3 text-emerald-500" />
+                                <span className="text-emerald-500">Link Copiado!</span>
                               </>
                             ) : (
                               <>
-                                <Share2 className="w-3 h-3 text-[#a89c93]" />
+                                <Share2 className="w-3 h-3 text-[var(--text-muted)]" />
                                 <span>Link Direto</span>
                               </>
                             )}
@@ -612,7 +612,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                     {p.clientPhone && (
                       <button
                         onClick={() => handleOpenWhatsApp(p)}
-                        className="w-full py-2 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                        className="w-full py-2 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-500 border border-emerald-500/30 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                       >
                         <Phone className="w-3.5 h-3.5" />
                         <span>Enviar Acesso no WhatsApp</span>
@@ -623,10 +623,10 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                 </div>
 
                 {/* Bottom quick stats */}
-                <div className="flex items-center justify-between pt-2 border-t border-[#3d342f]/40 text-[11px] text-[#a89c93]">
+                <div className="flex items-center justify-between pt-2 border-t border-[var(--border-color)] text-[11px] text-[var(--text-muted)]">
                   <div className="flex items-center gap-4">
-                    <span>Arquivos disponibilizados: <strong className="text-[#fcf8f5]">{p.documents?.length || 0}</strong></span>
-                    <span>Mensagens no chat: <strong className="text-[#fcf8f5]">{p.messages?.length || 0}</strong></span>
+                    <span>Arquivos disponibilizados: <strong className="text-[var(--text-main)]">{p.documents?.length || 0}</strong></span>
+                    <span>Mensagens no chat: <strong className="text-[var(--text-main)]">{p.messages?.length || 0}</strong></span>
                   </div>
                   <div>
                     {p.lastLoginAt ? (
@@ -643,26 +643,26 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
       </div>
 
       {/* Guide Card for the Office */}
-      <div className="bg-[#161311] border border-[#3d342f] rounded-2xl p-6 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-bold text-[#fcf8f5]">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 space-y-4">
+        <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-main)]">
           <Sparkles className="w-4 h-4 text-[var(--theme-primary)]" />
           <span>Como funciona a segurança e o isolamento do Radar do Cliente?</span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-[#a89c93]">
-          <div className="space-y-1.5 p-3.5 rounded-xl bg-[#1c1815] border border-[#3d342f]/60">
-            <strong className="text-[#fcf8f5] block">1. Total Isolamento de Dados</strong>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-[var(--text-muted)]">
+          <div className="space-y-1.5 p-3.5 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)]">
+            <strong className="text-[var(--text-main)] block">1. Total Isolamento de Dados</strong>
             <p className="leading-relaxed">
               Cada cliente acessa estritamente o seu projeto. Informações internas, custos, margens de lucro, fornecedores e notas da equipe permanecem 100% confidenciais.
             </p>
           </div>
-          <div className="space-y-1.5 p-3.5 rounded-xl bg-[#1c1815] border border-[#3d342f]/60">
-            <strong className="text-[#fcf8f5] block">2. Controle em Tempo Real</strong>
+          <div className="space-y-1.5 p-3.5 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)]">
+            <strong className="text-[var(--text-main)] block">2. Controle em Tempo Real</strong>
             <p className="leading-relaxed">
               Tudo o que você atualizar na tela de gestão (avançar de fase, adicionar prancha em PDF ou enviar mensagem) é refletido instantaneamente no radar da cliente.
             </p>
           </div>
-          <div className="space-y-1.5 p-3.5 rounded-xl bg-[#1c1815] border border-[#3d342f]/60">
-            <strong className="text-[#fcf8f5] block">3. Gestão Centralizada no Escritório</strong>
+          <div className="space-y-1.5 p-3.5 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)]">
+            <strong className="text-[var(--text-main)] block">3. Gestão Centralizada no Escritório</strong>
             <p className="leading-relaxed">
               Você e sua equipe gerenciam prazos, etapas, pranchas em PDF, senhas e canais de atendimento diretamente por este painel, com praticidade total.
             </p>

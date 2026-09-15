@@ -290,12 +290,12 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
       {/* Upper Dashboard Ribbon */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-serif font-bold text-[#fcf8f5]">Gestão Operacional de Projetos</h2>
-          <p className="text-xs text-[#a89c93]">Acompanhamento de etapas físicas, marcos de entrega e recebimentos financeiros de cada contrato ativo.</p>
+          <h2 className="text-2xl font-serif font-bold text-[var(--text-main)]">Gestão Operacional de Projetos</h2>
+          <p className="text-xs text-[var(--text-muted)]">Acompanhamento de etapas físicas, marcos de entrega e recebimentos financeiros de cada contrato ativo.</p>
         </div>
         <button
           onClick={handleOpenAddProject}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-black bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-hover)] transition-all cursor-pointer shadow-md self-stretch sm:self-auto text-center justify-center active:scale-95"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-white bg-[var(--theme-primary)] hover:opacity-90 transition-all cursor-pointer shadow-md self-stretch sm:self-auto text-center justify-center active:scale-95"
         >
           <FolderPlus className="w-4 h-4" />
           <span>Cadastrar Novo Projeto</span>
@@ -304,98 +304,98 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
 
       {/* Grid of operational stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
           <div className="p-2.5 rounded-xl bg-orange-500/10 border border-orange-500/15">
-            <Layers className="w-5 h-5 text-orange-400" />
+            <Layers className="w-5 h-5 text-orange-500" />
           </div>
           <div>
-            <span className="text-2xl font-serif font-bold text-[#fcf8f5] block leading-none">{activeProjectsCount}</span>
-            <span className="text-[11px] font-medium text-[#a89c93] mt-1 block">Ativos</span>
+            <span className="text-2xl font-serif font-bold text-[var(--text-main)] block leading-none">{activeProjectsCount}</span>
+            <span className="text-[11px] font-medium text-[var(--text-muted)] mt-1 block">Ativos</span>
           </div>
         </div>
 
-        <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
           <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/15">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
           </div>
           <div>
-            <span className="text-2xl font-serif font-bold text-emerald-400 block leading-none">{completedProjectsCount}</span>
-            <span className="text-[11px] font-medium text-emerald-400/90 mt-1 block">Concluídos</span>
+            <span className="text-2xl font-serif font-bold text-emerald-600 dark:text-emerald-400 block leading-none">{completedProjectsCount}</span>
+            <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400/90 mt-1 block">Concluídos</span>
           </div>
         </div>
 
-        <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
           <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/15">
-            <AlertTriangle className="w-5 h-5 text-rose-400" />
+            <AlertTriangle className="w-5 h-5 text-rose-500" />
           </div>
           <div>
-            <span className="text-2xl font-serif font-bold text-rose-400 block leading-none">{projectsWithDelaysCount}</span>
-            <span className="text-[11px] font-medium text-rose-400/90 mt-1 block">Com atraso</span>
+            <span className="text-2xl font-serif font-bold text-rose-600 dark:text-rose-400 block leading-none">{projectsWithDelaysCount}</span>
+            <span className="text-[11px] font-medium text-rose-600 dark:text-rose-400/90 mt-1 block">Com atraso</span>
           </div>
         </div>
 
-        <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
           <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/15">
-            <ListChecks className="w-5 h-5 text-amber-400" />
+            <ListChecks className="w-5 h-5 text-amber-500" />
           </div>
           <div>
-            <span className="text-2xl font-serif font-bold text-amber-300 block leading-none">{overdueTasksCount}</span>
-            <span className="text-[11px] font-medium text-amber-400/90 mt-1 block">Pendências atrasadas</span>
+            <span className="text-2xl font-serif font-bold text-amber-600 dark:text-amber-400 block leading-none">{overdueTasksCount}</span>
+            <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400/90 mt-1 block">Pendências atrasadas</span>
           </div>
         </div>
       </div>
 
       {/* Card Execução Operacional */}
-      <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-5 space-y-4 shadow-sm">
-        <div className="flex items-center gap-2 text-sm font-bold text-[#fcf8f5]">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-5 space-y-4 shadow-sm">
+        <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-main)]">
           <Target className="w-4 h-4 text-[var(--theme-primary)]" />
           <span>Execução Operacional</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#3d342f] pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[var(--border-color)] pt-1">
           <div className="px-2 sm:px-4 py-2.5 sm:py-0 first:pl-0">
-            <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[#a89c93]">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)]">
+              <Clock className="w-3.5 h-3.5 text-amber-500" />
               <span>VENCEM HOJE</span>
             </div>
-            <div className="text-2xl font-serif font-bold text-[#fcf8f5] mt-1.5">
+            <div className="text-2xl font-serif font-bold text-[var(--text-main)] mt-1.5">
               {dueTodayCount}
             </div>
-            <p className="text-[11px] text-[#a89c93] mt-0.5">tarefas vencem hoje</p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">tarefas vencem hoje</p>
           </div>
 
           <div className="px-2 sm:px-4 py-2.5 sm:py-0">
-            <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[#a89c93]">
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+            <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)]">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
               <span>ATRASADOS</span>
             </div>
-            <div className="text-2xl font-serif font-bold text-[#fcf8f5] mt-1.5">
+            <div className="text-2xl font-serif font-bold text-[var(--text-main)] mt-1.5">
               {overdueTasksCount}
             </div>
-            <p className="text-[11px] text-[#a89c93] mt-0.5">tarefas com prazo vencido</p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">tarefas com prazo vencido</p>
           </div>
 
           <div className="px-2 sm:px-4 py-2.5 sm:py-0 last:pr-0">
-            <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[#a89c93]">
-              <Zap className="w-3.5 h-3.5 text-rose-400" />
+            <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)]">
+              <Zap className="w-3.5 h-3.5 text-rose-500" />
               <span>EM RISCO</span>
             </div>
-            <div className="text-2xl font-serif font-bold text-rose-400 mt-1.5">
+            <div className="text-2xl font-serif font-bold text-rose-600 dark:text-rose-400 mt-1.5">
               {projectsWithDelaysCount}
             </div>
-            <p className="text-[11px] text-[#a89c93] mt-0.5">projetos com atrasos</p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">projetos com atrasos</p>
           </div>
         </div>
       </div>
 
       {/* SubTabs Navigation */}
-      <div className="flex items-center justify-start gap-2 border-b border-[#3d342f]/60 pb-3">
+      <div className="flex items-center justify-start gap-2 border-b border-[var(--border-color)] pb-3">
         <button
           onClick={() => setActiveSubTab('visao_geral')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
             activeSubTab === 'visao_geral'
-              ? 'bg-[#241e1b] text-[#fcf8f5] border border-[#3d342f] shadow-sm'
-              : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1c1815]'
+              ? 'bg-[var(--bg-card-secondary)] text-[var(--text-main)] border-[var(--border-color)] shadow-xs'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)] border-transparent'
           }`}
         >
           <BarChart3 className="w-4 h-4 text-[var(--theme-primary)]" />
@@ -404,16 +404,16 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
 
         <button
           onClick={() => setActiveSubTab('central_atrasos')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
             activeSubTab === 'central_atrasos'
-              ? 'bg-[#241e1b] text-[#fcf8f5] border border-[#3d342f] shadow-sm'
-              : 'text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#1c1815]'
+              ? 'bg-[var(--bg-card-secondary)] text-[var(--text-main)] border-[var(--border-color)] shadow-xs'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)] border-transparent'
           }`}
         >
-          <AlertTriangle className="w-4 h-4 text-amber-400" />
+          <AlertTriangle className="w-4 h-4 text-amber-500" />
           <span>Central de Atrasos</span>
           {projectsWithDelaysCount > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-extrabold text-[10px] border border-rose-500/30 ml-0.5">
+            <span className="px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-300 font-extrabold text-[10px] border border-rose-500/30 ml-0.5">
               {projectsWithDelaysCount}
             </span>
           )}
@@ -424,45 +424,45 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
       {activeSubTab === 'visao_geral' ? (
         <div className="space-y-6">
           {/* Filter and Search Bar */}
-      <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
         {/* Search */}
         <div className="relative w-full md:max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a89c93] w-4 h-4" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
           <input
             type="text"
             placeholder="Buscar por projeto, cliente ou UF..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-3.5 py-2 rounded-xl bg-[#14110f] border border-[#3d342f] text-sm text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+            className="w-full pl-10 pr-3.5 py-2 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-sm text-[var(--text-main)] focus:outline-hidden focus:border-[var(--theme-primary)] placeholder-[var(--text-muted)]"
           />
         </div>
 
         {/* Filters Selects */}
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-          <div className="flex items-center gap-1.5 text-xs text-[#a89c93]">
+          <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
             <Filter className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
             <span>Filtros:</span>
           </div>
 
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-xl bg-[#14110f] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none cursor-pointer"
+            onChange={(e) => setSearchQuery('') || setStatusFilter(e.target.value)}
+            className="px-3 py-1.5 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-xs text-[var(--text-main)] focus:outline-hidden cursor-pointer"
           >
-            <option value="all">Todas as Etapas</option>
+            <option value="all" className="bg-[var(--bg-card)] text-[var(--text-main)]">Todas as Etapas</option>
             {statusOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+              <option key={opt.value} value={opt.value} className="bg-[var(--bg-card)] text-[var(--text-main)]">{opt.label}</option>
             ))}
           </select>
 
           <select
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-xl bg-[#14110f] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none cursor-pointer"
+            onChange={(e) => setSearchQuery('') || setCategoryFilter(e.target.value)}
+            className="px-3 py-1.5 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-xs text-[var(--text-main)] focus:outline-hidden cursor-pointer"
           >
-            <option value="all">Categorias (Todas)</option>
+            <option value="all" className="bg-[var(--bg-card)] text-[var(--text-main)]">Categorias (Todas)</option>
             {categoryOptions.map((opt) => (
-              <option key={opt.id} value={opt.id}>{opt.name}</option>
+              <option key={opt.id} value={opt.id} className="bg-[var(--bg-card)] text-[var(--text-main)]">{opt.name}</option>
             ))}
           </select>
         </div>
@@ -470,11 +470,11 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
 
       {/* Projects Management Catalog */}
       {filteredProjects.length === 0 ? (
-        <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-12 text-center space-y-4">
-          <Layers className="w-12 h-12 text-[#a89c93] mx-auto opacity-35" />
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-12 text-center space-y-4">
+          <Layers className="w-12 h-12 text-[var(--text-muted)] mx-auto opacity-35" />
           <div>
-            <h3 className="font-serif font-bold text-lg text-[#fcf8f5]">Nenhum projeto encontrado</h3>
-            <p className="text-xs text-[#a89c93] max-w-md mx-auto mt-1">Nenhum contrato ativo corresponde aos termos pesquisados ou aos filtros selecionados.</p>
+            <h3 className="font-serif font-bold text-lg text-[var(--text-main)]">Nenhum projeto encontrado</h3>
+            <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto mt-1">Nenhum contrato ativo corresponde aos termos pesquisados ou aos filtros selecionados.</p>
           </div>
           <button
             onClick={() => {
@@ -482,7 +482,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
               setStatusFilter('all');
               setCategoryFilter('all');
             }}
-            className="px-4 py-2 rounded-xl text-xs bg-[#241e1b] border border-[#3d342f] text-[#fcf8f5] hover:bg-[#3d342f]/40 transition-all cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-[var(--text-main)] hover:opacity-80 transition-all cursor-pointer"
           >
             Limpar Filtros de Busca
           </button>
@@ -515,7 +515,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
               <div
                 key={p.id}
                 onClick={() => setSelectedProjectForDetail(p)}
-                className="bg-[#1c1815] border border-[#3d342f] hover:border-[var(--theme-primary)]/45 rounded-2xl p-5 shadow-sm transition-all cursor-pointer space-y-4 flex flex-col group"
+                className="bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--theme-primary)]/45 rounded-2xl p-5 shadow-sm transition-all cursor-pointer space-y-4 flex flex-col group"
               >
                 {/* Card Top: Title, status, actions */}
                 <div className="flex items-start justify-between gap-4">
@@ -525,21 +525,21 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                         {p.category.toUpperCase().replace('_', ' ')}
                       </span>
                       {p.areaM2 && (
-                        <span className="text-[10px] font-medium text-[#a89c93]">
+                        <span className="text-[10px] font-medium text-[var(--text-muted)]">
                           {p.areaM2} m²
                         </span>
                       )}
                     </div>
-                    <h3 className="text-base font-serif font-bold text-[#fcf8f5] group-hover:text-[var(--theme-primary)] transition-colors mt-1.5 truncate">
+                    <h3 className="text-base font-serif font-bold text-[var(--text-main)] group-hover:text-[var(--theme-primary)] transition-colors mt-1.5 truncate">
                       {p.title}
                     </h3>
-                    <div className="flex items-center gap-1 text-xs text-[#a89c93] mt-1">
-                      <User className="w-3.5 h-3.5 text-[#d49454]" />
+                    <div className="flex items-center gap-1 text-xs text-[var(--text-muted)] mt-1">
+                      <User className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
                       <span className="truncate">{p.clientName}</span>
                       {p.location && (
                         <>
                           <span className="mx-1">•</span>
-                          <MapPin className="w-3 h-3 text-red-400 shrink-0" />
+                          <MapPin className="w-3 h-3 text-red-500 shrink-0" />
                           <span className="truncate">{p.location}</span>
                         </>
                       )}
@@ -549,7 +549,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                   <div className="flex items-center gap-2.5 shrink-0" onClick={e => e.stopPropagation()}>
                     {/* Cover photo thumbnail */}
                     {p.coverImage ? (
-                      <div className="w-16 h-16 rounded-xl overflow-hidden border border-[#3d342f] shadow-sm bg-[#12100e]">
+                      <div className="w-16 h-16 rounded-xl overflow-hidden border border-[var(--border-color)] shadow-xs bg-[var(--bg-body)]">
                         <img
                           src={p.coverImage}
                           alt={p.title}
@@ -559,10 +559,10 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                     ) : (
                       <button
                         onClick={(e) => handleOpenEditProject(p, e)}
-                        className="w-16 h-16 rounded-xl border border-dashed border-[#3d342f] hover:border-[var(--theme-primary)] flex flex-col items-center justify-center text-[#a89c93] hover:text-[#fcf8f5] transition-colors bg-[#14110f]/40 group/img cursor-pointer"
+                        className="w-16 h-16 rounded-xl border border-dashed border-[var(--border-color)] hover:border-[var(--theme-primary)] flex flex-col items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors bg-[var(--bg-card-secondary)]/40 group/img cursor-pointer"
                         title="Adicionar foto do projeto"
                       >
-                        <Camera className="w-4 h-4 text-[#a89c93] group-hover/img:text-[var(--theme-primary)]" />
+                        <Camera className="w-4 h-4 text-[var(--text-muted)] group-hover/img:text-[var(--theme-primary)]" />
                         <span className="text-[9px] mt-0.5 font-medium">Foto</span>
                       </button>
                     )}
@@ -570,14 +570,14 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                     <div className="flex flex-col gap-1.5">
                       <button
                         onClick={(e) => handleOpenEditProject(p, e)}
-                        className="p-1.5 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#241e1b] border border-[#3d342f] transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)] border border-[var(--border-color)] transition-colors cursor-pointer"
                         title="Editar dados"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setSelectedProjectForDetail(p)}
-                        className="p-1.5 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#241e1b] border border-[#3d342f] transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)] border border-[var(--border-color)] transition-colors cursor-pointer"
                         title="Visualizar Detalhes"
                       >
                         <Eye className="w-3.5 h-3.5" />
@@ -588,7 +588,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                           setSelectedProjectForPortal(p);
                           setIsPortalModalOpen(true);
                         }}
-                        className="p-1.5 rounded-lg text-[var(--theme-primary)] hover:text-black hover:bg-[var(--theme-primary)] border border-[var(--theme-primary)]/40 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-[var(--theme-primary)] hover:text-white hover:bg-[var(--theme-primary)] border border-[var(--theme-primary)]/40 transition-colors cursor-pointer"
                         title="Gerenciar Radar do Cliente (Acesso, Fases & Mensagens)"
                       >
                         <KeyRound className="w-3.5 h-3.5" />
@@ -600,12 +600,12 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                 {/* Progress bar and milestone stats */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#a89c93] font-medium">Progresso das Entregas (Cronograma & Marcos)</span>
-                    <span className="font-bold text-[#fcf8f5] flex items-center gap-1">
-                      {progressPercent}% <span className="text-[10px] text-[#a89c93]">({completedCount}/{totalItems})</span>
+                    <span className="text-[var(--text-muted)] font-medium">Progresso das Entregas (Cronograma & Marcos)</span>
+                    <span className="font-bold text-[var(--text-main)] flex items-center gap-1">
+                      {progressPercent}% <span className="text-[10px] text-[var(--text-muted)]">({completedCount}/{totalItems})</span>
                     </span>
                   </div>
-                  <div className="w-full bg-[#14110f] h-2 rounded-full overflow-hidden border border-[#3d342f]">
+                  <div className="w-full bg-[var(--bg-card-secondary)] h-2 rounded-full overflow-hidden border border-[var(--border-color)]">
                     <div
                       className="h-full bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-accent)] transition-all duration-500 rounded-full"
                       style={{ width: `${progressPercent}%` }}
@@ -630,10 +630,10 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                               ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' 
                               : isActive 
                               ? 'bg-[var(--theme-primary)]/20 border-[var(--theme-primary)]/40' 
-                              : 'bg-[#14110f] border-[#3d342f]'
+                              : 'bg-[var(--bg-card-secondary)] border-[var(--border-color)]'
                           }`}
                         />
-                        <span className={`text-[9px] uppercase tracking-wider font-bold block truncate ${isActive ? 'text-[var(--theme-primary)]' : 'text-[#a89c93]'}`}>
+                        <span className={`text-[9px] uppercase tracking-wider font-bold block truncate ${isActive ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]'}`}>
                           {stg.replace('_', ' ')}
                         </span>
                       </div>
@@ -642,13 +642,13 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                 </div>
 
                 {/* Operational Details Grid: Sub-milestones & Installments */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-[#3d342f]/60">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-[var(--border-color)]/60">
                   
                   {/* Milestones / Deadlines section */}
                   <div className="space-y-2.5" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#fcf8f5] flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-xs font-bold text-[var(--text-main)] flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
                         Prazos & Entregas
                       </span>
                       <button
@@ -663,25 +663,25 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                     </div>
 
                     {activeAddingMilestoneProjectId === p.id && (
-                      <div className="bg-[#14110f] border border-[#3d342f] rounded-xl p-2.5 space-y-2">
+                      <div className="bg-[var(--bg-card-secondary)] border border-[var(--border-color)] rounded-xl p-2.5 space-y-2">
                         <input
                           type="text"
                           placeholder="Nome do prazo (ex: Entrega 3D)"
                           value={newMilestoneTitle}
                           onChange={(e) => setNewMilestoneTitle(e.target.value)}
-                          className="w-full bg-[#1c1815] border border-[#3d342f] rounded-lg px-2 py-1 text-xs text-[#fcf8f5] focus:outline-none"
+                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-hidden"
                         />
                         <div className="grid grid-cols-2 gap-1.5">
                           <input
                             type="date"
                             value={newMilestoneDueDate}
                             onChange={(e) => setNewMilestoneDueDate(e.target.value)}
-                            className="bg-[#1c1815] border border-[#3d342f] rounded-lg px-2 py-1 text-[10px] text-[#fcf8f5] focus:outline-none cursor-pointer"
+                            className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-main)] focus:outline-hidden cursor-pointer"
                           />
                           <select
                             value={newMilestoneStage}
                             onChange={(e) => setNewMilestoneStage(e.target.value as any)}
-                            className="bg-[#1c1815] border border-[#3d342f] rounded-lg px-1.5 py-1 text-[10px] text-[#fcf8f5] focus:outline-none cursor-pointer"
+                            className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-1.5 py-1 text-[10px] text-[var(--text-main)] focus:outline-hidden cursor-pointer"
                           >
                             <option value="estudo_preliminar">Estudo Prel.</option>
                             <option value="anteprojeto">Anteprojeto</option>
@@ -691,7 +691,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                         </div>
                         <button
                           onClick={() => handleAddQuickMilestone(p.id, p.clientName, p.clientPhone)}
-                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-black font-bold py-1 rounded-lg text-[10px] transition-colors"
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-1 rounded-lg text-[10px] transition-colors"
                         >
                           Confirmar Prazo
                         </button>
@@ -700,29 +700,29 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
 
                     {projectMils.length === 0 ? (
                       stageTasksCompleted > 0 ? (
-                        <div className="flex items-center justify-between p-2 bg-[#14110f]/60 border border-emerald-500/20 rounded-xl text-[11px]">
-                          <span className="text-emerald-400 font-medium flex items-center gap-1.5">
+                        <div className="flex items-center justify-between p-2 bg-[var(--bg-card-secondary)]/60 border border-emerald-500/20 rounded-xl text-[11px]">
+                          <span className="text-emerald-500 font-medium flex items-center gap-1.5">
                             <CheckSquare className="w-3.5 h-3.5" />
                             Cronograma: {stageTasksCompleted}/{stageTasksTotal} tarefas concluídas
                           </span>
                         </div>
                       ) : (
-                        <p className="text-[10px] text-[#a89c93] italic">Nenhum prazo cadastrado.</p>
+                        <p className="text-[10px] text-[var(--text-muted)] italic">Nenhum prazo cadastrado.</p>
                       )
                     ) : (
                       <div className="space-y-1.5 max-h-[140px] overflow-y-auto no-scrollbar">
                         {projectMils.map((m) => (
-                          <div key={m.id} className="flex items-center justify-between gap-2 p-1.5 bg-[#14110f]/40 border border-[#3d342f]/40 rounded-xl text-[11px]">
+                          <div key={m.id} className="flex items-center justify-between gap-2 p-1.5 bg-[var(--bg-card-secondary)]/40 border border-[var(--border-color)]/40 rounded-xl text-[11px]">
                             <button
                               onClick={() => toggleProjectMilestone(m.id)}
                               className="flex items-start gap-1.5 text-left flex-1"
                             >
-                              <CheckSquare className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${m.completed ? 'text-emerald-400' : 'text-[#a89c93]'}`} />
-                              <span className={m.completed ? 'line-through text-[#a89c93]' : 'text-[#fcf8f5] font-medium'}>
+                              <CheckSquare className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${m.completed ? 'text-emerald-500' : 'text-[var(--text-muted)]'}`} />
+                              <span className={m.completed ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-main)] font-medium'}>
                                 {m.title}
                               </span>
                             </button>
-                            <span className="text-[10px] text-[#a89c93] whitespace-nowrap">
+                            <span className="text-[10px] text-[var(--text-muted)] whitespace-nowrap">
                               {formatDate(m.dueDate)}
                             </span>
                           </div>
@@ -734,8 +734,8 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                   {/* Installments & Finances section */}
                   <div className="space-y-2.5" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#fcf8f5] flex items-center gap-1">
-                        <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-xs font-bold text-[var(--text-main)] flex items-center gap-1">
+                        <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
                         Finanças & Cobranças
                       </span>
                       <button
@@ -751,13 +751,13 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                     </div>
 
                     {activeAddingInstallmentProjectId === p.id && (
-                      <div className="bg-[#14110f] border border-[#3d342f] rounded-xl p-2.5 space-y-2">
+                      <div className="bg-[var(--bg-card-secondary)] border border-[var(--border-color)] rounded-xl p-2.5 space-y-2">
                         <input
                           type="text"
                           placeholder="Descrição (ex: Parcela 2)"
                           value={newInstallmentDesc}
                           onChange={(e) => setNewInstallmentDesc(e.target.value)}
-                          className="w-full bg-[#1c1815] border border-[#3d342f] rounded-lg px-2 py-1 text-xs text-[#fcf8f5] focus:outline-none"
+                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-hidden"
                         />
                         <div className="grid grid-cols-2 gap-1.5">
                           <input
@@ -765,18 +765,18 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                             placeholder="Valor (R$)"
                             value={newInstallmentAmount}
                             onChange={(e) => setNewInstallmentAmount(e.target.value)}
-                            className="bg-[#1c1815] border border-[#3d342f] rounded-lg px-2 py-1 text-[10px] text-[#fcf8f5] focus:outline-none"
+                            className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-main)] focus:outline-hidden"
                           />
                           <input
                             type="date"
                             value={newInstallmentDueDate}
                             onChange={(e) => setNewInstallmentDueDate(e.target.value)}
-                            className="bg-[#1c1815] border border-[#3d342f] rounded-lg px-2 py-1 text-[10px] text-[#fcf8f5] focus:outline-none cursor-pointer"
+                            className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-main)] focus:outline-hidden cursor-pointer"
                           />
                         </div>
                         <button
                           onClick={() => handleAddQuickInstallment(p.id, p.clientName, p.clientPhone)}
-                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-black font-bold py-1 rounded-lg text-[10px] transition-colors"
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-1 rounded-lg text-[10px] transition-colors"
                         >
                           Confirmar Cobrança
                         </button>
@@ -784,20 +784,20 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                     )}
 
                     {projectInsts.length === 0 ? (
-                      <p className="text-[10px] text-[#a89c93] italic">Nenhuma cobrança cadastrada.</p>
+                      <p className="text-[10px] text-[var(--text-muted)] italic">Nenhuma cobrança cadastrada.</p>
                     ) : (
                       <div className="space-y-1.5 max-h-[140px] overflow-y-auto no-scrollbar">
                         {projectInsts.map((i) => {
                           const isPaid = i.status === 'paid';
                           const isOverdue = i.status === 'overdue';
                           return (
-                            <div key={i.id} className="flex items-center justify-between gap-2 p-1.5 bg-[#14110f]/40 border border-[#3d342f]/40 rounded-xl text-[11px]">
+                            <div key={i.id} className="flex items-center justify-between gap-2 p-1.5 bg-[var(--bg-card-secondary)]/40 border border-[var(--border-color)]/40 rounded-xl text-[11px]">
                               <div className="flex flex-col">
-                                <span className="font-bold text-[#fcf8f5]">{formatCurrency(i.amount)}</span>
-                                <span className="text-[9px] text-[#a89c93]">{i.description} • {formatDate(i.dueDate)}</span>
+                                <span className="font-bold text-[var(--text-main)]">{formatCurrency(i.amount)}</span>
+                                <span className="text-[9px] text-[var(--text-muted)]">{i.description} • {formatDate(i.dueDate)}</span>
                               </div>
                               {isPaid ? (
-                                <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/15">
+                                <span className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/15">
                                   Pago
                                 </span>
                               ) : (
@@ -805,8 +805,8 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                                   onClick={() => handleMarkInstallmentAsPaid(i.id)}
                                   className={`text-[9px] font-bold px-2 py-1 rounded-lg transition-all border cursor-pointer active:scale-95 ${
                                     isOverdue 
-                                      ? 'bg-rose-500/15 text-rose-300 border-rose-500/25 hover:bg-rose-500/25' 
-                                      : 'bg-[#241e1b] text-amber-300 border-[#3d342f] hover:text-[#fcf8f5] hover:bg-[#3d342f]'
+                                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/25 hover:bg-rose-500/25' 
+                                      : 'bg-[var(--bg-card-secondary)] text-amber-600 dark:text-amber-300 border-[var(--border-color)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)]/80'
                                   }`}
                                   title="Marcar como Pago"
                                 >
@@ -823,13 +823,13 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                 </div>
 
                 {/* Footer details: Budget vs honorarios */}
-                <div className="flex items-center justify-between text-xs pt-3 border-t border-[#3d342f]/30 mt-auto">
-                  <div className="flex items-center gap-1 text-[#a89c93]">
+                <div className="flex items-center justify-between text-xs pt-3 border-t border-[var(--border-color)]/30 mt-auto">
+                  <div className="flex items-center gap-1 text-[var(--text-muted)]">
                     <Building2 className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
                     <span>Honorários:</span>
-                    <span className="font-bold text-[#fcf8f5]">{formatCurrency(p.honorarios || 0)}</span>
+                    <span className="font-bold text-[var(--text-main)]">{formatCurrency(p.honorarios || 0)}</span>
                   </div>
-                  <div className="text-[10px] text-[#a89c93] font-medium italic">
+                  <div className="text-[10px] text-[var(--text-muted)] font-medium italic">
                     Etapa Atual: <span className="text-[var(--theme-primary)] font-bold">{stageLabel}</span>
                   </div>
                 </div>
@@ -843,18 +843,18 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
         /* Central de Atrasos SubTab */
         <div className="space-y-6 animate-in fade-in duration-200">
           {delayedProjects.length === 0 ? (
-            <div className="bg-[#1c1815] border border-[#3d342f] rounded-2xl p-16 text-center space-y-3 shadow-sm">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-16 text-center space-y-3 shadow-sm">
               <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                <CheckCircle2 className="w-6 h-6 text-emerald-500" />
               </div>
-              <h3 className="font-bold text-base text-[#fcf8f5]">Sem atrasos!</h3>
-              <p className="text-xs text-[#a89c93]">Todos os projetos estão em dia</p>
+              <h3 className="font-bold text-base text-[var(--text-main)]">Sem atrasos!</h3>
+              <p className="text-xs text-[var(--text-muted)]">Todos os projetos estão em dia</p>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-[#fcf8f5] flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-400" />
+                <h3 className="text-sm font-bold text-[var(--text-main)] flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-500" />
                   <span>Projetos com Pendências Atrasadas ({delayedProjects.length})</span>
                 </h3>
               </div>
@@ -863,24 +863,24 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                 {delayedProjects.map(({ project: p, overdueTasks, overdueMils, overdueInsts, overdueActs, isProjectDeadlineOverdue }) => (
                   <div
                     key={p.id}
-                    className="bg-[#1c1815] border border-rose-500/30 rounded-2xl p-5 space-y-4 shadow-sm"
+                    className="bg-[var(--bg-card)] border border-rose-500/30 rounded-2xl p-5 space-y-4 shadow-sm"
                   >
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#3d342f]/60 pb-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-rose-400 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20">
+                          <span className="text-[10px] font-bold uppercase tracking-wide text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20">
                             {p.category.toUpperCase().replace('_', ' ')}
                           </span>
-                          <span className="text-xs text-[#a89c93]">
-                            Cliente: <strong className="text-[#fcf8f5]">{p.clientName}</strong>
+                          <span className="text-xs text-[var(--text-muted)]">
+                            Cliente: <strong className="text-[var(--text-main)]">{p.clientName}</strong>
                           </span>
                         </div>
-                        <h4 className="text-base font-serif font-bold text-[#fcf8f5] mt-1">{p.title}</h4>
+                        <h4 className="text-base font-serif font-bold text-[var(--text-main)] mt-1">{p.title}</h4>
                       </div>
 
                       <button
                         onClick={() => setSelectedProjectForDetail(p)}
-                        className="px-3.5 py-1.5 rounded-xl bg-[#241e1b] hover:bg-[#3d342f]/60 border border-[#3d342f] text-xs font-bold text-[#fcf8f5] flex items-center gap-1.5 transition-all cursor-pointer"
+                        className="px-3.5 py-1.5 rounded-xl bg-[var(--bg-card-secondary)] hover:opacity-90 border border-[var(--border-color)] text-xs font-bold text-[var(--text-main)] flex items-center gap-1.5 transition-all cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
                         <span>Ver Projeto</span>
@@ -890,9 +890,9 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                     {/* List of delayed items */}
                     <div className="space-y-2 text-xs">
                       {isProjectDeadlineOverdue && (
-                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300">
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-300">
                           <span className="font-semibold flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5 text-rose-400" />
+                            <Clock className="w-3.5 h-3.5 text-rose-500" />
                             Prazo Final do Contrato Vencido
                           </span>
                           <span className="text-[11px] font-bold">Previsto para: {formatDate(p.endDate!)}</span>
@@ -900,32 +900,32 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                       )}
 
                       {overdueTasks.map((t) => (
-                        <div key={t.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[#14110f] border border-[#3d342f]">
+                        <div key={t.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)]">
                           <div className="flex items-center gap-2 min-w-0">
-                            <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                            <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                             <div className="min-w-0">
-                              <span className="font-semibold text-[#fcf8f5] block truncate">{t.title}</span>
-                              <span className="text-[10px] text-[#a89c93] block">Etapa: {t.stageName}</span>
+                              <span className="font-semibold text-[var(--text-main)] block truncate">{t.title}</span>
+                              <span className="text-[10px] text-[var(--text-muted)] block">Etapa: {t.stageName}</span>
                             </div>
                           </div>
-                          <span className="text-rose-400 font-bold text-[11px] shrink-0 ml-2">Vencido em {formatDate(t.dueDate)}</span>
+                          <span className="text-rose-600 dark:text-rose-400 font-bold text-[11px] shrink-0 ml-2">Vencido em {formatDate(t.dueDate)}</span>
                         </div>
                       ))}
 
                       {overdueMils.map((m) => (
-                        <div key={m.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[#14110f] border border-[#3d342f]">
+                        <div key={m.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)]">
                           <div className="flex items-center gap-2 min-w-0">
-                            <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                             <div className="min-w-0">
-                              <span className="font-semibold text-[#fcf8f5] block truncate">Marco: {m.title}</span>
-                              <span className="text-[10px] text-[#a89c93] block">Fase: {m.stage}</span>
+                              <span className="font-semibold text-[var(--text-main)] block truncate">Marco: {m.title}</span>
+                              <span className="text-[10px] text-[var(--text-muted)] block">Fase: {m.stage}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0 ml-2">
-                            <span className="text-amber-400 font-bold text-[11px]">Vencido em {formatDate(m.dueDate)}</span>
+                            <span className="text-amber-600 dark:text-amber-400 font-bold text-[11px]">Vencido em {formatDate(m.dueDate)}</span>
                             <button
                               onClick={() => toggleProjectMilestone(m.id)}
-                              className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 font-bold text-[10px] cursor-pointer"
+                              className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 font-bold text-[10px] cursor-pointer"
                             >
                               Concluir
                             </button>
@@ -934,19 +934,19 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                       ))}
 
                       {overdueInsts.map((i) => (
-                        <div key={i.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[#14110f] border border-[#3d342f]">
+                        <div key={i.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)]">
                           <div className="flex items-center gap-2 min-w-0">
-                            <CreditCard className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                            <CreditCard className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                             <div className="min-w-0">
-                              <span className="font-semibold text-[#fcf8f5] block truncate">Parcela: {i.description}</span>
-                              <span className="text-[10px] text-[#a89c93] block">Valor: {formatCurrency(i.amount)}</span>
+                              <span className="font-semibold text-[var(--text-main)] block truncate">Parcela: {i.description}</span>
+                              <span className="text-[10px] text-[var(--text-muted)] block">Valor: {formatCurrency(i.amount)}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0 ml-2">
-                            <span className="text-rose-400 font-bold text-[11px]">Vencido em {formatDate(i.dueDate)}</span>
+                            <span className="text-rose-600 dark:text-rose-400 font-bold text-[11px]">Vencido em {formatDate(i.dueDate)}</span>
                             <button
                               onClick={() => handleMarkInstallmentAsPaid(i.id)}
-                              className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 font-bold text-[10px] cursor-pointer"
+                              className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 font-bold text-[10px] cursor-pointer"
                             >
                               Dar Baixa
                             </button>
@@ -955,15 +955,15 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                       ))}
 
                       {overdueActs.map((a) => (
-                        <div key={a.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[#14110f] border border-[#3d342f]">
+                        <div key={a.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)]">
                           <div className="flex items-center gap-2 min-w-0">
-                            <CheckSquare className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <CheckSquare className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                             <div className="min-w-0">
-                              <span className="font-semibold text-[#fcf8f5] block truncate">{a.description}</span>
-                              <span className="text-[10px] text-[#a89c93] block">Ação do Projeto</span>
+                              <span className="font-semibold text-[var(--text-main)] block truncate">{a.description}</span>
+                              <span className="text-[10px] text-[var(--text-muted)] block">Ação do Projeto</span>
                             </div>
                           </div>
-                          <span className="text-amber-400 font-bold text-[11px] shrink-0 ml-2">Vencido em {formatDate(a.date)}</span>
+                          <span className="text-amber-600 dark:text-amber-400 font-bold text-[11px] shrink-0 ml-2">Vencido em {formatDate(a.date)}</span>
                         </div>
                       ))}
                     </div>
