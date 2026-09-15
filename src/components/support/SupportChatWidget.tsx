@@ -82,45 +82,45 @@ export const SupportChatWidget: React.FC = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 sm:gap-2.5 px-3.5 py-2.5 sm:px-5 sm:py-3 bg-[var(--theme-primary)] hover:opacity-95 text-[#14110f] font-bold text-xs rounded-full shadow-2xl transition-all cursor-pointer group hover:scale-105 border border-black/20"
+          className="flex items-center gap-2 sm:gap-2.5 px-3.5 py-2.5 sm:px-5 sm:py-3 bg-[var(--theme-primary)] hover:opacity-95 text-white font-bold text-xs rounded-full shadow-2xl transition-all cursor-pointer group hover:scale-105 border border-black/20"
         >
           <div className="relative">
-            <Headset className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="absolute -top-1 -right-1 w-2 sm:w-2.5 h-2 sm:h-2.5 bg-emerald-500 rounded-full border-2 border-[#14110f] animate-pulse" />
+            <Headset className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            <span className="absolute -top-1 -right-1 w-2 sm:w-2.5 h-2 sm:h-2.5 bg-emerald-500 rounded-full border-2 border-[var(--bg-card)] animate-pulse" />
           </div>
-          <span className="tracking-wide text-xs">Suporte</span>
+          <span className="tracking-wide text-xs text-white">Suporte</span>
         </button>
       )}
 
       {/* Chat Window Modal */}
       {isOpen && (
-        <div className="w-[calc(100vw-32px)] sm:w-[400px] max-w-[400px] h-[480px] sm:h-[520px] bg-[#1c1815] border border-[#3d342f] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="w-[calc(100vw-32px)] sm:w-[400px] max-w-[400px] h-[480px] sm:h-[520px] bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {/* Header */}
-          <div className="bg-[#14110f] px-5 py-4 border-b border-[#3d342f] flex items-center justify-between">
+          <div className="bg-[var(--bg-card-secondary)] px-5 py-4 border-b border-[var(--border-color)] flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[var(--theme-primary)]/10 border border-[var(--theme-primary)]/30 flex items-center justify-center text-[var(--theme-primary)]">
                 <Headset className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-serif font-bold text-[#fcf8f5] text-sm tracking-wide">Suporte Dedicado</h3>
+                <h3 className="font-serif font-bold text-[var(--text-main)] text-sm tracking-wide">Suporte Dedicado</h3>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] text-[#a89c93] font-medium">Equipe online • Resposta rápida</span>
+                  <span className="text-[10px] text-[var(--text-muted)] font-medium">Equipe online • Resposta rápida</span>
                 </div>
               </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-[#a89c93] hover:text-[#fcf8f5] p-1.5 rounded-lg hover:bg-[#28221e] transition-colors cursor-pointer"
+              className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1.5 rounded-lg hover:bg-[var(--bg-card-secondary)] transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Messages Body */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-[#181412]">
+          <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-[var(--bg-card-secondary)]">
             <div className="text-center my-2">
-              <span className="text-[10px] text-[#a89c93] bg-[#221c19] px-3 py-1 rounded-full border border-[#302722]">
+              <span className="text-[10px] text-[var(--text-muted)] bg-[var(--bg-card)] px-3 py-1 rounded-full border border-[var(--border-color)]">
                 Início da conversa com o suporte
               </span>
             </div>
@@ -133,28 +133,28 @@ export const SupportChatWidget: React.FC = () => {
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
                     msg.sender === 'user'
-                      ? 'bg-[var(--theme-primary)] text-[#14110f] font-bold text-xs'
-                      : 'bg-[#2a2320] text-[var(--theme-primary)] border border-[#3d342f]'
+                      ? 'bg-[var(--theme-primary)] text-white font-bold text-xs'
+                      : 'bg-[var(--bg-card)] text-[var(--theme-primary)] border border-[var(--border-color)]'
                   }`}
                 >
                   {msg.sender === 'user' ? <User className="w-3.5 h-3.5" /> : <Headset className="w-3.5 h-3.5" />}
                 </div>
 
                 <div
-                  className={`max-w-[78%] px-4 py-3 rounded-2xl text-xs space-y-1 shadow-sm ${
+                  className={`max-w-[78%] px-4 py-3 rounded-2xl text-xs space-y-1 shadow-xs ${
                     msg.sender === 'user'
-                      ? 'bg-[var(--theme-primary)] text-[#14110f] font-medium rounded-tr-xs'
-                      : 'bg-[#221c19] text-[#fcf8f5] border border-[#302722] rounded-tl-xs'
+                      ? 'bg-[var(--theme-primary)] text-white font-medium rounded-tr-xs'
+                      : 'bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-tl-xs'
                   }`}
                 >
                   <p className="leading-relaxed">{msg.text}</p>
                   <div
                     className={`text-[9px] text-right flex items-center justify-end gap-1 ${
-                      msg.sender === 'user' ? 'text-[#14110f]/70' : 'text-[#a89c93]'
+                      msg.sender === 'user' ? 'text-white/80' : 'text-[var(--text-muted)]'
                     }`}
                   >
                     <span>{msg.time}</span>
-                    {msg.sender === 'user' && <CheckCircle2 className="w-3 h-3" />}
+                    {msg.sender === 'user' && <CheckCircle2 className="w-3 h-3 text-white" />}
                   </div>
                 </div>
               </div>
@@ -163,20 +163,20 @@ export const SupportChatWidget: React.FC = () => {
           </div>
 
           {/* Input Footer */}
-          <form onSubmit={handleSendMessage} className="p-3 bg-[#14110f] border-t border-[#3d342f] flex items-center gap-2">
+          <form onSubmit={handleSendMessage} className="p-3 bg-[var(--bg-card-secondary)] border-t border-[var(--border-color)] flex items-center gap-2">
             <input
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               placeholder="Digite sua dúvida ou mensagem..."
-              className="flex-1 px-4 py-2.5 rounded-xl bg-[#1c1815] border border-[#3d342f] text-[#fcf8f5] text-xs focus:outline-none focus:border-[var(--theme-primary)] placeholder:text-[#8a7e76]"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] text-xs focus:outline-hidden focus:border-[var(--theme-primary)] placeholder:[var(--text-muted)]"
             />
             <button
               type="submit"
               disabled={!inputMessage.trim()}
-              className="p-2.5 bg-[var(--theme-primary)] hover:opacity-90 disabled:opacity-40 text-[#14110f] rounded-xl transition-all cursor-pointer flex items-center justify-center shadow-md"
+              className="p-2.5 bg-[var(--theme-primary)] hover:opacity-90 disabled:opacity-40 text-white rounded-xl transition-all cursor-pointer flex items-center justify-center shadow-xs"
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-4 h-4 text-white" />
             </button>
           </form>
         </div>

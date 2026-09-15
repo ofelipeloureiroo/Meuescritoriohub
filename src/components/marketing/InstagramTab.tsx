@@ -611,35 +611,35 @@ export const InstagramTab: React.FC = () => {
     <div className="space-y-6 max-w-[1400px] mx-auto pb-16">
       {/* 1. HEADER */}
       <div>
-        <h1 className="text-2xl font-serif font-bold text-[#fcf8f5] flex items-center gap-2.5">
+        <h1 className="text-2xl font-serif font-bold text-[var(--text-main)] flex items-center gap-2.5">
           <Instagram className="w-6 h-6 text-[#e1306c]" />
           <span>Instagram</span>
         </h1>
-        <p className="text-xs text-[#a89c93] mt-0.5 font-sans">Planejamento de conteúdo</p>
+        <p className="text-xs text-[var(--text-muted)] mt-0.5 font-sans">Planejamento de conteúdo</p>
       </div>
 
       {/* 2. INSIGHT DO DIA CARD (EXACT MATCH TO USER REFERENCE IMAGE) */}
-      <div className="bg-[#f9f8f6] border border-[#e8e4dc] rounded-2xl overflow-hidden shadow-xl transition-all text-[#1c1917]">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-xl transition-all text-[var(--text-main)]">
         {/* TOP HEADER BAR */}
         <div
-          className="px-5 py-3.5 bg-[#f5f3ee] border-b border-[#e8e4dc] flex items-center justify-between cursor-pointer select-none"
+          className="px-5 py-3.5 bg-[var(--bg-card-secondary)] border-b border-[var(--border-color)] flex items-center justify-between cursor-pointer select-none"
           onClick={() => setIsInsightExpanded(!isInsightExpanded)}
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#e8e4dc] text-[#57534e] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[var(--bg-card-hover)] text-[var(--text-muted)] flex items-center justify-center shrink-0">
               <Sliders className="w-4 h-4" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold text-[#78716c] uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-[var(--theme-primary)] uppercase tracking-wider">
                 INSIGHT DO DIA
               </span>
-              <span className="text-sm font-semibold text-[#1c1917]">
+              <span className="text-sm font-semibold text-[var(--text-main)]">
                 {richInsight.title}
               </span>
             </div>
           </div>
 
-          <button className="p-1.5 text-[#78716c] hover:text-[#1c1917] rounded-lg transition-colors cursor-pointer">
+          <button className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-lg transition-colors cursor-pointer">
             {isInsightExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         </div>
@@ -649,7 +649,7 @@ export const InstagramTab: React.FC = () => {
           <div className="p-4 sm:p-6 space-y-6">
             {/* HERO BANNER WITH BACKGROUND IMAGE OVERLAY */}
             <div
-              className="relative rounded-2xl overflow-hidden bg-cover bg-center min-h-[200px] sm:min-h-[220px] flex flex-col justify-end p-6 sm:p-8 shadow-inner border border-[#e2ded7]"
+              className="relative rounded-2xl overflow-hidden bg-cover bg-center min-h-[200px] sm:min-h-[220px] flex flex-col justify-end p-6 sm:p-8 shadow-inner border border-[var(--border-color)]"
               style={{ backgroundImage: `url(${richInsight.bgImageUrl})` }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/20" />
@@ -657,7 +657,7 @@ export const InstagramTab: React.FC = () => {
               <div className="relative z-10 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="px-3 py-1 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold rounded-full flex items-center gap-1 border border-white/20">
-                    <Sparkles className="w-3 h-3 text-[#85e3c1]" />
+                    <Sparkles className="w-3 h-3 text-[var(--theme-primary)]" />
                     INSIGHT DO DIA
                   </span>
                   <span className="px-3 py-1 bg-black/60 backdrop-blur-md text-white/90 text-[10px] font-bold rounded-full uppercase tracking-wider border border-white/20">
@@ -681,35 +681,35 @@ export const InstagramTab: React.FC = () => {
             <div className="space-y-5 px-1 sm:px-2">
               {richInsight.stories.map((story) => (
                 <div key={story.number} className="flex items-start gap-3.5">
-                  <div className="w-7 h-7 rounded-full bg-[#f0ede8] border border-[#e2ded7] text-[#44403c] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                  <div className="w-7 h-7 rounded-full bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                     {story.number}
                   </div>
 
                   <div className="flex-1 space-y-1">
-                    <p className="text-[10px] font-bold text-[#8c827a] tracking-wider uppercase">
+                    <p className="text-[10px] font-bold text-[var(--text-muted)] tracking-wider uppercase">
                       {story.typeLabel}
                     </p>
-                    <p className="text-xs sm:text-sm font-semibold text-[#1c1917] leading-snug">
+                    <p className="text-xs sm:text-sm font-semibold text-[var(--text-main)] leading-snug">
                       {story.instruction}
                     </p>
                     {story.quote && (
-                      <p className="text-xs italic text-[#78716c] font-serif">
+                      <p className="text-xs italic text-[var(--text-muted)] font-serif">
                         {story.quote}
                       </p>
                     )}
 
                     {story.pollCard && (
-                      <div className="mt-3 p-4 bg-[#f4f2ee] rounded-xl border border-[#e8e4dc] space-y-2 text-xs">
-                        <p className="font-bold text-[#1c1917]">{story.pollCard.question}</p>
-                        <ul className="space-y-1 text-[#44403c] font-medium pl-1">
+                      <div className="mt-3 p-4 bg-[var(--bg-card-secondary)] rounded-xl border border-[var(--border-color)] space-y-2 text-xs">
+                        <p className="font-bold text-[var(--text-main)]">{story.pollCard.question}</p>
+                        <ul className="space-y-1 text-[var(--text-main)] font-medium pl-1">
                           {story.pollCard.options.map((opt) => (
                             <li key={opt} className="flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#78716c]" />
+                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)]" />
                               <span>{opt}</span>
                             </li>
                           ))}
                         </ul>
-                        <p className="text-[11px] text-[#78716c] pt-2 border-t border-[#e2ded7] flex items-center gap-1">
+                        <p className="text-[11px] text-[var(--text-muted)] pt-2 border-t border-[var(--border-color)] flex items-center gap-1">
                           <span>💡</span>
                           <span>{story.pollCard.tip}</span>
                         </p>
@@ -722,13 +722,13 @@ export const InstagramTab: React.FC = () => {
 
             {/* DIREÇÃO VISUAL TAGS */}
             <div className="flex flex-wrap items-center gap-2 pt-2 px-1 sm:px-2 text-xs">
-              <span className="text-[10px] font-bold text-[#8c827a] uppercase tracking-wider mr-1">
+              <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mr-1">
                 DIREÇÃO VISUAL
               </span>
               {richInsight.visualDirection.map((tag) => (
                 <span
                   key={tag}
-                  className="px-2.5 py-1 bg-[#f0ede8] border border-[#e2ded7] text-[#44403c] text-[11px] font-medium rounded-full"
+                  className="px-2.5 py-1 bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-[var(--text-main)] text-[11px] font-medium rounded-full"
                 >
                   {tag}
                 </span>
@@ -736,28 +736,28 @@ export const InstagramTab: React.FC = () => {
             </div>
 
             {/* ACTION BUTTONS FOOTER */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-[#e8e4dc]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-[var(--border-color)]">
               {/* LEFT GROUP */}
               <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   onClick={handleAcceptInsight}
-                  className="px-4 py-2.5 bg-[#1c352d] hover:bg-[#25463c] text-white text-xs font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer shadow-sm border border-[#2d5246]"
+                  className="px-4 py-2.5 bg-[var(--theme-primary)] text-black hover:brightness-110 text-xs font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer shadow-sm border border-[var(--theme-primary)]"
                 >
-                  <Check className="w-4 h-4 text-[#85e3c1]" />
+                  <Check className="w-4 h-4 text-black" />
                   <span>Aceitar e criar post</span>
                 </button>
 
                 <button
                   onClick={handleSaveInsight}
-                  className="px-4 py-2.5 bg-[#f0ede8] hover:bg-[#e8e4dc] text-[#2c2825] text-xs font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer border border-[#e2ded7]"
+                  className="px-4 py-2.5 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] text-xs font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer border border-[var(--border-color)]"
                 >
-                  <Bookmark className="w-4 h-4 text-[#78716c]" />
+                  <Bookmark className="w-4 h-4 text-[var(--text-muted)]" />
                   <span>{savedInsights.includes(richInsight.id) ? 'Salvo' : 'Salvar'}</span>
                 </button>
 
                 <button
                   onClick={handleNextInsight}
-                  className="px-3.5 py-2.5 text-[#78716c] hover:text-[#1c1917] text-xs font-medium rounded-full transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-2.5 text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-medium rounded-full transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                   <span>Não combina</span>
@@ -767,9 +767,9 @@ export const InstagramTab: React.FC = () => {
               {/* RIGHT GROUP */}
               <button
                 onClick={handleNextInsight}
-                className="px-4 py-2.5 border border-[#d6d1c7] bg-white hover:bg-[#f8f7f5] text-[#2c2825] text-xs font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer shadow-2xs self-start sm:self-center"
+                className="px-4 py-2.5 border border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] text-xs font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer shadow-2xs self-start sm:self-center"
               >
-                <RotateCw className="w-3.5 h-3.5 text-[#78716c]" />
+                <RotateCw className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                 <span>Gerar outro</span>
               </button>
             </div>
@@ -779,8 +779,8 @@ export const InstagramTab: React.FC = () => {
 
       {/* TOAST FEEDBACK NOTIFICATION */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#1c352d] text-white border border-[#85e3c1]/40 px-4 py-3 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-          <CheckCircle2 className="w-4 h-4 text-[#85e3c1]" />
+        <div className="fixed bottom-6 right-6 z-50 bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--theme-primary)]/40 px-4 py-3 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <CheckCircle2 className="w-4 h-4 text-[var(--theme-primary)]" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -794,7 +794,7 @@ export const InstagramTab: React.FC = () => {
             <select
               value={filterResponsible}
               onChange={(e) => setFilterResponsible(e.target.value)}
-              className="appearance-none px-3.5 py-2 pr-8 bg-[#1a1614] border border-[#302722] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[#85e3c1] cursor-pointer"
+              className="appearance-none px-3.5 py-2 pr-8 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
             >
               <option value="all">Todos...</option>
               {teamMembers.map((m) => (
@@ -803,7 +803,7 @@ export const InstagramTab: React.FC = () => {
                 </option>
               ))}
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-[#8c7e73] absolute right-2.5 top-2.5 pointer-events-none" />
+            <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] absolute right-2.5 top-2.5 pointer-events-none" />
           </div>
 
           {/* TYPE FILTER */}
@@ -811,7 +811,7 @@ export const InstagramTab: React.FC = () => {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="appearance-none px-3.5 py-2 pr-8 bg-[#1a1614] border border-[#302722] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[#85e3c1] cursor-pointer"
+              className="appearance-none px-3.5 py-2 pr-8 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
             >
               <option value="all">Todos tipos</option>
               <option value="Feed">Feed</option>
@@ -819,7 +819,7 @@ export const InstagramTab: React.FC = () => {
               <option value="Carrossel">Carrossel</option>
               <option value="Stories">Stories</option>
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-[#8c7e73] absolute right-2.5 top-2.5 pointer-events-none" />
+            <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] absolute right-2.5 top-2.5 pointer-events-none" />
           </div>
 
           {/* STATUS FILTER */}
@@ -827,7 +827,7 @@ export const InstagramTab: React.FC = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="appearance-none px-3.5 py-2 pr-8 bg-[#1a1614] border border-[#302722] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[#85e3c1] cursor-pointer"
+              className="appearance-none px-3.5 py-2 pr-8 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
             >
               <option value="all">Todos status</option>
               <option value="Planejado">Planejado</option>
@@ -835,7 +835,7 @@ export const InstagramTab: React.FC = () => {
               <option value="Postado">Postado</option>
               <option value="Atrasado">Atrasado</option>
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-[#8c7e73] absolute right-2.5 top-2.5 pointer-events-none" />
+            <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] absolute right-2.5 top-2.5 pointer-events-none" />
           </div>
         </div>
 
@@ -843,47 +843,47 @@ export const InstagramTab: React.FC = () => {
         <div className="flex items-center gap-2.5 shrink-0">
           <button
             onClick={handleSuggestPostOfDay}
-            className="px-3.5 py-2 bg-[#25201d] hover:bg-[#2e2724] border border-[#382f29] text-[#fcf8f5] rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+            className="px-3.5 py-2 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] text-[var(--text-main)] rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#85e3c1]" />
+            <Sparkles className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
             <span>Sugerir Post do Dia</span>
           </button>
 
           <button
             onClick={() => handleOpenNewPost()}
-            className="px-4 py-2 bg-[#1c352d] hover:bg-[#25463c] text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border border-[#2d5246] shadow-md"
+            className="px-4 py-2 bg-[var(--theme-primary)] text-black hover:brightness-110 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border border-[var(--theme-primary)] shadow-md"
           >
-            <Plus className="w-4 h-4 text-[#85e3c1]" />
+            <Plus className="w-4 h-4 text-black" />
             <span>Novo Post</span>
           </button>
         </div>
       </div>
 
       {/* 4. CALENDAR SECTION */}
-      <div className="bg-[#1a1614] border border-[#302722] rounded-2xl p-5 space-y-4 shadow-xl">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-5 space-y-4 shadow-xl">
         {/* CALENDAR NAVIGATION */}
         <div className="flex items-center justify-between">
           <button
             onClick={handlePrevMonth}
-            className="p-1.5 text-[#8c7e73] hover:text-[#fcf8f5] hover:bg-[#25201d] rounded-xl transition-colors cursor-pointer"
+            className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] rounded-xl transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
 
-          <h2 className="text-base font-serif font-bold text-[#fcf8f5]">{monthYearLabel}</h2>
+          <h2 className="text-base font-serif font-bold text-[var(--text-main)]">{monthYearLabel}</h2>
 
           <button
             onClick={handleNextMonth}
-            className="p-1.5 text-[#8c7e73] hover:text-[#fcf8f5] hover:bg-[#25201d] rounded-xl transition-colors cursor-pointer"
+            className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] rounded-xl transition-colors cursor-pointer"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
 
         {/* DAYS OF WEEK HEADER */}
-        <div className="grid grid-cols-7 gap-1 text-center border-b border-[#302722] pb-2">
+        <div className="grid grid-cols-7 gap-1 text-center border-b border-[var(--border-color)] pb-2">
           {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((d) => (
-            <div key={d} className="text-xs font-bold text-[#8c7e73]">
+            <div key={d} className="text-xs font-bold text-[var(--text-muted)]">
               {d}
             </div>
           ))}
@@ -900,10 +900,10 @@ export const InstagramTab: React.FC = () => {
                 onClick={() => handleOpenNewPost(day.dateStr)}
                 className={`min-h-[110px] p-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-between group ${
                   day.isToday
-                    ? 'bg-[#1e2320] border-2 border-[#85e3c1] shadow-lg'
+                    ? 'bg-[var(--bg-card-hover)] border-2 border-[var(--theme-primary)] shadow-lg'
                     : day.isCurrentMonth
-                    ? 'bg-[#12100e] border-[#2c241e] hover:border-[#3d342f]'
-                    : 'bg-[#0f0d0c]/50 border-[#1f1916] text-[#524740]'
+                    ? 'bg-[var(--bg-card)] border-[var(--border-color)] hover:border-[var(--theme-primary)]'
+                    : 'bg-[var(--bg-card-secondary)]/50 border-[var(--border-color)]/50 text-[var(--text-muted)]/50'
                 }`}
               >
                 {/* DAY TOP */}
@@ -911,10 +911,10 @@ export const InstagramTab: React.FC = () => {
                   <span
                     className={`text-xs font-bold ${
                       day.isToday
-                        ? 'text-[#85e3c1]'
+                        ? 'text-[var(--theme-primary)]'
                         : day.isCurrentMonth
-                        ? 'text-[#fcf8f5]'
-                        : 'text-[#63554c]'
+                        ? 'text-[var(--text-main)]'
+                        : 'text-[var(--text-muted)]'
                     }`}
                   >
                     {day.dayNumber}
@@ -925,7 +925,7 @@ export const InstagramTab: React.FC = () => {
                       e.stopPropagation();
                       handleOpenNewPost(day.dateStr);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 text-[#8c7e73] hover:text-[#85e3c1] transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-0.5 text-[var(--text-muted)] hover:text-[var(--theme-primary)] transition-all"
                     title="Adicionar post nesta data"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -945,12 +945,12 @@ export const InstagramTab: React.FC = () => {
                         }}
                         className={`p-1.5 rounded-lg border text-[10px] transition-all flex items-center justify-between gap-1.5 ${
                           post.status === 'Postado'
-                            ? 'bg-emerald-950/40 border-emerald-800/40 text-emerald-200 line-through opacity-80'
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 line-through opacity-80'
                             : post.status === 'Hoje'
-                            ? 'bg-amber-950/50 border-amber-700/50 text-amber-100 font-semibold'
+                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 font-semibold'
                             : post.status === 'Atrasado'
-                            ? 'bg-rose-950/50 border-rose-800/50 text-rose-200'
-                            : 'bg-[#1f1a17] border-[#382f29] text-[#fcf8f5] hover:border-[#85e3c1]'
+                            ? 'bg-rose-500/10 border-rose-500/30 text-rose-600'
+                            : 'bg-[var(--bg-card-secondary)] border-[var(--border-color)] text-[var(--text-main)] hover:border-[var(--theme-primary)]'
                         }`}
                       >
                         <div className="flex items-center gap-1 min-w-0 flex-1">
@@ -959,7 +959,7 @@ export const InstagramTab: React.FC = () => {
                               post.status
                             )}`}
                           />
-                          <TypeIcon className="w-3 h-3 shrink-0 text-[#85e3c1]" />
+                          <TypeIcon className="w-3 h-3 shrink-0 text-[var(--theme-primary)]" />
                           <span className="truncate leading-tight">{post.title}</span>
                         </div>
                       </div>
@@ -972,7 +972,7 @@ export const InstagramTab: React.FC = () => {
         </div>
 
         {/* CALENDAR FOOTER LEGEND */}
-        <div className="flex flex-wrap items-center justify-center gap-6 pt-3 border-t border-[#302722] text-xs text-[#a89c93]">
+        <div className="flex flex-wrap items-center justify-center gap-6 pt-3 border-t border-[var(--border-color)] text-xs text-[var(--text-muted)]">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-purple-400 inline-block" />
             <span>Planejado</span>
@@ -995,15 +995,15 @@ export const InstagramTab: React.FC = () => {
       {/* 5. MODAL NOVO / EDITAR POST (IMAGE 3 MATCH) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1a1614] border border-[#302722] rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150 no-scrollbar">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150 no-scrollbar">
             {/* MODAL HEADER */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#302722]">
-              <h3 className="font-serif font-bold text-[#fcf8f5] text-base">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color)]">
+              <h3 className="font-serif font-bold text-[var(--text-main)] text-base">
                 {editingPost ? 'Editar Post' : 'Novo Post'}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 text-[#8c7e73] hover:text-[#fcf8f5] rounded-lg transition-colors cursor-pointer"
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1012,21 +1012,21 @@ export const InstagramTab: React.FC = () => {
             <form onSubmit={handleSavePost} className="space-y-4">
               {/* TÍTULO * */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#fcf8f5] block">Título *</label>
+                <label className="text-xs font-bold text-[var(--text-main)] block">Título *</label>
                 <input
                   type="text"
                   placeholder="Título do post"
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
                   required
-                  className="w-full px-3.5 py-2.5 bg-[#12100e] border border-[#382f29] rounded-xl text-xs text-[#fcf8f5] placeholder-[#73655c] focus:outline-none focus:border-[#85e3c1]"
+                  className="w-full px-3.5 py-2.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-primary)]"
                 />
               </div>
 
               {/* IMAGEM DROPZONE */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#fcf8f5] block">Imagem</label>
-                <div className="relative border-2 border-dashed border-[#382f29] hover:border-[#85e3c1] rounded-xl p-4 bg-[#12100e] text-center transition-all">
+                <label className="text-xs font-bold text-[var(--text-main)] block">Imagem</label>
+                <div className="relative border-2 border-dashed border-[var(--border-color)] hover:border-[var(--theme-primary)] rounded-xl p-4 bg-[var(--bg-input)] text-center transition-all">
                   {formImageUrl ? (
                     <div className="relative group max-h-40 overflow-hidden rounded-lg mx-auto">
                       <img
@@ -1044,10 +1044,10 @@ export const InstagramTab: React.FC = () => {
                     </div>
                   ) : (
                     <label className="cursor-pointer flex flex-col items-center justify-center gap-1.5 py-2">
-                      <div className="w-10 h-10 rounded-full bg-[#1c352d] text-[#85e3c1] flex items-center justify-center border border-[#2d5246]">
+                      <div className="w-10 h-10 rounded-full bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] flex items-center justify-center border border-[var(--theme-primary)]/30">
                         <ImageIcon className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-semibold text-[#85e3c1]">Enviar</span>
+                      <span className="text-xs font-semibold text-[var(--theme-primary)]">Enviar</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -1061,24 +1061,24 @@ export const InstagramTab: React.FC = () => {
 
               {/* DESCRIÇÃO */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#fcf8f5] block">Descrição</label>
+                <label className="text-xs font-bold text-[var(--text-main)] block">Descrição</label>
                 <textarea
                   rows={3}
                   placeholder="Escreva a legenda ou tópicos do post..."
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#12100e] border border-[#382f29] rounded-xl text-xs text-[#fcf8f5] placeholder-[#73655c] focus:outline-none focus:border-[#85e3c1] resize-none"
+                  className="w-full px-3.5 py-2.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-primary)] resize-none"
                 />
               </div>
 
               {/* TIPO & CATEGORIA ROW */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-[#fcf8f5] block">Tipo</label>
+                  <label className="text-xs font-bold text-[var(--text-main)] block">Tipo</label>
                   <select
                     value={formType}
                     onChange={(e) => setFormType(e.target.value as PostType)}
-                    className="w-full px-3 py-2.5 bg-[#12100e] border border-[#382f29] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[#85e3c1] cursor-pointer"
+                    className="w-full px-3 py-2.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
                   >
                     <option value="Feed">Feed</option>
                     <option value="Reels">Reels</option>
@@ -1088,11 +1088,11 @@ export const InstagramTab: React.FC = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-[#fcf8f5] block">Categoria</label>
+                  <label className="text-xs font-bold text-[var(--text-main)] block">Categoria</label>
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value as PostCategory)}
-                    className="w-full px-3 py-2.5 bg-[#12100e] border border-[#382f29] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[#85e3c1] cursor-pointer"
+                    className="w-full px-3 py-2.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
                   >
                     <option value="Educativo">Educativo</option>
                     <option value="Portfólio">Portfólio</option>
@@ -1106,11 +1106,11 @@ export const InstagramTab: React.FC = () => {
 
               {/* PRIORIDADE */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#fcf8f5] block">Prioridade</label>
+                <label className="text-xs font-bold text-[var(--text-main)] block">Prioridade</label>
                 <select
                   value={formPriority}
                   onChange={(e) => setFormPriority(e.target.value as PostPriority)}
-                  className="w-full px-3 py-2.5 bg-[#12100e] border border-[#382f29] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[#85e3c1] cursor-pointer"
+                  className="w-full px-3 py-2.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
                 >
                   <option value="Baixa">Baixa</option>
                   <option value="Média">Média</option>
@@ -1120,22 +1120,22 @@ export const InstagramTab: React.FC = () => {
 
               {/* DATA PREVISTA */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#fcf8f5] block">Data Prevista</label>
+                <label className="text-xs font-bold text-[var(--text-main)] block">Data Prevista</label>
                 <input
                   type="date"
                   value={formScheduledDate}
                   onChange={(e) => setFormScheduledDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#12100e] border border-[#382f29] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[#85e3c1]"
+                  className="w-full px-3.5 py-2.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]"
                 />
               </div>
 
               {/* RESPONSÁVEL */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#fcf8f5] block">Responsável</label>
+                <label className="text-xs font-bold text-[var(--text-main)] block">Responsável</label>
                 <select
                   value={formResponsibleId}
                   onChange={(e) => setFormResponsibleId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-[#12100e] border border-[#382f29] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[#85e3c1] cursor-pointer"
+                  className="w-full px-3 py-2.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
                 >
                   <option value="">Selecionar...</option>
                   {teamMembers.map((m) => (
@@ -1148,11 +1148,11 @@ export const InstagramTab: React.FC = () => {
 
               {/* PROJETO (OPCIONAL) */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#fcf8f5] block">Projeto (opcional)</label>
+                <label className="text-xs font-bold text-[var(--text-main)] block">Projeto (opcional)</label>
                 <select
                   value={formProjectId}
                   onChange={(e) => setFormProjectId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-[#12100e] border border-[#382f29] rounded-xl text-xs text-[#fcf8f5] focus:outline-none focus:border-[#85e3c1] cursor-pointer"
+                  className="w-full px-3 py-2.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
                 >
                   <option value="">Nenhum</option>
                   {architectureProjects.map((p) => (
@@ -1164,12 +1164,12 @@ export const InstagramTab: React.FC = () => {
               </div>
 
               {/* SUBMIT BUTTON */}
-              <div className="pt-3 border-t border-[#302722]">
+              <div className="pt-3 border-t border-[var(--border-color)]">
                 <button
                   type="submit"
-                  className="w-full py-3 bg-[#1c352d] hover:bg-[#25463c] text-white text-xs font-bold rounded-xl transition-all cursor-pointer border border-[#2d5246] shadow-lg flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-[var(--theme-primary)] text-black hover:brightness-110 text-xs font-bold rounded-xl transition-all cursor-pointer border border-[var(--theme-primary)] shadow-lg flex items-center justify-center gap-2"
                 >
-                  <Plus className="w-4 h-4 text-[#85e3c1]" />
+                  <Plus className="w-4 h-4 text-black" />
                   <span>Criar Post + Tarefa</span>
                 </button>
               </div>
@@ -1181,17 +1181,17 @@ export const InstagramTab: React.FC = () => {
       {/* 6. SELECTED POST DETAIL MODAL */}
       {selectedPost && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1a1614] border border-[#302722] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#1c352d] border border-[#2d5246] text-[#85e3c1] flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-[var(--theme-primary)]/10 border border-[var(--theme-primary)]/30 text-[var(--theme-primary)] flex items-center justify-center">
                   {React.createElement(getTypeIcon(selectedPost.type), { className: 'w-4 h-4' })}
                 </div>
                 <div>
-                  <h3 className="font-serif font-bold text-[#fcf8f5] text-base leading-tight">
+                  <h3 className="font-serif font-bold text-[var(--text-main)] text-base leading-tight">
                     {selectedPost.title}
                   </h3>
-                  <p className="text-[11px] text-[#a89c93]">
+                  <p className="text-[11px] text-[var(--text-muted)]">
                     Data: {selectedPost.scheduledDate.split('-').reverse().join('/')}
                   </p>
                 </div>
@@ -1199,7 +1199,7 @@ export const InstagramTab: React.FC = () => {
 
               <button
                 onClick={() => setSelectedPost(null)}
-                className="p-1 text-[#8c7e73] hover:text-[#fcf8f5] rounded-lg"
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1209,34 +1209,34 @@ export const InstagramTab: React.FC = () => {
               <img
                 src={selectedPost.imageUrl}
                 alt={selectedPost.title}
-                className="w-full max-h-48 object-cover rounded-xl border border-[#302722]"
+                className="w-full max-h-48 object-cover rounded-xl border border-[var(--border-color)]"
               />
             )}
 
             {selectedPost.description && (
-              <p className="text-xs text-[#a89c93] leading-relaxed bg-[#12100e] p-3 rounded-xl border border-[#2c241e]">
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed bg-[var(--bg-card-secondary)] p-3 rounded-xl border border-[var(--border-color)]">
                 {selectedPost.description}
               </p>
             )}
 
-            <div className="grid grid-cols-2 gap-2 text-xs text-[#a89c93]">
-              <div className="bg-[#12100e] p-2.5 rounded-xl border border-[#2c241e]">
-                <span className="text-[10px] text-[#8c7e73] block">Tipo</span>
-                <span className="font-bold text-[#fcf8f5]">{selectedPost.type}</span>
+            <div className="grid grid-cols-2 gap-2 text-xs text-[var(--text-muted)]">
+              <div className="bg-[var(--bg-card-secondary)] p-2.5 rounded-xl border border-[var(--border-color)]">
+                <span className="text-[10px] text-[var(--text-muted)] block">Tipo</span>
+                <span className="font-bold text-[var(--text-main)]">{selectedPost.type}</span>
               </div>
-              <div className="bg-[#12100e] p-2.5 rounded-xl border border-[#2c241e]">
-                <span className="text-[10px] text-[#8c7e73] block">Categoria</span>
-                <span className="font-bold text-[#fcf8f5]">{selectedPost.category}</span>
+              <div className="bg-[var(--bg-card-secondary)] p-2.5 rounded-xl border border-[var(--border-color)]">
+                <span className="text-[10px] text-[var(--text-muted)] block">Categoria</span>
+                <span className="font-bold text-[var(--text-main)]">{selectedPost.category}</span>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-[#302722]">
+            <div className="flex items-center justify-between pt-3 border-t border-[var(--border-color)]">
               <button
                 onClick={(e) => handleTogglePostStatus(selectedPost.id, e)}
                 className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
                   selectedPost.status === 'Postado'
-                    ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
-                    : 'bg-[#1c352d] border-[#2d5246] text-[#85e3c1]'
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-600'
+                    : 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)]/40 text-[var(--theme-primary)]'
                 }`}
               >
                 <CheckCircle2 className="w-4 h-4" />
@@ -1246,14 +1246,14 @@ export const InstagramTab: React.FC = () => {
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={(e) => handleOpenEditPost(selectedPost, e)}
-                  className="p-2 border border-[#382f29] text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#25201d] rounded-xl transition-all"
+                  className="p-2 border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] rounded-xl transition-all"
                   title="Editar"
                 >
                   <Edit2 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={(e) => handleDeletePost(selectedPost.id, e)}
-                  className="p-2 border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all"
+                  className="p-2 border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
                   title="Excluir"
                 >
                   <Trash2 className="w-4 h-4" />

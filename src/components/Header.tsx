@@ -189,10 +189,10 @@ export const Header: React.FC<HeaderProps> = ({
 
 
   return (
-    <header className="sticky top-0 z-40 bg-[#14110f]/95 backdrop-blur-md border-b border-[#3d342f]">
+    <header className="sticky top-0 z-40 bg-[var(--bg-card-secondary)]/95 backdrop-blur-md border-b border-[var(--border-color)] transition-colors duration-200">
       {/* Top Banner & Balance Strip */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row items-center justify-between py-3 gap-4 border-b border-[#3d342f]">
+        <div className="flex flex-col md:flex-row items-center justify-between py-3 gap-4 border-b border-[var(--border-color)]">
           {/* Logo do Meu Escritório Online & Identidade do Profissional */}
           <div className="flex items-center gap-4 w-full md:w-auto justify-between">
             <div className="flex items-center gap-3.5">
@@ -203,32 +203,32 @@ export const Header: React.FC<HeaderProps> = ({
                 title="Meu Escritório Online - Início"
               >
                 <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md bg-[var(--theme-primary)] text-black group-hover:bg-[var(--theme-primary-hover)] transition-colors flex-shrink-0"
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs bg-[var(--theme-primary)] text-white group-hover:opacity-90 transition-opacity flex-shrink-0"
                 >
-                  <Building2 className="w-5 h-5 text-black" />
+                  <Building2 className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-serif font-bold text-base sm:text-lg tracking-wider text-[#fcf8f5] uppercase leading-none">
+                    <span className="font-serif font-bold text-base sm:text-lg tracking-wider text-[var(--text-main)] uppercase leading-none">
                       MEU ESCRITÓRIO
                     </span>
                     <span className="text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)]">
                       ONLINE
                     </span>
                   </div>
-                  <span className="text-[10px] text-[#a89c93] tracking-wide mt-0.5">
+                  <span className="text-[10px] text-[var(--text-muted)] tracking-wide mt-0.5">
                     {architectProfile?.name || profile?.companyName || 'Ateliê & Escritório Online'}
                   </span>
                 </div>
               </button>
 
               {/* Subtle divider */}
-              <div className="hidden lg:block h-6 w-px bg-[#3d342f]" />
+              <div className="hidden lg:block h-6 w-px bg-[var(--border-color)]" />
 
               {/* User / Studio badge */}
               <div className="hidden sm:flex items-center gap-2.5 pl-1">
                 <div
-                  className="w-7 h-7 rounded-full p-0.5 flex items-center justify-center overflow-hidden border border-[#3d342f]"
+                  className="w-7 h-7 rounded-full p-0.5 flex items-center justify-center overflow-hidden border border-[var(--border-color)] bg-[var(--bg-card)]"
                 >
                   {architectProfile?.photoUrl ? (
                     <img
@@ -237,13 +237,13 @@ export const Header: React.FC<HeaderProps> = ({
                       className="w-full h-full object-cover rounded-full"
                     />
                   ) : (
-                    <div className="w-full h-full bg-[#1c1815] rounded-full flex items-center justify-center font-serif font-bold text-[11px] text-[var(--theme-primary)]">
+                    <div className="w-full h-full bg-[var(--bg-card-secondary)] rounded-full flex items-center justify-center font-serif font-bold text-[11px] text-[var(--theme-primary)]">
                       {((architectProfile?.name || profile?.companyName || user?.displayName || 'LF').slice(0, 2)).toUpperCase()}
                     </div>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-[#ded5cc]">
+                  <span className="text-xs font-semibold text-[var(--text-main)]">
                     {architectProfile?.name || profile?.companyName || user?.displayName || 'LF Quadros & Decoração'}
                   </span>
                   <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)]">
@@ -257,13 +257,13 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Right Controls: Month Selector, Settings, Admin */}
           <div className="flex items-center gap-2.5 sm:gap-3 w-full md:w-auto justify-end">
             {/* Month Picker */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1c1815] border border-[#3d342f] text-[#a89c93] text-xs">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] text-xs">
               <Calendar className="w-3.5 h-3.5" style={{ color: 'var(--theme-primary)' }} />
               <input
                 type="month"
                 value={selectedMonth}
                 onChange={handleMonthChange}
-                className="bg-transparent text-[#fcf8f5] text-xs font-medium focus:outline-none cursor-pointer"
+                className="bg-transparent text-[var(--text-main)] text-xs font-medium focus:outline-hidden cursor-pointer"
               />
             </div>
 
@@ -273,8 +273,8 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => setActiveTab('settings')}
               className={`flex items-center justify-center w-8 h-8 rounded-full border transition-colors cursor-pointer ${
                 activeTab === 'settings'
-                  ? 'bg-[#241e1b] text-[var(--theme-primary)] border-[rgba(var(--theme-primary-rgb),0.55)]'
-                  : 'bg-[#1c1815] hover:bg-[#3d342f] text-[#a89c93] hover:text-[#fcf8f5] border-[#3d342f]'
+                  ? 'bg-[var(--bg-card)] text-[var(--theme-primary)] border-[var(--theme-primary)]'
+                  : 'bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-[var(--text-muted)] hover:text-[var(--text-main)] border-[var(--border-color)]'
               }`}
               title="Configurações & Backup"
             >
@@ -284,7 +284,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Admin Panel Link */}
             <a
               href="/admin"
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-[#1c1815] hover:bg-[#3d342f] text-[#a89c93] hover:text-[var(--theme-primary)] border border-[#3d342f] transition-colors cursor-pointer"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-[var(--text-muted)] hover:text-[var(--theme-primary)] border border-[var(--border-color)] transition-colors cursor-pointer"
               title="Painel Admin / Assinantes"
             >
               <ShieldCheck className="w-4 h-4" />
@@ -292,7 +292,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Navigation Tabs: Grade Unificada com Visibilidade Total de Todos os Botões */}
+        {/* Navigation Tabs */}
         <nav className="py-2.5">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1.5 sm:gap-2">
             {navItems.map((item) => {
@@ -305,21 +305,14 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => setActiveTab(item.id)}
                   className={`flex items-center justify-between gap-1.5 px-2.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer w-full text-left border ${
                     isActive
-                      ? "bg-[#241e1b] border-[rgba(var(--theme-primary-rgb),0.55)] shadow-xs font-semibold"
-                      : "bg-[#181412] hover:bg-[#201a17] text-[#a89c93] hover:text-[#fcf8f5] border-[#302722]/80 hover:border-[#423630]"
+                      ? "bg-[var(--bg-card)] border-[var(--theme-primary)] text-[var(--theme-primary)] shadow-xs font-semibold"
+                      : "bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-[var(--text-muted)] hover:text-[var(--text-main)] border-[var(--border-color)] hover:border-[var(--theme-primary)]/40"
                   }`}
-                  style={
-                    isActive
-                      ? {
-                          color: "var(--theme-primary)",
-                        }
-                      : undefined
-                  }
                 >
                   <div className="flex items-center gap-1.5 min-w-0 flex-1">
                     <Icon
                       className="w-3.5 h-3.5 shrink-0"
-                      style={{ color: isActive ? "var(--theme-primary)" : "#a89c93" }}
+                      style={{ color: isActive ? "var(--theme-primary)" : "var(--text-muted)" }}
                     />
                     <span className="truncate text-[11px] sm:text-xs font-medium">{item.label}</span>
                   </div>
@@ -329,9 +322,9 @@ export const Header: React.FC<HeaderProps> = ({
                       style={
                         item.alertBadge
                           ? {
-                              backgroundColor: "rgba(245, 158, 11, 0.2)",
-                              color: "#fcd34d",
-                              borderColor: "rgba(245, 158, 11, 0.4)",
+                              backgroundColor: "rgba(245, 158, 11, 0.15)",
+                              color: "#d97706",
+                              borderColor: "rgba(245, 158, 11, 0.3)",
                             }
                           : isActive
                           ? {
@@ -340,9 +333,9 @@ export const Header: React.FC<HeaderProps> = ({
                               borderColor: "var(--theme-badge-border)",
                             }
                           : {
-                              backgroundColor: "#14110f",
-                              color: "#8c7e73",
-                              borderColor: "#382f29",
+                              backgroundColor: "var(--bg-card-secondary)",
+                              color: "var(--text-muted)",
+                              borderColor: "var(--border-color)",
                             }
                       }
                     >

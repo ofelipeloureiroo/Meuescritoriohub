@@ -28,6 +28,8 @@ import {
   Image as ImageIcon,
   Sparkles,
   LayoutDashboard,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
@@ -74,6 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     overdueInstallments,
     dueSoonMilestones,
     overdueMilestones,
+    changeBgTheme,
   } = useFinance();
 
   const { user, profile } = useAuth();
@@ -288,10 +291,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   )}`;
   const instagramUrl = 'https://www.instagram.com/meuescritorio.online';
 
+  const isLight = architectProfile?.bgTheme === 'light_cream' || architectProfile?.bgTheme === 'light_pure';
+
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-[#161311] border-r border-[#2d2520] text-[#ded5cc] select-none">
+    <div className="flex flex-col h-full bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] text-[var(--text-main)] select-none transition-all duration-300">
       {/* Brand Header */}
-      <div className="p-4 border-b border-[#2d2520] flex items-center justify-between">
+      <div className="p-4 border-b border-[var(--border-color)] flex items-center justify-between">
         <button
           onClick={() => handleNavClick('today')}
           className="flex items-center gap-3 text-left group cursor-pointer hover:opacity-95 transition-opacity"
@@ -312,7 +317,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5 min-w-0">
               <span
-                className="font-serif font-bold text-sm tracking-wider text-[#fcf8f5] uppercase leading-none truncate max-w-[150px]"
+                className="font-serif font-bold text-sm tracking-wider text-[var(--text-main)] uppercase leading-none truncate max-w-[150px]"
                 title={architectProfile?.name || profile?.companyName || 'Meu Negócio'}
               >
                 {architectProfile?.name || profile?.companyName || 'MEU ESCRITÓRIO'}
@@ -322,7 +327,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </span>
             </div>
             <span 
-              className="text-[10px] text-[#a89c93] tracking-wide mt-0.5 truncate max-w-[160px]"
+              className="text-[10px] text-[var(--text-muted)] tracking-wide mt-0.5 truncate max-w-[160px]"
               title={architectProfile?.ownerName ? `${architectProfile.ownerName}${architectProfile.title ? ` • ${architectProfile.title}` : ''}` : (architectProfile?.title || 'Gestão & Negócios')}
             >
               {architectProfile?.ownerName ? `${architectProfile.ownerName}${architectProfile.title ? ` • ${architectProfile.title}` : ''}` : (architectProfile?.title || 'Gestão & Negócios')}
@@ -333,7 +338,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {setIsMobileOpen && (
           <button
             onClick={() => setIsMobileOpen(false)}
-            className="lg:hidden p-1.5 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#221c18] transition-colors"
+            className="lg:hidden p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -341,7 +346,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Navigation Links Scrollable */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 scrollbar-thin scrollbar-thumb-[#2d2520] scrollbar-track-transparent">
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 scrollbar-thin scrollbar-thumb-[var(--border-color)] scrollbar-track-transparent">
         {/* Standalone Dashboard Item (Above Comercial & Produtividade, without group header) */}
         {(!isCollaborator || !permissions || permissions.health !== false) && (
           <div className="space-y-0.5">
@@ -349,15 +354,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => handleNavClick('dashboard')}
               className={`w-full flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer text-left border ${
                 activeTab === 'dashboard'
-                  ? 'bg-[#241e1b] border-[rgba(var(--theme-primary-rgb),0.55)] text-[var(--theme-primary)] font-bold shadow-xs'
-                  : 'bg-transparent border-transparent hover:bg-[#201a17] text-[#a89c93] hover:text-[#fcf8f5]'
+                  ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)] font-bold shadow-xs'
+                  : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                 <LayoutDashboard
                   className="w-4 h-4 shrink-0 transition-colors"
                   style={{
-                    color: activeTab === 'dashboard' ? 'var(--theme-primary)' : '#8c7e73',
+                    color: activeTab === 'dashboard' ? 'var(--theme-primary)' : 'var(--text-muted)',
                   }}
                 />
                 <span className="truncate text-xs">Painel do Escritório</span>
@@ -372,7 +377,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           return (
             <div key={groupIdx} className="space-y-1">
-              <h4 className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#73655c]">
+              <h4 className="px-3 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] opacity-80">
                 {group.title}
               </h4>
               <div className="space-y-0.5">
@@ -390,15 +395,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onClick={() => handleNavClick(item.id)}
                       className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer text-left border ${
                         isActive
-                          ? 'bg-[#241e1b] border-[rgba(var(--theme-primary-rgb),0.55)] text-[var(--theme-primary)] font-semibold shadow-xs'
-                          : 'bg-transparent border-transparent hover:bg-[#201a17] text-[#a89c93] hover:text-[#fcf8f5]'
+                          ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)] font-semibold shadow-xs'
+                          : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <Icon
                           className="w-4 h-4 shrink-0 transition-colors"
                           style={{
-                            color: isActive ? 'var(--theme-primary)' : '#8c7e73',
+                            color: isActive ? 'var(--theme-primary)' : 'var(--text-muted)',
                           }}
                         />
                         <span className="truncate text-xs">{item.label}</span>
@@ -422,9 +427,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     borderColor: 'var(--theme-badge-border)',
                                   }
                                 : {
-                                    backgroundColor: '#14110f',
-                                    color: '#8c7e73',
-                                    borderColor: '#382f29',
+                                    backgroundColor: 'var(--bg-input)',
+                                    color: 'var(--text-muted)',
+                                    borderColor: 'var(--border-subtle)',
                                   }
                             }
                           >
@@ -435,7 +440,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         {item.hasChevron && (
                           <ChevronRight
                             className={`w-3.5 h-3.5 shrink-0 transition-transform ${
-                              isActive ? 'text-[var(--theme-primary)]' : 'text-[#73655c]'
+                              isActive ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]'
                             }`}
                           />
                         )}
@@ -447,6 +452,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           );
         })}
+      </div>
+
+      {/* Segmented Theme Toggle Footer */}
+      <div className="p-3.5 border-t border-[var(--border-color)] bg-[var(--bg-card-secondary)]/30 flex flex-col gap-2 shrink-0">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Aparência</span>
+        </div>
+        <div className="grid grid-cols-2 p-1 bg-[var(--bg-input)] rounded-xl border border-[var(--border-color)]">
+          <button
+            onClick={() => changeBgTheme('dark_warm')}
+            className={`flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold rounded-lg transition-all duration-150 cursor-pointer ${
+              !isLight
+                ? 'bg-[var(--bg-card-hover)] text-[var(--theme-primary)] shadow-xs'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+            }`}
+          >
+            <Moon className="w-3.5 h-3.5" />
+            <span>Escuro</span>
+          </button>
+          <button
+            onClick={() => changeBgTheme('light_cream')}
+            className={`flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold rounded-lg transition-all duration-150 cursor-pointer ${
+              isLight
+                ? 'bg-[var(--bg-card-hover)] text-[var(--theme-primary)] shadow-xs'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+            }`}
+          >
+            <Sun className="w-3.5 h-3.5" />
+            <span>Claro</span>
+          </button>
+        </div>
       </div>
     </div>
   );

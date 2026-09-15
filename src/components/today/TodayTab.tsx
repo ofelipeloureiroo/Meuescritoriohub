@@ -844,10 +844,10 @@ export const TodayTab: React.FC = () => {
       {/* 1. Header & View Mode Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold font-serif text-[#fcf8f5] tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-bold font-serif text-[var(--text-main)] tracking-tight">
             Meu Dia & Agenda
           </h2>
-          <p className="text-xs sm:text-sm text-[#a89c93] font-medium mt-0.5">
+          <p className="text-xs sm:text-sm text-[var(--text-muted)] font-medium mt-0.5">
             Compromissos, rotina diária e calendário completo de atividades
           </p>
         </div>
@@ -865,13 +865,13 @@ export const TodayTab: React.FC = () => {
             </div>
           )}
 
-          <div className="flex bg-[#181513] p-1 rounded-xl border border-[#3d342f] shadow-sm">
+          <div className="flex bg-[var(--bg-card-secondary)] p-1 rounded-xl border border-[var(--border-color)] shadow-sm">
             <button
               onClick={() => setViewMode('today')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'today'
-                  ? 'bg-[#2c241f] text-[#c58a4b] border border-[#c58a4b]/30 shadow-xs'
-                  : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                  ? 'bg-[var(--theme-primary)] text-black font-bold shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
               <ClipboardList className="w-3.5 h-3.5" /> Meu Dia
@@ -880,8 +880,8 @@ export const TodayTab: React.FC = () => {
               onClick={() => setViewMode('calendar')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'calendar'
-                  ? 'bg-[#2c241f] text-[#c58a4b] border border-[#c58a4b]/30 shadow-xs'
-                  : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                  ? 'bg-[var(--theme-primary)] text-black font-bold shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
               <CalendarIcon className="w-3.5 h-3.5" /> Calendário Mensal
@@ -890,8 +890,8 @@ export const TodayTab: React.FC = () => {
               onClick={() => setViewMode('7days')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === '7days'
-                  ? 'bg-[#2c241f] text-[#c58a4b] border border-[#c58a4b]/30 shadow-xs'
-                  : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                  ? 'bg-[var(--theme-primary)] text-black font-bold shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" /> 7 Dias
@@ -900,7 +900,7 @@ export const TodayTab: React.FC = () => {
 
           <button
             onClick={() => handleOpenCreateAction()}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-md bg-[#c58a4b] text-[#12100e] hover:brightness-110"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-md bg-[var(--theme-primary)] text-black hover:brightness-110"
           >
             <Plus className="w-4 h-4" />
             <span>Nova Ação</span>
@@ -912,28 +912,28 @@ export const TodayTab: React.FC = () => {
       {viewMode === 'today' && (
         <div className="space-y-6">
           {/* Google Calendar & Tasks Integration Widget */}
-          <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
                 <CalendarDays className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-bold text-[#fcf8f5]">Sincronização com Google Agenda & Tarefas</h4>
+                  <h4 className="text-sm font-bold text-[var(--text-main)]">Sincronização com Google Agenda & Tarefas</h4>
                   {isGoogleSynced && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 bg-emerald-500/20 text-emerald-500 border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       Sincronização Automática Ativa
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-[#a89c93] mt-0.5">
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
                   {isGoogleSynced
                     ? `Conectado como ${googleEmail || 'lfquadrosdecorativos@gmail.com'}. ${googleEvents.length} compromissos e ${googleTasks.length} tarefas sincronizados automaticamente em segundo plano.`
                     : 'Conecte sua conta Google para sincronizar automaticamente reuniões, compromissos e tarefas (Google Tasks & Agenda).'}
                 </p>
                 {syncMessage && (
-                  <p className="text-[11px] text-amber-400 mt-1 font-medium">{syncMessage}</p>
+                  <p className="text-[11px] text-amber-500 mt-1 font-medium">{syncMessage}</p>
                 )}
               </div>
             </div>
@@ -942,7 +942,7 @@ export const TodayTab: React.FC = () => {
               {isGoogleSynced && (
                 <button
                   onClick={handleDisconnectGoogleCalendar}
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[#a89c93] hover:text-red-400 hover:bg-red-500/10 border border-[#3d342f] transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 border border-[var(--border-color)] transition-all cursor-pointer flex items-center gap-1.5"
                   title="Desconectar conta do Google"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -964,29 +964,29 @@ export const TodayTab: React.FC = () => {
           </div>
 
           {/* Welcome Banner */}
-          <div className="relative p-6 rounded-2xl bg-gradient-to-br from-[#1c1815] via-[#161311] to-[#12100e] border border-[#3d342f] overflow-hidden shadow-md">
-            <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-[#c58a4b]/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="relative p-6 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] overflow-hidden shadow-md">
+            <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-[var(--theme-primary)]/10 rounded-full blur-2xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 -ml-6 -mb-6 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
 
             <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-[#c58a4b]">
+                <div className="flex items-center gap-1.5 text-[var(--theme-primary)]">
                   <Sparkles className="w-4 h-4" />
                   <span className="text-[10px] uppercase font-bold tracking-wider">Painel pessoal de produtividade</span>
                 </div>
-                <h1 className="text-xl md:text-2xl font-serif font-bold text-[#fcf8f5] tracking-tight">
+                <h1 className="text-xl md:text-2xl font-serif font-bold text-[var(--text-main)] tracking-tight">
                   Olá, {greetingName}
                 </h1>
-                <p className="text-xs text-[#a89c93] capitalize">
+                <p className="text-xs text-[var(--text-muted)] capitalize">
                   {todayFormatted}
                 </p>
               </div>
 
               {/* Today's Productivity Ring */}
-              <div className="flex items-center gap-4 bg-[#221c18] p-3.5 rounded-xl border border-[#3d342f] shadow-xs">
+              <div className="flex items-center gap-4 bg-[var(--bg-card-secondary)] p-3.5 rounded-xl border border-[var(--border-color)] shadow-xs">
                 <div className="relative w-12 h-12 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="24" cy="24" r="20" className="stroke-[#3d342f]" strokeWidth="4" fill="transparent" />
+                    <circle cx="24" cy="24" r="20" className="stroke-[var(--border-color)]" strokeWidth="4" fill="transparent" />
                     <circle
                       cx="24"
                       cy="24"
@@ -996,7 +996,7 @@ export const TodayTab: React.FC = () => {
                         strokeDashoffset: `${2 * Math.PI * 20 * (1 - completionPercent / 100)}`,
                         transition: 'stroke-dashoffset 0.5s ease-in-out',
                       }}
-                      className="stroke-[#c58a4b]"
+                      className="stroke-[var(--theme-primary)]"
                       strokeWidth="4"
                       strokeLinecap="round"
                       fill="transparent"
@@ -1019,7 +1019,7 @@ export const TodayTab: React.FC = () => {
             {/* Left column: Checklist timeline (8 Columns) */}
             <div className="lg:col-span-8 space-y-6">
               {/* Quick Task input form */}
-              <div className="p-4 rounded-xl bg-[#1a1614] border border-[#2d2520]">
+              <div className="p-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)]">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -1038,13 +1038,13 @@ export const TodayTab: React.FC = () => {
                       }
                     }}
                     placeholder="Adicionar tarefa rápida para fazer hoje..."
-                    className="flex-1 bg-[#221c18] border border-[#3d342f] rounded-xl px-3.5 py-2 text-xs text-[#fcf8f5] placeholder-[#73655c] focus:outline-none focus:border-[#c58a4b]/70"
+                    className="flex-1 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3.5 py-2 text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-primary)]/70"
                   />
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => handleAddQuickTask()}
-                      className="px-4 py-2 rounded-xl bg-[#c58a4b] hover:bg-[#b0783d] active:scale-95 text-[#12100e] text-xs font-bold transition-all shadow flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-[var(--theme-primary)] hover:brightness-110 active:scale-95 text-black text-xs font-bold transition-all shadow flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" /> Adicionar
                     </button>
@@ -1052,9 +1052,9 @@ export const TodayTab: React.FC = () => {
                       type="button"
                       onClick={() => handleOpenCreateAction(todayStr)}
                       title="Abrir formulário com mais opções (horário, responsável, área)"
-                      className="px-3 py-2 rounded-xl bg-[#221c18] hover:bg-[#2c241f] border border-[#3d342f] hover:border-[#c58a4b]/50 text-[#a89c93] hover:text-[#fcf8f5] text-xs font-medium transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                      className="px-3 py-2 rounded-xl bg-[var(--bg-card-hover)] hover:bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-medium transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
                     >
-                      <CalendarIcon className="w-3.5 h-3.5 text-[#c58a4b]" />
+                      <CalendarIcon className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
                       <span className="hidden sm:inline">Mais opções</span>
                     </button>
                   </div>
@@ -1062,7 +1062,7 @@ export const TodayTab: React.FC = () => {
 
                 {/* Instant Feedback Toast */}
                 {quickTaskFeedback && (
-                  <div className="mt-2.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+                  <div className="mt-2.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-xs flex items-center gap-2">
                     <Check className="w-3.5 h-3.5 shrink-0" />
                     <span>{quickTaskFeedback}</span>
                   </div>
@@ -1070,15 +1070,15 @@ export const TodayTab: React.FC = () => {
               </div>
 
               {/* Today's Schedule Card */}
-              <div className="p-6 rounded-2xl bg-[#1a1614] border border-[#2d2520] space-y-4">
+              <div className="p-6 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-[#fcf8f5] flex items-center gap-2">
-                    <ClipboardList className="w-4 h-4 text-[#c58a4b]" />
+                  <h3 className="text-base font-bold text-[var(--text-main)] flex items-center gap-2">
+                    <ClipboardList className="w-4 h-4 text-[var(--theme-primary)]" />
                     Tarefas & Compromissos Agendados
                   </h3>
                   <button
                     onClick={() => setViewMode('calendar')}
-                    className="text-xs text-[#c58a4b] hover:text-[#e6b37e] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    className="text-xs text-[var(--theme-primary)] hover:brightness-110 font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                   >
                     Ver no Calendário <ArrowUpRight className="w-3.5 h-3.5" />
                   </button>
@@ -1087,12 +1087,12 @@ export const TodayTab: React.FC = () => {
                 <div className="space-y-3">
                   {todayActions.length === 0 ? (
                     <div className="py-12 flex flex-col items-center justify-center text-center space-y-2">
-                      <div className="p-3 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <div className="p-3 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                         <Award className="w-6 h-6" />
                       </div>
                       <div>
-                        <h4 className="text-xs font-bold text-[#fcf8f5]">Sua agenda está livre hoje!</h4>
-                        <p className="text-[10px] text-[#a89c93] mt-0.5">Use as tarefas rápidas acima ou agende um compromisso no calendário.</p>
+                        <h4 className="text-xs font-bold text-[var(--text-main)]">Sua agenda está livre hoje!</h4>
+                        <p className="text-[10px] text-[var(--text-muted)] mt-0.5">Use as tarefas rápidas acima ou agende um compromisso no calendário.</p>
                       </div>
                     </div>
                   ) : (
@@ -1106,18 +1106,18 @@ export const TodayTab: React.FC = () => {
                           key={act.id}
                           className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${
                             isCompleted
-                              ? 'bg-[#14110f]/60 border-emerald-500/20 opacity-70'
+                              ? 'bg-[var(--bg-card-secondary)]/60 border-emerald-500/20 opacity-70'
                               : isGTask
-                              ? 'bg-[#181d19] border-emerald-500/20 hover:border-emerald-500/40'
+                              ? 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40'
                               : isGCal
-                              ? 'bg-[#1c1815] border-amber-500/20 hover:border-amber-500/40'
-                              : 'bg-[#221c18] border-[#3d342f] hover:border-[#c58a4b]/40'
+                              ? 'bg-amber-500/5 border-amber-500/20 hover:border-amber-500/40'
+                              : 'bg-[var(--bg-input)] border-[var(--border-color)] hover:border-[var(--theme-primary)]/40'
                           }`}
                         >
                           <div className="flex gap-3">
                             {/* Checkbox trigger or Calendar badge */}
                             {isGCal ? (
-                              <div className="w-5 h-5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center justify-center mt-0.5 shrink-0" title="Evento do Google Agenda">
+                              <div className="w-5 h-5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/30 flex items-center justify-center mt-0.5 shrink-0" title="Evento do Google Agenda">
                                 <CalendarDays className="w-3.5 h-3.5" />
                               </div>
                             ) : (
@@ -1127,8 +1127,8 @@ export const TodayTab: React.FC = () => {
                                   isCompleted
                                     ? 'bg-emerald-500 border-transparent text-white'
                                     : isGTask
-                                    ? 'border-emerald-500/40 hover:border-emerald-400'
-                                    : 'border-[#73655c] hover:border-[#c58a4b]'
+                                    ? 'border-emerald-500/40 hover:border-emerald-500'
+                                    : 'border-[var(--border-color)] hover:border-[var(--theme-primary)]'
                                 }`}
                                 title={isCompleted ? "Marcar como pendente" : "Concluir tarefa"}
                               >
@@ -1138,34 +1138,34 @@ export const TodayTab: React.FC = () => {
 
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-xs font-bold text-[#fcf8f5] ${isCompleted ? 'line-through text-[#73655c]' : ''}`}>
+                                <span className={`text-xs font-bold text-[var(--text-main)] ${isCompleted ? 'line-through text-[var(--text-muted)]' : ''}`}>
                                   {act.type}
                                 </span>
                                 {act.time && (
-                                  <span className="text-[9px] font-semibold text-[#c58a4b] flex items-center gap-1">
+                                  <span className="text-[9px] font-semibold text-[var(--theme-primary)] flex items-center gap-1">
                                     <Clock className="w-3 h-3" /> {act.time}
                                   </span>
                                 )}
                                 <span className={`text-[9px] px-1.5 py-0.5 rounded border font-semibold uppercase ${
                                   isGTask
-                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                                     : isGCal
-                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                    : 'bg-[#2c241f] text-[#c58a4b] border-[#3d342f]'
+                                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                    : 'bg-[var(--bg-card-hover)] text-[var(--theme-primary)] border-[var(--border-color)]'
                                 }`}>
                                   {isGTask ? 'Google Tarefa' : isGCal ? 'Google Agenda' : act.area}
                                 </span>
                               </div>
-                              <p className={`text-[11px] text-[#ded5cc] mt-1 ${isCompleted ? 'line-through text-[#73655c]' : ''}`}>
+                              <p className={`text-[11px] text-[var(--text-main)] mt-1 ${isCompleted ? 'line-through text-[var(--text-muted)]' : ''}`}>
                                 {act.description}
                               </p>
                               {act.relatedTitle && (
-                                <span className="text-[9px] text-[#8c827a] mt-1.5 block font-medium">
+                                <span className="text-[9px] text-[var(--text-muted)] mt-1.5 block font-medium">
                                   Ref: {act.relatedTitle}
                                 </span>
                               )}
                               {act.notes && isGTask && (
-                                <span className="text-[9px] text-emerald-400/80 mt-1 block font-medium">
+                                <span className="text-[9px] text-emerald-500/90 mt-1 block font-medium">
                                   {act.notes}
                                 </span>
                               )}
@@ -1180,10 +1180,10 @@ export const TodayTab: React.FC = () => {
                                   href={`https://calendar.google.com/calendar/r/eventedit/${act.gcalEventId}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="p-1.5 rounded-lg text-[#8c827a] hover:text-[#fcf8f5] transition-colors"
+                                  className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
                                   title="Abrir no Google Agenda"
                                 >
-                                  <ArrowUpRight className="w-3.5 h-3.5 text-amber-400" />
+                                  <ArrowUpRight className="w-3.5 h-3.5 text-amber-500" />
                                 </a>
                                 <button
                                   onClick={() => handleDeleteActionWrapper(act.id)}
@@ -1199,8 +1199,8 @@ export const TodayTab: React.FC = () => {
                                   onClick={() => handleToggleTaskStatus(act)}
                                   className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition-colors ${
                                     isCompleted
-                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
-                                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30'
+                                      ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20'
+                                      : 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500/30'
                                   }`}
                                 >
                                   <Check className="w-3 h-3" />
@@ -1219,14 +1219,14 @@ export const TodayTab: React.FC = () => {
                                 {act.status === 'pending' && (
                                   <button
                                     onClick={() => updateAppAction(act.id, { status: 'in_progress' })}
-                                    className="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                                    className="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 hover:bg-indigo-500/20 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
                                   >
                                     <Play className="w-3 h-3" /> Começar
                                   </button>
                                 )}
                                 <button
                                   onClick={() => handleOpenEditAction(act)}
-                                  className="p-1.5 rounded-lg text-[#8c827a] hover:text-[#fcf8f5] transition-colors cursor-pointer"
+                                  className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
                                   title="Editar ação"
                                 >
                                   <Edit2 className="w-3.5 h-3.5" />
@@ -1252,28 +1252,28 @@ export const TodayTab: React.FC = () => {
             {/* Right column: Interactive Mini-Calendar, Scratchpad & Deadlines (4 Columns) */}
             <div className="lg:col-span-4 space-y-6">
               {/* Interactive Mini-Calendar Widget */}
-              <div className="p-5 rounded-2xl bg-[#1a1614] border border-[#2d2520] space-y-3.5 shadow-sm">
+              <div className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] space-y-3.5 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-[#fcf8f5] uppercase tracking-wider flex items-center gap-1.5">
-                    <CalendarIcon className="w-4 h-4 text-[#c58a4b]" />
+                  <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider flex items-center gap-1.5">
+                    <CalendarIcon className="w-4 h-4 text-[var(--theme-primary)]" />
                     {MONTH_NAMES[month]} {year}
                   </h3>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-                      className="p-1 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#221c18] transition-colors cursor-pointer"
+                      className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-colors cursor-pointer"
                     >
                       <ChevronLeft className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => setCurrentDate(new Date())}
-                      className="text-[10px] font-bold text-[#c58a4b] px-1.5 py-0.5 rounded hover:bg-[#221c18] cursor-pointer"
+                      className="text-[10px] font-bold text-[var(--theme-primary)] px-1.5 py-0.5 rounded hover:bg-[var(--bg-card-hover)] cursor-pointer"
                     >
                       Hoje
                     </button>
                     <button
                       onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-                      className="p-1 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#221c18] transition-colors cursor-pointer"
+                      className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-colors cursor-pointer"
                     >
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
@@ -1281,7 +1281,7 @@ export const TodayTab: React.FC = () => {
                 </div>
 
                 {/* Weekdays */}
-                <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-[#73655c] pb-1">
+                <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-[var(--text-muted)] pb-1">
                   <span>D</span>
                   <span>S</span>
                   <span>T</span>
@@ -1327,8 +1327,8 @@ export const TodayTab: React.FC = () => {
                         }}
                         className={`h-7 rounded-lg text-xs font-semibold flex flex-col items-center justify-center relative transition-all cursor-pointer ${
                           isToday
-                            ? 'bg-[#c58a4b] text-[#12100e] font-bold shadow-xs'
-                            : 'text-[#ded5cc] hover:bg-[#241e1b] hover:text-[#fcf8f5]'
+                            ? 'bg-[var(--theme-primary)] text-black font-bold shadow-xs'
+                            : 'text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
                         }`}
                         title={`${checkDateStr} - Clique para ver o calendário${dayHasGCal ? ' • Google Agenda' : ''}${dayHasGTask ? ' • Google Tarefa' : ''}${dayHasActions ? ' • Ação Escritório' : ''}`}
                       >
@@ -1337,7 +1337,7 @@ export const TodayTab: React.FC = () => {
                           <div className="flex items-center gap-0.5 absolute bottom-0.5">
                             {dayHasGCal && <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />}
                             {dayHasGTask && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
-                            {dayHasActions && !dayHasGCal && !dayHasGTask && <span className="w-1.5 h-1.5 rounded-full bg-[#c58a4b]" />}
+                            {dayHasActions && !dayHasGCal && !dayHasGTask && <span className="w-1.5 h-1.5 rounded-full bg-[var(--theme-primary)]" />}
                           </div>
                         )}
                       </button>
@@ -1347,19 +1347,19 @@ export const TodayTab: React.FC = () => {
 
                 <button
                   onClick={() => setViewMode('calendar')}
-                  className="w-full mt-3 py-2 rounded-xl bg-[#221c18] hover:bg-[#2c241f] border border-[#3d342f] text-xs font-bold text-[#c58a4b] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full mt-3 py-2 rounded-xl bg-[var(--bg-card-hover)] hover:bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-xs font-bold text-[var(--theme-primary)] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <CalendarDays className="w-3.5 h-3.5" /> Acessar Calendário Completo
                 </button>
               </div>
 
               {/* Quick daily Notepad scratchpad */}
-              <div className="p-5 rounded-2xl bg-[#1a1614] border border-[#2d2520] space-y-3.5">
+              <div className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] space-y-3.5">
                 <div>
-                  <h3 className="text-xs font-bold text-[#fcf8f5] uppercase tracking-wider flex items-center gap-1.5">
-                    <FileText className="w-4 h-4 text-[#c58a4b]" /> Bloco de Notas de Hoje
+                  <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-[var(--theme-primary)]" /> Bloco de Notas de Hoje
                   </h3>
-                  <p className="text-[10px] text-[#a89c93] mt-0.5">Rascunhe ideias, telefones ou lembretes rápidos.</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-0.5">Rascunhe ideias, telefones ou lembretes rápidos.</p>
                 </div>
 
                 <textarea
@@ -1367,32 +1367,32 @@ export const TodayTab: React.FC = () => {
                   onChange={(e) => setDailyNote(e.target.value)}
                   placeholder="Digite suas anotações livres aqui... (Salva automaticamente)"
                   rows={6}
-                  className="w-full bg-[#221c18] border border-[#3d342f] rounded-xl p-3 text-xs text-[#fcf8f5] placeholder-[#73655c] focus:outline-none focus:border-[#c58a4b]/50 leading-relaxed resize-none"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl p-3 text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-primary)]/50 leading-relaxed resize-none"
                 />
               </div>
 
               {/* Urgent deadlines due today */}
               {(todayMilestones.length > 0 || todayInstallments.length > 0) && (
-                <div className="p-5 rounded-2xl bg-[#1a1614] border border-rose-500/30 space-y-4">
-                  <h3 className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="p-5 rounded-2xl bg-[var(--bg-card)] border border-rose-500/30 space-y-4">
+                  <h3 className="text-xs font-bold text-rose-500 uppercase tracking-wider flex items-center gap-1.5">
                     <AlertCircle className="w-4 h-4" /> Vencimentos Cruciais de Hoje
                   </h3>
 
                   <div className="space-y-3">
                     {todayMilestones.map((milestone) => (
                       <div key={milestone.id} className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs">
-                        <span className="font-semibold text-[#fcf8f5]">{milestone.title}</span>
-                        <p className="text-[10px] text-zinc-400 mt-1">Prazo de entrega agendado para hoje.</p>
+                        <span className="font-semibold text-[var(--text-main)]">{milestone.title}</span>
+                        <p className="text-[10px] text-[var(--text-muted)] mt-1">Prazo de entrega agendado para hoje.</p>
                       </div>
                     ))}
 
                     {todayInstallments.map((inst) => (
                       <div key={inst.id} className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs flex justify-between items-center">
                         <div>
-                          <span className="font-semibold text-[#fcf8f5]">{inst.description}</span>
-                          <p className="text-[10px] text-rose-400 mt-0.5">Valor: {formatCurrency(inst.amount)}</p>
+                          <span className="font-semibold text-[var(--text-main)]">{inst.description}</span>
+                          <p className="text-[10px] text-rose-500 mt-0.5">Valor: {formatCurrency(inst.amount)}</p>
                         </div>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold">Cobrança</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-500 font-bold">Cobrança</span>
                       </div>
                     ))}
                   </div>
@@ -1407,31 +1407,31 @@ export const TodayTab: React.FC = () => {
       {viewMode === 'calendar' && (
         <div className="space-y-4">
           {/* Controls Bar: Month Nav + Filters */}
-          <div className="p-4 rounded-2xl bg-[#1a1614] border border-[#2d2520] flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] flex flex-col md:flex-row md:items-center justify-between gap-4">
             {/* Month & Year Navigation */}
             <div className="flex items-center gap-3">
-              <h3 className="text-lg sm:text-xl font-bold font-serif text-[#fcf8f5] flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-[#c58a4b]" />
+              <h3 className="text-lg sm:text-xl font-bold font-serif text-[var(--text-main)] flex items-center gap-2">
+                <CalendarIcon className="w-5 h-5 text-[var(--theme-primary)]" />
                 {MONTH_NAMES[month]} de {year}
               </h3>
 
-              <div className="flex items-center gap-1 bg-[#221c18] p-1 rounded-xl border border-[#3d342f]">
+              <div className="flex items-center gap-1 bg-[var(--bg-card-secondary)] p-1 rounded-xl border border-[var(--border-color)]">
                 <button
                   onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-                  className="p-1.5 text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer"
+                  className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
                   title="Mês anterior"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setCurrentDate(new Date())}
-                  className="px-2.5 py-1 text-xs font-bold text-[#c58a4b] hover:text-[#e6b37e] transition-colors cursor-pointer"
+                  className="px-2.5 py-1 text-xs font-bold text-[var(--theme-primary)] hover:brightness-110 transition-colors cursor-pointer"
                 >
                   Hoje
                 </button>
                 <button
                   onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-                  className="p-1.5 text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer"
+                  className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
                   title="Próximo mês"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -1441,15 +1441,15 @@ export const TodayTab: React.FC = () => {
 
             {/* Area Filter, Google Sync & Search */}
             <div className="flex flex-wrap items-center gap-2.5">
-              <div className="flex items-center gap-1 bg-[#221c18] p-1 rounded-xl border border-[#3d342f] text-xs">
+              <div className="flex items-center gap-1 bg-[var(--bg-card-secondary)] p-1 rounded-xl border border-[var(--border-color)] text-xs">
                 {(['all', 'Comercial', 'Operação', 'Financeiro'] as const).map((area) => (
                   <button
                     key={area}
                     onClick={() => setSelectedArea(area)}
                     className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                       selectedArea === area
-                        ? 'bg-[#c58a4b] text-[#12100e]'
-                        : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                        ? 'bg-[var(--theme-primary)] text-black font-bold'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
                     }`}
                   >
                     {area === 'all' ? 'Todas Áreas' : area}
@@ -1463,14 +1463,14 @@ export const TodayTab: React.FC = () => {
                 disabled={isSyncingCalendar}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                   tokenExpired
-                    ? 'bg-amber-950/40 border-amber-500/40 text-amber-300 hover:bg-amber-900/40'
+                    ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 hover:bg-amber-500/20'
                     : isGoogleSynced
-                    ? 'bg-sky-950/30 border-sky-500/30 text-sky-300 hover:bg-sky-900/40 hover:border-sky-400/50'
-                    : 'bg-[#221c18] border-[#3d342f] text-[#d8cec5] hover:text-[#fcf8f5] hover:border-[#c58a4b]'
+                    ? 'bg-sky-500/10 border-sky-500/30 text-sky-500 hover:bg-sky-500/20'
+                    : 'bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-[var(--text-main)] hover:border-[var(--theme-primary)]'
                 }`}
                 title={isGoogleSynced ? "Clique para atualizar eventos do Google Agenda" : "Conectar Google Agenda"}
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCalendar ? 'animate-spin text-sky-400' : 'text-sky-400'}`} />
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCalendar ? 'animate-spin text-sky-500' : 'text-sky-500'}`} />
                 <span>
                   {isSyncingCalendar
                     ? 'Sincronizando...'
@@ -1483,13 +1483,13 @@ export const TodayTab: React.FC = () => {
               </button>
 
               <div className="relative">
-                <Search className="w-3.5 h-3.5 text-[#73655c] absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Buscar ação..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 bg-[#221c18] border border-[#3d342f] rounded-xl text-xs text-[#fcf8f5] placeholder-[#73655c] focus:outline-none focus:border-[#c58a4b]/50 w-36 sm:w-44"
+                  className="pl-8 pr-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-primary)]/50 w-36 sm:w-44"
                 />
               </div>
             </div>
@@ -1497,16 +1497,16 @@ export const TodayTab: React.FC = () => {
 
           {/* Sync Message Alert if any */}
           {syncMessage && (
-            <div className="px-4 py-2 rounded-xl bg-sky-950/40 border border-sky-500/30 text-sky-200 text-xs flex items-center justify-between">
+            <div className="px-4 py-2 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-500 text-xs flex items-center justify-between">
               <span>{syncMessage}</span>
-              <button onClick={() => setSyncMessage(null)} className="text-sky-400 hover:text-white cursor-pointer ml-2">
+              <button onClick={() => setSyncMessage(null)} className="text-sky-500 hover:text-sky-600 cursor-pointer ml-2">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
 
           {/* Weekday Columns */}
-          <div className="grid grid-cols-7 gap-1 text-center border-b border-[#2d2520] pb-2 text-[11px] font-bold text-[#8c827a] uppercase tracking-wider">
+          <div className="grid grid-cols-7 gap-1 text-center border-b border-[var(--border-color)] pb-2 text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
             <span>Dom</span>
             <span>Seg</span>
             <span>Ter</span>
@@ -1519,7 +1519,7 @@ export const TodayTab: React.FC = () => {
           {/* Monthly Days Grid */}
           <div className="grid grid-cols-7 gap-2 min-h-[460px]">
             {Array.from({ length: firstDayIndex }).map((_, i) => (
-              <div key={`blank-${i}`} className="p-2 min-h-[90px] rounded-xl bg-[#14110f]/30 border border-transparent" />
+              <div key={`blank-${i}`} className="p-2 min-h-[90px] rounded-xl bg-[var(--bg-card-secondary)]/30 border border-transparent" />
             ))}
 
             {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -1539,16 +1539,16 @@ export const TodayTab: React.FC = () => {
                   onClick={() => handleOpenCreateAction(checkDateStr)}
                   className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between min-h-[105px] group ${
                     isToday
-                      ? 'bg-[#27201b] border-[#c58a4b] shadow-sm'
-                      : 'bg-[#1a1614] border-[#2d2520] hover:bg-[#221c18] hover:border-[#3d342f]'
+                      ? 'bg-[var(--bg-card-hover)] border-[var(--theme-primary)] shadow-sm'
+                      : 'bg-[var(--bg-card)] border-[var(--border-color)] hover:bg-[var(--bg-card-hover)]'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <span
                       className={`text-xs font-bold ${
                         isToday
-                          ? 'w-5 h-5 rounded-full bg-[#c58a4b] text-[#12100e] flex items-center justify-center font-black'
-                          : 'text-[#ded5cc] group-hover:text-[#fcf8f5]'
+                          ? 'w-5 h-5 rounded-full bg-[var(--theme-primary)] text-black flex items-center justify-center font-black'
+                          : 'text-[var(--text-main)]'
                       }`}
                     >
                       {dayNum}
@@ -1559,7 +1559,7 @@ export const TodayTab: React.FC = () => {
                         e.stopPropagation();
                         handleOpenCreateAction(checkDateStr);
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded-md bg-[#2c241f] text-[#c58a4b] hover:bg-[#3d342f] transition-all cursor-pointer"
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded-md bg-[var(--bg-card-secondary)] text-[var(--theme-primary)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
                       title="Adicionar ação neste dia"
                     >
                       <Plus className="w-3 h-3" />
@@ -1582,20 +1582,20 @@ export const TodayTab: React.FC = () => {
                           }}
                           className={`text-[9px] px-1.5 py-0.5 rounded truncate font-medium flex items-center gap-1 border transition-all cursor-pointer ${
                             isCompleted
-                              ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300 line-through opacity-70'
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 line-through opacity-70'
                               : act.status === 'in_progress'
-                              ? 'bg-indigo-950/40 border-indigo-500/30 text-indigo-300'
+                              ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-500'
                               : isGoogleTask
-                              ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200 hover:border-emerald-400 hover:bg-emerald-900/50'
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 hover:border-emerald-500'
                               : isGoogleEvent
-                              ? 'bg-sky-950/50 border-sky-500/40 text-sky-200 hover:border-sky-400 hover:bg-sky-900/50'
-                              : 'bg-[#241e1b] border-[#3d342f] text-[#ded5cc] hover:border-[#c58a4b]'
+                              ? 'bg-sky-500/10 border-sky-500/40 text-sky-600 hover:border-sky-500'
+                              : 'bg-[var(--bg-card-secondary)] border-[var(--border-color)] text-[var(--text-main)] hover:border-[var(--theme-primary)]'
                           }`}
                           title={`${act.time ? act.time + ' - ' : ''}${isGoogleTask ? '[Google Tarefa] ' : isGoogleEvent ? '[Google Agenda] ' : ''}${act.description || act.type}`}
                         >
                           {isGoogleEvent && <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />}
                           {isGoogleTask && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />}
-                          {act.time && <span className={isGoogleEvent ? "text-sky-300 font-bold" : "text-[#c58a4b] font-bold"}>{act.time}</span>}
+                          {act.time && <span className={isGoogleEvent ? "text-sky-500 font-bold" : "text-[var(--theme-primary)] font-bold"}>{act.time}</span>}
                           <span className="truncate font-semibold">{act.description || act.type}</span>
                         </div>
                       );
@@ -1605,7 +1605,7 @@ export const TodayTab: React.FC = () => {
                     {dayMilestones.slice(0, 1).map((m) => (
                       <div
                         key={m.id}
-                        className="text-[9px] px-1.5 py-0.5 rounded truncate font-semibold bg-amber-950/40 border border-amber-500/30 text-amber-300 flex items-center gap-1"
+                        className="text-[9px] px-1.5 py-0.5 rounded truncate font-semibold bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center gap-1"
                         title={`Entrega: ${m.title}`}
                       >
                         <Clock className="w-2.5 h-2.5 shrink-0" />
@@ -1617,7 +1617,7 @@ export const TodayTab: React.FC = () => {
                     {dayInstallments.slice(0, 1).map((inst) => (
                       <div
                         key={inst.id}
-                        className="text-[9px] px-1.5 py-0.5 rounded truncate font-semibold bg-rose-950/40 border border-rose-500/30 text-rose-300 flex items-center gap-1"
+                        className="text-[9px] px-1.5 py-0.5 rounded truncate font-semibold bg-rose-500/10 border border-rose-500/30 text-rose-500 flex items-center gap-1"
                         title={`Cobrança: ${inst.description} (${formatCurrency(inst.amount)})`}
                       >
                         <DollarSign className="w-2.5 h-2.5 shrink-0" />
@@ -1627,7 +1627,7 @@ export const TodayTab: React.FC = () => {
 
                     {/* More count */}
                     {dayActions.length > 4 && (
-                      <span className="text-[8px] text-[#a89c93] font-bold text-center mt-0.5">
+                      <span className="text-[8px] text-[var(--text-muted)] font-bold text-center mt-0.5">
                         +{dayActions.length - 4} mais
                       </span>
                     )}
@@ -1642,9 +1642,9 @@ export const TodayTab: React.FC = () => {
       {/* 4. MODE: PRÓXIMOS 7 DIAS */}
       {viewMode === '7days' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-[#1a1614] border border-[#2d2520]">
-            <h3 className="text-sm font-bold text-[#fcf8f5] flex items-center gap-2">
-              <CalendarDays className="w-4 h-4 text-[#c58a4b]" />
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)]">
+            <h3 className="text-sm font-bold text-[var(--text-main)] flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-[var(--theme-primary)]" />
               Ações dos Próximos 7 Dias
             </h3>
             <div className="flex gap-1.5">
@@ -1654,14 +1654,14 @@ export const TodayTab: React.FC = () => {
                   prev.setDate(prev.getDate() - 7);
                   setCurrentDate(prev);
                 }}
-                className="p-1.5 rounded-lg bg-[#221c18] border border-[#3d342f] text-[#a89c93] hover:text-[#fcf8f5] cursor-pointer"
+                className="p-1.5 rounded-lg bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer"
                 title="Semana anterior"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setCurrentDate(new Date())}
-                className="px-2.5 py-1 rounded-lg bg-[#221c18] border border-[#3d342f] text-xs font-bold text-[#c58a4b] cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-xs font-bold text-[var(--theme-primary)] cursor-pointer"
               >
                 Hoje
               </button>
@@ -1671,7 +1671,7 @@ export const TodayTab: React.FC = () => {
                   next.setDate(next.getDate() + 7);
                   setCurrentDate(next);
                 }}
-                className="p-1.5 rounded-lg bg-[#221c18] border border-[#3d342f] text-[#a89c93] hover:text-[#fcf8f5] cursor-pointer"
+                className="p-1.5 rounded-lg bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer"
                 title="Próxima semana"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -1690,23 +1690,23 @@ export const TodayTab: React.FC = () => {
                   key={day.iso}
                   className={`p-3 rounded-xl border flex flex-col justify-between min-h-[220px] ${
                     isToday
-                      ? 'bg-[#27201b] border-[#c58a4b]'
-                      : 'bg-[#1a1614] border-[#2d2520]'
+                      ? 'bg-[var(--bg-card-hover)] border-[var(--theme-primary)]'
+                      : 'bg-[var(--bg-card)] border-[var(--border-color)]'
                   }`}
                 >
                   <div>
-                    <div className="flex items-center justify-between border-b border-[#2d2520] pb-2 mb-2">
-                      <span className={`text-xs font-bold capitalize ${isToday ? 'text-[#c58a4b]' : 'text-[#fcf8f5]'}`}>
+                    <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-2 mb-2">
+                      <span className={`text-xs font-bold capitalize ${isToday ? 'text-[var(--theme-primary)]' : 'text-[var(--text-main)]'}`}>
                         {day.dayOfWeek}
                       </span>
-                      <span className="text-[10px] text-[#a89c93] font-medium">
+                      <span className="text-[10px] text-[var(--text-muted)] font-medium">
                         {day.dayNum}
                       </span>
                     </div>
 
                     <div className="space-y-1.5">
                       {dayActions.length === 0 && dayMilestones.length === 0 ? (
-                        <span className="text-[10px] text-[#73655c] block italic py-6 text-center">
+                        <span className="text-[10px] text-[var(--text-muted)] block italic py-6 text-center">
                           Livre
                         </span>
                       ) : (
@@ -1718,32 +1718,32 @@ export const TodayTab: React.FC = () => {
                               <div
                                 key={act.id}
                                 onClick={() => handleOpenEditAction(act)}
-                                className={`p-2 rounded-lg border hover:border-[#c58a4b]/50 cursor-pointer transition-all text-left ${
+                                className={`p-2 rounded-lg border hover:border-[var(--theme-primary)]/50 cursor-pointer transition-all text-left ${
                                   isGoogleTask
-                                    ? 'bg-emerald-950/30 border-emerald-500/30 hover:bg-emerald-900/40'
+                                    ? 'bg-emerald-500/10 border-emerald-500/30'
                                     : isGoogleEvent
-                                    ? 'bg-sky-950/30 border-sky-500/30 hover:bg-sky-900/40'
-                                    : 'bg-[#221c18] border-[#3d342f]'
+                                    ? 'bg-sky-500/10 border-sky-500/30'
+                                    : 'bg-[var(--bg-card-secondary)] border border-[var(--border-color)]'
                                 }`}
                               >
-                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#fcf8f5] truncate">
+                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--text-main)] truncate">
                                   {isGoogleEvent && <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />}
                                   {isGoogleTask && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />}
-                                  {act.time && <span className={isGoogleEvent ? "text-sky-300" : "text-[#c58a4b]"}>{act.time}</span>}
-                                  <span className={`truncate ${act.status === 'completed' ? 'line-through text-[#73655c]' : ''}`}>
+                                  {act.time && <span className={isGoogleEvent ? "text-sky-500" : "text-[var(--theme-primary)]"}>{act.time}</span>}
+                                  <span className={`truncate ${act.status === 'completed' ? 'line-through text-[var(--text-muted)]' : ''}`}>
                                     {act.description || act.type}
                                   </span>
                                 </div>
                                 {isGoogleTask ? (
-                                  <div className="text-[9px] text-emerald-400/90 font-medium truncate mt-0.5">
+                                  <div className="text-[9px] text-emerald-500 font-medium truncate mt-0.5">
                                     {act.notes || 'Google Tarefa'}
                                   </div>
                                 ) : isGoogleEvent ? (
-                                  <div className="text-[9px] text-sky-400/90 font-medium truncate mt-0.5">
+                                  <div className="text-[9px] text-sky-500 font-medium truncate mt-0.5">
                                     {act.notes || 'Google Agenda'}
                                   </div>
                                 ) : (
-                                  <div className="text-[9px] text-[#a89c93] truncate mt-0.5">
+                                  <div className="text-[9px] text-[var(--text-muted)] truncate mt-0.5">
                                     {act.description}
                                   </div>
                                 )}
@@ -1754,7 +1754,7 @@ export const TodayTab: React.FC = () => {
                           {dayMilestones.map((m) => (
                             <div
                               key={m.id}
-                              className="p-2 rounded-lg bg-amber-950/30 border border-amber-500/30 text-left text-amber-300"
+                              className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-left text-amber-500"
                             >
                               <div className="text-[10px] font-bold truncate">Entrega: {m.title}</div>
                             </div>
@@ -1766,7 +1766,7 @@ export const TodayTab: React.FC = () => {
 
                   <button
                     onClick={() => handleOpenCreateAction(day.iso)}
-                    className="mt-3 w-full py-1.5 rounded-lg bg-[#221c18] hover:bg-[#2c241f] border border-[#3d342f] text-[10px] font-bold text-[#c58a4b] transition-colors cursor-pointer flex items-center justify-center gap-1"
+                    className="mt-3 w-full py-1.5 rounded-lg bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] text-[10px] font-bold text-[var(--theme-primary)] transition-colors cursor-pointer flex items-center justify-center gap-1"
                   >
                     <Plus className="w-3 h-3" /> Adicionar
                   </button>
@@ -1780,21 +1780,21 @@ export const TodayTab: React.FC = () => {
       {/* 5. Action Creation & Editing Modal */}
       {isActionModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-xl bg-[#1c1815] text-[#ded5cc] border border-[#3d342f] rounded-3xl shadow-2xl relative my-6 overflow-hidden flex flex-col max-h-[92vh]">
+          <div className="w-full max-w-xl bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-3xl shadow-2xl relative my-6 overflow-hidden flex flex-col max-h-[92vh]">
             {/* Header */}
-            <div className="p-6 pb-4 border-b border-[#2d2520] flex items-start justify-between">
+            <div className="p-6 pb-4 border-b border-[var(--border-color)] flex items-start justify-between">
               <div>
-                <h3 className="text-xl font-bold font-serif text-[#fcf8f5] tracking-tight">
+                <h3 className="text-xl font-bold font-serif text-[var(--text-main)] tracking-tight">
                   {editingAction ? 'Editar ação / compromisso' : 'Nova ação / agendamento'}
                 </h3>
-                <p className="text-xs text-[#a89c93] mt-1">
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   Registre uma ação vinculada a um lead, cliente, projeto ou rotina interna
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsActionModalOpen(false)}
-                className="p-1.5 rounded-full text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#2c241f] transition-colors cursor-pointer"
+                className="p-1.5 rounded-full text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1805,7 +1805,7 @@ export const TodayTab: React.FC = () => {
               <div className="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
                 {/* 1. ÁREA */}
                 <div>
-                  <label className="block text-[11px] font-bold text-[#c58a4b] uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-[var(--theme-primary)] uppercase tracking-wider mb-1.5">
                     Área Operacional
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -1816,8 +1816,8 @@ export const TodayTab: React.FC = () => {
                         onClick={() => setFormArea(area)}
                         className={`py-2 px-3 rounded-xl font-medium border text-center transition-all cursor-pointer ${
                           formArea === area
-                            ? 'bg-[#c58a4b] text-[#12100e] border-[#c58a4b] font-bold shadow-xs'
-                            : 'bg-[#221c18] text-[#a89c93] border-[#3d342f] hover:border-[#73655c]'
+                            ? 'bg-[var(--theme-primary)] text-black border-[var(--theme-primary)] font-bold shadow-xs'
+                            : 'bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border-[var(--border-color)] hover:border-[var(--text-muted)]'
                         }`}
                       >
                         {area}
@@ -1828,7 +1828,7 @@ export const TodayTab: React.FC = () => {
 
                 {/* 2. ORIGEM DA AÇÃO */}
                 <div>
-                  <label className="block text-[11px] font-bold text-[#c58a4b] uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-[var(--theme-primary)] uppercase tracking-wider mb-1.5">
                     Origem da Ação
                   </label>
                   <div className="grid grid-cols-4 gap-2">
@@ -1848,8 +1848,8 @@ export const TodayTab: React.FC = () => {
                         }}
                         className={`py-2 px-2 rounded-xl font-medium border text-center transition-all cursor-pointer ${
                           formOrigin === item.id
-                            ? 'bg-[#2c241f] text-[#c58a4b] border-[#c58a4b] font-bold shadow-xs'
-                            : 'bg-[#221c18] text-[#a89c93] border-[#3d342f] hover:border-[#73655c]'
+                            ? 'bg-[var(--bg-card-hover)] text-[var(--theme-primary)] border-[var(--theme-primary)] font-bold shadow-xs'
+                            : 'bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border-[var(--border-color)] hover:border-[var(--text-muted)]'
                         }`}
                       >
                         {item.label}
@@ -1860,11 +1860,11 @@ export const TodayTab: React.FC = () => {
 
                 {/* 3. VÍNCULO (SE CLIENTE OU PROJETO) */}
                 {formOrigin === 'Interna' && (
-                  <div className="p-3.5 rounded-xl border border-[#3d342f] bg-[#1a1614] shadow-sm flex items-start gap-3">
-                    <Building2 className="w-5 h-5 text-[#8c827a] shrink-0 mt-0.5" />
+                  <div className="p-3.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card-secondary)] shadow-sm flex items-start gap-3">
+                    <Building2 className="w-5 h-5 text-[var(--text-muted)] shrink-0 mt-0.5" />
                     <div>
-                      <span className="block text-sm font-bold text-[#fcf8f5]">Ação interna da empresa</span>
-                      <span className="block text-xs text-[#a89c93] mt-0.5 leading-relaxed">
+                      <span className="block text-sm font-bold text-[var(--text-main)]">Ação interna da empresa</span>
+                      <span className="block text-xs text-[var(--text-muted)] mt-0.5 leading-relaxed">
                         Não vinculada a lead, cliente ou projeto. Aparece normalmente em todos os calendários e dashboards.
                       </span>
                     </div>
@@ -1873,7 +1873,7 @@ export const TodayTab: React.FC = () => {
 
                 {formOrigin === 'Cliente' && (
                   <div>
-                    <label className="block text-[11px] font-bold text-[#a89c93] uppercase tracking-wider mb-1.5">
+                    <label className="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                       Vincular a Cliente
                     </label>
                     <select
@@ -1883,7 +1883,7 @@ export const TodayTab: React.FC = () => {
                         const c = clients.find((x) => x.id === e.target.value);
                         if (c) setFormRelatedTitle(c.name);
                       }}
-                      className="w-full px-3 py-2 rounded-xl bg-[#221c18] border border-[#3d342f] text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]/50 cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]/50 cursor-pointer"
                     >
                       <option value="">Selecione o cliente...</option>
                       {clients.map((c) => (
@@ -1897,7 +1897,7 @@ export const TodayTab: React.FC = () => {
 
                 {formOrigin === 'Projeto' && (
                   <div>
-                    <label className="block text-[11px] font-bold text-[#a89c93] uppercase tracking-wider mb-1.5">
+                    <label className="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                       Vincular a Projeto
                     </label>
                     <select
@@ -1907,7 +1907,7 @@ export const TodayTab: React.FC = () => {
                         const p = architectureProjects.find((x) => x.id === e.target.value);
                         if (p) setFormRelatedTitle(p.name);
                       }}
-                      className="w-full px-3 py-2 rounded-xl bg-[#221c18] border border-[#3d342f] text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]/50 cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]/50 cursor-pointer"
                     >
                       <option value="">Selecione o projeto...</option>
                       {architectureProjects.map((p) => (
@@ -1921,13 +1921,13 @@ export const TodayTab: React.FC = () => {
 
                 {/* 4. TIPO DA AÇÃO */}
                 <div>
-                  <label className="block text-[11px] font-bold text-[#c58a4b] uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-[var(--theme-primary)] uppercase tracking-wider mb-1.5">
                     Tipo de Ação / Atividade
                   </label>
                   <select
                     value={formType}
                     onChange={(e) => setFormType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[#221c18] border border-[#3d342f] text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]/50 cursor-pointer"
+                    className="w-full px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]/50 cursor-pointer"
                   >
                     <option value="Reunião com cliente">Reunião com cliente</option>
                     <option value="Visita à obra">Visita à obra</option>
@@ -1946,14 +1946,14 @@ export const TodayTab: React.FC = () => {
                       value={formCustomType}
                       onChange={(e) => setFormCustomType(e.target.value)}
                       placeholder="Nome do tipo personalizado..."
-                      className="w-full mt-2 px-3 py-2 rounded-xl bg-[#221c18] border border-[#3d342f] text-[#fcf8f5] placeholder-[#73655c] focus:outline-none focus:border-[#c58a4b]/50"
+                      className="w-full mt-2 px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-primary)]/50"
                     />
                   )}
                 </div>
 
                 {/* 5. DESCRIÇÃO */}
                 <div>
-                  <label className="block text-[11px] font-bold text-[#c58a4b] uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-[var(--theme-primary)] uppercase tracking-wider mb-1.5">
                     Descrição do que será feito <span className="text-rose-400">*</span>
                   </label>
                   <textarea
@@ -1962,14 +1962,14 @@ export const TodayTab: React.FC = () => {
                     placeholder="Descreva detalhes, objetivos e links necessários..."
                     rows={3}
                     required
-                    className="w-full px-3 py-2 rounded-xl bg-[#221c18] border border-[#3d342f] text-[#fcf8f5] placeholder-[#73655c] focus:outline-none focus:border-[#c58a4b]/50 leading-relaxed resize-none"
+                    className="w-full px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-primary)]/50 leading-relaxed resize-none"
                   />
                 </div>
 
                 {/* 6. DATA E HORÁRIO */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-[#a89c93] uppercase tracking-wider mb-1.5">
+                    <label className="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                       Data Agendada <span className="text-rose-400">*</span>
                     </label>
                     <input
@@ -1979,27 +1979,27 @@ export const TodayTab: React.FC = () => {
                         setFormEndDate(e.target.value);
                         setFormStartDate(e.target.value);
                       }}
-                      className="w-full px-3 py-2 rounded-xl bg-[#221c18] border border-[#3d342f] text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]/50"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]/50"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-[#a89c93] uppercase tracking-wider mb-1.5">
+                    <label className="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                       Horário Específico (Opcional)
                     </label>
                     <input
                       type="time"
                       value={formTime}
                       onChange={(e) => setFormTime(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-[#221c18] border border-[#3d342f] text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]/50"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]/50"
                     />
                   </div>
                 </div>
 
                 {/* 7. RESPONSÁVEL */}
                 <div>
-                  <label className="block text-[11px] font-bold text-[#a89c93] uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                     Responsável
                   </label>
                   <div className="relative">
@@ -2012,7 +2012,7 @@ export const TodayTab: React.FC = () => {
                         if (member) setFormResponsibleName(member.name);
                         else setFormResponsibleName('');
                       }}
-                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#221c18] border border-[#3d342f] text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b]/50 cursor-pointer"
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]/50 cursor-pointer"
                     >
                       <option value="">Selecione o responsável...</option>
                       {teamMembers.map((member) => (
@@ -2021,18 +2021,18 @@ export const TodayTab: React.FC = () => {
                         </option>
                       ))}
                     </select>
-                    <User className="w-4 h-4 text-[#73655c] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <User className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="p-4 px-6 border-t border-[#2d2520] flex items-center justify-between bg-[#161311]">
+              <div className="p-4 px-6 border-t border-[var(--border-color)] flex items-center justify-between bg-[var(--bg-card-secondary)]">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setIsActionModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-[#ded5cc] bg-[#221c18] border border-[#3d342f] hover:bg-[#2c241f] transition-all cursor-pointer"
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-[var(--text-main)] bg-[var(--bg-card)] border border-[var(--border-color)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -2044,7 +2044,7 @@ export const TodayTab: React.FC = () => {
                         handleDeleteActionWrapper(editingAction.id);
                         setIsActionModalOpen(false);
                       }}
-                      className="px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 hover:text-rose-300 transition-all cursor-pointer flex items-center gap-1.5"
+                      className="px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-500 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 hover:text-rose-600 transition-all cursor-pointer flex items-center gap-1.5"
                       title="Excluir este compromisso permanentemente"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -2055,7 +2055,7 @@ export const TodayTab: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-xl text-xs font-bold text-[#12100e] bg-[#c58a4b] hover:bg-[#b0783d] transition-all cursor-pointer shadow-md flex items-center gap-1.5"
+                  className="px-6 py-2 rounded-xl text-xs font-bold text-black bg-[var(--theme-primary)] hover:brightness-110 transition-all cursor-pointer shadow-md flex items-center gap-1.5"
                 >
                   <Check className="w-4 h-4" />
                   <span>{editingAction ? 'Salvar Alterações' : 'Agendar Ação'}</span>
