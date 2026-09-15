@@ -400,6 +400,21 @@ export interface ArchitectureProject {
   closingDate?: string;
   stages?: ProjectWorkflowStage[];
   linkedClients?: ProjectLinkedClient[];
+  memorialItems?: MemorialItem[];
+}
+
+export interface MemorialItem {
+  id: string;
+  category: string; // e.g. "Cozinha", "Banheiro", "Iluminação", "Revestimentos", "Sala"
+  title: string;
+  description?: string;
+  price?: string; // formatted as "R$ 1.500,00" or similar
+  store?: string;
+  url?: string;
+  imageUrl?: string; // base64 or external url
+  quantity: number;
+  status: 'pending' | 'approved' | 'purchased' | 'rejected';
+  notes?: string;
 }
 
 export interface WorldCountry {

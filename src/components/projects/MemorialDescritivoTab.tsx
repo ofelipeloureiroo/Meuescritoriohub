@@ -1,0 +1,1609 @@
+import React, { useState, useMemo } from 'react';
+import {
+  Plus,
+  Search,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
+  Edit2,
+  ExternalLink,
+  Check,
+  X,
+  ShoppingBag,
+  DollarSign,
+  FileText,
+  CheckCircle,
+  AlertCircle,
+  Filter,
+  Loader2,
+  Copy,
+  Printer,
+  ChevronDown,
+  Sparkles,
+  Eye,
+  Download
+} from 'lucide-react';
+import { ArchitectureProject, MemorialItem } from '../../types';
+import { useFinance } from '../../context/FinanceContext';
+
+interface MemorialDescritivoTabProps {
+  project: ArchitectureProject;
+}
+
+const CATEGORIES = [
+  'Cozinha',
+  'Banheiro',
+  'Iluminação',
+  'Revestimentos',
+  'Mobiliário',
+  'Eletros',
+  'Pintura',
+  'Outros'
+];
+
+// Helper to generate a clean, self-contained, printable A4 HTML document
+function generateMemorialPrintHtml(
+  project: ArchitectureProject,
+  items: MemorialItem[],
+  metrics: { totalCount: number; approvedCount: number; purchasedCount: number; estimatedTotal: number },
+  officeName: string
+): string {
+  const dateStr = new Date().toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  const currencyFormatter = (val: number) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  };
+
+  const statusLabels: Record<string, string> = {
+    pending: 'Pendente',
+    approved: 'Aprovado',
+    purchased: 'Comprado',
+    rejected: 'Recusado'
+  };
+
+  const statusBadges: Record<string, string> = {
+    pending: 'background:#f3f4f6;color:#374151;border:1px solid #d1d5db;',
+    approved: 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;',
+    purchased: 'background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;',
+    rejected: 'background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;'
+  };
+
+  const rows = items.length === 0
+    ? `<tr><td colspan="7" style="padding: 30px; text-align: center; color: #9ca3af; font-size: 12px;">Nenhum produto cadastrado no memorial descritivo até o momento.</td></tr>`
+    : items.map((item, idx) => {
+        return `
+          <tr style="border-bottom: 1px solid #e5e7eb; page-break-inside: avoid;">
+            <td style="padding: 10px 8px; font-size: 11px; text-align: center; color: #6b7280; font-weight: 600;">${idx + 1}</td>
+            <td style="padding: 10px 8px; width: 68px; text-align: center;">
+              ${item.imageUrl 
+                ? `<img src="${item.imageUrl}" alt="${item.title}" style="width: 54px; height: 54px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb; display: inline-block;" />` 
+                : `<div style="width: 54px; height: 54px; background: #f9fafb; border-radius: 6px; border: 1px dashed #d1d5db; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; color: #9ca3af; text-align: center; padding: 2px;">Sem foto</div>`}
+            </td>
+            <td style="padding: 10px 8px;">
+              <span style="font-size: 9px; font-weight: 800; color: #8c7456; text-transform: uppercase; letter-spacing: 0.5px; display: block;">${item.category}</span>
+              <strong style="font-size: 12px; color: #111827; display: block; margin-top: 2px;">${item.title}</strong>
+              ${item.description ? `<p style="font-size: 10px; color: #4b5563; margin: 3px 0 0 0; line-height: 1.35;">${item.description}</p>` : ''}
+              ${item.notes ? `<p style="font-size: 9px; color: #b45309; margin: 3px 0 0 0; font-style: italic;">Observação: ${item.notes}</p>` : ''}
+            </td>
+            <td style="padding: 10px 8px; font-size: 11px; color: #374151;">
+              <span style="display: block; font-weight: 600;">${item.store || 'A definir'}</span>
+              ${item.url ? `<a href="${item.url}" target="_blank" style="color: #8c7456; font-size: 10px; text-decoration: underline; word-break: break-all; display: block; margin-top: 3px;">Ver na Loja &rarr;</a>` : ''}
+            </td>
+            <td style="padding: 10px 8px; font-size: 11px; text-align: center; font-weight: 700; color: #111827;">${item.quantity || 1}</td>
+            <td style="padding: 10px 8px; font-size: 12px; text-align: right; font-weight: 800; color: #8c7456; white-space: nowrap;">${item.price || 'Sob consulta'}</td>
+            <td style="padding: 10px 8px; text-align: center; white-space: nowrap;">
+              <span style="display: inline-block; padding: 3px 8px; font-size: 9px; font-weight: 700; border-radius: 9999px; ${statusBadges[item.status] || statusBadges.pending}">
+                ${statusLabels[item.status] || 'Pendente'}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Memorial Descritivo - ${project.title}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 14mm 12mm 14mm 12mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1f2937;
+      background: #ffffff;
+      margin: 0;
+      padding: 16px;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .header-table {
+      width: 100%;
+      border-bottom: 2px solid #8c7456;
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+    }
+    .header-table td {
+      vertical-align: top;
+    }
+    .title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #111827;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.3px;
+    }
+    .subtitle {
+      font-size: 11px;
+      color: #4b5563;
+      margin: 0;
+    }
+    .badge-box {
+      background: #faf7f2;
+      border: 1px solid #e2d2bd;
+      color: #8c7456;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      text-align: right;
+      display: inline-block;
+      float: right;
+    }
+    .metrics-container {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+      margin-bottom: 18px;
+      border-collapse: separate;
+      border-spacing: 8px 0;
+    }
+    .metric-cell {
+      display: table-cell;
+      background: #fcfaf7;
+      border: 1px solid #ebdcc8;
+      border-radius: 8px;
+      padding: 9px 12px;
+    }
+    .metric-label {
+      font-size: 8px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #8c7456;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+    .metric-value {
+      font-size: 15px;
+      font-weight: 800;
+      color: #111827;
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    table.data-table th {
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+      border-bottom: 2px solid #e5e7eb;
+      padding: 8px;
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #4b5563;
+      letter-spacing: 0.5px;
+    }
+    .signatures-table {
+      width: 100%;
+      margin-top: 36px;
+      page-break-inside: avoid;
+    }
+    .signatures-table td {
+      width: 50%;
+      padding: 0 25px;
+      text-align: center;
+    }
+    .sign-line {
+      border-top: 1px solid #9ca3af;
+      padding-top: 6px;
+      font-size: 10px;
+      color: #4b5563;
+    }
+    .footer-bar {
+      margin-top: 24px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: #9ca3af;
+      page-break-inside: avoid;
+    }
+    @media print {
+      body {
+        padding: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <table class="header-table">
+    <tr>
+      <td>
+        <h1 class="title">${project.title}</h1>
+        <p class="subtitle"><strong>Cliente:</strong> ${project.clientName} &bull; <strong>Emissão:</strong> ${dateStr}</p>
+        <p class="subtitle" style="margin-top: 3px;"><strong>Responsável Técnico:</strong> ${officeName}</p>
+      </td>
+      <td style="text-align: right;">
+        <div class="badge-box">
+          MEMORIAL DESCRITIVO<br />
+          <span style="font-size: 8px; font-weight: 600; color: #786044;">ESPECIFICAÇÕES & COMPRAS</span>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <div class="metrics-container">
+    <div class="metric-cell">
+      <div class="metric-label">Total de Itens</div>
+      <div class="metric-value">${metrics.totalCount}</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">Itens Aprovados</div>
+      <div class="metric-value" style="color: #2563eb;">${metrics.approvedCount}</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">Itens Comprados</div>
+      <div class="metric-value" style="color: #059669;">${metrics.purchasedCount}</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">Orçamento Estimado</div>
+      <div class="metric-value" style="color: #8c7456;">${currencyFormatter(metrics.estimatedTotal)}</div>
+    </div>
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width: 25px; text-align: center;">#</th>
+        <th style="width: 68px; text-align: center;">Imagem</th>
+        <th style="text-align: left;">Item & Especificação Técnica</th>
+        <th style="text-align: left; width: 140px;">Loja / Fornecedor</th>
+        <th style="text-align: center; width: 45px;">Qtd</th>
+        <th style="text-align: right; width: 90px;">Valor Est.</th>
+        <th style="text-align: center; width: 80px;">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+    </tbody>
+  </table>
+
+  <table class="signatures-table">
+    <tr>
+      <td>
+        <div style="height: 35px;"></div>
+        <div class="sign-line">
+          <strong>${officeName}</strong><br />
+          Arquiteto / Designer Responsável
+        </div>
+      </td>
+      <td>
+        <div style="height: 35px;"></div>
+        <div class="sign-line">
+          <strong>${project.clientName}</strong><br />
+          Cliente (De acordo com o memorial)
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <div class="footer-bar">
+    <span>Memorial Descritivo gerado por ${officeName}</span>
+    <span>Emissão: ${dateStr}</span>
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        try {
+          window.print();
+        } catch (e) {
+          console.error(e);
+        }
+      }, 350);
+    };
+  </script>
+</body>
+</html>`;
+}
+
+export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ project }) => {
+  const { updateArchitectureProject, architectProfile } = useFinance();
+  const officeName = architectProfile?.ownerName || architectProfile?.name || 'Escritório de Arquitetura';
+
+  // Memorial Items local state (synced with project)
+  const items = useMemo(() => project.memorialItems || [], [project.memorialItems]);
+
+  // Tab Filtering & Search
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Modal State for adding/editing items
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<MemorialItem | null>(null);
+
+  // Print Preview Modal & Toast
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Form States
+  const [formCategory, setFormCategory] = useState<string>('Cozinha');
+  const [formTitle, setFormTitle] = useState<string>('');
+  const [formDescription, setFormDescription] = useState<string>('');
+  const [formPrice, setFormPrice] = useState<string>('');
+  const [formStore, setFormStore] = useState<string>('');
+  const [formUrl, setFormUrl] = useState<string>('');
+  const [formQuantity, setFormQuantity] = useState<number>(1);
+  const [formNotes, setFormNotes] = useState<string>('');
+  const [formImageBase64, setFormImageBase64] = useState<string>('');
+
+  // Gemini Search States
+  const [searchQueryIA, setSearchQueryIA] = useState<string>('');
+  const [imageUploadIA, setImageUploadIA] = useState<string>('');
+  const [isSearchingIA, setIsSearchingIA] = useState(false);
+  const [searchResultsIA, setSearchResultsIA] = useState<any[]>([]);
+  const [searchErrorIA, setSearchErrorIA] = useState<string>('');
+  const [searchNoticeIA, setSearchNoticeIA] = useState<string>('');
+
+  // Drag and Drop State
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Computed Metrics
+  const metrics = useMemo(() => {
+    const totalCount = items.length;
+    const approvedCount = items.filter(i => i.status === 'approved' || i.status === 'purchased').length;
+    const purchasedCount = items.filter(i => i.status === 'purchased').length;
+
+    let estimatedTotal = 0;
+    items.forEach(item => {
+      if (item.price) {
+        // Extract numbers from something like "R$ 1.540,00"
+        const cleanPrice = item.price.replace(/[^\d,]/g, '').replace(',', '.');
+        const numPrice = parseFloat(cleanPrice);
+        if (!isNaN(numPrice)) {
+          estimatedTotal += numPrice * item.quantity;
+        }
+      }
+    });
+
+    return {
+      totalCount,
+      approvedCount,
+      purchasedCount,
+      estimatedTotal
+    };
+  }, [items]);
+
+  // Handle Drag and Drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setImageUploadIA(reader.result);
+          setFormImageBase64(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle standard image input
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setImageUploadIA(reader.result);
+          setFormImageBase64(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Search product with Gemini API
+  const handleAISearch = async () => {
+    if (!searchQueryIA && !imageUploadIA) {
+      setSearchErrorIA('Por favor, faça upload de uma foto ou digite o nome do produto.');
+      return;
+    }
+
+    setIsSearchingIA(true);
+    setSearchErrorIA('');
+    setSearchNoticeIA('');
+    setSearchResultsIA([]);
+
+    try {
+      const response = await fetch('/api/gemini/search-product', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: searchQueryIA,
+          imageBase64: imageUploadIA,
+          category: formCategory
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.results && data.results.length > 0) {
+        setSearchResultsIA(data.results);
+        if (data.notice) {
+          setSearchNoticeIA(data.notice);
+        }
+      } else if (data.results && data.results.length > 0) {
+        setSearchResultsIA(data.results);
+      } else {
+        setSearchErrorIA(data.error || 'Não encontramos resultados para esta busca. Tente refinar o termo.');
+      }
+    } catch (err: any) {
+      setSearchErrorIA('Não foi possível conectar ao servidor para buscar com IA.');
+      console.error(err);
+    } finally {
+      setIsSearchingIA(false);
+    }
+  };
+
+  // Select search option and populate form
+  const handleSelectIAShowcase = (option: any) => {
+    setFormTitle(option.title || '');
+    setFormDescription(option.description || '');
+    setFormPrice(option.price || '');
+    setFormStore(option.store || '');
+    setFormUrl(option.url || '');
+    if (imageUploadIA && !formImageBase64) {
+      setFormImageBase64(imageUploadIA);
+    }
+  };
+
+  // Reset form
+  const resetForm = () => {
+    setEditingItem(null);
+    setFormCategory('Cozinha');
+    setFormTitle('');
+    setFormDescription('');
+    setFormPrice('');
+    setFormStore('');
+    setFormUrl('');
+    setFormQuantity(1);
+    setFormNotes('');
+    setFormImageBase64('');
+    setSearchQueryIA('');
+    setImageUploadIA('');
+    setSearchResultsIA([]);
+    setSearchErrorIA('');
+    setSearchNoticeIA('');
+  };
+
+  // Open modal for new item
+  const handleOpenNewModal = () => {
+    resetForm();
+    setIsModalOpen(true);
+  };
+
+  // Open modal to edit existing
+  const handleOpenEditModal = (item: MemorialItem) => {
+    setEditingItem(item);
+    setFormCategory(item.category);
+    setFormTitle(item.title);
+    setFormDescription(item.description || '');
+    setFormPrice(item.price || '');
+    setFormStore(item.store || '');
+    setFormUrl(item.url || '');
+    setFormQuantity(item.quantity);
+    setFormNotes(item.notes || '');
+    setFormImageBase64(item.imageUrl || '');
+    setIsModalOpen(true);
+  };
+
+  // Save item (Create or Update)
+  const handleSaveItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formTitle.trim()) return;
+
+    let updatedItems: MemorialItem[];
+
+    if (editingItem) {
+      // Update
+      updatedItems = items.map(item => {
+        if (item.id === editingItem.id) {
+          return {
+            ...item,
+            category: formCategory,
+            title: formTitle,
+            description: formDescription,
+            price: formPrice,
+            store: formStore,
+            url: formUrl,
+            quantity: formQuantity,
+            notes: formNotes,
+            imageUrl: formImageBase64 || item.imageUrl
+          };
+        }
+        return item;
+      });
+    } else {
+      // Create
+      const newItem: MemorialItem = {
+        id: `mem_${Date.now()}`,
+        category: formCategory,
+        title: formTitle,
+        description: formDescription,
+        price: formPrice,
+        store: formStore,
+        url: formUrl,
+        quantity: formQuantity,
+        status: 'pending',
+        notes: formNotes,
+        imageUrl: formImageBase64
+      };
+      updatedItems = [...items, newItem];
+    }
+
+    updateArchitectureProject(project.id, { memorialItems: updatedItems });
+    setIsModalOpen(false);
+    resetForm();
+  };
+
+  // Delete item
+  const handleDeleteItem = (id: string) => {
+    if (confirm('Tem certeza de que deseja remover este produto do memorial?')) {
+      const updatedItems = items.filter(item => item.id !== id);
+      updateArchitectureProject(project.id, { memorialItems: updatedItems });
+    }
+  };
+
+  // Toggle item status
+  const handleUpdateStatus = (id: string, nextStatus: MemorialItem['status']) => {
+    const updatedItems = items.map(item => {
+      if (item.id === id) {
+        return { ...item, status: nextStatus };
+      }
+      return item;
+    });
+    updateArchitectureProject(project.id, { memorialItems: updatedItems });
+  };
+
+  // Copy product list shopping cart summary
+  const handleCopyShoppingList = () => {
+    if (items.length === 0) {
+      showToast('O memorial não possui produtos cadastrados ainda.');
+      return;
+    }
+    const lines = [`📋 LISTA DE COMPRAS - MEMORIAL DESCRITIVO • ${project.title}`];
+    lines.push(`Cliente: ${project.clientName}`);
+    lines.push(`Total de Itens: ${metrics.totalCount} | Orçamento Estimado: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.estimatedTotal)}`);
+    lines.push(`Responsável Técnico: ${officeName}`);
+    lines.push('--------------------------------------------------');
+
+    items.forEach((item, index) => {
+      const priceText = item.price ? ` | Valor: ${item.price}` : '';
+      const qtyText = ` | Qtd: ${item.quantity}`;
+      const storeText = item.store ? ` | Loja: ${item.store}` : '';
+      lines.push(`${index + 1}. [${item.category}] ${item.title}${qtyText}${priceText}${storeText}`);
+      if (item.description) lines.push(`   Especificação: ${item.description}`);
+      if (item.url) lines.push(`   Link: ${item.url}`);
+      if (item.notes) lines.push(`   Obs: ${item.notes}`);
+      lines.push('');
+    });
+
+    navigator.clipboard.writeText(lines.join('\n'));
+    showToast('Lista de compras copiada para a área de transferência!');
+  };
+
+  // Direct print via hidden isolated iframe
+  const handleDirectPrint = () => {
+    try {
+      const html = generateMemorialPrintHtml(project, items, metrics, officeName);
+      
+      let iframe = document.getElementById('memorial-print-iframe') as HTMLIFrameElement;
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'memorial-print-iframe';
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+      }
+
+      const doc = iframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
+
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            showToast('Janela de impressão/PDF iniciada!');
+          } catch (err) {
+            console.warn('Iframe print restricted by sandbox. Falling back to standalone tab or window.print', err);
+            handleOpenPrintTab();
+          }
+        }, 350);
+      }
+    } catch (err) {
+      console.error('Print generation error:', err);
+      window.print();
+    }
+  };
+
+  // Open standalone print tab (guarantees print dialog works even inside sandboxed iframes)
+  const handleOpenPrintTab = () => {
+    try {
+      const html = generateMemorialPrintHtml(project, items, metrics, officeName);
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, '_blank');
+      if (!win) {
+        showToast('Permita popups no navegador para abrir a página de impressão.');
+      } else {
+        showToast('Página de impressão aberta em nova aba!');
+      }
+    } catch (err) {
+      console.error('Error opening print tab:', err);
+      handleDirectPrint();
+    }
+  };
+
+  // Trigger print workflow: opens print preview modal where user can choose printing method
+  const handlePrint = () => {
+    setIsPrintModalOpen(true);
+  };
+
+  // Filter items
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      const matchesCategory = selectedCategory === 'Todos' || item.category === selectedCategory;
+      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.store && item.store.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchesCategory && matchesSearch;
+    });
+  }, [items, selectedCategory, searchQuery]);
+
+  return (
+    <div className="space-y-6">
+      {/* Print stylesheet override */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #print-memorial-section, #print-memorial-section * {
+            visibility: visible;
+          }
+          #print-memorial-section {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
+
+      {/* Summary metrics bento grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-zinc-200 shadow-xs flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 block">Total de Itens</span>
+            <span className="text-xl sm:text-2xl font-extrabold text-zinc-900">{metrics.totalCount}</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-zinc-200 shadow-xs flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+            <CheckCircle className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 block">Aprovados</span>
+            <span className="text-xl sm:text-2xl font-extrabold text-blue-600">{metrics.approvedCount}</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-zinc-200 shadow-xs flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+            <ShoppingBag className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 block">Comprados</span>
+            <span className="text-xl sm:text-2xl font-extrabold text-emerald-600">{metrics.purchasedCount}</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-zinc-200 shadow-xs flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-[#f5efe6] flex items-center justify-center text-[#786652] shrink-0">
+            <DollarSign className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 block">Total Previsto</span>
+            <span className="text-xl sm:text-2xl font-extrabold text-zinc-900">
+              R$ {metrics.estimatedTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main workspace section */}
+      <div id="print-memorial-section" className="bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden p-4 sm:p-6 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
+          <div>
+            <h3 className="font-extrabold text-lg text-zinc-900 tracking-tight">Memorial Descritivo</h3>
+            <p className="text-xs text-zinc-500">
+              Gestão de produtos e especificações para compra direta durante a obra.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 no-print shrink-0">
+            <button
+              onClick={handleCopyShoppingList}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-zinc-700 bg-zinc-50 border border-zinc-200 hover:bg-zinc-100 transition-colors cursor-pointer"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>Copiar Lista</span>
+            </button>
+
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-zinc-700 bg-zinc-50 border border-zinc-200 hover:bg-zinc-100 transition-colors cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Imprimir</span>
+            </button>
+
+            <button
+              onClick={handleOpenNewModal}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#8c7456] hover:bg-[#786044] transition-colors cursor-pointer shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Especificar Produto</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Filter and search bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print border-b border-zinc-50 pb-2">
+          {/* Categories select row */}
+          <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+            <button
+              onClick={() => setSelectedCategory('Todos')}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                selectedCategory === 'Todos'
+                  ? 'bg-[#4a4038] text-white'
+                  : 'border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+              }`}
+            >
+              Todos
+            </button>
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  selectedCategory === cat
+                    ? 'bg-[#4a4038] text-white'
+                    : 'border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Search box */}
+          <div className="relative min-w-[240px] md:w-64">
+            <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar no memorial.."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-zinc-200 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-hidden focus:border-zinc-400 bg-white"
+            />
+          </div>
+        </div>
+
+        {/* Products list grid */}
+        {filteredItems.length === 0 ? (
+          <div className="py-12 text-center border-2 border-dashed border-zinc-200 rounded-2xl">
+            <ImageIcon className="w-10 h-10 text-zinc-300 mx-auto mb-3" />
+            <h4 className="font-bold text-sm text-zinc-700">Nenhum item especificado</h4>
+            <p className="text-xs text-zinc-400 max-w-[320px] mx-auto mt-1">
+              {searchQuery || selectedCategory !== 'Todos'
+                ? 'Nenhum produto atende aos filtros aplicados.'
+                : 'Adicione produtos no memorial descritivo para que o cliente possa acompanhar e realizar compras de forma organizada.'}
+            </p>
+            {!searchQuery && selectedCategory === 'Todos' && (
+              <button
+                onClick={handleOpenNewModal}
+                className="mt-4 px-4 py-2 rounded-xl text-xs font-bold text-[#8c7456] bg-[#f4ece1] hover:bg-[#ebdcc8] border border-[#e2d2bd] transition-colors cursor-pointer"
+              >
+                Adicionar primeiro item
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {filteredItems.map(item => {
+              const statusColors = {
+                pending: 'bg-zinc-100 text-zinc-700 border-zinc-200',
+                approved: 'bg-blue-50 text-blue-700 border-blue-200',
+                purchased: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                rejected: 'bg-red-50 text-red-700 border-red-200'
+              };
+
+              const statusLabels = {
+                pending: 'Pendente',
+                approved: 'Aprovado',
+                purchased: 'Comprado',
+                rejected: 'Recusado'
+              };
+
+              return (
+                <div
+                  key={item.id}
+                  className="bg-white rounded-2xl border border-zinc-200 overflow-hidden flex flex-col justify-between group hover:border-zinc-300 transition-all shadow-xs"
+                >
+                  <div className="p-4 space-y-3">
+                    {/* Header: image & category */}
+                    <div className="flex gap-3">
+                      {/* Product image */}
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.title}
+                          className="w-16 h-16 object-cover rounded-xl border border-zinc-100 bg-zinc-50 shrink-0"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-xl bg-zinc-100/80 border border-zinc-200 flex items-center justify-center text-zinc-400 shrink-0 font-bold uppercase select-none">
+                          {item.category.substring(0, 2)}
+                        </div>
+                      )}
+
+                      <div className="space-y-1 overflow-hidden">
+                        <span className="inline-flex px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 text-[10px] font-bold">
+                          {item.category}
+                        </span>
+                        <h4 className="font-extrabold text-xs sm:text-sm text-zinc-900 leading-snug truncate" title={item.title}>
+                          {item.title}
+                        </h4>
+                        {item.store && (
+                          <span className="text-[11px] text-zinc-500 font-medium block">
+                            Loja: <strong className="text-zinc-700">{item.store}</strong>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Specifications */}
+                    {item.description && (
+                      <p className="text-xs text-zinc-600 leading-relaxed line-clamp-2 bg-zinc-50/50 p-2 rounded-lg">
+                        {item.description}
+                      </p>
+                    )}
+
+                    {/* Price, Qty and Subtotal */}
+                    <div className="flex items-center justify-between pt-1 border-t border-zinc-50 text-xs">
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] text-zinc-400 font-bold uppercase block">Preço Unitário</span>
+                        <span className="font-bold text-zinc-800">{item.price || 'Sob consulta'}</span>
+                      </div>
+                      <div className="text-right space-y-0.5">
+                        <span className="text-[10px] text-zinc-400 font-bold uppercase block">Qtd</span>
+                        <span className="font-bold text-zinc-800">x {item.quantity}</span>
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    {item.notes && (
+                      <div className="text-[11px] text-zinc-500 italic border-l-2 border-zinc-200 pl-2 py-0.5 mt-2">
+                        Obs: {item.notes}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions & Status footer */}
+                  <div className="bg-zinc-50/60 px-4 py-3 border-t border-zinc-100 flex items-center justify-between gap-2">
+                    {/* Status Badge */}
+                    <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold border ${statusColors[item.status]}`}>
+                      {statusLabels[item.status]}
+                    </span>
+
+                    {/* Interactive controls */}
+                    <div className="flex items-center gap-1.5 no-print">
+                      {/* Approved check */}
+                      {item.status !== 'approved' && item.status !== 'purchased' && (
+                        <button
+                          onClick={() => handleUpdateStatus(item.id, 'approved')}
+                          className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-200 cursor-pointer"
+                          title="Aprovar produto"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      {/* Purchased bag */}
+                      {item.status !== 'purchased' && (
+                        <button
+                          onClick={() => handleUpdateStatus(item.id, 'purchased')}
+                          className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors border border-emerald-200 cursor-pointer"
+                          title="Marcar como comprado"
+                        >
+                          <ShoppingBag className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      {/* Rejected cross */}
+                      {item.status !== 'rejected' && (
+                        <button
+                          onClick={() => handleUpdateStatus(item.id, 'rejected')}
+                          className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-200 cursor-pointer"
+                          title="Recusar produto"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      {/* Shop Link */}
+                      {item.url && (
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 rounded-lg bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors border border-zinc-200 cursor-pointer"
+                          title="Ir para loja"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+
+                      {/* Edit */}
+                      <button
+                        onClick={() => handleOpenEditModal(item)}
+                        className="p-1.5 rounded-lg bg-white text-zinc-500 hover:text-zinc-800 hover:bg-zinc-50 border border-zinc-200 transition-colors cursor-pointer"
+                        title="Editar especificação"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Delete */}
+                      <button
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="p-1.5 rounded-lg bg-white text-red-400 hover:text-red-600 hover:bg-red-50 border border-zinc-200 transition-colors cursor-pointer"
+                        title="Remover"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Slide-over / Modal for Adding & Specifying Product */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs no-print">
+          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-2xl border border-zinc-200 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 shrink-0">
+              <h3 className="font-extrabold text-base text-zinc-900">
+                {editingItem ? 'Editar Especificação' : 'Especificar Novo Produto para a Obra'}
+              </h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1 rounded-full text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body: Left search/AI results, Right item details */}
+            <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              {/* Left Column: AI Google Search Assistant */}
+              <div className="lg:col-span-5 bg-zinc-50/80 rounded-2xl p-4 border border-zinc-200 space-y-4">
+                <div className="space-y-1">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200/50">
+                    ASSISTENTE DE COMPRA INTELIGENTE
+                  </span>
+                  <h4 className="font-extrabold text-xs sm:text-sm text-zinc-900">Pesquisar Ofertas no Google</h4>
+                  <p className="text-[11px] text-zinc-500">
+                    Insira uma foto ou digite o nome do produto para que nossa IA busque as melhores opções de compras reais no Brasil.
+                  </p>
+                </div>
+
+                {/* Upload Section with Drag & Drop */}
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                    isDragging
+                      ? 'border-[#8c7456] bg-[#faf7f2]'
+                      : imageUploadIA
+                      ? 'border-emerald-300 bg-emerald-50/30'
+                      : 'border-zinc-300 bg-white hover:border-zinc-400'
+                  }`}
+                >
+                  <input
+                    type="file"
+                    id="product-photo-upload"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                  <label htmlFor="product-photo-upload" className="cursor-pointer block space-y-2">
+                    {imageUploadIA ? (
+                      <div className="space-y-2">
+                        <img
+                          src={imageUploadIA}
+                          alt="Produto carregado"
+                          className="max-h-24 mx-auto rounded-lg object-contain border border-zinc-200"
+                        />
+                        <span className="text-[11px] text-emerald-600 font-bold block">✓ Foto do produto carregada</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 py-1">
+                        <Upload className="w-6 h-6 text-zinc-400 mx-auto" />
+                        <span className="text-xs text-zinc-600 block font-semibold">Arraste a foto do produto ou clique</span>
+                        <span className="text-[10px] text-zinc-400 block">Formatos aceitos: JPG, PNG, WEBP</span>
+                      </div>
+                    )}
+                  </label>
+                </div>
+
+                {/* Search Text input */}
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                    Nome / Termo de busca adicional
+                  </label>
+                  <input
+                    type="text"
+                    value={searchQueryIA}
+                    onChange={(e) => setSearchQueryIA(e.target.value)}
+                    placeholder="Ex: Cuba Deca L.730 preta fosca"
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden focus:border-zinc-400"
+                  />
+                </div>
+
+                {/* IA Trigger button */}
+                <button
+                  type="button"
+                  disabled={isSearchingIA}
+                  onClick={handleAISearch}
+                  className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-[#4a4038] hover:bg-[#3d342f] transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50"
+                >
+                  {isSearchingIA ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Consultando Google e IA...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-3.5 h-3.5" />
+                      <span>Buscar Preços e Lojas</span>
+                    </>
+                  )}
+                </button>
+
+                {searchNoticeIA && (
+                  <div className="p-2.5 rounded-lg bg-amber-50/80 text-amber-800 text-[11px] flex items-start gap-2 border border-amber-200/60 leading-snug">
+                    <Sparkles className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-600" />
+                    <span>{searchNoticeIA}</span>
+                  </div>
+                )}
+
+                {searchErrorIA && (
+                  <div className="p-3 rounded-lg bg-red-50 text-red-600 text-xs flex items-start gap-2 border border-red-200/50">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{searchErrorIA}</span>
+                  </div>
+                )}
+
+                {/* AI Search Results Showcase */}
+                {searchResultsIA.length > 0 && (
+                  <div className="space-y-2 mt-2 max-h-[220px] overflow-y-auto pr-1">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Opções Sugeridas para Compra</span>
+                    {searchResultsIA.map((opt, i) => (
+                      <div
+                        key={i}
+                        className="bg-white rounded-xl p-3 border border-zinc-200 hover:border-[#8c7456] transition-colors flex flex-col justify-between gap-1.5"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-bold text-xs text-zinc-800 leading-tight block truncate max-w-[85%]">{opt.title}</span>
+                            <span className="text-xs font-extrabold text-[#8c7456] shrink-0">{opt.price}</span>
+                          </div>
+                          <p className="text-[11px] text-zinc-500 line-clamp-1">{opt.description}</p>
+                          <span className="text-[10px] text-zinc-400 block font-medium">Loja: {opt.store}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectIAShowcase(opt)}
+                          className="self-end py-1 px-2.5 rounded-lg text-[10px] font-bold bg-[#faf7f2] border border-[#e2d2bd] text-zinc-800 hover:bg-[#8c7456] hover:text-white transition-all cursor-pointer"
+                        >
+                          Preencher Formulário
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: Detailed Product Form */}
+              <form onSubmit={handleSaveItem} className="lg:col-span-7 space-y-4 text-xs">
+                {/* Form Row 1: Title */}
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                    Nome do Produto *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formTitle}
+                    onChange={(e) => setFormTitle(e.target.value)}
+                    placeholder="Ex: Cuba de Apoio Deca Slim 40cm"
+                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
+                  />
+                </div>
+
+                {/* Form Row 2: Category and Quantity */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                      Categoria *
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={formCategory}
+                        onChange={(e) => setFormCategory(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-700 bg-white appearance-none focus:outline-hidden"
+                      >
+                        {CATEGORIES.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                      Quantidade *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={formQuantity}
+                      onChange={(e) => setFormQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                {/* Form Row 3: Specifications / Description */}
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                    Especificações Técnicas / Acabamento
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={formDescription}
+                    onChange={(e) => setFormDescription(e.target.value)}
+                    placeholder="Ex: Acabamento preto fosco, cerâmica esmaltada, 40cm diâmetro..."
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden resize-none"
+                  />
+                </div>
+
+                {/* Form Row 4: Price and Store */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                      Preço Unitário (R$ ou Sob consulta)
+                    </label>
+                    <input
+                      type="text"
+                      value={formPrice}
+                      onChange={(e) => setFormPrice(e.target.value)}
+                      placeholder="Ex: R$ 1.540,00"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                      Loja / Fornecedor sugerido
+                    </label>
+                    <input
+                      type="text"
+                      value={formStore}
+                      onChange={(e) => setFormStore(e.target.value)}
+                      placeholder="Ex: Leroy Merlin"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                {/* Form Row 5: Store/Product Purchase URL */}
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                    Link de Compra / URL do Fornecedor
+                  </label>
+                  <input
+                    type="url"
+                    value={formUrl}
+                    onChange={(e) => setFormUrl(e.target.value)}
+                    placeholder="Ex: https://www.leroymerlin.com.br/produto-especifico"
+                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
+                  />
+                </div>
+
+                {/* Form Row 6: Internal notes */}
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                    Observações internas ou para o cliente
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={formNotes}
+                    onChange={(e) => setFormNotes(e.target.value)}
+                    placeholder="Ex: Verificar se a válvula oculta preta já acompanha a cuba."
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden resize-none"
+                  />
+                </div>
+
+                {/* Modal Actions Footer */}
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 hover:bg-zinc-100 transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#8c7456] hover:bg-[#786044] transition-colors cursor-pointer shadow-xs"
+                  >
+                    {editingItem ? 'Salvar Alterações' : 'Especificar Produto'}
+                  </button>
+                </div>
+              </form>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-zinc-900 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-semibold border border-zinc-700 animate-in fade-in slide-in-from-bottom-3">
+          <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Print & PDF Export Modal */}
+      {isPrintModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-zinc-100 rounded-3xl w-full max-w-5xl shadow-2xl border border-zinc-200 flex flex-col max-h-[96vh] overflow-hidden my-auto">
+            {/* Modal Header Actions Bar */}
+            <div className="bg-white px-5 sm:px-7 py-4 border-b border-zinc-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#faf7f2] border border-[#e2d2bd] flex items-center justify-center text-[#8c7456] shadow-xs">
+                  <Printer className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-zinc-900 flex items-center gap-2">
+                    Prancha de Impressão e PDF
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                      A4 Pronto
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-500">
+                    {project.title} &bull; {project.clientName}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyShoppingList}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-zinc-700 bg-white border border-zinc-200 hover:bg-zinc-50 transition-colors cursor-pointer"
+                  title="Copiar lista resumida para WhatsApp ou e-mail"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Copiar Texto</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenPrintTab}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-zinc-700 bg-white border border-zinc-200 hover:bg-zinc-50 transition-colors cursor-pointer"
+                  title="Abre o documento em uma nova aba para imprimir sem restrições do navegador"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Abrir em Nova Aba</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDirectPrint}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#8c7456] hover:bg-[#786044] transition-all cursor-pointer shadow-xs"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Imprimir / Salvar PDF</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPrintModalOpen(false)}
+                  className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 flex items-center justify-center transition-colors cursor-pointer ml-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Document Preview Paper Canvas */}
+            <div className="p-3 sm:p-8 overflow-y-auto bg-zinc-200/70 space-y-4">
+              <div className="max-w-4xl mx-auto bg-white rounded-2xl p-6 sm:p-10 shadow-xl border border-zinc-200 text-zinc-900 space-y-6">
+                
+                {/* Paper Header */}
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-5 border-b-2 border-[#8c7456]">
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tight">
+                      {project.title}
+                    </h1>
+                    <p className="text-xs text-zinc-600 mt-1">
+                      <strong>Cliente:</strong> {project.clientName} &bull; <strong>Emissão:</strong> {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </p>
+                    <p className="text-xs text-zinc-600 mt-0.5">
+                      <strong>Responsável Técnico:</strong> {officeName}
+                    </p>
+                  </div>
+                  <div className="text-left sm:text-right bg-[#faf7f2] border border-[#e2d2bd] px-4 py-2 rounded-xl">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#8c7456] block">
+                      MEMORIAL DESCRITIVO
+                    </span>
+                    <span className="text-[9px] font-semibold text-zinc-500 block">
+                      ESPECIFICAÇÕES & COMPRAS
+                    </span>
+                  </div>
+                </div>
+
+                {/* Metrics Bento */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-[#fcfaf7] border border-[#ebdcc8] rounded-xl p-3">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#8c7456] block mb-1">
+                      Total de Itens
+                    </span>
+                    <span className="text-lg font-extrabold text-zinc-900 block">
+                      {metrics.totalCount}
+                    </span>
+                  </div>
+                  <div className="bg-[#fcfaf7] border border-[#ebdcc8] rounded-xl p-3">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#8c7456] block mb-1">
+                      Itens Aprovados
+                    </span>
+                    <span className="text-lg font-extrabold text-blue-600 block">
+                      {metrics.approvedCount}
+                    </span>
+                  </div>
+                  <div className="bg-[#fcfaf7] border border-[#ebdcc8] rounded-xl p-3">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#8c7456] block mb-1">
+                      Itens Comprados
+                    </span>
+                    <span className="text-lg font-extrabold text-emerald-600 block">
+                      {metrics.purchasedCount}
+                    </span>
+                  </div>
+                  <div className="bg-[#fcfaf7] border border-[#ebdcc8] rounded-xl p-3">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#8c7456] block mb-1">
+                      Orçamento Estimado
+                    </span>
+                    <span className="text-lg font-extrabold text-[#8c7456] block">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.estimatedTotal)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Products Table */}
+                <div className="border border-zinc-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-zinc-50 border-b border-zinc-200 text-[9px] uppercase tracking-wider font-extrabold text-zinc-600">
+                        <th className="py-2.5 px-3 text-center w-10">#</th>
+                        <th className="py-2.5 px-3 text-center w-16">Foto</th>
+                        <th className="py-2.5 px-3">Item & Especificação</th>
+                        <th className="py-2.5 px-3 w-36">Loja / Link</th>
+                        <th className="py-2.5 px-3 text-center w-12">Qtd</th>
+                        <th className="py-2.5 px-3 text-right w-24">Valor Est.</th>
+                        <th className="py-2.5 px-3 text-center w-24">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 text-xs">
+                      {items.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="text-center py-10 text-zinc-400">
+                            Nenhum item cadastrado no memorial descritivo até o momento.
+                          </td>
+                        </tr>
+                      ) : (
+                        items.map((item, idx) => (
+                          <tr key={item.id} className="hover:bg-zinc-50/50">
+                            <td className="py-3 px-3 text-center font-bold text-zinc-400">
+                              {idx + 1}
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              {item.imageUrl ? (
+                                <img
+                                  src={item.imageUrl}
+                                  alt={item.title}
+                                  className="w-12 h-12 rounded-lg object-cover border border-zinc-200 mx-auto"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-lg bg-zinc-100 border border-dashed border-zinc-300 mx-auto flex items-center justify-center text-[8px] text-zinc-400 text-center p-1">
+                                  Sem foto
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#8c7456] block">
+                                {item.category}
+                              </span>
+                              <strong className="text-xs font-bold text-zinc-900 block mt-0.5">
+                                {item.title}
+                              </strong>
+                              {item.description && (
+                                <p className="text-[11px] text-zinc-600 mt-1 line-clamp-2 leading-relaxed">
+                                  {item.description}
+                                </p>
+                              )}
+                              {item.notes && (
+                                <p className="text-[10px] text-amber-700 italic mt-1">
+                                  Obs: {item.notes}
+                                </p>
+                              )}
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className="font-semibold text-zinc-800 block text-xs">
+                                {item.store || 'A definir'}
+                              </span>
+                              {item.url && (
+                                <a
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] text-[#8c7456] underline hover:text-[#786044] inline-flex items-center gap-1 mt-1 font-medium"
+                                >
+                                  Ver na Loja <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-center font-bold text-zinc-900">
+                              {item.quantity || 1}
+                            </td>
+                            <td className="py-3 px-3 text-right font-bold text-[#8c7456] whitespace-nowrap">
+                              {item.price || 'Sob consulta'}
+                            </td>
+                            <td className="py-3 px-3 text-center whitespace-nowrap">
+                              <span
+                                className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                  item.status === 'purchased'
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : item.status === 'approved'
+                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                    : item.status === 'rejected'
+                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                    : 'bg-zinc-100 text-zinc-700 border border-zinc-200'
+                                }`}
+                              >
+                                {item.status === 'purchased'
+                                  ? 'Comprado'
+                                  : item.status === 'approved'
+                                  ? 'Aprovado'
+                                  : item.status === 'rejected'
+                                  ? 'Recusado'
+                                  : 'Pendente'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Signatures Area */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-8 mt-6">
+                  <div className="text-center pt-8 border-t border-zinc-400">
+                    <strong className="block text-xs text-zinc-900">{officeName}</strong>
+                    <span className="text-[11px] text-zinc-500">Arquiteto / Designer Responsável</span>
+                  </div>
+                  <div className="text-center pt-8 border-t border-zinc-400">
+                    <strong className="block text-xs text-zinc-900">{project.clientName}</strong>
+                    <span className="text-[11px] text-zinc-500">Cliente (De acordo com o memorial)</span>
+                  </div>
+                </div>
+
+                {/* Footer Note */}
+                <div className="pt-4 border-t border-zinc-200 flex flex-col sm:flex-row items-center justify-between text-[10px] text-zinc-400 gap-2">
+                  <span>Documento emitido eletronicamente por {officeName}</span>
+                  <span>Memorial Descritivo &bull; Gestão da Obra</span>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};

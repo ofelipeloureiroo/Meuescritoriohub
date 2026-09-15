@@ -47,6 +47,7 @@ import {
 import { useFinance } from '../../context/FinanceContext';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
 import { DEFAULT_PROJECT_STAGES } from '../../data/defaultProjectStages';
+import { MemorialDescritivoTab } from './MemorialDescritivoTab';
 
 interface ProjectWorkspaceViewProps {
   project: ArchitectureProject;
@@ -63,7 +64,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
   const { teamMembers } = useTeamMembers();
 
   // Active top-level tab
-  const [activeTab, setActiveTab] = useState<'cronograma' | 'board' | 'acoes' | 'financeiro' | 'detalhes'>('cronograma');
+  const [activeTab, setActiveTab] = useState<'cronograma' | 'board' | 'acoes' | 'financeiro' | 'detalhes' | 'memorial'>('cronograma');
 
   // Delete project confirmation modal state
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -675,6 +676,17 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
             }`}
           >
             <span>Detalhes</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('memorial')}
+            className={`flex items-center gap-2 pb-3 text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap border-b-2 ${
+              activeTab === 'memorial'
+                ? 'border-[#8c7456] text-zinc-900 font-bold'
+                : 'border-transparent text-zinc-500 hover:text-zinc-800 font-medium'
+            }`}
+          >
+            <span>Memorial Descritivo</span>
           </button>
         </div>
 
@@ -1694,6 +1706,10 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
             )}
           </div>
         </div>
+      )}
+
+      {activeTab === 'memorial' && (
+        <MemorialDescritivoTab project={project} />
       )}
 
       {/* Modal: Nova Ação (Image 5) */}
