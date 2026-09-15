@@ -33,6 +33,7 @@ export interface PlatformPayment {
 }
 
 const STORAGE_KEY = 'platform_subscriber_payments_v1';
+const DELETED_SEEDS_KEY = 'deleted_seed_payments_v1';
 
 interface FinancialControlTabProps {
   users?: UserProfile[];
@@ -43,6 +44,8 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [paymentToDelete, setPaymentToDelete] = useState<PlatformPayment | null>(null);
+  const [showResetModal, setShowResetModal] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Form State for Manual Subscription Payment
@@ -62,13 +65,16 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
 
     const loadPlatformPayments = async () => {
       try {
-        // 1. Try local storage first for instantaneous UI
+        const deletedSeeds: string[] = JSON.parse(localStorage.getItem(DELETED_SEEDS_KEY) || '[]');
+
+        // 1. Load local cache first for fast rendering
         const cached = localStorage.getItem(STORAGE_KEY);
         if (cached) {
           try {
-            const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setPayments(parsed);
+            const parsed: PlatformPayment[] = JSON.parse(cached);
+            if (Array.isArray(parsed)) {
+              const validCached = parsed.filter(p => !deletedSeeds.includes(p.id));
+              setPayments(validCached);
             }
           } catch (e) {
             console.warn("Cached payments parse error:", e);
@@ -80,7 +86,9 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
         unsub = onSnapshot(colRef, (snapshot) => {
           const docsData: PlatformPayment[] = [];
           snapshot.forEach((d) => {
-            docsData.push({ id: d.id, ...d.data() } as PlatformPayment);
+            if (!deletedSeeds.includes(d.id)) {
+              docsData.push({ id: d.id, ...d.data() } as PlatformPayment);
+            }
           });
 
           // Sort by date descending
@@ -90,22 +98,47 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
             setPayments(docsData);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(docsData));
           } else {
-            // If empty in Firestore and empty in local, seed default sample subscriber entries from active users
-            const activeSubscribers = users.filter(u => u.role !== 'admin' && u.status === 'active');
-            if (activeSubscribers.length > 0 && (!cached || JSON.parse(cached || '[]').length === 0)) {
-              const seeded: PlatformPayment[] = activeSubscribers.map((u, idx) => ({
-                id: `seed-${u.uid}-${idx}`,
-                subscriberEmail: u.email,
-                subscriberName: u.name || u.email.split('@')[0],
-                description: 'Assinatura Plataforma SaaS - Ativação',
-                plan: '1month',
-                amount: 97.00,
-                date: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                paymentMethod: 'PIX',
-                createdAt: new Date().toISOString()
-              }));
-              setPayments(seeded);
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+            // Firestore has no documents for platform_payments.
+            // Check if local cache has valid items
+            const localCachedStr = localStorage.getItem(STORAGE_KEY);
+            let localParsed: PlatformPayment[] = [];
+            if (localCachedStr) {
+              try {
+                localParsed = JSON.parse(localCachedStr);
+              } catch (e) {
+                console.warn(e);
+              }
+            }
+
+            const filteredLocal = localParsed.filter(p => !deletedSeeds.includes(p.id));
+
+            if (filteredLocal.length > 0) {
+              setPayments(filteredLocal);
+            } else {
+              // Only seed if user has not explicitly cleared history or deleted seed items
+              const userClearedAll = localStorage.getItem('user_cleared_all_payments') === 'true';
+              if (!userClearedAll && deletedSeeds.length === 0) {
+                const activeSubscribers = users.filter(u => u.role !== 'admin' && u.status === 'active');
+                if (activeSubscribers.length > 0) {
+                  const seeded: PlatformPayment[] = activeSubscribers.map((u, idx) => ({
+                    id: `seed-${u.uid}-${idx}`,
+                    subscriberEmail: u.email,
+                    subscriberName: u.name || u.email.split('@')[0],
+                    description: 'Assinatura Plataforma SaaS - Ativação',
+                    plan: '1month',
+                    amount: 97.00,
+                    date: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                    paymentMethod: 'PIX',
+                    createdAt: new Date().toISOString()
+                  }));
+                  setPayments(seeded);
+                  localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+                } else {
+                  setPayments([]);
+                }
+              } else {
+                setPayments([]);
+              }
             }
           }
           setLoading(false);
@@ -152,13 +185,11 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
   const handleAddPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.subscriberEmail.trim()) {
-      alert('Por favor, informe o e-mail do assinante.');
       return;
     }
 
     const numericAmount = parseFloat(formData.amount.replace(',', '.'));
     if (isNaN(numericAmount) || numericAmount <= 0) {
-      alert('Por favor, insira um valor válido para a assinatura.');
       return;
     }
 
@@ -183,6 +214,7 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
       const updated = [newPayment, ...payments];
       setPayments(updated);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      localStorage.removeItem('user_cleared_all_payments');
 
       setShowAddModal(false);
       setSuccessMsg(`Recebimento de R$ ${numericAmount.toFixed(2)} registrado com sucesso para ${formData.subscriberEmail}!`);
@@ -210,38 +242,58 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
     }
   };
 
-  // Delete individual payment record
-  const handleDeletePayment = async (id: string) => {
-    if (!window.confirm('Tem certeza que deseja remover este registro de recebimento de assinatura?')) return;
+  // Confirm deletion of single payment entry
+  const confirmDeletePayment = async () => {
+    if (!paymentToDelete) return;
+
+    const targetId = paymentToDelete.id;
+    const targetEmail = paymentToDelete.subscriberEmail;
 
     try {
-      await deleteDoc(doc(db, 'platform_payments', id));
+      // 1. Try deleting from Firestore
+      await deleteDoc(doc(db, 'platform_payments', targetId));
     } catch (e) {
-      console.warn("Could not delete from Firestore:", e);
+      console.warn("Could not delete document from Firestore:", e);
     }
 
-    const updated = payments.filter(p => p.id !== id);
+    // 2. Track deleted ID in localStorage black-list so it never re-appears
+    const deletedSeeds: string[] = JSON.parse(localStorage.getItem(DELETED_SEEDS_KEY) || '[]');
+    if (!deletedSeeds.includes(targetId)) {
+      deletedSeeds.push(targetId);
+      localStorage.setItem(DELETED_SEEDS_KEY, JSON.stringify(deletedSeeds));
+    }
+
+    // 3. Update React state & localStorage
+    const updated = payments.filter(p => p.id !== targetId);
     setPayments(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    setPaymentToDelete(null);
+    setSuccessMsg(`Lançamento de recebimento de ${targetEmail} excluído com sucesso!`);
+    setTimeout(() => setSuccessMsg(null), 4000);
   };
 
-  // Reset all platform financial control data
-  const handleReset = async () => {
-    if (window.confirm('Tem certeza que deseja zerar TODO o histórico de recebimentos de assinantes da plataforma? Esta ação não pode ser desfeita.')) {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'platform_payments'));
-        querySnapshot.forEach(async (d) => {
-          await deleteDoc(doc(db, 'platform_payments', d.id));
-        });
-      } catch (e) {
-        console.warn("Error deleting Firestore documents:", e);
-      }
-
-      setPayments([]);
-      localStorage.removeItem(STORAGE_KEY);
-      setSuccessMsg('Controle financeiro de assinantes zerado com sucesso.');
-      setTimeout(() => setSuccessMsg(null), 4000);
+  // Confirm Reset all platform financial data
+  const confirmReset = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'platform_payments'));
+      querySnapshot.forEach(async (d) => {
+        await deleteDoc(doc(db, 'platform_payments', d.id));
+      });
+    } catch (e) {
+      console.warn("Error deleting Firestore documents:", e);
     }
+
+    // Track all current IDs as deleted
+    const allIds = payments.map(p => p.id);
+    localStorage.setItem(DELETED_SEEDS_KEY, JSON.stringify(allIds));
+    localStorage.setItem('user_cleared_all_payments', 'true');
+
+    setPayments([]);
+    localStorage.removeItem(STORAGE_KEY);
+    setShowResetModal(false);
+    setSuccessMsg('Histórico financeiro de assinantes zerado com sucesso.');
+    setTimeout(() => setSuccessMsg(null), 4000);
   };
 
   // Calculations for SaaS Metrics
@@ -291,7 +343,7 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
           </button>
 
           <button
-            onClick={handleReset}
+            onClick={() => setShowResetModal(true)}
             className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-2xs"
             title="Zerar registros financeiros de assinantes da plataforma"
           >
@@ -446,11 +498,12 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
                   </td>
                   <td className="px-4 py-3.5 text-right">
                     <button
-                      onClick={() => handleDeletePayment(p.id)}
+                      type="button"
+                      onClick={() => setPaymentToDelete(p)}
                       className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-zinc-200 hover:border-rose-200 rounded-lg transition-all cursor-pointer shadow-2xs"
                       title="Excluir este lançamento de recebimento"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>
@@ -467,6 +520,106 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
           </table>
         </div>
       </div>
+
+      {/* Modal de Confirmação para Excluir um Lançamento Individual */}
+      {paymentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white border border-zinc-200 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl relative animate-in fade-in zoom-in duration-200 text-zinc-900">
+            <button
+              onClick={() => setPaymentToDelete(null)}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-zinc-900">Excluir Lançamento</h3>
+                <p className="text-xs text-zinc-500 font-medium">Remover entrada do histórico de assinaturas</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl space-y-1">
+              <div className="text-xs text-zinc-900 font-bold">{paymentToDelete.subscriberName || paymentToDelete.subscriberEmail}</div>
+              <div className="text-xs font-mono text-[#8c6b3e] font-bold">{paymentToDelete.subscriberEmail}</div>
+              <div className="text-xs font-extrabold text-emerald-600 pt-1">
+                Valor: {paymentToDelete.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} ({paymentToDelete.paymentMethod})
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-600 leading-relaxed font-medium">
+              Tem certeza que deseja excluir o lançamento de <span className="font-bold text-zinc-900">{paymentToDelete.description}</span> no valor de <span className="font-bold text-emerald-600">R$ {paymentToDelete.amount.toFixed(2)}</span>?
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-200">
+              <button
+                type="button"
+                onClick={() => setPaymentToDelete(null)}
+                className="py-2 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeletePayment}
+                className="py-2 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Confirmar Exclusão</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação para Zerar Todo o Histórico */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white border border-zinc-200 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl relative animate-in fade-in zoom-in duration-200 text-zinc-900">
+            <button
+              onClick={() => setShowResetModal(false)}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-zinc-900">Zerar Histórico Financeiro</h3>
+                <p className="text-xs text-zinc-500 font-medium">Esta ação limpará todos os registros de pagamentos</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-600 leading-relaxed font-medium">
+              Tem certeza que deseja apagar **TODOS** os lançamentos de recebimentos de assinaturas da plataforma? Os totais calculados serão zerados.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-200">
+              <button
+                type="button"
+                onClick={() => setShowResetModal(false)}
+                className="py-2 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmReset}
+                className="py-2 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Sim, Zerar Histórico</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal para Lançar Recebimento Manual de Assinante */}
       {showAddModal && (
