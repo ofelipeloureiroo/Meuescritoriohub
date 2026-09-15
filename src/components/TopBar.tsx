@@ -226,14 +226,14 @@ export const TopBar: React.FC<TopBarProps> = ({
           {/* User Profile Info */}
           <button
             onClick={() => setActiveTab?.('settings')}
-            className={`flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-xl transition-all cursor-pointer text-left shrink-0 ${
+            className={`flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-xl transition-all border cursor-pointer text-left shrink-0 ${
               activeTab === 'settings'
-                ? 'bg-[#201a17] border border-[#382f29]'
-                : 'hover:bg-[#201a17] border border-transparent hover:border-[#382f29]'
+                ? 'bg-[var(--bg-card)] border-[var(--theme-primary)] text-[var(--theme-primary)] shadow-xs'
+                : 'bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border-[var(--border-color)] hover:border-[var(--theme-primary)]/40'
             }`}
             title="Abrir Configurações do Perfil"
           >
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full p-0.5 flex items-center justify-center overflow-hidden border border-[var(--theme-primary)]/40 shadow-xs shrink-0 bg-[#12100e]">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full p-0.5 flex items-center justify-center overflow-hidden border border-[var(--theme-primary)]/40 shadow-xs shrink-0 bg-[var(--bg-card-secondary)]">
               {userPhoto ? (
                 <img
                   src={userPhoto}
