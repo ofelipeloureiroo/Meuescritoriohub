@@ -12,7 +12,7 @@ import {
   updateDoc,
   deleteDoc
 } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { auth, db, sanitizeFirestoreData } from '../lib/firebase';
 import { Collaborator, CollaboratorPermissions } from '../types';
 
 export interface UserProfile {
@@ -174,6 +174,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (firebaseUser) {
         setUser(firebaseUser);
         syncUserData(firebaseUser);
+
+        // Guarantee user record exists in Firestore users collection
+        try {
+          const userEmail = (firebaseUser.email || '').toLowerCase().trim();
+          const isMaster = userEmail === 'lfquadrosdecorativos@gmail.com';
+          const userDocRef = doc(db, 'users', firebaseUser.uid);
+          
+          getDoc(userDocRef).then((snap) => {
+            if (!snap.exists()) {
+              setDoc(userDocRef, sanitizeFirestoreData({
+                uid: firebaseUser.uid,
+                email: userEmail,
+                name: firebaseUser.displayName || (userEmail ? userEmail.split('@')[0] : 'Usuário'),
+                role: isMaster ? 'admin' : 'user',
+                status: 'active',
+                subscriptionDueDate: isMaster ? undefined : new Date(Date.now() + 365 * 86400000).toISOString(),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              }), { merge: true }).catch(console.warn);
+            } else {
+              setDoc(userDocRef, sanitizeFirestoreData({
+                email: userEmail || snap.data()?.email,
+                updatedAt: new Date().toISOString()
+              }), { merge: true }).catch(console.warn);
+            }
+          }).catch(console.warn);
+        } catch (syncErr) {
+          console.warn("User doc sync notice:", syncErr);
+        }
       } else if (!localSession) {
         setUser(null);
         setProfile(null);

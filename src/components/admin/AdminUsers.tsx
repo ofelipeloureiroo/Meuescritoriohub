@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc, getDoc, getDocs, query, where } from 'firebase/firestore';
-import { db, auth } from '../../lib/firebase';
+import { db, auth, sanitizeFirestoreData } from '../../lib/firebase';
 import { UserProfile, useAuth } from '../../context/AuthContext';
 import {
   Loader2,
@@ -113,6 +113,16 @@ const SUBSCRIBERS_STORAGE_KEY = 'meu_escritorio_assinantes_autorizados_v1';
 // Base studio team members & authorized accounts to ensure authorized subscribers are always loaded
 const DEFAULT_AUTHORIZED_SUBSCRIBERS: UserProfile[] = [
   {
+    uid: 'sub_carlos_felipe',
+    email: 'carlos.felipe.123@hotmail.com',
+    name: 'Carlos Felipe',
+    role: 'user',
+    status: 'active',
+    subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
+    createdAt: new Date().toISOString(),
+    notes: 'Assinante Ativo / Usuário da Plataforma',
+  },
+  {
     uid: 'sub_laine_loureiro',
     email: 'laine@lparquitetura.com.br',
     name: 'Laíne Paula Loureiro',
@@ -161,7 +171,17 @@ export const AdminUsers: React.FC = () => {
       const stored = localStorage.getItem(SUBSCRIBERS_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const map = new Map<string, UserProfile>();
+          parsed.forEach((u: UserProfile) => {
+            if (u.email) map.set(u.email.toLowerCase().trim(), u);
+          });
+          DEFAULT_AUTHORIZED_SUBSCRIBERS.forEach(d => {
+            const em = d.email.toLowerCase().trim();
+            if (!map.has(em)) map.set(em, d);
+          });
+          return Array.from(map.values());
+        }
       }
     } catch {}
     return DEFAULT_AUTHORIZED_SUBSCRIBERS;
@@ -218,15 +238,15 @@ export const AdminUsers: React.FC = () => {
       localStorage.setItem(SUBSCRIBERS_STORAGE_KEY, JSON.stringify(allUsers));
 
       // Persist to system_integrations/authorized_subscribers in Firestore
-      await setDoc(doc(db, 'system_integrations', 'authorized_subscribers'), {
+      await setDoc(doc(db, 'system_integrations', 'authorized_subscribers'), sanitizeFirestoreData({
         subscribers: allUsers,
         updatedAt: new Date().toISOString()
-      }, { merge: true });
+      }), { merge: true });
 
       // Ensure each user document is kept up to date in Firestore users collection
       for (const u of allUsers) {
         if (u.uid) {
-          setDoc(doc(db, 'users', u.uid), u, { merge: true }).catch(() => {});
+          setDoc(doc(db, 'users', u.uid), sanitizeFirestoreData(u), { merge: true }).catch(() => {});
         }
       }
     } catch (e) {
@@ -398,16 +418,22 @@ export const AdminUsers: React.FC = () => {
       });
     }
 
-    // 7. If non-admin count is 0, inject DEFAULT_AUTHORIZED_SUBSCRIBERS
-    const nonAdminCount = Array.from(usersMap.values()).filter(u => u.role !== 'admin').length;
-    if (nonAdminCount === 0) {
-      DEFAULT_AUTHORIZED_SUBSCRIBERS.forEach((defSub) => {
-        const em = defSub.email.toLowerCase().trim();
-        if (!usersMap.has(em) && !blacklist.has(em)) {
+    // 7. Ensure DEFAULT_AUTHORIZED_SUBSCRIBERS (including Carlos Felipe and studio members) are always included
+    DEFAULT_AUTHORIZED_SUBSCRIBERS.forEach((defSub) => {
+      const em = defSub.email.toLowerCase().trim();
+      if (!blacklist.has(em)) {
+        if (!usersMap.has(em)) {
           usersMap.set(em, defSub);
+        } else {
+          const existing = usersMap.get(em)!;
+          usersMap.set(em, {
+            ...defSub,
+            ...existing,
+            email: em,
+          });
         }
-      });
-    }
+      }
+    });
 
     const finalList = Array.from(usersMap.values());
     // Background persist to Firestore & LocalStorage

@@ -983,10 +983,10 @@ export const TodayTab: React.FC = () => {
               </div>
 
               {/* Today's Productivity Ring */}
-              <div className="flex items-center gap-4 bg-[var(--bg-card-secondary)] p-3.5 rounded-xl border border-[var(--border-color)] shadow-xs">
-                <div className="relative w-12 h-12 flex items-center justify-center">
+              <div id="today-progress-card" className="flex items-center gap-3.5 bg-[var(--bg-card-secondary)] p-3.5 rounded-xl border border-[var(--border-color)] shadow-xs">
+                <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
                   <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="24" cy="24" r="20" className="stroke-[var(--border-color)]" strokeWidth="4" fill="transparent" />
+                    <circle cx="24" cy="24" r="20" className="stroke-[var(--border-color)] opacity-60" strokeWidth="4" fill="transparent" />
                     <circle
                       cx="24"
                       cy="24"
@@ -1002,11 +1002,11 @@ export const TodayTab: React.FC = () => {
                       fill="transparent"
                     />
                   </svg>
-                  <span className="absolute text-[10px] font-bold text-[#fcf8f5]">{completionPercent}%</span>
+                  <span className="absolute text-[11px] font-bold text-[var(--text-main)]">{completionPercent}%</span>
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-[#fcf8f5]">Progresso de Hoje</h4>
-                  <p className="text-[10px] text-[#a89c93] mt-0.5">
+                  <h4 className="text-xs font-bold text-[var(--text-main)]">Progresso de Hoje</h4>
+                  <p className="text-[11px] font-medium text-[var(--text-muted)] mt-0.5">
                     {completedToday} de {todayActions.length} tarefas concluídas
                   </p>
                 </div>
