@@ -82,6 +82,7 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
 
   // Navigation Subtabs: 'caixa_real' | 'projetos' | 'lancamentos'
   const [activeTab, setActiveTab] = useState<'caixa_real' | 'projetos' | 'lancamentos'>('caixa_real');
+  const [confirmDeleteTx, setConfirmDeleteTx] = useState<Transaction | null>(null);
 
   // Month selector
   const [selectedPeriod, setSelectedPeriod] = useState<string>('current_month'); // 'current_month' | 'last_month' | 'all'
@@ -1188,11 +1189,7 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
                                 </button>
                               )}
                               <button
-                                onClick={() => {
-                                  if (confirm(`Excluir o lançamento "${tx.description}"?`)) {
-                                    deleteTransaction(tx.id);
-                                  }
-                                }}
+                                onClick={() => setConfirmDeleteTx(tx)}
                                 className="p-1 rounded text-[#9c8e85] hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                                 title="Excluir"
                               >
@@ -1770,9 +1767,7 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
                                       <div className="border-t border-[#f0ebe4] my-1" />
                                       <button
                                         onClick={() => {
-                                          if (confirm(`Excluir ${item.description}?`)) {
-                                            deleteTransaction(item.id);
-                                          }
+                                          setConfirmDeleteTx(item);
                                           setOpenMenuTxId(null);
                                         }}
                                         className="w-full px-3 py-1.5 text-left hover:bg-rose-50 flex items-center gap-2 text-rose-600 font-semibold"
@@ -2026,10 +2021,8 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
             <div className="flex items-center justify-between pt-3 border-t border-[#f0ebe4]">
               <button
                 onClick={() => {
-                  if (confirm(`Excluir permanentemente ${selectedTxForDetail.description}?`)) {
-                    deleteTransaction(selectedTxForDetail.id);
-                    setSelectedTxForDetail(null);
-                  }
+                  setConfirmDeleteTx(selectedTxForDetail);
+                  setSelectedTxForDetail(null);
                 }}
                 className="px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
               >
@@ -2042,6 +2035,62 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
                 className="px-4 py-2 rounded-xl bg-[#b89f82] hover:bg-[#a68c6e] text-white text-xs font-bold transition-all cursor-pointer"
               >
                 Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação para Excluir um Lançamento Financeiro */}
+      {confirmDeleteTx && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white border border-[#eae4dc] rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl relative animate-in fade-in zoom-in duration-200 text-[#1c1815]">
+            <button
+              onClick={() => setConfirmDeleteTx(null)}
+              className="absolute top-4 right-4 text-[#9c8e85] hover:text-[#1c1815] p-1 rounded-lg hover:bg-[#f0ebe4] transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#1c1815]">Excluir Lançamento</h3>
+                <p className="text-xs text-[#9c8e85] font-medium">Esta ação removerá a entrada do financeiro</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-[#faf8f5] border border-[#f0ebe4] rounded-xl space-y-1">
+              <div className="text-xs text-[#1c1815] font-bold">{confirmDeleteTx.description}</div>
+              <div className="text-xs font-extrabold text-rose-600">
+                {confirmDeleteTx.type === 'income' ? '+' : '-'} {confirmDeleteTx.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </div>
+            </div>
+
+            <p className="text-xs text-[#706259] leading-relaxed font-medium">
+              Tem certeza que deseja excluir permanentemente este lançamento?
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#f0ebe4]">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteTx(null)}
+                className="py-2 px-4 rounded-xl bg-[#f0ebe4] hover:bg-[#e4ded5] text-[#1c1815] text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteTransaction(confirmDeleteTx.id);
+                  setConfirmDeleteTx(null);
+                }}
+                className="py-2 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Excluir Lançamento</span>
               </button>
             </div>
           </div>

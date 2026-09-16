@@ -217,6 +217,66 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
   const [zapiInstanceToken, setZapiInstanceToken] = useState('B47651661E706A718A173D03');
   const [zapiClientToken, setZapiClientToken] = useState('');
   const [copiedWebhook, setCopiedWebhook] = useState(false);
+  const [isTestingZapi, setIsTestingZapi] = useState(false);
+  const [zapiTestResult, setZapiTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleSaveConfig = () => {
+    const config = {
+      providerApi,
+      instanceName,
+      instancePhone,
+      zapiInstanceId,
+      zapiInstanceToken,
+      zapiClientToken,
+      autoSimulateReply,
+    };
+    localStorage.setItem('meu_escritorio_zapi_config_v1', JSON.stringify(config));
+    setShowConfigModal(false);
+    alert('Configurações salvas com sucesso no sistema!');
+  };
+
+  const handleTestZapi = async () => {
+    if (!zapiInstanceId || !zapiInstanceToken) {
+      alert('Por favor, preencha o ID da Instância e o Token da Instância primeiro.');
+      return;
+    }
+    setIsTestingZapi(true);
+    setZapiTestResult(null);
+
+    try {
+      const res = await fetch('/api/zapi/send-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instanceId: zapiInstanceId.trim(),
+          instanceToken: zapiInstanceToken.trim(),
+          clientToken: zapiClientToken.trim(),
+          phone: instancePhone.replace(/\D/g, '') || '5521998213069',
+          message: '🔔 Teste de conexão Z-API realizado com sucesso pelo Meu Escritório Online!',
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setZapiTestResult({
+          success: true,
+          message: '✅ Conexão bem-sucedida! Mensagem de teste enviada via Z-API.',
+        });
+      } else {
+        setZapiTestResult({
+          success: false,
+          message: `⚠️ Resposta da Z-API: ${data.error || data.message || 'Verifique se o QR Code foi lido no celular e se o plano trial está ativo.'}`,
+        });
+      }
+    } catch (err: any) {
+      setZapiTestResult({
+        success: false,
+        message: `❌ Falha de conexão: ${err.message || 'Servidor indisponível'}`,
+      });
+    } finally {
+      setIsTestingZapi(false);
+    }
+  };
 
   // New Chat Form
   const [newChatData, setNewChatData] = useState({
@@ -247,6 +307,23 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
   // 1. Initial Load & Firestore Realtime Sync
   useEffect(() => {
     let unsub: () => void = () => {};
+
+    // Load saved Z-API config
+    try {
+      const savedConfig = localStorage.getItem('meu_escritorio_zapi_config_v1');
+      if (savedConfig) {
+        const cfg = JSON.parse(savedConfig);
+        if (cfg.providerApi) setProviderApi(cfg.providerApi);
+        if (cfg.instanceName) setInstanceName(cfg.instanceName);
+        if (cfg.instancePhone) setInstancePhone(cfg.instancePhone);
+        if (cfg.zapiInstanceId) setZapiInstanceId(cfg.zapiInstanceId);
+        if (cfg.zapiInstanceToken) setZapiInstanceToken(cfg.zapiInstanceToken);
+        if (cfg.zapiClientToken !== undefined) setZapiClientToken(cfg.zapiClientToken);
+        if (cfg.autoSimulateReply !== undefined) setAutoSimulateReply(cfg.autoSimulateReply);
+      }
+    } catch (err) {
+      console.warn("Could not load zapi config:", err);
+    }
 
     const loadChats = async () => {
       // Local cache first
@@ -474,14 +551,12 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
 
   // Delete chat
   const handleDeleteChat = (chatId: string) => {
-    if (confirm('Deseja realmente remover este atendimento do histórico?')) {
-      const updated = chats.filter(c => c.id !== chatId);
-      setChats(updated);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      deleteDoc(doc(db, 'whatsapp_chats', chatId)).catch(console.warn);
-      if (activeChatId === chatId && updated.length > 0) {
-        setActiveChatId(updated[0].id);
-      }
+    const updated = chats.filter(c => c.id !== chatId);
+    setChats(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    deleteDoc(doc(db, 'whatsapp_chats', chatId)).catch(console.warn);
+    if (activeChatId === chatId && updated.length > 0) {
+      setActiveChatId(updated[0].id);
     }
   };
 
@@ -1157,11 +1232,24 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
                 </div>
               )}
 
+              {/* Test Connection Output */}
+              {zapiTestResult && (
+                <div
+                  className={`p-3 rounded-xl text-xs font-medium border ${
+                    zapiTestResult.success
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900 font-bold'
+                      : 'bg-rose-50 border-rose-200 text-rose-900'
+                  }`}
+                >
+                  {zapiTestResult.message}
+                </div>
+              )}
+
               {/* Auto Reply Simulator Toggle */}
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
                 <div>
                   <div className="text-xs font-bold text-emerald-900">Simulação de Resposta de Clientes</div>
-                  <div className="text-[10px] text-emerald-700">Simula respostas automáticas dos clientes para testes</div>
+                  <div className="text-[10px] text-emerald-700">Simula respostas automáticas dos clientes para testes em ambiente local</div>
                 </div>
                 <input
                   type="checkbox"
@@ -1172,10 +1260,21 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-200">
+            <div className="flex items-center justify-between gap-2 pt-3 border-t border-zinc-200">
+              {providerApi === 'zapi' ? (
+                <button
+                  type="button"
+                  onClick={handleTestZapi}
+                  disabled={isTestingZapi}
+                  className="py-2 px-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl text-xs font-bold transition-all cursor-pointer border border-zinc-300 disabled:opacity-50"
+                >
+                  {isTestingZapi ? 'Testando...' : '⚡ Testar Envio Z-API'}
+                </button>
+              ) : <div></div>}
+
               <button
                 type="button"
-                onClick={() => setShowConfigModal(false)}
+                onClick={handleSaveConfig}
                 className="py-2 px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
               >
                 Salvar Configurações
