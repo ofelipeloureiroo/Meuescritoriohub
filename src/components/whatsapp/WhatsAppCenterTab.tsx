@@ -33,7 +33,9 @@ import {
   Eye,
   Trash2,
   CheckCircle2,
-  ArrowLeft
+  ArrowLeft,
+  Tag,
+  Tags
 } from 'lucide-react';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db, sanitizeFirestoreData } from '../../lib/firebase';
@@ -71,6 +73,70 @@ export interface WhatsAppChat {
 }
 
 const STORAGE_KEY = 'meu_escritorio_whatsapp_chats_v2';
+
+export const PRESET_TAGS: string[] = [
+  'Novo Lead',
+  'Orçamento Enviado',
+  'Em Andamento',
+  'Projeto 3D',
+  'Aprovado',
+  'VIP',
+  'Urgente',
+  'Aguardando Retorno',
+  'Comercial',
+  'Pós-Venda',
+  'Concluído',
+];
+
+export const getTagColorClasses = (tagName: string) => {
+  const c = (tagName || '').toLowerCase();
+  if (c.includes('lead') || c === 'sky' || c === 'blue') {
+    return { bg: 'bg-sky-50 text-sky-700 border-sky-200/90', dot: 'bg-sky-500', badge: 'bg-sky-500 text-white' };
+  }
+  if (c.includes('orçamento') || c.includes('orcamento') || c.includes('proposta') || c === 'amber') {
+    return { bg: 'bg-amber-50 text-amber-800 border-amber-200/90', dot: 'bg-amber-500', badge: 'bg-amber-500 text-white' };
+  }
+  if (c.includes('andamento') || c.includes('obra') || c === 'emerald' || c === 'green') {
+    return { bg: 'bg-emerald-50 text-emerald-800 border-emerald-200/90', dot: 'bg-emerald-500', badge: 'bg-emerald-500 text-white' };
+  }
+  if (c.includes('3d') || c.includes('projeto') || c.includes('render') || c === 'purple') {
+    return { bg: 'bg-purple-50 text-purple-800 border-purple-200/90', dot: 'bg-purple-500', badge: 'bg-purple-500 text-white' };
+  }
+  if (c.includes('aprovado') || c.includes('contrato') || c === 'teal') {
+    return { bg: 'bg-teal-50 text-teal-800 border-teal-200/90', dot: 'bg-teal-500', badge: 'bg-teal-500 text-white' };
+  }
+  if (c.includes('vip') || c.includes('premium') || c === 'rose') {
+    return { bg: 'bg-rose-50 text-rose-800 border-rose-200/90', dot: 'bg-rose-500', badge: 'bg-rose-500 text-white' };
+  }
+  if (c.includes('urgente') || c.includes('atraso') || c === 'red') {
+    return { bg: 'bg-red-50 text-red-800 border-red-200/90', dot: 'bg-red-500', badge: 'bg-red-500 text-white' };
+  }
+  if (c.includes('retorno') || c.includes('aguardando') || c.includes('pendente') || c === 'orange') {
+    return { bg: 'bg-orange-50 text-orange-800 border-orange-200/90', dot: 'bg-orange-500', badge: 'bg-orange-500 text-white' };
+  }
+  if (c.includes('comercial') || c.includes('vendas') || c === 'indigo') {
+    return { bg: 'bg-indigo-50 text-indigo-800 border-indigo-200/90', dot: 'bg-indigo-500', badge: 'bg-indigo-500 text-white' };
+  }
+  if (c.includes('pos') || c.includes('pós') || c.includes('entrega') || c === 'cyan') {
+    return { bg: 'bg-cyan-50 text-cyan-800 border-cyan-200/90', dot: 'bg-cyan-500', badge: 'bg-cyan-500 text-white' };
+  }
+  if (c.includes('conclu') || c.includes('final') || c === 'zinc') {
+    return { bg: 'bg-zinc-100 text-zinc-700 border-zinc-300', dot: 'bg-zinc-500', badge: 'bg-zinc-700 text-white' };
+  }
+  let hash = 0;
+  for (let i = 0; i < tagName.length; i++) {
+    hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const colors = [
+    { bg: 'bg-blue-50 text-blue-800 border-blue-200/90', dot: 'bg-blue-500', badge: 'bg-blue-500 text-white' },
+    { bg: 'bg-emerald-50 text-emerald-800 border-emerald-200/90', dot: 'bg-emerald-500', badge: 'bg-emerald-500 text-white' },
+    { bg: 'bg-violet-50 text-violet-800 border-violet-200/90', dot: 'bg-violet-500', badge: 'bg-violet-500 text-white' },
+    { bg: 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200/90', dot: 'bg-fuchsia-500', badge: 'bg-fuchsia-500 text-white' },
+    { bg: 'bg-amber-50 text-amber-800 border-amber-200/90', dot: 'bg-amber-500', badge: 'bg-amber-500 text-white' },
+    { bg: 'bg-teal-50 text-teal-800 border-teal-200/90', dot: 'bg-teal-500', badge: 'bg-teal-500 text-white' },
+  ];
+  return colors[Math.abs(hash) % colors.length];
+};
 
 const DEFAULT_CHATS: WhatsAppChat[] = [
   {
@@ -199,11 +265,27 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
   const currentUserKey = user?.email?.toLowerCase() || user?.uid || 'guest';
   const userConfigKey = `meu_escritorio_zapi_config_${currentUserKey}`;
   const userChatsKey = `meu_escritorio_whatsapp_chats_${currentUserKey}`;
+  const tagsStorageKey = `meu_escritorio_whatsapp_tags_${currentUserKey}`;
 
   const [chats, setChats] = useState<WhatsAppChat[]>([]);
   const [activeChatId, setActiveChatId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'mine' | 'unread' | 'closed'>('all');
+  
+  // Tags State
+  const [availableTags, setAvailableTags] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(tagsStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return PRESET_TAGS;
+  });
+  const [showTagPopover, setShowTagPopover] = useState(false);
+  const [newCustomTagInput, setNewCustomTagInput] = useState('');
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string>('all');
   
   // Message composition states
   const [messageInput, setMessageInput] = useState('');
@@ -376,11 +458,24 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
     if (!isNaN(num) && num > 1000000000) {
       const finalMs = num < 10000000000 ? num * 1000 : num;
       const d = new Date(finalMs);
-      const today = new Date();
-      if (d.toDateString() === today.toDateString()) {
-        return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const nowStr = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+      const dStr = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+      if (dStr === nowStr) {
+        return d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
       }
-      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      return dStr.slice(0, 5) + ' ' + d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+    }
+    if (typeof val === 'string') {
+      const parsed = Date.parse(val);
+      if (!isNaN(parsed) && parsed > 1000000000) {
+        const d = new Date(parsed);
+        const nowStr = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+        const dStr = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+        if (dStr === nowStr) {
+          return d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+        }
+        return dStr.slice(0, 5) + ' ' + d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+      }
     }
     return String(val);
   };
@@ -579,7 +674,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
 
     if (!activeChat) return;
 
-    const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
     const dateStr = new Date().toISOString().split('T')[0];
     const currentUserName = profile?.name || user?.email?.split('@')[0] || 'Arquiteto João';
 
@@ -631,7 +726,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
     // Auto-reply Simulation if enabled and not an internal note
     if (autoSimulateReply && !isInternalNote) {
       setTimeout(() => {
-        const replyTime = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const replyTime = new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
         const clientReply: WhatsAppMessage = {
           id: `reply-${Date.now()}`,
           sender: 'client',
@@ -667,7 +762,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
     if (!newChatData.clientName || !newChatData.clientPhone) return;
 
     const newId = `chat-${Date.now()}`;
-    const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
     const dateStr = new Date().toISOString().split('T')[0];
 
     const initialMsgObj: WhatsAppMessage = {
@@ -692,7 +787,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
       lastMessage: newChatData.initialMessage,
       lastMessageTime: timeStr,
       createdAt: new Date().toISOString(),
-      tags: ['Manual'],
+      tags: ['Novo Lead'],
       messages: [initialMsgObj]
     };
 
@@ -709,6 +804,35 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
       assignedMember: profile?.name || user?.email?.split('@')[0] || 'Arquiteto João',
       initialMessage: 'Olá! Entro em contato referente ao seu projeto de arquitetura.'
     });
+  };
+
+  // Tag Management Handlers
+  const handleToggleTag = (chatId: string, tagName: string) => {
+    const targetChat = chats.find(c => c.id === chatId);
+    if (!targetChat) return;
+    const currentTags = Array.isArray(targetChat.tags) ? targetChat.tags : [];
+    const newTags = currentTags.includes(tagName)
+      ? currentTags.filter(t => t !== tagName)
+      : [...currentTags, tagName];
+    const updated = { ...targetChat, tags: newTags };
+    const list = chats.map(c => c.id === chatId ? updated : c);
+    saveChatsState(list);
+  };
+
+  const handleAddNewCustomTag = () => {
+    const trimmed = newCustomTagInput.trim();
+    if (!trimmed) return;
+    if (!availableTags.includes(trimmed)) {
+      const updated = [...availableTags, trimmed];
+      setAvailableTags(updated);
+      try {
+        localStorage.setItem(tagsStorageKey, JSON.stringify(updated));
+      } catch {}
+    }
+    if (activeChat) {
+      handleToggleTag(activeChat.id, trimmed);
+    }
+    setNewCustomTagInput('');
   };
 
   // Change assigned team member for active chat
@@ -745,7 +869,8 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
       chat.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       chat.clientPhone.includes(searchTerm) ||
       (chat.projectName && chat.projectName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      chat.lastMessage.toLowerCase().includes(searchTerm.toLowerCase());
+      chat.lastMessage.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (chat.tags && chat.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase())));
 
     if (!matchesSearch) return false;
 
@@ -755,6 +880,12 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
     }
     if (filterTab === 'unread') return chat.unreadCount > 0;
     if (filterTab === 'closed') return chat.status === 'closed';
+
+    if (selectedTagFilter !== 'all') {
+      if (!chat.tags || !chat.tags.includes(selectedTagFilter)) {
+        return false;
+      }
+    }
 
     return true;
   });
@@ -885,6 +1016,43 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
                 Não Lidos
               </button>
             </div>
+
+            {/* Tag Filter Chips Bar */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-0.5">
+              <button
+                type="button"
+                onClick={() => setSelectedTagFilter('all')}
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border whitespace-nowrap transition-all cursor-pointer ${
+                  selectedTagFilter === 'all'
+                    ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xs'
+                    : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'
+                }`}
+              >
+                Todas Etiquetas
+              </button>
+              {availableTags.map((t) => {
+                const isSelected = selectedTagFilter === t;
+                const color = getTagColorClasses(t);
+                const count = chats.filter(c => c.tags && c.tags.includes(t)).length;
+                if (count === 0 && selectedTagFilter !== t) return null;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setSelectedTagFilter(isSelected ? 'all' : t)}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border whitespace-nowrap inline-flex items-center gap-1 transition-all cursor-pointer ${
+                      isSelected
+                        ? `${color.badge} border-transparent shadow-2xs`
+                        : `${color.bg} hover:brightness-95`
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : color.dot}`} />
+                    <span>{t}</span>
+                    {count > 0 && <span className="opacity-70 text-[9px]">({count})</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Conversations List */}
@@ -947,6 +1115,24 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
                       <span className="inline-block text-[10px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60 mt-0.5 truncate max-w-full">
                         {chat.projectName}
                       </span>
+                    )}
+
+                    {/* Chat Card Tags Badges */}
+                    {chat.tags && chat.tags.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1 mt-1">
+                        {chat.tags.map((tag) => {
+                          const color = getTagColorClasses(tag);
+                          return (
+                            <span
+                              key={tag}
+                              className={`text-[9px] font-bold px-1.5 py-0.2 rounded border inline-flex items-center gap-1 ${color.bg}`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${color.dot}`} />
+                              {tag}
+                            </span>
+                          );
+                        })}
+                      </div>
                     )}
 
                     <p className="text-xs text-zinc-500 truncate mt-1 font-normal">
@@ -1045,6 +1231,112 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-medium truncate mt-0.5">
                     <span className="text-amber-700 font-bold">{activeChat.projectName || 'Projeto Não Especificado'}</span>
+                  </div>
+
+                  {/* Active Chat Tags Row & Add Tag Popover */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    {activeChat.tags && activeChat.tags.map((tag) => {
+                      const color = getTagColorClasses(tag);
+                      return (
+                        <span
+                          key={tag}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md border inline-flex items-center gap-1 shadow-2xs ${color.bg}`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${color.dot}`} />
+                          <span>{tag}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleTag(activeChat.id, tag);
+                            }}
+                            className="hover:opacity-100 opacity-60 ml-0.5 p-0.5 rounded hover:bg-black/5 cursor-pointer"
+                            title="Remover etiqueta desta conversa"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </span>
+                      );
+                    })}
+
+                    {/* Popover trigger */}
+                    <div className="relative inline-block">
+                      <button
+                        type="button"
+                        onClick={() => setShowTagPopover(!showTagPopover)}
+                        className="text-[10px] font-bold text-zinc-600 hover:text-emerald-700 bg-zinc-100 hover:bg-emerald-50 px-2 py-0.5 rounded-md border border-zinc-200 hover:border-emerald-300 inline-flex items-center gap-1 transition-all cursor-pointer"
+                        title="Gerenciar ou adicionar etiquetas"
+                      >
+                        <Tag className="w-3 h-3 text-emerald-600" />
+                        <span>{activeChat.tags && activeChat.tags.length > 0 ? '+ Etiqueta' : 'Adicionar Etiqueta'}</span>
+                      </button>
+
+                      {showTagPopover && (
+                        <div className="absolute left-0 top-full mt-1.5 w-64 bg-white border border-zinc-200 rounded-2xl shadow-xl p-3 z-40 space-y-2.5 text-left">
+                          <div className="flex items-center justify-between pb-1.5 border-b border-zinc-100">
+                            <span className="text-xs font-bold text-zinc-800 flex items-center gap-1.5">
+                              <Tags className="w-3.5 h-3.5 text-emerald-600" />
+                              Etiquetas da Conversa
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setShowTagPopover(false)}
+                              className="p-1 text-zinc-400 hover:text-zinc-600 rounded-md cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="max-h-48 overflow-y-auto space-y-1 py-0.5">
+                            {availableTags.map((tag) => {
+                              const isChecked = (activeChat.tags || []).includes(tag);
+                              const color = getTagColorClasses(tag);
+                              return (
+                                <button
+                                  key={tag}
+                                  type="button"
+                                  onClick={() => handleToggleTag(activeChat.id, tag)}
+                                  className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                                    isChecked
+                                      ? `${color.bg} font-bold`
+                                      : 'hover:bg-zinc-50 text-zinc-700'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className={`w-2 h-2 rounded-full ${color.dot}`} />
+                                    <span>{tag}</span>
+                                  </div>
+                                  {isChecked && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <div className="pt-2 border-t border-zinc-100 flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              placeholder="Nova etiqueta..."
+                              value={newCustomTagInput}
+                              onChange={(e) => setNewCustomTagInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddNewCustomTag();
+                                }
+                              }}
+                              className="flex-1 px-2 py-1 text-xs border border-zinc-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleAddNewCustomTag}
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                            >
+                              Criar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

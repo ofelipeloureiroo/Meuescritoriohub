@@ -942,16 +942,29 @@ Retorne uma resposta JSON com o formato estrito:
       }
 
       const formatZapiTimestamp = (val: any): string => {
-        if (!val) return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        if (!val) return new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
         const num = Number(val);
         if (!isNaN(num) && num > 1000000000) {
           const finalMs = num < 10000000000 ? num * 1000 : num;
           const d = new Date(finalMs);
-          const today = new Date();
-          if (d.toDateString() === today.toDateString()) {
-            return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          const nowStr = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+          const dStr = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+          if (dStr === nowStr) {
+            return d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
           }
-          return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          return dStr.slice(0, 5) + ' ' + d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+        }
+        if (typeof val === 'string') {
+          const parsed = Date.parse(val);
+          if (!isNaN(parsed) && parsed > 1000000000) {
+            const d = new Date(parsed);
+            const nowStr = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+            const dStr = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+            if (dStr === nowStr) {
+              return d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+            }
+            return dStr.slice(0, 5) + ' ' + d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+          }
         }
         return String(val);
       };
@@ -1042,7 +1055,7 @@ Retorne uma resposta JSON com o formato estrito:
         const senderName = body.senderName || body.pushName || body.contact?.name || `+${phone}`;
         const textMessage = body.text?.message || body.body || body.text || body.message || (body.image ? '📷 [Foto]' : body.audio ? '🎤 [Áudio]' : body.document ? '📄 [Documento]' : '');
         const nowIso = new Date().toISOString();
-        const timeFormatted = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const timeFormatted = new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
 
         if (textMessage && phone) {
           const chatId = `chat-${phone}`;
