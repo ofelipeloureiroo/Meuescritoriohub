@@ -866,57 +866,222 @@ Retorne uma resposta JSON com o formato estrito:
     }
   });
 
+  // Local Persistent WhatsApp Chats
+  const WHATSAPP_CHATS_FILE = path.join(process.cwd(), '.whatsapp_chats.json');
+
+  function loadLocalWhatsAppChats(): any[] {
+    try {
+      if (fs.existsSync(WHATSAPP_CHATS_FILE)) {
+        return JSON.parse(fs.readFileSync(WHATSAPP_CHATS_FILE, 'utf-8'));
+      }
+    } catch (e) {
+      console.warn("Could not read .whatsapp_chats.json", e);
+    }
+    return [];
+  }
+
+  function saveLocalWhatsAppChats(chats: any[]) {
+    try {
+      fs.writeFileSync(WHATSAPP_CHATS_FILE, JSON.stringify(chats, null, 2), 'utf-8');
+    } catch (e) {
+      console.warn("Could not write .whatsapp_chats.json", e);
+    }
+  }
+
+  // Get WhatsApp Chats
+  app.get('/api/whatsapp/chats', (req, res) => {
+    const chats = loadLocalWhatsAppChats();
+    return res.json({ success: true, chats });
+  });
+
+  // Save WhatsApp Chats from frontend
+  app.post('/api/whatsapp/chats', (req, res) => {
+    if (Array.isArray(req.body?.chats)) {
+      saveLocalWhatsAppChats(req.body.chats);
+      return res.json({ success: true });
+    }
+    return res.status(400).json({ error: "Campo 'chats' inválido." });
+  });
+
+  // Sync Chats from Z-API instance
+  app.post('/api/zapi/sync-chats', async (req, res) => {
+    try {
+      const { instanceId, instanceToken, clientToken } = req.body;
+      if (!instanceId || !instanceToken) {
+        return res.status(400).json({ error: "Instance ID e Instance Token são obrigatórios." });
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (clientToken) {
+        headers['Client-Token'] = clientToken;
+      }
+
+      const zapiUrl = `https://api.z-api.io/instances/${instanceId}/token/${instanceToken}/chats?page=1&pageSize=40`;
+      console.log("[Z-API Sync Chats] Calling:", zapiUrl);
+      const response = await fetch(zapiUrl, { method: 'GET', headers });
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Z-API Sync Chats Error:", response.status, data);
+        const errMsg = data.message || data.error || (typeof data === 'object' ? JSON.stringify(data) : String(data));
+        return res.status(response.status).json({
+          error: `Z-API (${response.status}): ${errMsg}`,
+          details: data
+        });
+      }
+
+      const rawChats = Array.isArray(data) ? data : (data.chats || data.data || []);
+      const localChats = loadLocalWhatsAppChats();
+      const mergedChats = [...localChats];
+
+      for (const zchat of rawChats) {
+        const phone = String(zchat.phone || zchat.id || '').replace(/\D/g, '');
+        if (!phone || phone.includes('@g.us') || zchat.isGroup) continue; // ignore groups for now or format properly
+
+        const chatId = `chat-${phone}`;
+        const name = zchat.name || zchat.pushName || zchat.contact?.name || `+${phone}`;
+        const lastMsgText = typeof zchat.lastMessage === 'string'
+          ? zchat.lastMessage
+          : (zchat.lastMessage?.message || zchat.lastMessage?.text || 'Conversa ativa no WhatsApp');
+        const lastTime = zchat.lastMessageTime || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+        const existingIdx = mergedChats.findIndex(c => c.id === chatId || (c.clientPhone && c.clientPhone.replace(/\D/g, '') === phone));
+        if (existingIdx >= 0) {
+          mergedChats[existingIdx] = {
+            ...mergedChats[existingIdx],
+            clientName: name,
+            lastMessage: lastMsgText || mergedChats[existingIdx].lastMessage,
+            lastMessageTime: lastTime || mergedChats[existingIdx].lastMessageTime,
+          };
+        } else {
+          mergedChats.push({
+            id: chatId,
+            clientName: name,
+            clientPhone: phone.startsWith('55') ? `+${phone.slice(0, 2)} (${phone.slice(2, 4)}) ${phone.slice(4)}` : `+${phone}`,
+            assignedMember: 'Equipe Atendimento',
+            status: 'open',
+            unreadCount: zchat.unread || 0,
+            lastMessage: lastMsgText,
+            lastMessageTime: lastTime,
+            createdAt: new Date().toISOString(),
+            messages: [
+              {
+                id: `msg-sync-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                sender: 'client',
+                senderName: name,
+                text: lastMsgText,
+                timestamp: lastTime,
+                date: new Date().toISOString().split('T')[0],
+                status: 'read'
+              }
+            ]
+          });
+        }
+      }
+
+      saveLocalWhatsAppChats(mergedChats);
+      return res.json({ success: true, count: rawChats.length, chats: mergedChats });
+    } catch (err: any) {
+      console.error("Error syncing Z-API chats:", err);
+      return res.status(500).json({ error: err.message || "Erro ao sincronizar conversas." });
+    }
+  });
+
   // Webhook Receiver for Z-API incoming messages
   app.post('/api/zapi/webhook', async (req, res) => {
     try {
       const body = req.body;
       console.log("[Z-API Webhook] Payload recebido:", JSON.stringify(body));
 
-      if (body && (body.phone || body.from)) {
-        const phone = body.phone || body.from;
-        const senderName = body.senderName || body.pushName || 'Cliente WhatsApp';
-        const textMessage = body.text?.message || body.body || body.text || '';
+      if (body && (body.phone || body.from || body.chatId)) {
+        const rawPhone = body.phone || body.from || body.chatId;
+        const phone = String(rawPhone).replace(/\D/g, '');
+        const senderName = body.senderName || body.pushName || body.contact?.name || `+${phone}`;
+        const textMessage = body.text?.message || body.body || body.text || body.message || (body.image ? '📷 [Foto]' : body.audio ? '🎤 [Áudio]' : body.document ? '📄 [Documento]' : '');
         const nowIso = new Date().toISOString();
         const timeFormatted = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-        if (textMessage && getApps().length > 0) {
-          const db = getFirestore();
-          const chatId = `chat-${phone.replace(/\D/g, '')}`;
-          const chatRef = db.collection('whatsapp_chats').doc(chatId);
-          const docSnap = await chatRef.get();
-
+        if (textMessage && phone) {
+          const chatId = `chat-${phone}`;
+          const isFromMe = Boolean(body.fromMe);
           const newMessage = {
-            id: `msg-${Date.now()}`,
-            sender: 'client',
-            senderName,
+            id: body.messageId || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            sender: isFromMe ? 'team' : 'client',
+            senderName: isFromMe ? 'Atendente' : senderName,
             text: textMessage,
             timestamp: timeFormatted,
             date: nowIso.split('T')[0],
             status: 'read',
           };
 
-          if (docSnap.exists) {
-            const existingData = docSnap.data();
-            const existingMessages = existingData?.messages || [];
-            await chatRef.update({
+          // Update local persistent store
+          const currentChats = loadLocalWhatsAppChats();
+          const existingIdx = currentChats.findIndex(c => c.id === chatId || (c.clientPhone && c.clientPhone.replace(/\D/g, '') === phone));
+
+          if (existingIdx >= 0) {
+            const existingChat = currentChats[existingIdx];
+            const msgs = existingChat.messages || [];
+            if (!msgs.some((m: any) => m.id === newMessage.id)) {
+              msgs.push(newMessage);
+            }
+            currentChats[existingIdx] = {
+              ...existingChat,
               lastMessage: textMessage,
               lastMessageTime: timeFormatted,
-              unreadCount: (existingData?.unreadCount || 0) + 1,
-              messages: [...existingMessages, newMessage],
-            });
+              unreadCount: isFromMe ? 0 : (existingChat.unreadCount || 0) + 1,
+              messages: msgs,
+            };
           } else {
-            await chatRef.set({
+            currentChats.unshift({
               id: chatId,
               clientName: senderName,
-              clientPhone: phone,
+              clientPhone: phone.startsWith('55') ? `+${phone.slice(0, 2)} (${phone.slice(2, 4)}) ${phone.slice(4)}` : `+${phone}`,
               assignedMember: 'Equipe Atendimento',
               status: 'open',
-              unreadCount: 1,
+              unreadCount: isFromMe ? 0 : 1,
               lastMessage: textMessage,
               lastMessageTime: timeFormatted,
               createdAt: nowIso,
               messages: [newMessage],
             });
+          }
+          saveLocalWhatsAppChats(currentChats);
+
+          // If Firestore is available, update Firestore as well
+          if (getApps().length > 0) {
+            try {
+              const db = getFirestore();
+              const chatRef = db.collection('whatsapp_chats').doc(chatId);
+              const docSnap = await chatRef.get();
+
+              if (docSnap.exists) {
+                const existingData = docSnap.data();
+                const existingMessages = existingData?.messages || [];
+                await chatRef.update({
+                  lastMessage: textMessage,
+                  lastMessageTime: timeFormatted,
+                  unreadCount: isFromMe ? 0 : (existingData?.unreadCount || 0) + 1,
+                  messages: [...existingMessages, newMessage],
+                });
+              } else {
+                await chatRef.set({
+                  id: chatId,
+                  clientName: senderName,
+                  clientPhone: phone,
+                  assignedMember: 'Equipe Atendimento',
+                  status: 'open',
+                  unreadCount: isFromMe ? 0 : 1,
+                  lastMessage: textMessage,
+                  lastMessageTime: timeFormatted,
+                  createdAt: nowIso,
+                  messages: [newMessage],
+                });
+              }
+            } catch (fsErr) {
+              console.warn("Firestore sync in webhook warning:", fsErr);
+            }
           }
         }
       }

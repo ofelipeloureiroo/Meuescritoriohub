@@ -220,6 +220,50 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
   const [isTestingZapi, setIsTestingZapi] = useState(false);
   const [zapiTestResult, setZapiTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  // Syncing WhatsApp Chats from Z-API
+  const [isSyncingChats, setIsSyncingChats] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+
+  const handleSyncZapiChats = async () => {
+    if (!zapiInstanceId || !zapiInstanceToken) {
+      alert("Por favor, preencha o ID e Token da Instância primeiro nas configurações.");
+      setShowConfigModal(true);
+      return;
+    }
+    setIsSyncingChats(true);
+    setSyncStatus(null);
+    try {
+      const res = await fetch('/api/zapi/sync-chats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instanceId: zapiInstanceId.trim(),
+          instanceToken: zapiInstanceToken.trim(),
+          clientToken: zapiClientToken.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (data.chats && data.chats.length > 0) {
+          setChats(data.chats);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data.chats));
+          if (!data.chats.some((c: any) => c.id === activeChatId)) {
+            setActiveChatId(data.chats[0].id);
+          }
+          setSyncStatus(`✅ ${data.chats.length} conversas sincronizadas com sucesso do seu WhatsApp!`);
+        } else {
+          setSyncStatus("ℹ️ Nenhuma conversa encontrada na instância Z-API no momento.");
+        }
+      } else {
+        setSyncStatus(`⚠️ Erro ao sincronizar: ${data.error || 'Verifique as credenciais da instância'}`);
+      }
+    } catch (err: any) {
+      setSyncStatus(`❌ Falha: ${err.message}`);
+    } finally {
+      setIsSyncingChats(false);
+    }
+  };
+
   const handleSaveConfig = () => {
     const config = {
       providerApi,
@@ -267,10 +311,17 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
         });
       } else {
         const errorDetail = data.error || data.message || (data.details ? JSON.stringify(data.details) : 'Erro de comunicação');
-        setZapiTestResult({
-          success: false,
-          message: `⚠️ Resposta da Z-API: ${errorDetail}`,
-        });
+        if (errorDetail.toLowerCase().includes('client-token')) {
+          setZapiTestResult({
+            success: false,
+            message: `⚠️ Sua conta Z-API exige o Client-Token! Vá no menu lateral "Segurança" do painel Z-API, copie o Token de Segurança e cole no campo "Client Token" acima.`,
+          });
+        } else {
+          setZapiTestResult({
+            success: false,
+            message: `⚠️ Resposta da Z-API: ${errorDetail}`,
+          });
+        }
       }
     } catch (err: any) {
       setZapiTestResult({
@@ -330,7 +381,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
     }
 
     const loadChats = async () => {
-      // Local cache first
+      // 1. Local cache first
       const cached = localStorage.getItem(STORAGE_KEY);
       if (cached) {
         try {
@@ -347,7 +398,19 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
         setChats(DEFAULT_CHATS);
       }
 
-      // Firestore Listener
+      // 2. Fetch from backend server persistent store
+      try {
+        const srvRes = await fetch('/api/whatsapp/chats');
+        const srvData = await srvRes.json();
+        if (srvData.success && Array.isArray(srvData.chats) && srvData.chats.length > 0) {
+          setChats(srvData.chats);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(srvData.chats));
+        }
+      } catch (err) {
+        console.warn("Could not fetch server whatsapp chats:", err);
+      }
+
+      // 3. Firestore Listener
       try {
         const colRef = collection(db, 'whatsapp_chats');
         unsub = onSnapshot(colRef, (snapshot) => {
@@ -357,7 +420,6 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
           });
 
           if (fsChats.length > 0) {
-            // Sort by last message time
             setChats(fsChats);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(fsChats));
           }
@@ -371,13 +433,45 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
 
     loadChats();
 
-    return () => unsub();
+    // 4. Polling for incoming webhook messages from server
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/whatsapp/chats');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.chats) && data.chats.length > 0) {
+          setChats(prev => {
+            // Check if there are updates or new messages
+            const prevStr = JSON.stringify(prev);
+            const nextStr = JSON.stringify(data.chats);
+            if (prevStr !== nextStr) {
+              localStorage.setItem(STORAGE_KEY, nextStr);
+              return data.chats;
+            }
+            return prev;
+          });
+        }
+      } catch (e) {
+        // silent
+      }
+    }, 3500);
+
+    return () => {
+      unsub();
+      clearInterval(pollInterval);
+    };
   }, []);
 
   // Save changes helper
   const saveChatsState = (newChats: WhatsAppChat[]) => {
     setChats(newChats);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newChats));
+
+    // Async sync to server store
+    fetch('/api/whatsapp/chats', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chats: newChats }),
+    }).catch(console.warn);
 
     // Async sync to Firestore
     const active = newChats.find(c => c.id === activeChatId);
@@ -616,6 +710,16 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
             <span className="text-zinc-400">|</span>
             <span className="text-zinc-500 font-medium">{instanceName}</span>
           </div>
+
+          <button
+            onClick={handleSyncZapiChats}
+            disabled={isSyncingChats}
+            className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer border border-emerald-300 disabled:opacity-50 shadow-xs"
+            title="Sincronizar conversas ativas diretamente da instância Z-API"
+          >
+            <RefreshCw className={`w-4 h-4 text-emerald-600 ${isSyncingChats ? 'animate-spin' : ''}`} />
+            <span>{isSyncingChats ? 'Sincronizando...' : 'Sincronizar Conversas'}</span>
+          </button>
 
           <button
             onClick={() => setShowConfigModal(true)}
@@ -1190,48 +1294,93 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[11px] font-bold text-zinc-700 mb-1">
-                        Client Token / Security Token (Opcional)
-                      </label>
+                    <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[11px] font-bold text-amber-900">
+                          Client Token (Token de Segurança da Conta)
+                        </label>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-800">
+                          Exigido pelo Z-API
+                        </span>
+                      </div>
                       <input
                         type="text"
                         value={zapiClientToken}
                         onChange={(e) => setZapiClientToken(e.target.value)}
-                        placeholder="Token de segurança configurado no painel do Z-API"
-                        className="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2 text-xs font-mono text-zinc-900 focus:outline-none focus:border-emerald-500"
+                        placeholder="Cole o Client Token aqui"
+                        className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-xs font-mono text-zinc-900 focus:outline-none focus:border-amber-500 font-medium"
                       />
+                      <p className="text-[10.5px] text-amber-800 leading-snug">
+                        🔑 <strong>Onde encontrar:</strong> No painel do Z-API (menu lateral esquerdo), clique em <strong>Segurança</strong>. Copie o <strong>Token de Segurança da Conta</strong> gerado lá e cole aqui.
+                      </p>
                     </div>
 
                     {/* Webhook Configuration Guide */}
-                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span>Configurar Webhook de Mensagens Recebidas</span>
+                    <div className="mt-3 p-3.5 bg-rose-50 border border-rose-200 rounded-2xl space-y-2.5">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-xs font-bold text-rose-900">URL Obrigatória no Z-API para receber mensagens</h4>
+                          <p className="text-[11px] text-rose-700 leading-relaxed mt-0.5">
+                            Se as mensagens dos seus clientes não estão aparecendo aqui, é porque a URL no painel do Z-API ainda está com o domínio de exemplo (<em>meuescritoriohub</em>). 
+                            Substitua pela URL real abaixo:
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-[11px] text-amber-800 line-clamp-2 leading-relaxed">
-                        No painel do Z-API, clique no aviso <strong>"Configurar agora"</strong> ou vá em <strong>Webhooks</strong> e cole a URL abaixo no campo <em>"Ao receber mensagem"</em>:
-                      </p>
+
                       <div className="flex items-center gap-2">
                         <input
                           type="text"
                           readOnly
                           value={`${window.location.origin}/api/zapi/webhook`}
-                          className="flex-1 bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-amber-950 font-bold select-all"
+                          className="flex-1 bg-white border border-rose-300 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 font-bold select-all shadow-2xs"
                         />
                         <button
                           type="button"
                           onClick={() => {
                             navigator.clipboard.writeText(`${window.location.origin}/api/zapi/webhook`);
                             setCopiedWebhook(true);
-                            setTimeout(() => setCopiedWebhook(false), 2000);
+                            setTimeout(() => setCopiedWebhook(false), 2500);
                           }}
-                          className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold rounded-lg shrink-0 transition-colors"
+                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shrink-0 transition-colors shadow-2xs cursor-pointer"
                         >
-                          {copiedWebhook ? 'Copiado!' : 'Copiar URL'}
+                          {copiedWebhook ? '✓ Copiado!' : 'Copiar URL'}
                         </button>
                       </div>
+
+                      <div className="text-[11px] text-rose-800 bg-white/80 p-2.5 rounded-xl border border-rose-100 space-y-1">
+                        <div>📍 <strong>Passo a passo no painel do Z-API:</strong></div>
+                        <ol className="list-decimal list-inside space-y-0.5 text-[10.5px]">
+                          <li>Acesse seu painel Z-API &gt; <strong>Webhooks e configurações gerais</strong></li>
+                          <li>Procure o campo <strong>"Ao receber"</strong> (ou "Ao receber mensagem")</li>
+                          <li>Apague qualquer endereço que esteja lá (como <em>meuescritoriohub</em>) e cole a URL copiada acima</li>
+                          <li>Clique em <strong>Salvar</strong> no Z-API</li>
+                        </ol>
+                      </div>
                     </div>
+
+                    {/* Sincronizar Conversas Ativas */}
+                    <div className="mt-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-bold text-emerald-900">Importar conversas do seu WhatsApp</div>
+                        <div className="text-[11px] text-emerald-700">Carrega todas as conversas e contatos ativos da sua conta agora</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSyncZapiChats}
+                        disabled={isSyncingChats}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isSyncingChats ? 'animate-spin' : ''}`} />
+                        <span>{isSyncingChats ? 'Importando...' : 'Sincronizar Agora'}</span>
+                      </button>
+                    </div>
+
+                    {syncStatus && (
+                      <div className="p-2.5 rounded-xl bg-zinc-100 border border-zinc-200 text-xs font-medium text-zinc-800">
+                        {syncStatus}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
