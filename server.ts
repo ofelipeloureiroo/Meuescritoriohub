@@ -851,8 +851,12 @@ Retorne uma resposta JSON com o formato estrito:
       const data = await response.json();
 
       if (!response.ok) {
-        console.error("Z-API Send Text Error:", data);
-        return res.status(response.status).json({ error: data.message || "Erro ao enviar mensagem via Z-API", details: data });
+        console.error("Z-API Send Text Error:", response.status, data);
+        const detailMsg = data.message || data.error || data.reason || (typeof data === 'object' ? JSON.stringify(data) : String(data));
+        return res.status(response.status).json({
+          error: `Z-API (${response.status}): ${detailMsg}`,
+          details: data
+        });
       }
 
       return res.json({ success: true, data });

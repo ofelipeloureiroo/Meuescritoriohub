@@ -243,6 +243,9 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
     setIsTestingZapi(true);
     setZapiTestResult(null);
 
+    // Target a client phone if selected, or fallback
+    const targetPhone = activeChat?.clientPhone ? activeChat.clientPhone.replace(/\D/g, '') : instancePhone.replace(/\D/g, '');
+
     try {
       const res = await fetch('/api/zapi/send-text', {
         method: 'POST',
@@ -251,7 +254,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
           instanceId: zapiInstanceId.trim(),
           instanceToken: zapiInstanceToken.trim(),
           clientToken: zapiClientToken.trim(),
-          phone: instancePhone.replace(/\D/g, '') || '5521998213069',
+          phone: targetPhone,
           message: '🔔 Teste de conexão Z-API realizado com sucesso pelo Meu Escritório Online!',
         }),
       });
@@ -260,18 +263,19 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
       if (res.ok && data.success) {
         setZapiTestResult({
           success: true,
-          message: '✅ Conexão bem-sucedida! Mensagem de teste enviada via Z-API.',
+          message: `✅ Conexão Z-API OK! Mensagem de teste enviada para o número (${targetPhone}).`,
         });
       } else {
+        const errorDetail = data.error || data.message || (data.details ? JSON.stringify(data.details) : 'Erro de comunicação');
         setZapiTestResult({
           success: false,
-          message: `⚠️ Resposta da Z-API: ${data.error || data.message || 'Verifique se o QR Code foi lido no celular e se o plano trial está ativo.'}`,
+          message: `⚠️ Resposta da Z-API: ${errorDetail}`,
         });
       }
     } catch (err: any) {
       setZapiTestResult({
         success: false,
-        message: `❌ Falha de conexão: ${err.message || 'Servidor indisponível'}`,
+        message: `❌ Falha na chamada: ${err.message || 'Erro de rede/servidor'}`,
       });
     } finally {
       setIsTestingZapi(false);
