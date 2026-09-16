@@ -213,7 +213,10 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
   const [instanceName, setInstanceName] = useState('Escritório Principal');
   const [instancePhone, setInstancePhone] = useState('+55 (21) 99821-3069');
   const [providerApi, setProviderApi] = useState<'zapi' | 'evolution' | 'twilio' | 'dev'>('zapi');
-  const [apiToken, setApiToken] = useState('wts_token_live_992817263');
+  const [zapiInstanceId, setZapiInstanceId] = useState('3F93F58A2B108198830236EE76B60FCD');
+  const [zapiInstanceToken, setZapiInstanceToken] = useState('B47651661E706A718A173D03');
+  const [zapiClientToken, setZapiClientToken] = useState('');
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
 
   // New Chat Form
   const [newChatData, setNewChatData] = useState({
@@ -350,6 +353,21 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
 
     const updatedChatsList = chats.map(c => c.id === activeChat.id ? updatedChat : c);
     saveChatsState(updatedChatsList);
+
+    // Send real message via Z-API if configured
+    if (providerApi === 'zapi' && zapiInstanceId && zapiInstanceToken && !isInternalNote && activeChat.clientPhone) {
+      fetch('/api/zapi/send-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instanceId: zapiInstanceId,
+          instanceToken: zapiInstanceToken,
+          clientToken: zapiClientToken,
+          phone: activeChat.clientPhone,
+          message: messageInput.trim(),
+        }),
+      }).catch((err) => console.warn('Z-API direct dispatch info:', err));
+    }
 
     setMessageInput('');
     setAttachedFile(null);
@@ -1055,6 +1073,89 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
                   />
                 </div>
               </div>
+
+              {providerApi === 'zapi' && (
+                <div className="space-y-3 p-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-amber-500" />
+                      Credenciais da Instância Z-API
+                    </span>
+                    <span className="text-[10px] text-zinc-500 font-medium">z-api.io</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-700 mb-1">
+                        ID da Instância (Instance ID)
+                      </label>
+                      <input
+                        type="text"
+                        value={zapiInstanceId}
+                        onChange={(e) => setZapiInstanceId(e.target.value)}
+                        placeholder="Ex: 3F93F58A2B108198830236EE76B60FCD"
+                        className="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-zinc-900 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-700 mb-1">
+                        Token da Instância (Instance Token)
+                      </label>
+                      <input
+                        type="text"
+                        value={zapiInstanceToken}
+                        onChange={(e) => setZapiInstanceToken(e.target.value)}
+                        placeholder="Ex: B47651661E706A718A173D03"
+                        className="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-zinc-900 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-700 mb-1">
+                        Client Token / Security Token (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={zapiClientToken}
+                        onChange={(e) => setZapiClientToken(e.target.value)}
+                        placeholder="Token de segurança configurado no painel do Z-API"
+                        className="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2 text-xs font-mono text-zinc-900 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    {/* Webhook Configuration Guide */}
+                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>Configurar Webhook de Mensagens Recebidas</span>
+                      </div>
+                      <p className="text-[11px] text-amber-800 line-clamp-2 leading-relaxed">
+                        No painel do Z-API, clique no aviso <strong>"Configurar agora"</strong> ou vá em <strong>Webhooks</strong> e cole a URL abaixo no campo <em>"Ao receber mensagem"</em>:
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={`${window.location.origin}/api/zapi/webhook`}
+                          className="flex-1 bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-amber-950 font-bold select-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}/api/zapi/webhook`);
+                            setCopiedWebhook(true);
+                            setTimeout(() => setCopiedWebhook(false), 2000);
+                          }}
+                          className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold rounded-lg shrink-0 transition-colors"
+                        >
+                          {copiedWebhook ? 'Copiado!' : 'Copiar URL'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Auto Reply Simulator Toggle */}
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">

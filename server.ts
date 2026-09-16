@@ -818,6 +818,112 @@ Retorne uma resposta JSON com o formato estrito:
     }
   });
 
+  // ==================== Z-API INTEGRATION (WHATSAPP) ====================
+
+  // Send text message via Z-API
+  app.post('/api/zapi/send-text', async (req, res) => {
+    try {
+      const { instanceId, instanceToken, clientToken, phone, message } = req.body;
+
+      if (!instanceId || !instanceToken || !phone || !message) {
+        return res.status(400).json({ error: "Parâmetros incompletos (instanceId, instanceToken, phone, message são obrigatórios)." });
+      }
+
+      const cleanPhone = phone.replace(/\D/g, '');
+      const zapiUrl = `https://api.z-api.io/instances/${instanceId}/token/${instanceToken}/send-text`;
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (clientToken) {
+        headers['Client-Token'] = clientToken;
+      }
+
+      const response = await fetch(zapiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          phone: cleanPhone,
+          message: message,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Z-API Send Text Error:", data);
+        return res.status(response.status).json({ error: data.message || "Erro ao enviar mensagem via Z-API", details: data });
+      }
+
+      return res.json({ success: true, data });
+    } catch (err: any) {
+      console.error("Error sending Z-API message:", err);
+      return res.status(500).json({ error: err.message || "Erro interno ao conectar com Z-API." });
+    }
+  });
+
+  // Webhook Receiver for Z-API incoming messages
+  app.post('/api/zapi/webhook', async (req, res) => {
+    try {
+      const body = req.body;
+      console.log("[Z-API Webhook] Payload recebido:", JSON.stringify(body));
+
+      if (body && (body.phone || body.from)) {
+        const phone = body.phone || body.from;
+        const senderName = body.senderName || body.pushName || 'Cliente WhatsApp';
+        const textMessage = body.text?.message || body.body || body.text || '';
+        const nowIso = new Date().toISOString();
+        const timeFormatted = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+        if (textMessage && getApps().length > 0) {
+          const db = getFirestore();
+          const chatId = `chat-${phone.replace(/\D/g, '')}`;
+          const chatRef = db.collection('whatsapp_chats').doc(chatId);
+          const docSnap = await chatRef.get();
+
+          const newMessage = {
+            id: `msg-${Date.now()}`,
+            sender: 'client',
+            senderName,
+            text: textMessage,
+            timestamp: timeFormatted,
+            date: nowIso.split('T')[0],
+            status: 'read',
+          };
+
+          if (docSnap.exists) {
+            const existingData = docSnap.data();
+            const existingMessages = existingData?.messages || [];
+            await chatRef.update({
+              lastMessage: textMessage,
+              lastMessageTime: timeFormatted,
+              unreadCount: (existingData?.unreadCount || 0) + 1,
+              messages: [...existingMessages, newMessage],
+            });
+          } else {
+            await chatRef.set({
+              id: chatId,
+              clientName: senderName,
+              clientPhone: phone,
+              assignedMember: 'Equipe Atendimento',
+              status: 'open',
+              unreadCount: 1,
+              lastMessage: textMessage,
+              lastMessageTime: timeFormatted,
+              createdAt: nowIso,
+              messages: [newMessage],
+            });
+          }
+        }
+      }
+
+      return res.json({ status: "received" });
+    } catch (err: any) {
+      console.error("Z-API Webhook Error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   // Create Checkout Session
   app.post('/api/create-checkout-session', async (req, res) => {
     try {
