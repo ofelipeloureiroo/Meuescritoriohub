@@ -941,6 +941,21 @@ Retorne uma resposta JSON com o formato estrito:
         });
       }
 
+      const formatZapiTimestamp = (val: any): string => {
+        if (!val) return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const num = Number(val);
+        if (!isNaN(num) && num > 1000000000) {
+          const finalMs = num < 10000000000 ? num * 1000 : num;
+          const d = new Date(finalMs);
+          const today = new Date();
+          if (d.toDateString() === today.toDateString()) {
+            return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          }
+          return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+        return String(val);
+      };
+
       const rawChats = Array.isArray(data) ? data : (data.chats || data.data || []);
       const allChats = loadAllWhatsAppChats();
       const localChats = allChats[userId] || [];
@@ -956,14 +971,29 @@ Retorne uma resposta JSON com o formato estrito:
           ? zchat.lastMessage
           : (zchat.lastMessage?.message || zchat.lastMessage?.text || 'Conversa ativa no WhatsApp');
         const lastTime = zchat.lastMessageTime || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const formattedTime = formatZapiTimestamp(lastTime);
 
         const existingIdx = mergedChats.findIndex(c => c.id === chatId || (c.clientPhone && c.clientPhone.replace(/\D/g, '') === phone));
         if (existingIdx >= 0) {
+          const existingChat = mergedChats[existingIdx];
+          const msgs = Array.isArray(existingChat.messages) ? existingChat.messages : [];
+          if (msgs.length === 0 && lastMsgText) {
+            msgs.push({
+              id: `msg-sync-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              sender: 'client',
+              senderName: name,
+              text: lastMsgText,
+              timestamp: formattedTime,
+              date: new Date().toISOString().split('T')[0],
+              status: 'read'
+            });
+          }
           mergedChats[existingIdx] = {
-            ...mergedChats[existingIdx],
+            ...existingChat,
             clientName: name,
-            lastMessage: lastMsgText || mergedChats[existingIdx].lastMessage,
-            lastMessageTime: lastTime || mergedChats[existingIdx].lastMessageTime,
+            lastMessage: lastMsgText || existingChat.lastMessage,
+            lastMessageTime: formattedTime || existingChat.lastMessageTime,
+            messages: msgs
           };
         } else {
           mergedChats.push({
@@ -974,7 +1004,7 @@ Retorne uma resposta JSON com o formato estrito:
             status: 'open',
             unreadCount: zchat.unread || 0,
             lastMessage: lastMsgText,
-            lastMessageTime: lastTime,
+            lastMessageTime: formattedTime,
             createdAt: new Date().toISOString(),
             messages: [
               {
@@ -982,7 +1012,7 @@ Retorne uma resposta JSON com o formato estrito:
                 sender: 'client',
                 senderName: name,
                 text: lastMsgText,
-                timestamp: lastTime,
+                timestamp: formattedTime,
                 date: new Date().toISOString().split('T')[0],
                 status: 'read'
               }

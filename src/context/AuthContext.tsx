@@ -404,7 +404,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Update the removed collaborator's profile as well
       const collabRef = doc(db, 'users', collaboratorUid);
-      await setDoc(collabRef, { joinedOwnerUid: undefined }, { merge: true });
+      await setDoc(collabRef, { joinedOwnerUid: null }, { merge: true });
     } catch (e) {
       console.error("Error removing collaborator:", e);
     }

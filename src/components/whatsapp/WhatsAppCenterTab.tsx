@@ -32,10 +32,11 @@ import {
   Calendar,
   Eye,
   Trash2,
-  CheckCircle2
+  CheckCircle2,
+  ArrowLeft
 } from 'lucide-react';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db, sanitizeFirestoreData } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 
 export interface WhatsAppMessage {
@@ -367,6 +368,22 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const formatWhatsAppTime = (val: any): string => {
+    if (!val) return '';
+    const num = Number(val);
+    if (!isNaN(num) && num > 1000000000) {
+      const finalMs = num < 10000000000 ? num * 1000 : num;
+      const d = new Date(finalMs);
+      const today = new Date();
+      if (d.toDateString() === today.toDateString()) {
+        return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      }
+      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+    return String(val);
+  };
 
   // Load team members from local storage
   const teamMembersList = (() => {
@@ -531,13 +548,15 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
     // Async sync to Firestore
     const active = newChats.find(c => c.id === activeChatId);
     if (active) {
-      setDoc(doc(db, 'whatsapp_chats', active.id), active).catch(console.warn);
+      setDoc(doc(db, 'whatsapp_chats', active.id), sanitizeFirestoreData(active)).catch(console.warn);
     }
   };
 
   // Scroll to bottom of chat
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -545,7 +564,13 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
   }, [activeChatId, chats]);
 
   // Active Chat Object
-  const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
+  const activeChat = chats.find(c => c.id === activeChatId) || (chats.length > 0 ? chats[0] : null);
+
+  useEffect(() => {
+    if (!activeChatId && chats.length > 0) {
+      setActiveChatId(chats[0].id);
+    }
+  }, [chats, activeChatId]);
 
   // Send message handler
   const handleSendMessage = (e?: React.FormEvent) => {
@@ -629,7 +654,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
           };
           const nextChats = prev.map(c => c.id === current.id ? withReply : c);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(nextChats));
-          setDoc(doc(db, 'whatsapp_chats', current.id), withReply).catch(console.warn);
+          setDoc(doc(db, 'whatsapp_chats', current.id), sanitizeFirestoreData(withReply)).catch(console.warn);
           return nextChats;
         });
       }, 2500);
@@ -815,13 +840,13 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
         </div>
       </div>
 
-      {/* Main Container Layout (3 Columns: Left List, Center Chat, Right Details) */}
-      <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm grid grid-cols-1 lg:grid-cols-12 min-h-[620px] max-h-[750px] h-[calc(100vh-220px)]">
+      {/* Main Container Layout */}
+      <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm flex flex-col lg:grid lg:grid-cols-12 h-[calc(100vh-200px)] min-h-[580px] max-h-[820px]">
         
         {/* Left Column: Chats List (4 cols) */}
-        <div className="lg:col-span-4 border-r border-zinc-200 flex flex-col bg-zinc-50/50">
+        <div className={`lg:col-span-4 border-r border-zinc-200 flex flex-col h-full min-h-0 bg-zinc-50/50 ${activeChatId ? 'hidden lg:flex' : 'flex'}`}>
           {/* Search & Tabs Header */}
-          <div className="p-3.5 space-y-3 border-b border-zinc-200 bg-white">
+          <div className="p-3.5 space-y-3 border-b border-zinc-200 bg-white shrink-0">
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
               <input
@@ -863,12 +888,14 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
           </div>
 
           {/* Conversations List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-zinc-100">
+          <div className="flex-1 overflow-y-auto divide-y divide-zinc-100 min-h-0">
             {filteredChats.map((chat) => {
               const isSelected = chat.id === activeChatId;
               return (
                 <div
                   key={chat.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     setActiveChatId(chat.id);
                     // Clear unread badge
@@ -877,10 +904,15 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
                       saveChatsState(updated);
                     }
                   }}
-                  className={`p-3.5 transition-all cursor-pointer flex items-start gap-3 relative group ${
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      setActiveChatId(chat.id);
+                    }
+                  }}
+                  className={`p-3.5 transition-all cursor-pointer flex items-start gap-3 relative group select-none ${
                     isSelected
-                      ? 'bg-emerald-50/60 border-l-4 border-l-emerald-600'
-                      : 'hover:bg-zinc-100/80'
+                      ? 'bg-emerald-50/80 border-l-4 border-l-emerald-600 shadow-2xs'
+                      : 'hover:bg-zinc-100/80 active:bg-zinc-200/60'
                   }`}
                 >
                   {/* Client Avatar */}
@@ -907,7 +939,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
                         {chat.clientName}
                       </h4>
                       <span className="text-[10px] text-zinc-400 font-medium shrink-0">
-                        {chat.lastMessageTime}
+                        {formatWhatsAppTime(chat.lastMessageTime)}
                       </span>
                     </div>
 
@@ -972,13 +1004,23 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
           </div>
         </div>
 
-        {/* Center Column: Active Chat Window (5 cols or 8 cols depending on detail bar) */}
+        {/* Center Column: Active Chat Window (8 cols) */}
         {activeChat ? (
-          <div className="lg:col-span-8 flex flex-col h-full bg-[#efeae2]/40 relative">
+          <div className={`lg:col-span-8 flex flex-col h-full min-h-0 bg-[#efeae2]/40 relative overflow-hidden ${!activeChatId ? 'hidden lg:flex' : 'flex'}`}>
             
             {/* Chat Top Header */}
-            <div className="p-3.5 bg-white border-b border-zinc-200 flex items-center justify-between gap-3 shadow-2xs">
-              <div className="flex items-center gap-3 min-w-0">
+            <div className="p-3.5 bg-white border-b border-zinc-200 flex items-center justify-between gap-3 shadow-2xs shrink-0 z-10">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                {/* Mobile Back Button */}
+                <button
+                  type="button"
+                  onClick={() => setActiveChatId('')}
+                  className="lg:hidden p-1.5 -ml-1 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer shrink-0"
+                  title="Voltar para a lista de conversas"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+
                 {activeChat.clientAvatar ? (
                   <img
                     src={activeChat.clientAvatar}
@@ -1052,90 +1094,107 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
             </div>
 
             {/* Messages Thread Background */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
+            <div
+              ref={messagesContainerRef}
+              className="flex-1 overflow-y-auto min-h-0 p-4 space-y-3 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"
+            >
               
               {/* Security Banner Notice */}
-              <div className="max-w-md mx-auto p-2.5 bg-amber-50/90 border border-amber-200/80 rounded-xl text-[11px] text-amber-900 text-center font-medium shadow-2xs flex items-center justify-center gap-2">
+              <div className="max-w-md mx-auto p-2.5 bg-amber-50/90 border border-amber-200/80 rounded-xl text-[11px] text-amber-900 text-center font-medium shadow-2xs flex items-center justify-center gap-2 shrink-0">
                 <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
                 <span>Mensagens sincronizadas via API oficial com histórico do escritório.</span>
               </div>
 
-              {activeChat.messages.map((msg) => {
-                const isTeam = msg.sender === 'team';
-                const isInternal = msg.isInternalNote;
+              {(!activeChat.messages || activeChat.messages.length === 0) ? (
+                <div className="h-48 sm:h-64 flex flex-col items-center justify-center p-6 text-center text-zinc-500 space-y-2">
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-zinc-200 flex items-center justify-center text-emerald-600 shadow-2xs">
+                    <MessageSquare className="w-6 h-6" />
+                  </div>
+                  <div className="max-w-xs space-y-1">
+                    <p className="text-xs font-bold text-zinc-800">Inicie o atendimento com {activeChat.clientName}</p>
+                    <p className="text-[11px] text-zinc-500 leading-relaxed">
+                      Digite sua mensagem abaixo para enviar pelo WhatsApp oficial via Z-API.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                (activeChat.messages || []).map((msg) => {
+                  const isTeam = msg.sender === 'team';
+                  const isInternal = msg.isInternalNote;
 
-                if (isInternal) {
+                  if (isInternal) {
+                    return (
+                      <div key={msg.id} className="max-w-md mx-auto my-2">
+                        <div className="bg-amber-100/90 border border-amber-300 text-amber-900 p-3 rounded-2xl text-xs shadow-2xs space-y-1">
+                          <div className="flex items-center justify-between gap-2 font-bold text-[10px] uppercase tracking-wider text-amber-800 border-b border-amber-200/60 pb-1">
+                            <span className="flex items-center gap-1">
+                              <Lock className="w-3 h-3 text-amber-700" />
+                              Nota Interna da Equipe (Invisível para o cliente)
+                            </span>
+                            <span>{formatWhatsAppTime(msg.timestamp)}</span>
+                          </div>
+                          <p className="font-medium">{msg.text}</p>
+                          <div className="text-[10px] text-amber-700 font-bold text-right">
+                            Registrado por: {msg.senderName}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
-                    <div key={msg.id} className="max-w-md mx-auto my-2">
-                      <div className="bg-amber-100/90 border border-amber-300 text-amber-900 p-3 rounded-2xl text-xs shadow-2xs space-y-1">
-                        <div className="flex items-center justify-between gap-2 font-bold text-[10px] uppercase tracking-wider text-amber-800 border-b border-amber-200/60 pb-1">
-                          <span className="flex items-center gap-1">
-                            <Lock className="w-3 h-3 text-amber-700" />
-                            Nota Interna da Equipe (Invisível para o cliente)
-                          </span>
-                          <span>{msg.timestamp}</span>
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col ${isTeam ? 'items-end' : 'items-start'}`}
+                    >
+                      <div
+                        className={`max-w-[82%] sm:max-w-[70%] p-3 rounded-2xl text-xs shadow-2xs relative space-y-1 ${
+                          isTeam
+                            ? 'bg-emerald-700 text-white rounded-tr-none'
+                            : 'bg-white text-zinc-900 rounded-tl-none border border-zinc-200'
+                        }`}
+                      >
+                        {/* Sender Name Label */}
+                        <div className={`text-[10px] font-bold flex items-center justify-between gap-3 pb-0.5 ${
+                          isTeam ? 'text-emerald-100' : 'text-zinc-500'
+                        }`}>
+                          <span>{msg.senderName}</span>
+                          <span className="font-normal opacity-80">{formatWhatsAppTime(msg.timestamp)}</span>
                         </div>
-                        <p className="font-medium">{msg.text}</p>
-                        <div className="text-[10px] text-amber-700 font-bold text-right">
-                          Registrado por: {msg.senderName}
-                        </div>
+
+                        {/* Attached media display */}
+                        {msg.mediaName && (
+                          <div className={`p-2 rounded-xl flex items-center gap-2 text-xs font-bold mb-1 ${
+                            isTeam ? 'bg-emerald-800 text-white' : 'bg-zinc-100 text-zinc-800'
+                          }`}>
+                            <FileText className="w-4 h-4 shrink-0 text-amber-400" />
+                            <span className="truncate flex-1">{msg.mediaName}</span>
+                            <Download className="w-3.5 h-3.5 cursor-pointer hover:opacity-80" />
+                          </div>
+                        )}
+
+                        {/* Message Text */}
+                        <p className="leading-relaxed whitespace-pre-wrap font-medium">
+                          {msg.text}
+                        </p>
+
+                        {/* Status Checkmark */}
+                        {isTeam && (
+                          <div className="flex justify-end pt-0.5">
+                            <CheckCheck className="w-3.5 h-3.5 text-emerald-200" />
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
-                }
-
-                return (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col ${isTeam ? 'items-end' : 'items-start'}`}
-                  >
-                    <div
-                      className={`max-w-[82%] sm:max-w-[70%] p-3 rounded-2xl text-xs shadow-2xs relative space-y-1 ${
-                        isTeam
-                          ? 'bg-emerald-700 text-white rounded-tr-none'
-                          : 'bg-white text-zinc-900 rounded-tl-none border border-zinc-200'
-                      }`}
-                    >
-                      {/* Sender Name Label */}
-                      <div className={`text-[10px] font-bold flex items-center justify-between gap-3 pb-0.5 ${
-                        isTeam ? 'text-emerald-100' : 'text-zinc-500'
-                      }`}>
-                        <span>{msg.senderName}</span>
-                        <span className="font-normal opacity-80">{msg.timestamp}</span>
-                      </div>
-
-                      {/* Attached media display */}
-                      {msg.mediaName && (
-                        <div className={`p-2 rounded-xl flex items-center gap-2 text-xs font-bold mb-1 ${
-                          isTeam ? 'bg-emerald-800 text-white' : 'bg-zinc-100 text-zinc-800'
-                        }`}>
-                          <FileText className="w-4 h-4 shrink-0 text-amber-400" />
-                          <span className="truncate flex-1">{msg.mediaName}</span>
-                          <Download className="w-3.5 h-3.5 cursor-pointer hover:opacity-80" />
-                        </div>
-                      )}
-
-                      {/* Message Text */}
-                      <p className="leading-relaxed whitespace-pre-wrap font-medium">
-                        {msg.text}
-                      </p>
-
-                      {/* Status Checkmark */}
-                      {isTeam && (
-                        <div className="flex justify-end pt-0.5">
-                          <CheckCheck className="w-3.5 h-3.5 text-emerald-200" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                })
+              )}
 
               <div ref={messagesEndRef} />
             </div>
 
             {/* Composer Footer Bar */}
-            <div className="p-3 bg-white border-t border-zinc-200 space-y-2">
+            <div className="p-3 bg-white border-t border-zinc-200 space-y-2 shrink-0 z-10">
               
               {/* Mode Toggle & Presets */}
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1262,7 +1321,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
             </div>
           </div>
         ) : (
-          <div className="lg:col-span-8 flex flex-col items-center justify-center p-8 bg-zinc-50/50 text-center space-y-4">
+          <div className="hidden lg:flex lg:col-span-8 flex-col items-center justify-center p-8 bg-zinc-50/50 text-center space-y-4">
             <div className="w-16 h-16 rounded-3xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-xs">
               <MessageSquare className="w-8 h-8" />
             </div>
