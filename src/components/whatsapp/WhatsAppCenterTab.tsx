@@ -192,8 +192,15 @@ interface WhatsAppCenterTabProps {
 
 export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigateTab }) => {
   const { user, profile } = useAuth();
+  
+  // User scoping: LF Quadros is the main administrator, other users start blank
+  const isMainOwner = user?.email?.toLowerCase() === 'lfquadrosdecorativos@gmail.com';
+  const currentUserKey = user?.email?.toLowerCase() || user?.uid || 'guest';
+  const userConfigKey = `meu_escritorio_zapi_config_${currentUserKey}`;
+  const userChatsKey = `meu_escritorio_whatsapp_chats_${currentUserKey}`;
+
   const [chats, setChats] = useState<WhatsAppChat[]>([]);
-  const [activeChatId, setActiveChatId] = useState<string>('chat-maria-laura');
+  const [activeChatId, setActiveChatId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'mine' | 'unread' | 'closed'>('all');
   
@@ -208,13 +215,23 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
   const [showTemplatesDropdown, setShowTemplatesDropdown] = useState(false);
   const [autoSimulateReply, setAutoSimulateReply] = useState(true);
 
-  // Connection settings state
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connected');
-  const [instanceName, setInstanceName] = useState('Escritório Principal');
-  const [instancePhone, setInstancePhone] = useState('+55 (21) 99821-3069');
+  // Connection settings state - BLANK FOR OTHER USERS
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>(() => {
+    return isMainOwner ? 'connected' : 'disconnected';
+  });
+  const [instanceName, setInstanceName] = useState(() => {
+    return isMainOwner ? 'Escritório Principal' : '';
+  });
+  const [instancePhone, setInstancePhone] = useState(() => {
+    return isMainOwner ? '+55 (21) 99821-3069' : '';
+  });
   const [providerApi, setProviderApi] = useState<'zapi' | 'evolution' | 'twilio' | 'dev'>('zapi');
-  const [zapiInstanceId, setZapiInstanceId] = useState('3F93F58A2B108198830236EE76B60FCD');
-  const [zapiInstanceToken, setZapiInstanceToken] = useState('B47651661E706A718A173D03');
+  const [zapiInstanceId, setZapiInstanceId] = useState(() => {
+    return isMainOwner ? '3F93F58A2B108198830236EE76B60FCD' : '';
+  });
+  const [zapiInstanceToken, setZapiInstanceToken] = useState(() => {
+    return isMainOwner ? 'B47651661E706A718A173D03' : '';
+  });
   const [zapiClientToken, setZapiClientToken] = useState('');
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [isTestingZapi, setIsTestingZapi] = useState(false);
@@ -226,7 +243,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
 
   const handleSyncZapiChats = async () => {
     if (!zapiInstanceId || !zapiInstanceToken) {
-      alert("Por favor, preencha o ID e Token da Instância primeiro nas configurações.");
+      alert("Por favor, preencha o ID e Token da sua Instância primeiro em QR Code / Conexão API.");
       setShowConfigModal(true);
       return;
     }
@@ -240,19 +257,20 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
           instanceId: zapiInstanceId.trim(),
           instanceToken: zapiInstanceToken.trim(),
           clientToken: zapiClientToken.trim(),
+          userId: currentUserKey,
         }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         if (data.chats && data.chats.length > 0) {
           setChats(data.chats);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data.chats));
+          localStorage.setItem(userChatsKey, JSON.stringify(data.chats));
           if (!data.chats.some((c: any) => c.id === activeChatId)) {
             setActiveChatId(data.chats[0].id);
           }
-          setSyncStatus(`✅ ${data.chats.length} conversas sincronizadas com sucesso do seu WhatsApp!`);
+          setSyncStatus(`✅ ${data.chats.length} conversas sincronizadas com sucesso para seu usuário!`);
         } else {
-          setSyncStatus("ℹ️ Nenhuma conversa encontrada na instância Z-API no momento.");
+          setSyncStatus("ℹ️ Nenhuma conversa encontrada nesta instância Z-API no momento.");
         }
       } else {
         setSyncStatus(`⚠️ Erro ao sincronizar: ${data.error || 'Verifique as credenciais da instância'}`);
@@ -267,16 +285,21 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
   const handleSaveConfig = () => {
     const config = {
       providerApi,
-      instanceName,
-      instancePhone,
-      zapiInstanceId,
-      zapiInstanceToken,
-      zapiClientToken,
+      instanceName: instanceName.trim(),
+      instancePhone: instancePhone.trim(),
+      zapiInstanceId: zapiInstanceId.trim(),
+      zapiInstanceToken: zapiInstanceToken.trim(),
+      zapiClientToken: zapiClientToken.trim(),
       autoSimulateReply,
     };
-    localStorage.setItem('meu_escritorio_zapi_config_v1', JSON.stringify(config));
+    // Save to user-scoped storage
+    localStorage.setItem(userConfigKey, JSON.stringify(config));
+    if (isMainOwner) {
+      localStorage.setItem('meu_escritorio_zapi_config_v1', JSON.stringify(config));
+    }
+    setConnectionStatus(zapiInstanceId.trim() ? 'connected' : 'disconnected');
     setShowConfigModal(false);
-    alert('Configurações salvas com sucesso no sistema!');
+    alert(`Configurações de WhatsApp salvas com sucesso para o usuário ${user?.email || ''}!`);
   };
 
   const handleTestZapi = async () => {
@@ -359,92 +382,124 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
     return ['João Silva (Arquiteto)', 'Maria Paula (Designer)', 'Ana Costa (Coordenadora)', 'Equipe Geral'];
   })();
 
-  // 1. Initial Load & Firestore Realtime Sync
+  // 1. Initial Load & Firestore Realtime Sync (Per-User)
   useEffect(() => {
     let unsub: () => void = () => {};
 
-    // Load saved Z-API config
+    // 1. Load user-scoped configuration
     try {
-      const savedConfig = localStorage.getItem('meu_escritorio_zapi_config_v1');
-      if (savedConfig) {
-        const cfg = JSON.parse(savedConfig);
+      const savedUserConfig = localStorage.getItem(userConfigKey);
+      if (savedUserConfig) {
+        const cfg = JSON.parse(savedUserConfig);
         if (cfg.providerApi) setProviderApi(cfg.providerApi);
-        if (cfg.instanceName) setInstanceName(cfg.instanceName);
-        if (cfg.instancePhone) setInstancePhone(cfg.instancePhone);
-        if (cfg.zapiInstanceId) setZapiInstanceId(cfg.zapiInstanceId);
-        if (cfg.zapiInstanceToken) setZapiInstanceToken(cfg.zapiInstanceToken);
-        if (cfg.zapiClientToken !== undefined) setZapiClientToken(cfg.zapiClientToken);
+        setInstanceName(cfg.instanceName || '');
+        setInstancePhone(cfg.instancePhone || '');
+        setZapiInstanceId(cfg.zapiInstanceId || '');
+        setZapiInstanceToken(cfg.zapiInstanceToken || '');
+        setZapiClientToken(cfg.zapiClientToken || '');
         if (cfg.autoSimulateReply !== undefined) setAutoSimulateReply(cfg.autoSimulateReply);
+        setConnectionStatus(cfg.zapiInstanceId ? 'connected' : 'disconnected');
+      } else if (isMainOwner) {
+        // Fallback for primary owner account
+        const legacy = localStorage.getItem('meu_escritorio_zapi_config_v1');
+        if (legacy) {
+          const cfg = JSON.parse(legacy);
+          if (cfg.providerApi) setProviderApi(cfg.providerApi);
+          setInstanceName(cfg.instanceName || 'Escritório Principal');
+          setInstancePhone(cfg.instancePhone || '+55 (21) 99821-3069');
+          setZapiInstanceId(cfg.zapiInstanceId || '3F93F58A2B108198830236EE76B60FCD');
+          setZapiInstanceToken(cfg.zapiInstanceToken || 'B47651661E706A718A173D03');
+          setZapiClientToken(cfg.zapiClientToken || '');
+        }
+        setConnectionStatus('connected');
+      } else {
+        // Any other user starts completely in blank!
+        setInstanceName('');
+        setInstancePhone('');
+        setZapiInstanceId('');
+        setZapiInstanceToken('');
+        setZapiClientToken('');
+        setConnectionStatus('disconnected');
       }
     } catch (err) {
-      console.warn("Could not load zapi config:", err);
+      console.warn("Could not load user zapi config:", err);
     }
 
     const loadChats = async () => {
-      // 1. Local cache first
-      const cached = localStorage.getItem(STORAGE_KEY);
+      // 1. Local cache first for this specific user
+      const cached = localStorage.getItem(userChatsKey);
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             setChats(parsed);
+            if (parsed.length > 0 && !activeChatId) {
+              setActiveChatId(parsed[0].id);
+            }
           } else {
-            setChats(DEFAULT_CHATS);
+            setChats(isMainOwner ? DEFAULT_CHATS : []);
           }
         } catch (e) {
-          setChats(DEFAULT_CHATS);
+          setChats(isMainOwner ? DEFAULT_CHATS : []);
         }
       } else {
-        setChats(DEFAULT_CHATS);
+        setChats(isMainOwner ? DEFAULT_CHATS : []);
+        if (isMainOwner && DEFAULT_CHATS.length > 0 && !activeChatId) {
+          setActiveChatId(DEFAULT_CHATS[0].id);
+        }
       }
 
-      // 2. Fetch from backend server persistent store
+      // 2. Fetch from backend server persistent store for this user
       try {
-        const srvRes = await fetch('/api/whatsapp/chats');
+        const srvRes = await fetch(`/api/whatsapp/chats?userId=${encodeURIComponent(currentUserKey)}`);
         const srvData = await srvRes.json();
         if (srvData.success && Array.isArray(srvData.chats) && srvData.chats.length > 0) {
           setChats(srvData.chats);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(srvData.chats));
+          localStorage.setItem(userChatsKey, JSON.stringify(srvData.chats));
+          if (!activeChatId) {
+            setActiveChatId(srvData.chats[0].id);
+          }
         }
       } catch (err) {
         console.warn("Could not fetch server whatsapp chats:", err);
       }
 
-      // 3. Firestore Listener
-      try {
-        const colRef = collection(db, 'whatsapp_chats');
-        unsub = onSnapshot(colRef, (snapshot) => {
-          const fsChats: WhatsAppChat[] = [];
-          snapshot.forEach(doc => {
-            fsChats.push({ id: doc.id, ...doc.data() } as WhatsAppChat);
-          });
+      // 3. Firestore Listener (for owner or when available)
+      if (isMainOwner) {
+        try {
+          const colRef = collection(db, 'whatsapp_chats');
+          unsub = onSnapshot(colRef, (snapshot) => {
+            const fsChats: WhatsAppChat[] = [];
+            snapshot.forEach(doc => {
+              fsChats.push({ id: doc.id, ...doc.data() } as WhatsAppChat);
+            });
 
-          if (fsChats.length > 0) {
-            setChats(fsChats);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(fsChats));
-          }
-        }, (err) => {
-          console.warn("Firestore whatsapp_chats listener warning:", err);
-        });
-      } catch (err) {
-        console.warn("Could not subscribe to whatsapp_chats Firestore:", err);
+            if (fsChats.length > 0) {
+              setChats(fsChats);
+              localStorage.setItem(userChatsKey, JSON.stringify(fsChats));
+            }
+          }, (err) => {
+            console.warn("Firestore whatsapp_chats listener warning:", err);
+          });
+        } catch (err) {
+          console.warn("Could not subscribe to whatsapp_chats Firestore:", err);
+        }
       }
     };
 
     loadChats();
 
-    // 4. Polling for incoming webhook messages from server
+    // 4. Polling for incoming webhook messages for this user
     const pollInterval = setInterval(async () => {
       try {
-        const res = await fetch('/api/whatsapp/chats');
+        const res = await fetch(`/api/whatsapp/chats?userId=${encodeURIComponent(currentUserKey)}`);
         const data = await res.json();
-        if (data.success && Array.isArray(data.chats) && data.chats.length > 0) {
+        if (data.success && Array.isArray(data.chats)) {
           setChats(prev => {
-            // Check if there are updates or new messages
             const prevStr = JSON.stringify(prev);
             const nextStr = JSON.stringify(data.chats);
-            if (prevStr !== nextStr) {
-              localStorage.setItem(STORAGE_KEY, nextStr);
+            if (prevStr !== nextStr && data.chats.length > 0) {
+              localStorage.setItem(userChatsKey, nextStr);
               return data.chats;
             }
             return prev;
@@ -459,18 +514,18 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
       unsub();
       clearInterval(pollInterval);
     };
-  }, []);
+  }, [user, isMainOwner, currentUserKey, userConfigKey, userChatsKey]);
 
   // Save changes helper
   const saveChatsState = (newChats: WhatsAppChat[]) => {
     setChats(newChats);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newChats));
+    localStorage.setItem(userChatsKey, JSON.stringify(newChats));
 
     // Async sync to server store
     fetch('/api/whatsapp/chats', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chats: newChats }),
+      body: JSON.stringify({ userId: currentUserKey, chats: newChats }),
     }).catch(console.warn);
 
     // Async sync to Firestore
@@ -650,11 +705,12 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
   // Delete chat
   const handleDeleteChat = (chatId: string) => {
     const updated = chats.filter(c => c.id !== chatId);
-    setChats(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    saveChatsState(updated);
     deleteDoc(doc(db, 'whatsapp_chats', chatId)).catch(console.warn);
     if (activeChatId === chatId && updated.length > 0) {
       setActiveChatId(updated[0].id);
+    } else if (updated.length === 0) {
+      setActiveChatId('');
     }
   };
 
@@ -691,25 +747,45 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
               <h2 className="text-xl sm:text-2xl font-serif font-extrabold text-zinc-900 tracking-tight">
                 Central de Atendimento WhatsApp
               </h2>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                API Ativa
-              </span>
+              {zapiInstanceId ? (
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Conectado
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
+                  Não Configurado
+                </span>
+              )}
             </div>
             <p className="text-zinc-500 text-xs font-medium mt-0.5">
-              Comunicação integrada entre clientes e membros da sua equipe de arquitetura.
+              {isMainOwner
+                ? 'Painel de atendimento do administrador principal.'
+                : `Painel exclusivo de WhatsApp do usuário ${user?.email || ''}.`}
             </p>
           </div>
         </div>
 
         {/* Quick Connection Info & Actions */}
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs">
-            <Phone className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="font-bold text-zinc-700">{instancePhone}</span>
-            <span className="text-zinc-400">|</span>
-            <span className="text-zinc-500 font-medium">{instanceName}</span>
-          </div>
+          {instancePhone ? (
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs">
+              <Phone className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="font-bold text-zinc-700">{instancePhone}</span>
+              {instanceName && (
+                <>
+                  <span className="text-zinc-400">|</span>
+                  <span className="text-zinc-500 font-medium">{instanceName}</span>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-medium">
+              <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+              <span>Sem WhatsApp Vinculado</span>
+            </div>
+          )}
 
           <button
             onClick={handleSyncZapiChats}
@@ -863,9 +939,34 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
             })}
 
             {filteredChats.length === 0 && (
-              <div className="p-8 text-center text-zinc-400 space-y-2">
+              <div className="p-6 text-center text-zinc-400 space-y-3">
                 <MessageSquare className="w-8 h-8 mx-auto opacity-30" />
-                <p className="text-xs font-medium">Nenhuma conversa encontrada.</p>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-zinc-600">Nenhuma conversa aqui</p>
+                  <p className="text-[11px] text-zinc-400 max-w-[200px] mx-auto leading-relaxed">
+                    {zapiInstanceId
+                      ? 'Sincronize com a Z-API ou inicie um novo chat manual acima.'
+                      : 'Configure seu WhatsApp para carregar seus contatos e mensagens.'}
+                  </p>
+                </div>
+                {zapiInstanceId ? (
+                  <button
+                    onClick={handleSyncZapiChats}
+                    disabled={isSyncingChats}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingChats ? 'animate-spin' : ''}`} />
+                    <span>Sincronizar</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowConfigModal(true)}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <QrCode className="w-3.5 h-3.5" />
+                    <span>Configurar WhatsApp</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -1161,12 +1262,49 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
             </div>
           </div>
         ) : (
-          <div className="lg:col-span-8 flex flex-col items-center justify-center p-8 bg-zinc-50 text-center space-y-3">
-            <MessageSquare className="w-12 h-12 text-zinc-300" />
-            <h3 className="font-serif font-bold text-lg text-zinc-700">Nenhum Atendimento Selecionado</h3>
-            <p className="text-xs text-zinc-500 max-w-sm">
-              Selecione uma conversa ao lado ou inicie um novo chat de WhatsApp com seu cliente.
-            </p>
+          <div className="lg:col-span-8 flex flex-col items-center justify-center p-8 bg-zinc-50/50 text-center space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-xs">
+              <MessageSquare className="w-8 h-8" />
+            </div>
+            <div className="space-y-1.5 max-w-md">
+              <h3 className="font-serif font-bold text-lg text-zinc-900">
+                {zapiInstanceId ? 'Nenhum Atendimento Selecionado' : 'Conecte seu WhatsApp Individual'}
+              </h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                {zapiInstanceId
+                  ? 'Selecione uma conversa na lista ao lado ou sincronize suas mensagens com a Z-API.'
+                  : `Cada usuário do sistema gerencia sua própria conexão e histórico de WhatsApp. Configure suas credenciais Z-API para seu usuário (${user?.email || 'seu usuário'}).`}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+              <button
+                onClick={() => setShowConfigModal(true)}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer"
+              >
+                <QrCode className="w-4 h-4" />
+                <span>{zapiInstanceId ? 'Ver Conexão WhatsApp' : 'Configurar Meu WhatsApp'}</span>
+              </button>
+
+              {zapiInstanceId && (
+                <button
+                  onClick={handleSyncZapiChats}
+                  disabled={isSyncingChats}
+                  className="px-4 py-2 bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-800 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 text-emerald-600 ${isSyncingChats ? 'animate-spin' : ''}`} />
+                  <span>{isSyncingChats ? 'Sincronizando...' : 'Sincronizar Conversas'}</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => setShowNewChatModal(true)}
+                className="px-4 py-2 bg-white border border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-4 h-4 text-zinc-500" />
+                <span>Novo Chat Manual</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -1174,12 +1312,12 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
       {/* Modal de Conexão WhatsApp / QR Code / API */}
       {showConfigModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-zinc-200 rounded-3xl p-6 w-full max-w-lg space-y-5 shadow-2xl relative animate-in zoom-in-95 duration-200 text-zinc-900">
+          <div className="bg-white border border-zinc-200 rounded-3xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-5 shadow-2xl relative animate-in zoom-in-95 duration-200 text-zinc-900">
             <div className="flex items-center justify-between border-b border-zinc-200 pb-3">
               <div className="flex items-center gap-2">
                 <QrCode className="w-5 h-5 text-emerald-600" />
                 <h3 className="font-serif font-bold text-lg text-zinc-900">
-                  Configuração de Conexão WhatsApp API
+                  Configuração WhatsApp (Usuário Individual)
                 </h3>
               </div>
               <button
@@ -1190,25 +1328,50 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
               </button>
             </div>
 
-            {/* Simulated Live QR Code Box */}
+            {/* User Isolation Notice */}
+            <div className="p-3 bg-blue-50/90 border border-blue-200 rounded-2xl flex items-start gap-2.5">
+              <User className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <div className="text-xs">
+                <span className="font-bold text-blue-950">Configuração Exclusiva para: {user?.email || 'Seu Usuário'}</span>
+                <p className="text-blue-800 text-[11px] mt-0.5 leading-snug">
+                  Cada usuário possui seu próprio WhatsApp e credenciais Z-API isoladas. Outros usuários não têm acesso às suas mensagens ou configurações.
+                </p>
+              </div>
+            </div>
+
+            {/* Live QR Code Box */}
             <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 text-center space-y-3">
               <div className="w-44 h-44 bg-white border-2 border-emerald-500 rounded-2xl mx-auto p-3 flex flex-col items-center justify-center relative shadow-xs">
-                {/* QR Code Graphic Mock */}
                 <QrCode className="w-32 h-32 text-zinc-900" />
                 <div className="absolute inset-0 bg-emerald-500/5 backdrop-blur-[0.5px] rounded-2xl flex items-center justify-center">
-                  <span className="bg-emerald-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-2xs">
-                    INSTÂNCIA ONLINE
+                  <span className={`text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-2xs ${
+                    zapiInstanceId ? 'bg-emerald-600' : 'bg-zinc-500'
+                  }`}>
+                    {zapiInstanceId ? 'INSTÂNCIA ATIVA' : 'CONFIGURAÇÃO EM BRANCO'}
                   </span>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <div className="text-xs font-bold text-emerald-700 flex items-center justify-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Conectado com sucesso: {instancePhone}</span>
+                <div className={`text-xs font-bold flex items-center justify-center gap-1.5 ${
+                  zapiInstanceId ? 'text-emerald-700' : 'text-zinc-600'
+                }`}>
+                  {zapiInstanceId ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>Conectado: {instancePhone || 'Instância Z-API'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-4 h-4 text-amber-500" />
+                      <span>Preencha os dados da sua instância Z-API abaixo</span>
+                    </>
+                  )}
                 </div>
                 <p className="text-[11px] text-zinc-500">
-                  Instância "{instanceName}" pronta para enviar e receber mensagens de clientes da equipe.
+                  {zapiInstanceId
+                    ? `Instância "${instanceName || 'Meu WhatsApp'}" pronta para enviar e receber mensagens da sua conta.`
+                    : 'Adicione suas credenciais do Z-API para conectar seu WhatsApp ao seu usuário.'}
                 </p>
               </div>
             </div>
@@ -1240,6 +1403,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
                     type="text"
                     value={instanceName}
                     onChange={(e) => setInstanceName(e.target.value)}
+                    placeholder="Ex: Meu WhatsApp"
                     className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-xs font-bold text-zinc-900 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -1252,6 +1416,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
                     type="text"
                     value={instancePhone}
                     onChange={(e) => setInstancePhone(e.target.value)}
+                    placeholder="Ex: +55 (21) 99999-9999"
                     className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-xs font-bold text-zinc-900 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -1262,7 +1427,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
                       <Zap className="w-4 h-4 text-amber-500" />
-                      Credenciais da Instância Z-API
+                      Credenciais Z-API (Usuário Atual)
                     </span>
                     <span className="text-[10px] text-zinc-500 font-medium">z-api.io</span>
                   </div>
@@ -1322,8 +1487,7 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
                         <div>
                           <h4 className="text-xs font-bold text-rose-900">URL Obrigatória no Z-API para receber mensagens</h4>
                           <p className="text-[11px] text-rose-700 leading-relaxed mt-0.5">
-                            Se as mensagens dos seus clientes não estão aparecendo aqui, é porque a URL no painel do Z-API ainda está com o domínio de exemplo (<em>meuescritoriohub</em>). 
-                            Substitua pela URL real abaixo:
+                            Cadastre a URL abaixo no seu painel Z-API para que as mensagens recebidas caiam diretamente no seu usuário:
                           </p>
                         </div>
                       </div>
@@ -1332,13 +1496,13 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
                         <input
                           type="text"
                           readOnly
-                          value={`${window.location.origin}/api/zapi/webhook`}
+                          value={`${window.location.origin}/api/zapi/webhook?userId=${encodeURIComponent(currentUserKey)}`}
                           className="flex-1 bg-white border border-rose-300 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 font-bold select-all shadow-2xs"
                         />
                         <button
                           type="button"
                           onClick={() => {
-                            navigator.clipboard.writeText(`${window.location.origin}/api/zapi/webhook`);
+                            navigator.clipboard.writeText(`${window.location.origin}/api/zapi/webhook?userId=${encodeURIComponent(currentUserKey)}`);
                             setCopiedWebhook(true);
                             setTimeout(() => setCopiedWebhook(false), 2500);
                           }}

@@ -866,47 +866,56 @@ Retorne uma resposta JSON com o formato estrito:
     }
   });
 
-  // Local Persistent WhatsApp Chats
+  // Local Persistent WhatsApp Chats per User
   const WHATSAPP_CHATS_FILE = path.join(process.cwd(), '.whatsapp_chats.json');
 
-  function loadLocalWhatsAppChats(): any[] {
+  function loadAllWhatsAppChats(): Record<string, any[]> {
     try {
       if (fs.existsSync(WHATSAPP_CHATS_FILE)) {
-        return JSON.parse(fs.readFileSync(WHATSAPP_CHATS_FILE, 'utf-8'));
+        const raw = JSON.parse(fs.readFileSync(WHATSAPP_CHATS_FILE, 'utf-8'));
+        if (Array.isArray(raw)) {
+          return { 'lfquadrosdecorativos@gmail.com': raw };
+        }
+        return raw || {};
       }
     } catch (e) {
       console.warn("Could not read .whatsapp_chats.json", e);
     }
-    return [];
+    return {};
   }
 
-  function saveLocalWhatsAppChats(chats: any[]) {
+  function saveAllWhatsAppChats(data: Record<string, any[]>) {
     try {
-      fs.writeFileSync(WHATSAPP_CHATS_FILE, JSON.stringify(chats, null, 2), 'utf-8');
+      fs.writeFileSync(WHATSAPP_CHATS_FILE, JSON.stringify(data, null, 2), 'utf-8');
     } catch (e) {
       console.warn("Could not write .whatsapp_chats.json", e);
     }
   }
 
-  // Get WhatsApp Chats
+  // Get WhatsApp Chats for a specific user
   app.get('/api/whatsapp/chats', (req, res) => {
-    const chats = loadLocalWhatsAppChats();
+    const userId = (req.query.userId as string) || 'lfquadrosdecorativos@gmail.com';
+    const all = loadAllWhatsAppChats();
+    const chats = all[userId] || [];
     return res.json({ success: true, chats });
   });
 
-  // Save WhatsApp Chats from frontend
+  // Save WhatsApp Chats from frontend for a specific user
   app.post('/api/whatsapp/chats', (req, res) => {
+    const userId = req.body?.userId || 'lfquadrosdecorativos@gmail.com';
     if (Array.isArray(req.body?.chats)) {
-      saveLocalWhatsAppChats(req.body.chats);
+      const all = loadAllWhatsAppChats();
+      all[userId] = req.body.chats;
+      saveAllWhatsAppChats(all);
       return res.json({ success: true });
     }
     return res.status(400).json({ error: "Campo 'chats' inválido." });
   });
 
-  // Sync Chats from Z-API instance
+  // Sync Chats from Z-API instance for a specific user
   app.post('/api/zapi/sync-chats', async (req, res) => {
     try {
-      const { instanceId, instanceToken, clientToken } = req.body;
+      const { instanceId, instanceToken, clientToken, userId = 'lfquadrosdecorativos@gmail.com' } = req.body;
       if (!instanceId || !instanceToken) {
         return res.status(400).json({ error: "Instance ID e Instance Token são obrigatórios." });
       }
@@ -919,7 +928,7 @@ Retorne uma resposta JSON com o formato estrito:
       }
 
       const zapiUrl = `https://api.z-api.io/instances/${instanceId}/token/${instanceToken}/chats?page=1&pageSize=40`;
-      console.log("[Z-API Sync Chats] Calling:", zapiUrl);
+      console.log(`[Z-API Sync Chats for user ${userId}] Calling:`, zapiUrl);
       const response = await fetch(zapiUrl, { method: 'GET', headers });
       const data = await response.json();
 
@@ -933,12 +942,13 @@ Retorne uma resposta JSON com o formato estrito:
       }
 
       const rawChats = Array.isArray(data) ? data : (data.chats || data.data || []);
-      const localChats = loadLocalWhatsAppChats();
+      const allChats = loadAllWhatsAppChats();
+      const localChats = allChats[userId] || [];
       const mergedChats = [...localChats];
 
       for (const zchat of rawChats) {
         const phone = String(zchat.phone || zchat.id || '').replace(/\D/g, '');
-        if (!phone || phone.includes('@g.us') || zchat.isGroup) continue; // ignore groups for now or format properly
+        if (!phone || phone.includes('@g.us') || zchat.isGroup) continue;
 
         const chatId = `chat-${phone}`;
         const name = zchat.name || zchat.pushName || zchat.contact?.name || `+${phone}`;
@@ -981,7 +991,8 @@ Retorne uma resposta JSON com o formato estrito:
         }
       }
 
-      saveLocalWhatsAppChats(mergedChats);
+      allChats[userId] = mergedChats;
+      saveAllWhatsAppChats(allChats);
       return res.json({ success: true, count: rawChats.length, chats: mergedChats });
     } catch (err: any) {
       console.error("Error syncing Z-API chats:", err);
@@ -1016,8 +1027,22 @@ Retorne uma resposta JSON com o formato estrito:
             status: 'read',
           };
 
-          // Update local persistent store
-          const currentChats = loadLocalWhatsAppChats();
+          // Update local persistent store for target user
+          const allChats = loadAllWhatsAppChats();
+          let targetUserId = (req.query.userId as string);
+          if (!targetUserId) {
+            for (const [uid, userChatList] of Object.entries(allChats)) {
+              if (userChatList.some(c => c.id === chatId || (c.clientPhone && c.clientPhone.replace(/\D/g, '') === phone))) {
+                targetUserId = uid;
+                break;
+              }
+            }
+          }
+          if (!targetUserId) {
+            targetUserId = 'lfquadrosdecorativos@gmail.com';
+          }
+
+          const currentChats = allChats[targetUserId] || [];
           const existingIdx = currentChats.findIndex(c => c.id === chatId || (c.clientPhone && c.clientPhone.replace(/\D/g, '') === phone));
 
           if (existingIdx >= 0) {
@@ -1047,7 +1072,8 @@ Retorne uma resposta JSON com o formato estrito:
               messages: [newMessage],
             });
           }
-          saveLocalWhatsAppChats(currentChats);
+          allChats[targetUserId] = currentChats;
+          saveAllWhatsAppChats(allChats);
 
           // If Firestore is available, update Firestore as well
           if (getApps().length > 0) {
