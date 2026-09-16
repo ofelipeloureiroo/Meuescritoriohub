@@ -1,28 +1,42 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Headset, CheckCircle2, User } from 'lucide-react';
+import { MessageSquare, X, Send, Headset, CheckCircle2, User, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
-interface Message {
-  id: string;
-  sender: 'user' | 'support';
-  text: string;
-  time: string;
-}
+import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { db, sanitizeFirestoreData } from '../../lib/firebase';
+import { SupportTicket, SupportMessage } from '../../types';
 
 export const SupportChatWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const { user, profile } = useAuth();
-  const userName = profile?.name || user?.displayName || 'Usuário';
+  const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Assinante';
+  const userEmail = user?.email || 'contato@escritorio.com';
+  const userUid = user?.uid || (userEmail ? `sub_${userEmail.replace(/[^a-zA-Z0-9]/g, '_')}` : 'guest_user');
+  
+  const ticketId = `ticket_${userUid}`;
 
-  const [messages, setMessages] = useState<Message[]>([
+  const defaultInitialMessages: SupportMessage[] = [
     {
-      id: '1',
-      sender: 'support',
-      text: `Olá, ${userName}! Seja bem-vindo(a) ao Suporte do Escritório Online. Como podemos te ajudar hoje?`,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
+      id: 'welcome_1',
+      sender: 'admin',
+      senderName: 'Carlos Felipe (Suporte Admin)',
+      senderEmail: 'lfquadrosdecorativos@gmail.com',
+      text: `Olá, ${userName}! Seja muito bem-vindo(a) ao Suporte Dedicado do Meu Escritório Online. Como podemos te ajudar hoje?`,
+      time: new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }),
+      date: new Date().toISOString().split('T')[0],
+      timestamp: new Date().toISOString(),
+      read: true
+    }
+  ];
+
+  const [ticketData, setTicketData] = useState<SupportTicket | null>(() => {
+    try {
+      const local = localStorage.getItem(`meu_escritorio_user_support_ticket_${userUid}`);
+      if (local) return JSON.parse(local);
+    } catch {}
+    return null;
+  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -30,50 +44,102 @@ export const SupportChatWidget: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Real-time Firestore sync with the user's support ticket document
+  useEffect(() => {
+    if (!userUid) return;
+
+    const docRef = doc(db, 'support_tickets', ticketId);
+    const unsub = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as SupportTicket;
+        setTicketData(data);
+        try {
+          localStorage.setItem(`meu_escritorio_user_support_ticket_${userUid}`, JSON.stringify(data));
+        } catch {}
+      }
+    }, (err) => {
+      console.warn('Support ticket onSnapshot notice:', err);
+    });
+
+    return () => unsub();
+  }, [userUid, ticketId]);
+
+  // When user opens the chat, mark unread admin messages as read
   useEffect(() => {
     if (isOpen) {
       scrollToBottom();
+      if (ticketData && ticketData.unreadByUser > 0) {
+        updateDoc(doc(db, 'support_tickets', ticketId), {
+          unreadByUser: 0
+        }).catch(() => {});
+      }
     }
-  }, [isOpen, messages]);
+  }, [isOpen, ticketData?.messages]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const messagesToDisplay: SupportMessage[] = ticketData?.messages && ticketData.messages.length > 0
+    ? ticketData.messages
+    : defaultInitialMessages;
+
+  const unreadCountForUser = ticketData?.unreadByUser || 0;
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim()) return;
+    if (!inputMessage.trim() || isSending) return;
 
     const userText = inputMessage.trim();
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setIsSending(true);
 
-    const newMsg: Message = {
-      id: Date.now().toString(),
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+    const dateStr = now.toISOString().split('T')[0];
+
+    const newMsg: SupportMessage = {
+      id: `msg_user_${Date.now()}`,
       sender: 'user',
+      senderName: userName,
+      senderEmail: userEmail,
       text: userText,
       time: timeStr,
+      date: dateStr,
+      timestamp: now.toISOString(),
+      read: false
     };
 
-    setMessages((prev) => [...prev, newMsg]);
+    const currentMessages = ticketData?.messages || defaultInitialMessages;
+    const updatedMessages = [...currentMessages, newMsg];
+
+    const updatedTicket: SupportTicket = {
+      id: ticketId,
+      subscriberUid: userUid,
+      subscriberName: userName,
+      subscriberEmail: userEmail,
+      subscriberPhone: profile?.phone || '',
+      status: 'waiting_admin',
+      unreadByAdmin: (ticketData?.unreadByAdmin || 0) + 1,
+      unreadByUser: 0,
+      lastMessage: userText,
+      lastMessageTime: timeStr,
+      lastMessageSender: 'user',
+      createdAt: ticketData?.createdAt || now.toISOString(),
+      updatedAt: now.toISOString(),
+      messages: updatedMessages
+    };
+
+    // Optimistic UI state
+    setTicketData(updatedTicket);
+    try {
+      localStorage.setItem(`meu_escritorio_user_support_ticket_${userUid}`, JSON.stringify(updatedTicket));
+    } catch {}
+
     setInputMessage('');
 
-    // Simulate automated support response
-    setTimeout(() => {
-      let replyText = 'Recebemos sua mensagem! Nossa equipe de suporte técnico e atendimento responderá em breve por aqui e também no seu e-mail cadastrado.';
-      const lower = userText.toLowerCase();
-
-      if (lower.includes('olá') || lower.includes('oi') || lower.includes('bom dia') || lower.includes('boa tarde')) {
-        replyText = `Olá, ${userName}! Em que posso auxiliar na sua gestão hoje?`;
-      } else if (lower.includes('financeiro') || lower.includes('pagamento') || lower.includes('cobrança') || lower.includes('assinatura')) {
-        replyText = 'Para questões financeiras ou de assinatura, você pode acessar a aba de Configurações ou Planos. Se precisar de ajuste em faturas, nossa equipe financeira foi notificada.';
-      } else if (lower.includes('lead') || lower.includes('pipeline') || lower.includes('comercial')) {
-        replyText = 'No módulo Comercial & Leads, você pode cadastrar novos leads, configurar etapas do pipeline e filtrar por pontuação de score. Precisa de ajuda com alguma automação específica?';
-      }
-
-      const supportReply: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: 'support',
-        text: replyText,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages((prev) => [...prev, supportReply]);
-    }, 1000);
+    try {
+      await setDoc(doc(db, 'support_tickets', ticketId), sanitizeFirestoreData(updatedTicket), { merge: true });
+    } catch (err) {
+      console.warn('Error saving support message to Firestore:', err);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -89,6 +155,11 @@ export const SupportChatWidget: React.FC = () => {
             <span className="absolute -top-1 -right-1 w-2 sm:w-2.5 h-2 sm:h-2.5 bg-emerald-500 rounded-full border-2 border-[var(--bg-card)] animate-pulse" />
           </div>
           <span className="tracking-wide text-xs text-white">Suporte</span>
+          {unreadCountForUser > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-extrabold animate-bounce shadow-xs">
+              {unreadCountForUser}
+            </span>
+          )}
         </button>
       )}
 
@@ -105,7 +176,7 @@ export const SupportChatWidget: React.FC = () => {
                 <h3 className="font-serif font-bold text-[var(--text-main)] text-sm tracking-wide">Suporte Dedicado</h3>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] text-[var(--text-muted)] font-medium">Equipe online • Resposta rápida</span>
+                  <span className="text-[10px] text-[var(--text-muted)] font-medium">Equipe de Atendimento Online</span>
                 </div>
               </div>
             </div>
@@ -119,46 +190,54 @@ export const SupportChatWidget: React.FC = () => {
 
           {/* Messages Body */}
           <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-[var(--bg-card-secondary)]">
-            <div className="text-center my-2">
+            <div className="text-center my-1">
               <span className="text-[10px] text-[var(--text-muted)] bg-[var(--bg-card)] px-3 py-1 rounded-full border border-[var(--border-color)]">
-                Início da conversa com o suporte
+                Canal direto com o suporte • Atendimento ao assinante
               </span>
             </div>
 
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex gap-2.5 ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-              >
+            {messagesToDisplay.map((msg) => {
+              const isUser = msg.sender === 'user';
+              return (
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                    msg.sender === 'user'
-                      ? 'bg-[var(--theme-primary)] text-white font-bold text-xs'
-                      : 'bg-[var(--bg-card)] text-[var(--theme-primary)] border border-[var(--border-color)]'
-                  }`}
+                  key={msg.id}
+                  className={`flex gap-2.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
                 >
-                  {msg.sender === 'user' ? <User className="w-3.5 h-3.5" /> : <Headset className="w-3.5 h-3.5" />}
-                </div>
-
-                <div
-                  className={`max-w-[78%] px-4 py-3 rounded-2xl text-xs space-y-1 shadow-xs ${
-                    msg.sender === 'user'
-                      ? 'bg-[var(--theme-primary)] text-white font-medium rounded-tr-xs'
-                      : 'bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-tl-xs'
-                  }`}
-                >
-                  <p className="leading-relaxed">{msg.text}</p>
                   <div
-                    className={`text-[9px] text-right flex items-center justify-end gap-1 ${
-                      msg.sender === 'user' ? 'text-white/80' : 'text-[var(--text-muted)]'
+                    className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                      isUser
+                        ? 'bg-[var(--theme-primary)] text-white font-bold text-xs'
+                        : 'bg-[var(--bg-card)] text-[var(--theme-primary)] border border-[var(--border-color)]'
                     }`}
                   >
-                    <span>{msg.time}</span>
-                    {msg.sender === 'user' && <CheckCircle2 className="w-3 h-3 text-white" />}
+                    {isUser ? <User className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
+                  </div>
+
+                  <div
+                    className={`max-w-[78%] px-4 py-3 rounded-2xl text-xs space-y-1 shadow-xs ${
+                      isUser
+                        ? 'bg-[var(--theme-primary)] text-white font-medium rounded-tr-xs'
+                        : 'bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-color)] rounded-tl-xs'
+                    }`}
+                  >
+                    {!isUser && (
+                      <div className="text-[10px] font-bold text-[var(--theme-primary)] pb-0.5 border-b border-[var(--border-color)]/50">
+                        {msg.senderName || 'Suporte Admin'}
+                      </div>
+                    )}
+                    <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                    <div
+                      className={`text-[9px] text-right flex items-center justify-end gap-1 ${
+                        isUser ? 'text-white/80' : 'text-[var(--text-muted)]'
+                      }`}
+                    >
+                      <span>{msg.time}</span>
+                      {isUser && <CheckCircle2 className="w-3 h-3 text-white" />}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
 
@@ -168,12 +247,13 @@ export const SupportChatWidget: React.FC = () => {
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Digite sua dúvida ou mensagem..."
+              placeholder="Digite sua dúvida ou solicitação..."
+              disabled={isSending}
               className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] text-xs focus:outline-hidden focus:border-[var(--theme-primary)] placeholder:[var(--text-muted)]"
             />
             <button
               type="submit"
-              disabled={!inputMessage.trim()}
+              disabled={!inputMessage.trim() || isSending}
               className="p-2.5 bg-[var(--theme-primary)] hover:opacity-90 disabled:opacity-40 text-white rounded-xl transition-all cursor-pointer flex items-center justify-center shadow-xs"
             >
               <Send className="w-4 h-4 text-white" />

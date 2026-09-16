@@ -23,10 +23,13 @@ import {
   Mail,
   ArrowLeft,
   UserX,
-  UserCheck
+  UserCheck,
+  Headset,
+  MessageSquare
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { FinancialControlTab } from './FinancialControlTab';
+import { AdminSupportTab } from './AdminSupportTab';
 
 
 const DashboardSubscriptions: React.FC<{ users: UserProfile[] }> = ({ users }) => {
@@ -194,7 +197,25 @@ export const AdminUsers: React.FC = () => {
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all');
-  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'finance'>('users');
+  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'finance' | 'support'>('users');
+  const [waitingSupportCount, setWaitingSupportCount] = useState<number>(0);
+
+  // Real-time support tickets counter for notification badge
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'support_tickets'), (snapshot) => {
+      let count = 0;
+      snapshot.forEach((d) => {
+        const data = d.data();
+        if (data.status === 'waiting_admin' || (data.unreadByAdmin && data.unreadByAdmin > 0)) {
+          count++;
+        }
+      });
+      setWaitingSupportCount(count);
+    }, (err) => {
+      console.warn('Support count snapshot notice:', err);
+    });
+    return () => unsub();
+  }, []);
 
   // Custom Date Modal & Manual Approval State
   const [selectedUserForModal, setSelectedUserForModal] = useState<UserProfile | null>(null);
@@ -792,44 +813,80 @@ export const AdminUsers: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {activeAdminTab === 'finance' ? (
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 mb-4">
-            <button 
-              onClick={() => setActiveAdminTab('users')}
-              className="px-4 py-2 bg-white hover:bg-zinc-50 text-zinc-800 border border-zinc-300 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-2xs"
+      {/* Top Main Navigation Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 bg-white border border-zinc-200 rounded-3xl shadow-sm">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-serif font-extrabold text-zinc-900 tracking-tight flex items-center gap-2">
+            <span>Painel Administrativo & Gestão</span>
+          </h2>
+          <p className="text-zinc-500 text-xs font-medium mt-0.5">
+            Gerencie assinantes, atenda chamados de suporte em tempo real e controle o faturamento.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setActiveAdminTab('users')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer border shadow-2xs ${
+              activeAdminTab === 'users'
+                ? 'bg-[#b5986e] text-white border-[#b5986e]'
+                : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border-zinc-200'
+            }`}
+          >
+            <UserCheck className="w-3.5 h-3.5" />
+            <span>Assinantes ({users.filter(u => u.role !== 'admin').length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveAdminTab('support')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer border shadow-2xs relative ${
+              activeAdminTab === 'support'
+                ? 'bg-[#b5986e] text-white border-[#b5986e]'
+                : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border-zinc-200'
+            }`}
+          >
+            <Headset className={`w-3.5 h-3.5 ${activeAdminTab === 'support' ? 'text-white' : 'text-[#b5986e]'}`} />
+            <span>Suporte aos Assinantes</span>
+            {waitingSupportCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-extrabold animate-pulse shadow-xs flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                <span>{waitingSupportCount}</span>
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveAdminTab('finance')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer border shadow-2xs ${
+              activeAdminTab === 'finance'
+                ? 'bg-[#b5986e] text-white border-[#b5986e]'
+                : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border-zinc-200'
+            }`}
+          >
+            <span>Controle Financeiro</span>
+          </button>
+
+          {activeAdminTab === 'users' && (
+            <button
+              onClick={handleManualRefresh}
+              disabled={refreshing}
+              className="px-3.5 py-2 bg-white hover:bg-zinc-50 text-zinc-800 border border-zinc-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-2xs"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Voltar para Assinantes</span>
+              <RefreshCw className={`w-3.5 h-3.5 text-[#b5986e] ${refreshing ? 'animate-spin' : ''}`} />
+              <span>{refreshing ? 'Sincronizando...' : 'Atualizar'}</span>
             </button>
-          </div>
+          )}
+        </div>
+      </div>
+
+      {activeAdminTab === 'support' ? (
+        <AdminSupportTab users={users} />
+      ) : activeAdminTab === 'finance' ? (
+        <div className="space-y-6">
           <FinancialControlTab users={users} />
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-serif font-extrabold text-zinc-900 tracking-tight">Painel Financeiro & Assinantes</h2>
-              <p className="text-zinc-600 text-xs sm:text-sm font-medium">Acompanhe seus assinantes, gerencie liberação após pagamento e permissões do sistema.</p>
-            </div>
-            <div className="flex items-center gap-2.5 shrink-0">
-              <button
-                onClick={() => setActiveAdminTab('finance')}
-                className="px-4 py-2 bg-white hover:bg-zinc-50 text-zinc-800 border border-zinc-300 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-2xs"
-              >
-                <span>Controle Financeiro</span>
-              </button>
-              <button
-                onClick={handleManualRefresh}
-                disabled={refreshing}
-                className="px-4 py-2 bg-white hover:bg-zinc-50 text-zinc-800 border border-zinc-300 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-2xs"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-[#b5986e] ${refreshing ? 'animate-spin' : ''}`} />
-                <span>{refreshing ? 'Sincronizando...' : 'Atualizar Lista'}</span>
-              </button>
-            </div>
-          </div>
-
           {refreshSuccessMessage && (
             <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in duration-200 shadow-2xs">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -1128,6 +1185,18 @@ export const AdminUsers: React.FC = () => {
                       <div className="flex items-center justify-end gap-1.5 flex-wrap">
                         {u.role !== 'admin' && (
                           <>
+                            {/* Open Support Chat with Subscriber */}
+                            <button
+                              onClick={() => {
+                                setActiveAdminTab('support');
+                              }}
+                              className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                              title={`Abrir chat de suporte com ${u.name || u.email}`}
+                            >
+                              <Headset className="w-3.5 h-3.5 text-amber-700" />
+                              <span>Suporte</span>
+                            </button>
+
                             {/* If user is active, show renewal and dedicated UNSUBSCRIBE / CANCELAR ASSINATURA button */}
                             {u.status === 'active' && (
                               <>

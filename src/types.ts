@@ -791,5 +791,39 @@ export interface ClientPortalAccess {
   documents: ClientPortalDocument[];
 }
 
+// ==========================================
+// SUBSCRIBER SUPPORT (SUPORTE AOS ASSINANTES)
+// ==========================================
+
+export interface SupportMessage {
+  id: string;
+  sender: 'user' | 'admin';
+  senderName: string;
+  senderEmail?: string;
+  text: string;
+  time: string;
+  date: string;
+  timestamp: string;
+  read?: boolean;
+}
+
+export interface SupportTicket {
+  id: string;
+  subscriberUid: string;
+  subscriberName: string;
+  subscriberEmail: string;
+  subscriberPhone?: string;
+  status: 'waiting_admin' | 'in_progress' | 'waiting_user' | 'resolved';
+  unreadByAdmin: number;
+  unreadByUser: number;
+  lastMessage: string;
+  lastMessageTime: string;
+  lastMessageSender: 'user' | 'admin';
+  createdAt: string;
+  updatedAt: string;
+  messages: SupportMessage[];
+}
+
+
 
 
