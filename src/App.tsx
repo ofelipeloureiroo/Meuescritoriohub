@@ -33,6 +33,7 @@ import { SuppliersTab } from './components/suppliers/SuppliersTab';
 import { SettingsTab } from './components/settings/SettingsTab';
 import { ClientPortalOfficeTab } from './components/portal/ClientPortalOfficeTab';
 import { ExpressConsultingTab } from './components/projects/ExpressConsultingTab';
+import { WhatsAppCenterTab } from './components/whatsapp/WhatsAppCenterTab';
 import { PublicConsultoriaPage } from './components/projects/PublicConsultoriaPage';
 import { NewTransactionModal } from './components/modals/NewTransactionModal';
 import { TransactionStructure } from './types';
@@ -146,6 +147,7 @@ const AppContent: React.FC = () => {
       case 'actions': return <ActionsTab />;
       case 'listas': return <ListsTab />;
       case 'leads': return <LeadsTab />;
+      case 'whatsapp_center': return <WhatsAppCenterTab onNavigateTab={setActiveTab} />;
       case 'dashboard': return <BusinessDashboardTab onNavigateTab={setActiveTab} />;
       case 'home': return <HomeProjectsTab onNavigateTab={setActiveTab} onOpenNewTxModal={handleOpenNewTx} />;
       case 'projects': return <ProjectsManagementTab onNavigateTab={setActiveTab} />;

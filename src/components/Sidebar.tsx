@@ -150,6 +150,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             !permissions ||
             (permissions.leads !== undefined ? permissions.leads : permissions.clients !== false),
         },
+        {
+          id: 'whatsapp_center',
+          label: 'Atendimento WhatsApp',
+          icon: MessageCircle,
+          badge: 'Novo',
+          visible:
+            !isCollaborator ||
+            !permissions ||
+            (permissions.clients !== undefined ? permissions.clients : permissions.projects !== false),
+        },
       ],
     },
     {

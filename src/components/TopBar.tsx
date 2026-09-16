@@ -21,6 +21,7 @@ import {
   Instagram,
   Sparkles,
   LayoutDashboard,
+  MessageSquare,
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
@@ -39,6 +40,7 @@ const ALL_QUICK_ACTIONS = [
   { id: 'actions', label: 'Central de Ações', shortLabel: 'Ações', icon: Clock },
   { id: 'projects', label: 'Gestão de Projetos', shortLabel: 'Projetos', icon: FolderOpen },
   { id: 'leads', label: 'Leads & Comercial', shortLabel: 'Leads', icon: Users },
+  { id: 'whatsapp_center', label: 'Atendimento WhatsApp', shortLabel: 'WhatsApp', icon: MessageSquare },
   { id: 'freelance', label: 'Clientes & Contratos', shortLabel: 'Clientes', icon: Briefcase },
   { id: 'banks', label: 'Financeiro & Bancos', shortLabel: 'Financeiro', icon: DollarSign },
   { id: 'deadlines', label: 'Recebimentos', shortLabel: 'Recebimentos', icon: Clock },
@@ -61,6 +63,7 @@ const TAB_TITLES: Record<string, { label: string; icon: React.ElementType; descr
   today: { label: 'Meu Dia & Agenda', icon: Calendar, description: 'Compromissos, prazos do dia e ações prioritárias' },
   actions: { label: 'Central de Ações', icon: Clock, description: 'Fluxo de tarefas e pendências de projetos' },
   leads: { label: 'Leads & Comercial', icon: Users, description: 'Pipeline de vendas, propostas e captação' },
+  whatsapp_center: { label: 'Central de Atendimento WhatsApp', icon: MessageSquare, description: 'Comunicação integrada em tempo real entre clientes e membros da equipe' },
   projects: { label: 'Gestão de Projetos', icon: FolderOpen, description: 'Acompanhamento de etapas, cronogramas e entregas' },
   consultoria_expressa: { label: 'Consultoria Expressa', icon: Sparkles, description: 'Propostas ágeis de redesign de ambientes com Inteligência Artificial' },
   suppliers: { label: 'Fornecedores', icon: Package, description: 'Catálogo de parceiros, lojas e contatos técnicos' },
