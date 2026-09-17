@@ -133,7 +133,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
     }
 
     const unsubscribe = subscribeToOfficePortals(user.uid, (list) => {
-      setPortals(list);
+      setPortals((prev) => (JSON.stringify(prev) === JSON.stringify(list) ? prev : list));
       setLoading(false);
     });
 
@@ -157,15 +157,6 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
       return buildClientPortalAccess(client, architectureProjects, architectProfile, cloudMatch, projectMilestones);
     });
   }, [clients, portals, architectureProjects, architectProfile, projectMilestones]);
-
-  // Auto-sync calculated portals to Firestore so external clients can immediately log in from any device
-  useEffect(() => {
-    if (displayPortals.length > 0) {
-      displayPortals.forEach((p) => {
-        saveClientPortalAccess(p).catch(() => {});
-      });
-    }
-  }, [displayPortals]);
 
   const filteredPortals = displayPortals.filter((p) => {
     const matchSearch =

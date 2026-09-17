@@ -525,8 +525,62 @@
     "accessCode": "MEO-5254",
     "status": "active",
     "createdAt": "2026-09-15",
-    "lastLoginAt": "2026-09-17T13:33:03.029Z",
-    "projects": [],
+    "lastLoginAt": "2026-09-17T14:55:13.289Z",
+    "projects": [
+      {
+        "id": "proj-cli-br-1789485095254-1",
+        "title": "Projeto de Arquitetura e Interiores",
+        "category": "interiores",
+        "description": "Projeto de Projeto de Arquitetura e Interiores para lucas",
+        "status": "executivo",
+        "generalStatus": "no_prazo",
+        "currentStageName": "Projeto Executivo & Marcenaria",
+        "currentStageIndex": 3,
+        "progressPercent": 60,
+        "stages": [
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-1",
+            "name": "1. Briefing & Levantamento Técnico",
+            "description": "Alinhamento do programa de necessidades e medições detalhadas.",
+            "status": "completed",
+            "completedAt": "Concluído"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-2",
+            "name": "2. Estudo Preliminar & Modelagem 3D",
+            "description": "Apresentação de layouts humanizados e volumetria 3D.",
+            "status": "completed",
+            "completedAt": "Concluído"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-3",
+            "name": "3. Anteprojeto & Aprovação",
+            "description": "Definição de materiais, iluminação e aprovações necessárias.",
+            "status": "completed",
+            "completedAt": "Concluído"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-4",
+            "name": "4. Projeto Executivo & Marcenaria",
+            "description": "Pranchas executivas técnicas para marcenaria, forro e marmoraria.",
+            "status": "in_progress"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-5",
+            "name": "5. Acompanhamento & Entrega Final",
+            "description": "Visitas técnicas, fiscalização de obra e entrega do caderno final.",
+            "status": "pending"
+          }
+        ],
+        "startDate": "2026-09-15",
+        "deliveryDate": "A combinar com o escritório",
+        "contractTitle": "Contrato de Prestação de Serviços - Projeto de Arquitetura e Interiores",
+        "contractNumber": "CTR-54-1",
+        "contractStatus": "signed",
+        "totalValue": 25000,
+        "currency": "BRL"
+      }
+    ],
     "documents": [
       {
         "id": "doc-cli-br-1789485095254-1",
@@ -543,11 +597,11 @@
         "sender": "office",
         "senderName": "Carlos Felipe (Equipe)",
         "text": "Olá, lucas! Seja muito bem-vindo ao seu Portal exclusivo. Aqui você acompanha as etapas, prazos e novidades do seu projeto em tempo real.",
-        "createdAt": "2026-09-17T13:33:03.029Z",
+        "createdAt": "2026-09-17T14:55:13.289Z",
         "read": false
       }
     ],
-    "updatedAt": "2026-09-17T13:35:05.650Z"
+    "updatedAt": "2026-09-17T14:59:00.326Z"
   },
   "email_lucas@cliente.com": {
     "id": "portal-cli-br-1789485095254",
@@ -564,8 +618,62 @@
     "accessCode": "MEO-5254",
     "status": "active",
     "createdAt": "2026-09-15",
-    "lastLoginAt": "2026-09-17T13:33:03.029Z",
-    "projects": [],
+    "lastLoginAt": "2026-09-17T14:55:13.289Z",
+    "projects": [
+      {
+        "id": "proj-cli-br-1789485095254-1",
+        "title": "Projeto de Arquitetura e Interiores",
+        "category": "interiores",
+        "description": "Projeto de Projeto de Arquitetura e Interiores para lucas",
+        "status": "executivo",
+        "generalStatus": "no_prazo",
+        "currentStageName": "Projeto Executivo & Marcenaria",
+        "currentStageIndex": 3,
+        "progressPercent": 60,
+        "stages": [
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-1",
+            "name": "1. Briefing & Levantamento Técnico",
+            "description": "Alinhamento do programa de necessidades e medições detalhadas.",
+            "status": "completed",
+            "completedAt": "Concluído"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-2",
+            "name": "2. Estudo Preliminar & Modelagem 3D",
+            "description": "Apresentação de layouts humanizados e volumetria 3D.",
+            "status": "completed",
+            "completedAt": "Concluído"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-3",
+            "name": "3. Anteprojeto & Aprovação",
+            "description": "Definição de materiais, iluminação e aprovações necessárias.",
+            "status": "completed",
+            "completedAt": "Concluído"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-4",
+            "name": "4. Projeto Executivo & Marcenaria",
+            "description": "Pranchas executivas técnicas para marcenaria, forro e marmoraria.",
+            "status": "in_progress"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-5",
+            "name": "5. Acompanhamento & Entrega Final",
+            "description": "Visitas técnicas, fiscalização de obra e entrega do caderno final.",
+            "status": "pending"
+          }
+        ],
+        "startDate": "2026-09-15",
+        "deliveryDate": "A combinar com o escritório",
+        "contractTitle": "Contrato de Prestação de Serviços - Projeto de Arquitetura e Interiores",
+        "contractNumber": "CTR-54-1",
+        "contractStatus": "signed",
+        "totalValue": 25000,
+        "currency": "BRL"
+      }
+    ],
     "documents": [
       {
         "id": "doc-cli-br-1789485095254-1",
@@ -582,11 +690,11 @@
         "sender": "office",
         "senderName": "Carlos Felipe (Equipe)",
         "text": "Olá, lucas! Seja muito bem-vindo ao seu Portal exclusivo. Aqui você acompanha as etapas, prazos e novidades do seu projeto em tempo real.",
-        "createdAt": "2026-09-17T13:33:03.029Z",
+        "createdAt": "2026-09-17T14:55:13.289Z",
         "read": false
       }
     ],
-    "updatedAt": "2026-09-17T13:35:05.650Z"
+    "updatedAt": "2026-09-17T14:59:00.326Z"
   },
   "code_MEO-5254": {
     "id": "portal-cli-br-1789485095254",
@@ -603,8 +711,62 @@
     "accessCode": "MEO-5254",
     "status": "active",
     "createdAt": "2026-09-15",
-    "lastLoginAt": "2026-09-17T13:33:03.029Z",
-    "projects": [],
+    "lastLoginAt": "2026-09-17T14:55:13.289Z",
+    "projects": [
+      {
+        "id": "proj-cli-br-1789485095254-1",
+        "title": "Projeto de Arquitetura e Interiores",
+        "category": "interiores",
+        "description": "Projeto de Projeto de Arquitetura e Interiores para lucas",
+        "status": "executivo",
+        "generalStatus": "no_prazo",
+        "currentStageName": "Projeto Executivo & Marcenaria",
+        "currentStageIndex": 3,
+        "progressPercent": 60,
+        "stages": [
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-1",
+            "name": "1. Briefing & Levantamento Técnico",
+            "description": "Alinhamento do programa de necessidades e medições detalhadas.",
+            "status": "completed",
+            "completedAt": "Concluído"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-2",
+            "name": "2. Estudo Preliminar & Modelagem 3D",
+            "description": "Apresentação de layouts humanizados e volumetria 3D.",
+            "status": "completed",
+            "completedAt": "Concluído"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-3",
+            "name": "3. Anteprojeto & Aprovação",
+            "description": "Definição de materiais, iluminação e aprovações necessárias.",
+            "status": "completed",
+            "completedAt": "Concluído"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-4",
+            "name": "4. Projeto Executivo & Marcenaria",
+            "description": "Pranchas executivas técnicas para marcenaria, forro e marmoraria.",
+            "status": "in_progress"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-5",
+            "name": "5. Acompanhamento & Entrega Final",
+            "description": "Visitas técnicas, fiscalização de obra e entrega do caderno final.",
+            "status": "pending"
+          }
+        ],
+        "startDate": "2026-09-15",
+        "deliveryDate": "A combinar com o escritório",
+        "contractTitle": "Contrato de Prestação de Serviços - Projeto de Arquitetura e Interiores",
+        "contractNumber": "CTR-54-1",
+        "contractStatus": "signed",
+        "totalValue": 25000,
+        "currency": "BRL"
+      }
+    ],
     "documents": [
       {
         "id": "doc-cli-br-1789485095254-1",
@@ -621,10 +783,103 @@
         "sender": "office",
         "senderName": "Carlos Felipe (Equipe)",
         "text": "Olá, lucas! Seja muito bem-vindo ao seu Portal exclusivo. Aqui você acompanha as etapas, prazos e novidades do seu projeto em tempo real.",
-        "createdAt": "2026-09-17T13:33:03.029Z",
+        "createdAt": "2026-09-17T14:55:13.289Z",
         "read": false
       }
     ],
-    "updatedAt": "2026-09-17T13:35:05.650Z"
+    "updatedAt": "2026-09-17T14:59:00.326Z"
+  },
+  "cli-br-1789485095254": {
+    "id": "portal-cli-br-1789485095254",
+    "officeUid": "office-current",
+    "officeName": "Carlos Felipe",
+    "officeEmail": "contato@escritorio.com",
+    "officePhone": "(11) 98765-4321",
+    "officeLogo": "data:image/jpeg;base64,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",
+    "clientId": "cli-br-1789485095254",
+    "clientName": "lucas",
+    "clientEmail": "lucas@cliente.com",
+    "clientPhone": "",
+    "clientDocument": "",
+    "accessCode": "MEO-5254",
+    "status": "active",
+    "createdAt": "2026-09-15",
+    "lastLoginAt": "2026-09-17T14:55:13.289Z",
+    "projects": [
+      {
+        "id": "proj-cli-br-1789485095254-1",
+        "title": "Projeto de Arquitetura e Interiores",
+        "category": "interiores",
+        "description": "Projeto de Projeto de Arquitetura e Interiores para lucas",
+        "status": "executivo",
+        "generalStatus": "no_prazo",
+        "currentStageName": "Projeto Executivo & Marcenaria",
+        "currentStageIndex": 3,
+        "progressPercent": 60,
+        "stages": [
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-1",
+            "name": "1. Briefing & Levantamento Técnico",
+            "description": "Alinhamento do programa de necessidades e medições detalhadas.",
+            "status": "completed",
+            "completedAt": "Concluído"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-2",
+            "name": "2. Estudo Preliminar & Modelagem 3D",
+            "description": "Apresentação de layouts humanizados e volumetria 3D.",
+            "status": "completed",
+            "completedAt": "Concluído"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-3",
+            "name": "3. Anteprojeto & Aprovação",
+            "description": "Definição de materiais, iluminação e aprovações necessárias.",
+            "status": "completed",
+            "completedAt": "Concluído"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-4",
+            "name": "4. Projeto Executivo & Marcenaria",
+            "description": "Pranchas executivas técnicas para marcenaria, forro e marmoraria.",
+            "status": "in_progress"
+          },
+          {
+            "id": "stg-proj-cli-br-1789485095254-1-5",
+            "name": "5. Acompanhamento & Entrega Final",
+            "description": "Visitas técnicas, fiscalização de obra e entrega do caderno final.",
+            "status": "pending"
+          }
+        ],
+        "startDate": "2026-09-15",
+        "deliveryDate": "A combinar com o escritório",
+        "contractTitle": "Contrato de Prestação de Serviços - Projeto de Arquitetura e Interiores",
+        "contractNumber": "CTR-54-1",
+        "contractStatus": "signed",
+        "totalValue": 25000,
+        "currency": "BRL"
+      }
+    ],
+    "documents": [
+      {
+        "id": "doc-cli-br-1789485095254-1",
+        "title": "Contrato de Prestação de Serviços Arquitetônicos - lucas",
+        "category": "contrato",
+        "fileName": "Contrato_lucas.pdf",
+        "date": "17/09/2026",
+        "size": "1.4 MB"
+      }
+    ],
+    "messages": [
+      {
+        "id": "msg-cli-br-1789485095254-1",
+        "sender": "office",
+        "senderName": "Carlos Felipe (Equipe)",
+        "text": "Olá, lucas! Seja muito bem-vindo ao seu Portal exclusivo. Aqui você acompanha as etapas, prazos e novidades do seu projeto em tempo real.",
+        "createdAt": "2026-09-17T14:55:13.289Z",
+        "read": false
+      }
+    ],
+    "updatedAt": "2026-09-17T14:59:00.326Z"
   }
 }

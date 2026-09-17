@@ -47,6 +47,25 @@ export function normalizeClientEmail(email: string): string {
 }
 
 /**
+ * Compares whether two client portals are functionally equal (ignoring timestamps)
+ */
+export function isPortalEqual(
+  a: Partial<ClientPortalAccess> | null | undefined,
+  b: Partial<ClientPortalAccess> | null | undefined
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.id !== b.id || a.clientId !== b.clientId || a.accessCode !== b.accessCode || a.status !== b.status) return false;
+  if (a.clientEmail !== b.clientEmail || a.clientName !== b.clientName || a.officeName !== b.officeName) return false;
+  if ((a.projects?.length || 0) !== (b.projects?.length || 0)) return false;
+  if ((a.messages?.length || 0) !== (b.messages?.length || 0)) return false;
+
+  const aCopy = { ...a, updatedAt: undefined, lastLoginAt: undefined };
+  const bCopy = { ...b, updatedAt: undefined, lastLoginAt: undefined };
+  return JSON.stringify(aCopy) === JSON.stringify(bCopy);
+}
+
+/**
  * Saves portal locally for immediate access across the browser session
  */
 export function savePortalLocally(portal: ClientPortalAccess): void {
@@ -54,14 +73,21 @@ export function savePortalLocally(portal: ClientPortalAccess): void {
     const raw = localStorage.getItem(LOCAL_STORAGE_PORTALS_KEY);
     let list: ClientPortalAccess[] = raw ? JSON.parse(raw) : [];
     const idx = list.findIndex(p => p.id === portal.id || p.clientId === portal.clientId);
+    let changed = false;
     if (idx >= 0) {
-      list[idx] = portal;
+      if (!isPortalEqual(list[idx], portal)) {
+        list[idx] = portal;
+        changed = true;
+      }
     } else {
       list.push(portal);
+      changed = true;
     }
-    localStorage.setItem(LOCAL_STORAGE_PORTALS_KEY, JSON.stringify(list));
-    localStorage.setItem(`client_portal_${portal.id}`, JSON.stringify(portal));
-    window.dispatchEvent(new CustomEvent('client_portals_updated', { detail: portal }));
+    if (changed) {
+      localStorage.setItem(LOCAL_STORAGE_PORTALS_KEY, JSON.stringify(list));
+      localStorage.setItem(`client_portal_${portal.id}`, JSON.stringify(portal));
+      window.dispatchEvent(new CustomEvent('client_portals_updated', { detail: portal }));
+    }
   } catch (e) {
     console.warn('Local save portal error:', e);
   }
@@ -185,6 +211,17 @@ export function subscribeToOfficePortals(
   callback: (portals: ClientPortalAccess[]) => void
 ): () => void {
   let isSubscribed = true;
+  let lastEmittedStr = '';
+
+  const emitIfChanged = (list: ClientPortalAccess[]) => {
+    if (!isSubscribed || !list) return;
+    const simplified = list.map(p => ({ ...p, updatedAt: undefined, lastLoginAt: undefined }));
+    const str = JSON.stringify(simplified);
+    if (str !== lastEmittedStr) {
+      lastEmittedStr = str;
+      callback(list);
+    }
+  };
 
   // 1. Initial & recurring poll to server persistent API
   const fetchFromServer = async () => {
@@ -193,20 +230,20 @@ export function subscribeToOfficePortals(
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.portals) && isSubscribed) {
-          callback(data.portals);
+          emitIfChanged(data.portals);
         }
       }
     } catch {}
   };
 
   fetchFromServer();
-  const pollInterval = setInterval(fetchFromServer, 2500);
+  const pollInterval = setInterval(fetchFromServer, 3000);
 
   // 2. Local updates
   const handleLocalUpdate = () => {
     const localList = getLocalPortals();
     if (localList.length > 0 && isSubscribed) {
-      callback(localList);
+      emitIfChanged(localList);
     }
     fetchFromServer();
   };
@@ -223,7 +260,7 @@ export function subscribeToOfficePortals(
         list.push(d.data() as ClientPortalAccess);
       });
       if (list.length > 0 && isSubscribed) {
-        callback(list);
+        emitIfChanged(list);
       }
     }, () => {});
   } catch {}
@@ -246,6 +283,24 @@ export function subscribeToClientPortal(
   extraParams?: { clientId?: string; clientEmail?: string }
 ): () => void {
   let isSubscribed = true;
+  let lastEmittedStr = '';
+
+  const emitIfChanged = (p: ClientPortalAccess | null) => {
+    if (!isSubscribed) return;
+    if (!p) {
+      if (lastEmittedStr !== 'null') {
+        lastEmittedStr = 'null';
+        callback(null);
+      }
+      return;
+    }
+    const simplified = { ...p, updatedAt: undefined, lastLoginAt: undefined };
+    const str = JSON.stringify(simplified);
+    if (str !== lastEmittedStr) {
+      lastEmittedStr = str;
+      callback(p);
+    }
+  };
 
   const fetchUpdatedPortal = async () => {
     try {
@@ -257,14 +312,14 @@ export function subscribeToClientPortal(
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.portal && isSubscribed) {
-          callback(data.portal);
+          emitIfChanged(data.portal);
         }
       }
     } catch {}
   };
 
   fetchUpdatedPortal();
-  const pollInterval = setInterval(fetchUpdatedPortal, 2000);
+  const pollInterval = setInterval(fetchUpdatedPortal, 3000);
 
   const handleMessageEvent = () => {
     fetchUpdatedPortal();
@@ -277,7 +332,7 @@ export function subscribeToClientPortal(
     const portalRef = doc(db, 'clientPortals', portalId);
     unsubFirestore = onSnapshot(portalRef, (snapshot) => {
       if (snapshot.exists() && isSubscribed) {
-        callback(snapshot.data() as ClientPortalAccess);
+        emitIfChanged(snapshot.data() as ClientPortalAccess);
       }
     }, () => {});
   } catch {}

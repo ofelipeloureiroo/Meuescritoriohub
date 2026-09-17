@@ -47,6 +47,7 @@ import {
   buildClientPortalAccess,
   syncPortalWithOfficeRegistry,
   savePortalLocally,
+  isPortalEqual,
   SAMPLE_CLIENT_PORTAL 
 } from '../../services/clientPortalService';
 import { OfficeClientPortalManagerModal } from './OfficeClientPortalManagerModal';
@@ -124,12 +125,15 @@ export const ClientPortalDashboard: React.FC = () => {
     if (!user) return;
     const unsubscribe = subscribeToOfficePortals(user.uid, (list) => {
       if (list && list.length > 0) {
-        setOfficePortals(list);
+        setOfficePortals((prev) => (JSON.stringify(prev) === JSON.stringify(list) ? prev : list));
         if (requestedPortalId) {
           const matched = list.find((p) => p.id === requestedPortalId || p.clientId === requestedPortalId);
           if (matched) {
-            setPortal(matched);
-            sessionStorage.setItem('client_portal_session', JSON.stringify(matched));
+            setPortal((prev) => {
+              if (JSON.stringify(prev) === JSON.stringify(matched)) return prev;
+              sessionStorage.setItem('client_portal_session', JSON.stringify(matched));
+              return matched;
+            });
           }
         }
       }
@@ -157,6 +161,9 @@ export const ClientPortalDashboard: React.FC = () => {
           const data = await res.json();
           if (data.success && data.portal) {
             setPortal((prev) => {
+              if (isPortalEqual(prev, data.portal)) {
+                return prev;
+              }
               const mergedMessages = (data.portal.messages && data.portal.messages.length > 0)
                 ? data.portal.messages
                 : prev.messages;
@@ -170,7 +177,6 @@ export const ClientPortalDashboard: React.FC = () => {
                 projects: mergedProjects
               };
               sessionStorage.setItem('client_portal_session', JSON.stringify(updated));
-              savePortalLocally(updated);
               return updated;
             });
           }
@@ -183,25 +189,33 @@ export const ClientPortalDashboard: React.FC = () => {
     fetchPortalFromUrlOrServer();
   }, [requestedPortalId, requestedClientId]);
 
+  const targetDocId = (portal && portal.id !== SAMPLE_CLIENT_PORTAL.id) ? portal.id : requestedPortalId;
+  const currentClientId = requestedClientId || portal?.clientId;
+  const currentClientEmail = portal?.clientEmail;
+
   // Subscribe to real-time updates if connected to a real Firestore document
   useEffect(() => {
-    const targetDocId = (portal && portal.id !== SAMPLE_CLIENT_PORTAL.id) ? portal.id : requestedPortalId;
     if (!targetDocId || targetDocId === SAMPLE_CLIENT_PORTAL.id) {
       return;
     }
 
     const unsubscribe = subscribeToClientPortal(targetDocId, (updatedPortal) => {
       if (updatedPortal) {
-        setPortal(updatedPortal);
-        sessionStorage.setItem('client_portal_session', JSON.stringify(updatedPortal));
+        setPortal((prev) => {
+          if (isPortalEqual(prev, updatedPortal)) {
+            return prev;
+          }
+          sessionStorage.setItem('client_portal_session', JSON.stringify(updatedPortal));
+          return updatedPortal;
+        });
       }
     }, {
-      clientId: requestedClientId || portal?.clientId,
-      clientEmail: portal?.clientEmail
+      clientId: currentClientId,
+      clientEmail: currentClientEmail
     });
 
     return () => unsubscribe();
-  }, [portal?.id, requestedPortalId, requestedClientId, portal?.clientId, portal?.clientEmail]);
+  }, [targetDocId, currentClientId, currentClientEmail]);
 
   // Set default active project based on effectivePortal
   const projectIdsKey = (effectivePortal.projects || []).map((p) => p.id).join(',');
@@ -231,7 +245,6 @@ export const ClientPortalDashboard: React.FC = () => {
             if (JSON.stringify(currentMsgs) !== JSON.stringify(msgs)) {
               const updated = { ...prev, messages: msgs };
               sessionStorage.setItem('client_portal_session', JSON.stringify(updated));
-              savePortalLocally(updated);
               return updated;
             }
             return prev;
@@ -241,7 +254,7 @@ export const ClientPortalDashboard: React.FC = () => {
     };
 
     pollMessages();
-    const interval = setInterval(pollMessages, 1500);
+    const interval = setInterval(pollMessages, 3000);
 
     const onUpdate = () => pollMessages();
     window.addEventListener('portal_messages_updated', onUpdate);
