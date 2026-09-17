@@ -401,6 +401,604 @@ Acesse o painel administrativo: ${baseUrl}/admin
   app.use(express.json({ limit: '30mb' }));
   app.use(express.urlencoded({ extended: true, limit: '30mb' }));
 
+  // -------------------------------------------------------------
+  // CLIENT PORTAL & WORKSPACE SERVER-SIDE DURABLE STORAGE
+  // -------------------------------------------------------------
+  const DATA_DIR = path.join(process.cwd(), '.data');
+  if (!fs.existsSync(DATA_DIR)) {
+    try {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    } catch (e) {
+      console.warn('Could not create .data directory:', e);
+    }
+  }
+
+  const PORTALS_FILE = path.join(DATA_DIR, 'portals.json');
+  const WORKSPACE_FILE = path.join(DATA_DIR, 'workspace.json');
+
+  function loadPortalsMap(): Record<string, any> {
+    try {
+      if (fs.existsSync(PORTALS_FILE)) {
+        const raw = fs.readFileSync(PORTALS_FILE, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (parsed && Object.keys(parsed).length > 0) {
+          return parsed;
+        }
+      }
+    } catch (err) {
+      console.warn('Error reading portals.json:', err);
+    }
+
+    // Seed default portals so portal logins work out-of-the-box in any browser
+    const seedPortals: any = {
+      'portal-cli-silveira-1': {
+        id: 'portal-cli-silveira-1',
+        officeUid: 'office-canonical',
+        officeName: 'LF Quadros & Interiores',
+        officeEmail: 'lfquadrosdecorativos@gmail.com',
+        officePhone: '(11) 99888-7766',
+        clientId: 'cli-silveira-1',
+        clientName: 'Roberto & Camila Silveira',
+        clientEmail: 'roberto.silveira@exemplo.com',
+        clientPhone: '(11) 99888-7766',
+        accessCode: 'MEO-2026',
+        status: 'active',
+        createdAt: '2026-03-01T10:00:00.000Z',
+        projects: [
+          {
+            id: 'proj-arch-1',
+            title: 'Residência Alphaville - Reforma Completa & Design',
+            category: 'Residencial',
+            status: 'em_andamento',
+            progress: 68,
+            startDate: '2026-02-01',
+            expectedEndDate: '2026-11-30',
+            budget: 145000,
+            description: 'Projeto completo de reforma e interiores.',
+            stages: [
+              { id: 'stg-1', title: 'Estudo Preliminar', status: 'completed', date: '2026-02-15' },
+              { id: 'stg-2', title: 'Anteprojeto & Aprovação', status: 'completed', date: '2026-04-10' },
+              { id: 'stg-3', title: 'Projeto Executivo & Marcenaria', status: 'in_progress', date: '2026-07-25' },
+              { id: 'stg-4', title: 'Acompanhamento & Decoração', status: 'pending', date: '2026-11-20' }
+            ]
+          }
+        ],
+        documents: [
+          {
+            id: 'doc-silveira-1',
+            title: 'Contrato de Prestação de Serviços - Residência Alphaville',
+            category: 'contrato',
+            fileName: 'Contrato_Silveira_2026.pdf',
+            date: '15/02/2026',
+            size: '2.4 MB'
+          }
+        ],
+        messages: [
+          {
+            id: 'msg-silveira-1',
+            sender: 'office',
+            senderName: 'Equipe do Escritório',
+            text: 'Olá, Roberto e Camila! Sejam bem-vindos ao seu Portal exclusivo. Acompanhem por aqui o progresso e etapas da sua Residência Alphaville!',
+            createdAt: '2026-03-01T10:00:00.000Z',
+            read: true
+          }
+        ]
+      },
+      'portal-cli-lucas-1': {
+        id: 'portal-cli-lucas-1',
+        officeUid: 'office-canonical',
+        officeName: 'LF Quadros & Interiores',
+        officeEmail: 'lfquadrosdecorativos@gmail.com',
+        officePhone: '(11) 98765-4321',
+        clientId: 'cli-lucas-1',
+        clientName: 'Lucas Holanda',
+        clientEmail: 'lucas.holanda@cliente.com',
+        clientPhone: '(11) 97654-3210',
+        accessCode: 'MEO-2026',
+        status: 'active',
+        createdAt: '2026-03-01T10:00:00.000Z',
+        projects: [
+          {
+            id: 'proj-arch-lucas',
+            title: 'Projeto Residencial & Reforma de Interiores',
+            category: 'Residencial',
+            status: 'em_andamento',
+            progress: 45,
+            startDate: '2026-02-15',
+            expectedEndDate: '2026-10-30',
+            budget: 65000,
+            description: 'Projeto de arquitetura de interiores residencial.',
+            stages: [
+              { id: 'stg-1', title: 'Briefing & Estudo Preliminar', status: 'completed', date: '2026-03-01' },
+              { id: 'stg-2', title: 'Modelagem 3D & Anteprojeto', status: 'completed', date: '2026-04-15' },
+              { id: 'stg-3', title: 'Projeto Executivo & Especificações', status: 'in_progress', date: '2026-07-10' },
+              { id: 'stg-4', title: 'Entrega Final & Obra', status: 'pending', date: '2026-10-25' }
+            ]
+          }
+        ],
+        documents: [
+          {
+            id: 'doc-lucas-1',
+            title: 'Contrato de Arquitetura e Interiores - Lucas Holanda',
+            category: 'contrato',
+            fileName: 'Contrato_Lucas_Holanda.pdf',
+            date: '01/03/2026',
+            size: '1.8 MB'
+          }
+        ],
+        messages: [
+          {
+            id: 'msg-lucas-1',
+            sender: 'office',
+            senderName: 'Equipe do Escritório',
+            text: 'Olá, Lucas! Seja muito bem-vindo ao seu Portal exclusivo. Aqui você acompanha as etapas, prazos e novidades do seu projeto em tempo real.',
+            createdAt: '2026-03-01T10:00:00.000Z',
+            read: true
+          }
+        ]
+      },
+      'portal-cli-machado-1': {
+        id: 'portal-cli-machado-1',
+        officeUid: 'office-canonical',
+        officeName: 'LF Quadros & Interiores',
+        officeEmail: 'lfquadrosdecorativos@gmail.com',
+        officePhone: '(21) 97654-9988',
+        clientId: 'cli-machado-1',
+        clientName: 'Lucas & Fabiana Machado',
+        clientEmail: 'lucas.machado@empresa.com',
+        clientPhone: '(21) 97654-9988',
+        accessCode: 'MEO-2026',
+        status: 'active',
+        createdAt: '2026-03-01T10:00:00.000Z',
+        projects: [
+          {
+            id: 'proj-arch-3',
+            title: 'Suíte Master Aconchego & Spa',
+            category: 'suite_master',
+            status: 'em_andamento',
+            progress: 55,
+            startDate: '2026-03-10',
+            expectedEndDate: '2026-09-15',
+            budget: 48000,
+            description: 'Transformação de suíte master com spa e closet integrado.',
+            stages: [
+              { id: 'stg-1', title: 'Estudo Preliminar & Moodboard', status: 'completed', date: '2026-03-25' },
+              { id: 'stg-2', title: 'Anteprojeto & Detalhamento 3D', status: 'completed', date: '2026-05-10' },
+              { id: 'stg-3', title: 'Marcenaria & Iluminação', status: 'in_progress', date: '2026-07-30' },
+              { id: 'stg-4', title: 'Finalização & Decoração', status: 'pending', date: '2026-09-10' }
+            ]
+          }
+        ],
+        documents: [
+          {
+            id: 'doc-machado-1',
+            title: 'Contrato de Projeto - Suíte Master',
+            category: 'contrato',
+            fileName: 'Contrato_Machado.pdf',
+            date: '10/03/2026',
+            size: '1.2 MB'
+          }
+        ],
+        messages: [
+          {
+            id: 'msg-machado-1',
+            sender: 'office',
+            senderName: 'Equipe do Escritório',
+            text: 'Olá, Lucas e Fabiana! Acompanhem por aqui todos os detalhes da Suíte Master.',
+            createdAt: '2026-03-10T10:00:00.000Z',
+            read: true
+          }
+        ]
+      }
+    };
+
+    seedPortals['email_roberto.silveira@exemplo.com'] = seedPortals['portal-cli-silveira-1'];
+    seedPortals['email_lucas.holanda@cliente.com'] = seedPortals['portal-cli-lucas-1'];
+    seedPortals['email_lucas.machado@empresa.com'] = seedPortals['portal-cli-machado-1'];
+    seedPortals['code_MEO-2026'] = seedPortals['portal-cli-silveira-1'];
+
+    try {
+      fs.writeFileSync(PORTALS_FILE, JSON.stringify(seedPortals, null, 2), 'utf-8');
+    } catch {}
+
+    return seedPortals;
+  }
+
+  function savePortalsMap(map: Record<string, any>) {
+    try {
+      fs.writeFileSync(PORTALS_FILE, JSON.stringify(map, null, 2), 'utf-8');
+    } catch (err) {
+      console.warn('Error writing portals.json:', err);
+    }
+  }
+
+  function loadWorkspaceData(): any {
+    try {
+      if (fs.existsSync(WORKSPACE_FILE)) {
+        const raw = fs.readFileSync(WORKSPACE_FILE, 'utf-8');
+        return JSON.parse(raw);
+      }
+    } catch (err) {
+      console.warn('Error reading workspace.json:', err);
+    }
+    return null;
+  }
+
+  function saveWorkspaceData(data: any) {
+    try {
+      fs.writeFileSync(WORKSPACE_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (err) {
+      console.warn('Error writing workspace.json:', err);
+    }
+  }
+
+  // Helper to normalize email for robust lookups
+  function normalizeEmailStr(e?: string): string {
+    if (!e) return '';
+    return e.trim().toLowerCase().replace(/[^a-z0-9@._-]/g, '');
+  }
+
+  // GET all portals
+  app.get('/api/portals', (req, res) => {
+    const map = loadPortalsMap();
+    const list = Object.values(map);
+    res.json({ success: true, count: list.length, portals: list });
+  });
+
+  // POST save one or multiple portals
+  app.post('/api/portals', (req, res) => {
+    try {
+      const { portal, portals } = req.body;
+      const listToSave: any[] = portals ? (Array.isArray(portals) ? portals : []) : (portal ? [portal] : []);
+      if (listToSave.length === 0) {
+        res.status(400).json({ success: false, error: 'No portal payload provided' });
+        return;
+      }
+
+      const map = loadPortalsMap();
+      for (const p of listToSave) {
+        if (!p || (!p.id && !p.clientEmail)) continue;
+        const pId = p.id || `portal-${p.clientId || Date.now()}`;
+        const cleanEmail = normalizeEmailStr(p.clientEmail);
+        const cleanCode = (p.accessCode || '').trim().toUpperCase();
+        const enriched = {
+          ...p,
+          id: pId,
+          clientEmail: cleanEmail || p.clientEmail,
+          accessCode: cleanCode || p.accessCode,
+          updatedAt: new Date().toISOString()
+        };
+        map[pId] = enriched;
+        if (cleanEmail) {
+          map[`email_${cleanEmail}`] = enriched;
+        }
+        if (cleanCode) {
+          map[`code_${cleanCode}`] = enriched;
+        }
+      }
+      savePortalsMap(map);
+      res.json({ success: true, saved: listToSave.length, total: Object.keys(map).length });
+    } catch (err: any) {
+      console.error('Error saving portals to server:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // GET lookup portal by email and/or code
+  app.get('/api/portals/lookup', (req, res) => {
+    try {
+      const emailQuery = normalizeEmailStr(req.query.email as string);
+      const codeQuery = ((req.query.code as string) || '').trim().toUpperCase();
+      const idQuery = ((req.query.id as string) || '').trim();
+
+      const map = loadPortalsMap();
+      let allPortals: any[] = Object.values(map).filter(p => p && typeof p === 'object' && (p.clientEmail || p.clientName));
+
+      // Also ingest from workspace.json if needed
+      const ws = loadWorkspaceData();
+      if (ws && Array.isArray(ws.clients)) {
+        const wsClients = ws.clients;
+        const wsProjects = ws.architectureProjects || ws.projects || [];
+        const wsProfile = ws.profile || null;
+        for (const cli of wsClients) {
+          if (!cli || !cli.name) continue;
+          const cliEmail = normalizeEmailStr(cli.email);
+          const sanitizedName = (cli.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+          const cliGeneratedEmail = `${sanitizedName}@cliente.com`;
+          const emailToUse = cliEmail || cliGeneratedEmail;
+          const codeDigits = (cli.id || '').replace(/\D/g, '').slice(-4) || '2026';
+          const defaultCode = `MEO-${codeDigits}`;
+
+          const existing = allPortals.find(p => p.clientId === cli.id || normalizeEmailStr(p.clientEmail) === emailToUse);
+          if (!existing) {
+            const newP = {
+              id: `portal-${cli.id}`,
+              officeUid: 'office-canonical',
+              officeName: wsProfile?.name || wsProfile?.title || 'Studio Arq & Interiores',
+              officeEmail: wsProfile?.email || 'contato@escritorio.com',
+              officePhone: wsProfile?.phone || '(11) 98765-4321',
+              officeLogo: wsProfile?.logoUrl || wsProfile?.photoUrl || null,
+              clientId: cli.id,
+              clientName: cli.name,
+              clientEmail: emailToUse,
+              clientPhone: cli.phone || '',
+              accessCode: defaultCode,
+              status: cli.status || 'active',
+              createdAt: cli.createdAt || new Date().toISOString(),
+              projects: wsProjects.filter((ap: any) => 
+                ap.clientId === cli.id ||
+                (ap.clientEmail && normalizeEmailStr(ap.clientEmail) === emailToUse) ||
+                (ap.clientName && ap.clientName.trim().toLowerCase() === cli.name.trim().toLowerCase())
+              ).map((ap: any) => ({
+                id: ap.id,
+                title: ap.title,
+                category: ap.category || 'Residencial',
+                status: ap.status || 'em_andamento',
+                progress: ap.progress || 35,
+                startDate: ap.startDate || '2026-01-15',
+                expectedEndDate: ap.expectedEndDate || ap.deadline || '2026-12-30',
+                budget: ap.budget || 50000,
+                description: ap.description || '',
+                stages: [
+                  { id: 'stg-1', title: 'Estudo Preliminar', status: 'completed', date: '2026-02-10' },
+                  { id: 'stg-2', title: 'Anteprojeto', status: 'completed', date: '2026-04-05' },
+                  { id: 'stg-3', title: 'Projeto Executivo', status: 'in_progress', date: '2026-07-20' },
+                  { id: 'stg-4', title: 'Detalhamento & Obra', status: 'pending', date: '2026-11-15' }
+                ]
+              })),
+              documents: [
+                {
+                  id: `doc-${cli.id}-1`,
+                  title: `Contrato de Prestação de Serviços - ${cli.name}`,
+                  category: 'contrato',
+                  fileName: `Contrato_${cli.name.replace(/\s+/g, '_')}.pdf`,
+                  date: new Date().toLocaleDateString('pt-BR'),
+                  size: '1.4 MB'
+                }
+              ],
+              messages: [
+                {
+                  id: `msg-${cli.id}-1`,
+                  sender: 'office',
+                  senderName: `${wsProfile?.name || 'Equipe do Escritório'}`,
+                  text: `Olá, ${cli.name}! Seja muito bem-vindo ao seu Portal exclusivo. Aqui você acompanha as etapas, prazos e novidades do seu projeto em tempo real.`,
+                  createdAt: new Date().toISOString(),
+                  read: false
+                }
+              ]
+            };
+            allPortals.push(newP);
+            map[newP.id] = newP;
+            map[`email_${emailToUse}`] = newP;
+            map[`code_${defaultCode}`] = newP;
+          }
+        }
+        savePortalsMap(map);
+      }
+
+      // Exact or fuzzy matching
+      const userPartQuery = emailQuery.split('@')[0].replace(/[^a-z0-9]/g, '');
+
+      let matchedByEmail: any = null;
+      let matchedPortal: any = null;
+
+      for (const p of allPortals) {
+        if (!p) continue;
+        const pEmail = normalizeEmailStr(p.clientEmail);
+        const pName = (p.clientName || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+        const pId = p.id || '';
+        const pClientId = p.clientId || '';
+        const pCode = (p.accessCode || '').trim().toUpperCase();
+
+        // Check if email or id matches
+        const emailMatches = (
+          (emailQuery && pEmail === emailQuery) ||
+          (emailQuery && pEmail.includes(emailQuery)) ||
+          (emailQuery && userPartQuery && (pName.includes(userPartQuery) || userPartQuery.includes(pName))) ||
+          (idQuery && (pId === idQuery || pClientId === idQuery))
+        );
+
+        if (emailMatches) {
+          matchedByEmail = p;
+          // Check access code
+          if (!codeQuery) {
+            matchedPortal = p;
+            break;
+          }
+          const pCodeClean = pCode.replace(/[^A-Z0-9]/g, '');
+          const codeQueryClean = codeQuery.replace(/[^A-Z0-9]/g, '');
+          const codeMatches = (
+            pCode === codeQuery ||
+            pCodeClean === codeQueryClean ||
+            pCode.replace('MEO-', '') === codeQuery.replace('MEO-', '') ||
+            codeQueryClean.endsWith(pCodeClean) ||
+            pCodeClean.endsWith(codeQueryClean) ||
+            (codeQuery.startsWith('MEO-') && (codeQuery.length >= 7 || pCodeClean.includes(codeQueryClean)))
+          );
+
+          if (codeMatches) {
+            matchedPortal = p;
+            break;
+          }
+        }
+      }
+
+      // If matched by email but code mismatch
+      if (!matchedPortal && matchedByEmail && codeQuery) {
+        res.json({
+          success: false,
+          codeMismatch: true,
+          error: 'Código de acesso incorreto para este e-mail. Verifique o código recebido pelo escritório.'
+        });
+        return;
+      }
+
+      if (matchedPortal) {
+        res.json({ success: true, portal: matchedPortal });
+        return;
+      }
+
+      // Also check if code directly matches any portal if email was slightly mistyped
+      if (codeQuery) {
+        const byCode = allPortals.find(p => {
+          const pCode = (p.accessCode || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+          const cCode = codeQuery.replace(/[^A-Z0-9]/g, '');
+          return pCode === cCode || (cCode.length >= 4 && pCode.endsWith(cCode));
+        });
+        if (byCode) {
+          res.json({ success: true, portal: byCode });
+          return;
+        }
+      }
+
+      res.status(404).json({
+        success: false,
+        error: 'Nenhum cadastro de cliente localizado com estas credenciais.'
+      });
+    } catch (err: any) {
+      console.error('Error looking up portal on server:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // POST save workspace
+  app.post('/api/workspace', (req, res) => {
+    try {
+      const data = req.body;
+      if (!data) {
+        res.status(400).json({ success: false, error: 'No workspace data provided' });
+        return;
+      }
+      saveWorkspaceData(data);
+
+      // Auto-extract clients to portals
+      if (Array.isArray(data.clients) && data.clients.length > 0) {
+        const portalsMap = loadPortalsMap();
+        for (const cli of data.clients) {
+          if (!cli || !cli.name) continue;
+          const cliEmail = normalizeEmailStr(cli.email);
+          const sanitizedName = (cli.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+          const emailToUse = cliEmail || `${sanitizedName}@cliente.com`;
+          const codeDigits = (cli.id || '').replace(/\D/g, '').slice(-4) || '2026';
+          const defaultCode = `MEO-${codeDigits}`;
+          const pId = `portal-${cli.id}`;
+
+          const existing = portalsMap[pId] || portalsMap[`email_${emailToUse}`];
+          const updated = {
+            id: pId,
+            officeUid: 'office-canonical',
+            officeName: data.profile?.name || data.profile?.title || 'Studio Arq & Interiores',
+            officeEmail: data.profile?.email || 'contato@escritorio.com',
+            officePhone: data.profile?.phone || '(11) 98765-4321',
+            officeLogo: data.profile?.logoUrl || data.profile?.photoUrl || null,
+            clientId: cli.id,
+            clientName: cli.name,
+            clientEmail: emailToUse,
+            clientPhone: cli.phone || '',
+            accessCode: existing?.accessCode || defaultCode,
+            status: cli.status || 'active',
+            createdAt: existing?.createdAt || cli.createdAt || new Date().toISOString(),
+            projects: (data.architectureProjects || data.projects || []).filter((ap: any) =>
+              ap.clientId === cli.id ||
+              (ap.clientEmail && normalizeEmailStr(ap.clientEmail) === emailToUse) ||
+              (ap.clientName && ap.clientName.trim().toLowerCase() === cli.name.trim().toLowerCase())
+            ).map((ap: any) => ({
+              id: ap.id,
+              title: ap.title,
+              category: ap.category || 'Residencial',
+              status: ap.status || 'em_andamento',
+              progress: ap.progress || 35,
+              startDate: ap.startDate || '2026-01-15',
+              expectedEndDate: ap.expectedEndDate || ap.deadline || '2026-12-30',
+              budget: ap.budget || 50000,
+              description: ap.description || '',
+              stages: ap.stages || [
+                { id: 'stg-1', title: 'Estudo Preliminar', status: 'completed', date: '2026-02-10' },
+                { id: 'stg-2', title: 'Anteprojeto', status: 'completed', date: '2026-04-05' },
+                { id: 'stg-3', title: 'Projeto Executivo', status: 'in_progress', date: '2026-07-20' },
+                { id: 'stg-4', title: 'Detalhamento & Obra', status: 'pending', date: '2026-11-15' }
+              ]
+            })),
+            documents: existing?.documents || [
+              {
+                id: `doc-${cli.id}-1`,
+                title: `Contrato de Prestação de Serviços - ${cli.name}`,
+                category: 'contrato',
+                fileName: `Contrato_${cli.name.replace(/\s+/g, '_')}.pdf`,
+                date: new Date().toLocaleDateString('pt-BR'),
+                size: '1.4 MB'
+              }
+            ],
+            messages: existing?.messages || [
+              {
+                id: `msg-${cli.id}-1`,
+                sender: 'office',
+                senderName: `${data.profile?.name || 'Equipe do Escritório'}`,
+                text: `Olá, ${cli.name}! Seja muito bem-vindo ao seu Portal exclusivo. Aqui você acompanha as etapas, prazos e novidades do seu projeto em tempo real.`,
+                createdAt: new Date().toISOString(),
+                read: false
+              }
+            ]
+          };
+          portalsMap[pId] = updated;
+          portalsMap[`email_${emailToUse}`] = updated;
+          portalsMap[`code_${updated.accessCode}`] = updated;
+        }
+        savePortalsMap(portalsMap);
+      }
+
+      res.json({ success: true, savedAt: new Date().toISOString() });
+    } catch (err: any) {
+      console.error('Error saving workspace to server:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // GET workspace
+  app.get('/api/workspace', (req, res) => {
+    const ws = loadWorkspaceData();
+    if (ws) {
+      res.json({ success: true, workspace: ws });
+    } else {
+      res.json({ success: false, empty: true });
+    }
+  });
+
+  // POST chat message to client portal
+  app.post('/api/portals/messages', (req, res) => {
+    try {
+      const { portalId, message } = req.body;
+      if (!portalId || !message) {
+        res.status(400).json({ success: false, error: 'portalId and message required' });
+        return;
+      }
+      const map = loadPortalsMap();
+      const p = map[portalId];
+      if (!p) {
+        res.status(404).json({ success: false, error: 'Portal not found' });
+        return;
+      }
+      if (!Array.isArray(p.messages)) {
+        p.messages = [];
+      }
+      const newMsg = {
+        ...message,
+        id: message.id || `msg-${Date.now()}`,
+        createdAt: message.createdAt || new Date().toISOString()
+      };
+      p.messages.push(newMsg);
+      p.updatedAt = new Date().toISOString();
+      map[portalId] = p;
+      if (p.clientEmail) map[`email_${normalizeEmailStr(p.clientEmail)}`] = p;
+      if (p.accessCode) map[`code_${p.accessCode.toUpperCase().trim()}`] = p;
+      savePortalsMap(map);
+      res.json({ success: true, portal: p });
+    } catch (err: any) {
+      console.error('Error saving portal message:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // AI Generation Route: Creates proposal with AI, generating both text rationale and redesigned image
   app.post('/api/gemini/generate-proposal', async (req, res) => {
     try {

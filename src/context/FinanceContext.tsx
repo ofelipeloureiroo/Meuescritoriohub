@@ -1003,6 +1003,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       (error) => {
         handleFirestoreError(error, OperationType.GET, `users/${primaryUid}/data/workspace`);
         isCloudLoadedRef.current = true;
+        // Fallback to server durable workspace storage
+        fetch('/api/workspace')
+          .then(r => r.json())
+          .then(res => {
+            if (res.success && res.workspace) {
+              const data = res.workspace;
+              if (data.profile) setArchitectProfile(data.profile);
+              if (Array.isArray(data.clients) && data.clients.length > 0) setClients(data.clients);
+              if (Array.isArray(data.architectureProjects)) setArchitectureProjects(data.architectureProjects);
+              if (Array.isArray(data.projectMilestones)) setProjectMilestones(data.projectMilestones);
+              if (Array.isArray(data.workContracts)) setWorkContracts(data.workContracts);
+              if (Array.isArray(data.actions)) setActions(data.actions);
+            }
+          })
+          .catch(() => {});
       }
     );
 
@@ -1072,12 +1087,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           updatedAt: new Date().toISOString(),
         }, { merge: true }).catch(() => {});
       }
+
+      // Also persist to server workspace API for universal multi-browser synchronization
+      fetch('/api/workspace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sanitized),
+      }).catch(() => {});
     } catch (err) {
       console.warn("Firestore immediate save warning:", err);
     }
   };
 
-  // Auto-save local changes to Firestore (debounced 500ms)
+  // Auto-save local changes to Firestore & Server API (debounced 500ms)
   useEffect(() => {
     if (!isCloudLoadedRef.current || isSyncingFromCloudRef.current) {
       return;
@@ -1108,6 +1130,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const sanitized = JSON.parse(JSON.stringify(payload));
         await setDoc(canonicalWorkspaceRef, sanitized, { merge: true });
         await setDoc(doc(db, 'workspaces', 'canonical'), sanitized, { merge: true }).catch(() => {});
+
+        // Always sync with backend server workspace API
+        fetch('/api/workspace', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sanitized),
+        }).catch(() => {});
 
         if (targetUid && targetUid !== canonicalUid) {
           const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
@@ -1622,11 +1651,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       projectsCount: 0,
       status: clientData.status || 'active',
     };
-    setClients((prev) => [newClient, ...prev]);
+    const updated = [newClient, ...clients];
+    setClients(updated);
+    safeSetItem('clients', updated);
+
+    // Build and save client portal immediately to server & local storage
+    const portal = buildClientPortalAccess(newClient, architectureProjects, architectProfile, null, projectMilestones);
+    saveClientPortalAccess(portal).catch(() => {});
   };
 
   const updateClient = (id: string, updatedFields: Partial<Client>) => {
-    setClients((prev) => prev.map((c) => (c.id === id ? { ...c, ...updatedFields } : c)));
+    const updated = clients.map((c) => (c.id === id ? { ...c, ...updatedFields } : c));
+    setClients(updated);
+    safeSetItem('clients', updated);
+    const target = updated.find((c) => c.id === id);
+    if (target) {
+      const portal = buildClientPortalAccess(target, architectureProjects, architectProfile, null, projectMilestones);
+      saveClientPortalAccess(portal).catch(() => {});
+    }
   };
 
   const deleteClient = (id: string) => {

@@ -51,7 +51,7 @@ export const ClientLogin: React.FC = () => {
       try {
         localStorage.setItem('client_portal_session', JSON.stringify(res.portal));
       } catch {}
-      navigate(`/cliente/dashboard?portalId=${encodeURIComponent(res.portal.id)}&clientId=${encodeURIComponent(res.portal.clientId)}`);
+      navigate(`/cliente/dashboard?portalId=${encodeURIComponent(res.portal.id)}&clientId=${encodeURIComponent(res.portal.clientId)}&clientView=true`);
     } else {
       setErrorMessage(res.error || 'Não foi possível validar o acesso.');
     }
@@ -78,7 +78,7 @@ export const ClientLogin: React.FC = () => {
       try {
         localStorage.setItem('client_portal_session', JSON.stringify(res.portal));
       } catch {}
-      navigate(`/cliente/dashboard?portalId=${encodeURIComponent(res.portal.id)}&clientId=${encodeURIComponent(res.portal.clientId)}`);
+      navigate(`/cliente/dashboard?portalId=${encodeURIComponent(res.portal.id)}&clientId=${encodeURIComponent(res.portal.clientId)}&clientView=true`);
     } else {
       setErrorMessage(res.error || 'Credenciais inválidas.');
     }

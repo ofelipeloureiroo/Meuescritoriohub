@@ -57,9 +57,11 @@ export const ClientPortalDashboard: React.FC = () => {
   const { clients, architectureProjects, architectProfile } = useFinance();
 
   const isAdminParam = searchParams.get('admin') === 'true';
+  const isClientView = searchParams.get('clientView') === 'true';
   const requestedPortalId = searchParams.get('portalId');
   const requestedClientId = searchParams.get('clientId');
-  const isAdminMode = isAdminParam || !!user;
+  // Admin mode is only active when explicitly requested via URL (e.g. from office tab simulator)
+  const isAdminMode = !isClientView && isAdminParam === true;
 
   const [officePortals, setOfficePortals] = useState<ClientPortalAccess[]>([SAMPLE_CLIENT_PORTAL]);
   const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);

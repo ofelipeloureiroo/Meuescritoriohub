@@ -110,6 +110,15 @@ export async function saveClientPortalAccess(portal: ClientPortalAccess): Promis
     }
   } catch {}
 
+  // 1b. Instant server persistent storage sync (survives any browser session)
+  try {
+    fetch('/api/portals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ portal: normalizedPortal })
+    }).catch(() => {});
+  } catch {}
+
   // 2. Persist to Firestore with sanitization across direct-access documents
   try {
     const sanitized = sanitizeFirestoreData({
@@ -286,6 +295,30 @@ export async function loginClient(
 
       return isEmailMatch || isCodeMatch;
     };
+
+    // 0. FAST SERVER API LOOKUP (/api/portals/lookup) - Universal sync across all browsers & devices
+    try {
+      const serverRes = await fetch(`/api/portals/lookup?email=${encodeURIComponent(rawEmail)}&code=${encodeURIComponent(cleanCode)}`);
+      if (serverRes.ok) {
+        const json = await serverRes.json();
+        if (json.success && json.portal) {
+          savePortalLocally(json.portal);
+          sessionStorage.setItem('client_portal_session', JSON.stringify(json.portal));
+          try { localStorage.setItem('client_portal_session', JSON.stringify(json.portal)); } catch {}
+          return { success: true, portal: json.portal };
+        }
+        if (json.codeMismatch) {
+          return { success: false, error: json.error || 'Código de acesso ou senha incorreta para este e-mail.' };
+        }
+      } else {
+        const json = await serverRes.json().catch(() => null);
+        if (json && json.codeMismatch) {
+          return { success: false, error: json.error || 'Código de acesso ou senha incorreta para este e-mail.' };
+        }
+      }
+    } catch (netErr) {
+      console.warn('Notice querying server portal lookup:', netErr);
+    }
 
     // 1. FAST LOCAL STORAGE CHECK (0ms)
     // 1a. Direct cached portals
@@ -691,6 +724,15 @@ export async function sendPortalMessage(
       }
     } catch {}
   }
+
+  // 1c. Sync message to server persistent storage
+  try {
+    fetch('/api/portals/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ portalId, message: newMessage })
+    }).catch(() => {});
+  } catch {}
 
   // 2. Firestore persistence
   try {
