@@ -47,9 +47,32 @@ export const SupportChatWidget: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Real-time Firestore sync with the user's support ticket document
+  // Real-time Firestore sync and localStorage fallback for subscriber
   useEffect(() => {
     if (!ticketId) return;
+
+    const loadLocal = () => {
+      try {
+        const local = localStorage.getItem(`meu_escritorio_user_support_ticket_${ticketId}`);
+        if (local) {
+          const parsed = JSON.parse(local) as SupportTicket;
+          if (parsed) setTicketData(parsed);
+        } else {
+          const rawPool = localStorage.getItem('meu_escritorio_global_support_tickets');
+          if (rawPool) {
+            const pool: SupportTicket[] = JSON.parse(rawPool);
+            const found = pool.find(t => t.id === ticketId);
+            if (found) setTicketData(found);
+          }
+        }
+      } catch {}
+    };
+
+    loadLocal();
+
+    const handleUpdate = () => loadLocal();
+    window.addEventListener('support_tickets_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
 
     const docRef = doc(db, 'support_tickets', ticketId);
     const unsub = onSnapshot(docRef, (docSnap) => {
@@ -58,13 +81,23 @@ export const SupportChatWidget: React.FC = () => {
         setTicketData(data);
         try {
           localStorage.setItem(`meu_escritorio_user_support_ticket_${ticketId}`, JSON.stringify(data));
+          const rawPool = localStorage.getItem('meu_escritorio_global_support_tickets');
+          let pool: SupportTicket[] = rawPool ? JSON.parse(rawPool) : [];
+          const idx = pool.findIndex(t => t.id === ticketId);
+          if (idx >= 0) pool[idx] = data;
+          else pool.push(data);
+          localStorage.setItem('meu_escritorio_global_support_tickets', JSON.stringify(pool));
         } catch {}
       }
     }, (err) => {
       console.warn('Support ticket onSnapshot notice:', err);
     });
 
-    return () => unsub();
+    return () => {
+      unsub();
+      window.removeEventListener('support_tickets_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
   }, [ticketId]);
 
   // When user opens the chat, mark unread admin messages as read

@@ -276,13 +276,29 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
 
   // Delete ticket
   const handleDeleteTicket = async (ticketId: string) => {
-    if (!confirm('Deseja realmente excluir este atendimento de suporte?')) return;
+    if (!window.confirm('Deseja realmente excluir este atendimento de suporte?')) return;
 
     try {
-      await deleteDoc(doc(db, 'support_tickets', ticketId));
+      // 1. Remove from localStorage keys and global pool
+      try {
+        localStorage.removeItem(`meu_escritorio_user_support_ticket_${ticketId}`);
+        const rawPool = localStorage.getItem('meu_escritorio_global_support_tickets');
+        if (rawPool) {
+          let pool: SupportTicket[] = JSON.parse(rawPool);
+          pool = pool.filter(t => t.id !== ticketId);
+          localStorage.setItem('meu_escritorio_global_support_tickets', JSON.stringify(pool));
+        }
+      } catch {}
+
+      // 2. Delete from Firestore
+      await deleteDoc(doc(db, 'support_tickets', ticketId)).catch(() => {});
+
+      // 3. Update state & dispatch event
+      setTickets((prev) => prev.filter(t => t.id !== ticketId));
       if (selectedTicketId === ticketId) {
         setSelectedTicketId('');
       }
+      window.dispatchEvent(new CustomEvent('support_tickets_updated'));
     } catch (e) {
       console.warn('Error deleting support ticket:', e);
     }
