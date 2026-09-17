@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   KeyRound,
@@ -43,6 +43,7 @@ import {
   syncPortalWithOfficeRegistry,
   saveClientPortalAccess,
   sendPortalMessage,
+  fetchPortalMessages,
   savePortalLocally,
   SAMPLE_CLIENT_PORTAL 
 } from '../../services/clientPortalService';
@@ -72,6 +73,57 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
   const [isSendingChat, setIsSendingChat] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
+
+  const chatPortalId = selectedPortalForChat?.id;
+  const chatClientId = selectedPortalForChat?.clientId;
+  const chatClientEmail = selectedPortalForChat?.clientEmail;
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Poll & sync live chat messages whenever a chat modal is open
+  useEffect(() => {
+    if (!chatPortalId) return;
+
+    let isMounted = true;
+
+    const loadLiveMessages = async () => {
+      try {
+        const msgs = await fetchPortalMessages({
+          portalId: chatPortalId,
+          clientId: chatClientId,
+          clientEmail: chatClientEmail
+        });
+        if (isMounted && msgs && msgs.length > 0) {
+          setSelectedPortalForChat((prev) => {
+            if (!prev) return null;
+            if (JSON.stringify(prev.messages) !== JSON.stringify(msgs)) {
+              return { ...prev, messages: msgs };
+            }
+            return prev;
+          });
+        }
+      } catch {}
+    };
+
+    loadLiveMessages();
+    const interval = setInterval(loadLiveMessages, 1500);
+
+    const onUpdate = () => loadLiveMessages();
+    window.addEventListener('portal_messages_updated', onUpdate);
+    window.addEventListener('client_portals_updated', onUpdate);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener('portal_messages_updated', onUpdate);
+      window.removeEventListener('client_portals_updated', onUpdate);
+    };
+  }, [chatPortalId, chatClientId, chatClientEmail]);
+
+  useEffect(() => {
+    if (selectedPortalForChat?.messages) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [selectedPortalForChat?.messages?.length]);
 
   // Real-time subscribe to all portals created by this office
   useEffect(() => {
@@ -195,7 +247,11 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
         selectedPortalForChat.id,
         'office',
         `${senderName} (Equipe)`,
-        textToSend
+        textToSend,
+        {
+          clientId: selectedPortalForChat.clientId,
+          clientEmail: selectedPortalForChat.clientEmail
+        }
       );
 
       // Locally update selected portal messages for instant feedback
@@ -764,8 +820,9 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                     <h3 className="font-bold text-sm sm:text-base text-[var(--text-main)]">
                       {selectedPortalForChat.clientName}
                     </h3>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">
-                      Canal do Radar
+                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Ao Vivo
                     </span>
                   </div>
                   <p className="text-xs text-[var(--text-muted)]">
@@ -801,31 +858,34 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
             {/* Messages Thread */}
             <div className="flex-1 p-6 overflow-y-auto space-y-3 bg-[var(--bg-card)]">
               {selectedPortalForChat.messages && selectedPortalForChat.messages.length > 0 ? (
-                selectedPortalForChat.messages.map((msg) => {
-                  const isOffice = msg.sender === 'office';
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex flex-col ${isOffice ? 'items-end' : 'items-start'}`}
-                    >
+                <>
+                  {selectedPortalForChat.messages.map((msg) => {
+                    const isOffice = msg.sender === 'office';
+                    return (
                       <div
-                        className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed shadow-xs ${
-                          isOffice
-                            ? 'bg-[var(--theme-primary)] text-black font-medium rounded-br-none'
-                            : 'bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-[var(--text-main)] rounded-bl-none'
-                        }`}
+                        key={msg.id}
+                        className={`flex flex-col ${isOffice ? 'items-end' : 'items-start'}`}
                       >
-                        <div className={`text-[10px] font-bold mb-1 ${isOffice ? 'text-black/80' : 'text-[var(--theme-primary)]'}`}>
-                          {msg.senderName || (isOffice ? 'Equipe do Escritório' : selectedPortalForChat.clientName)}
-                        </div>
-                        <p className="whitespace-pre-wrap">{msg.text}</p>
-                        <div className={`text-[9px] mt-1.5 text-right opacity-70`}>
-                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(msg.createdAt).toLocaleDateString('pt-BR')}
+                        <div
+                          className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed shadow-xs ${
+                            isOffice
+                              ? 'bg-[var(--theme-primary)] text-black font-medium rounded-br-none'
+                              : 'bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-[var(--text-main)] rounded-bl-none'
+                          }`}
+                        >
+                          <div className={`text-[10px] font-bold mb-1 ${isOffice ? 'text-black/80' : 'text-[var(--theme-primary)]'}`}>
+                            {msg.senderName || (isOffice ? 'Equipe do Escritório' : selectedPortalForChat.clientName)}
+                          </div>
+                          <p className="whitespace-pre-wrap">{msg.text}</p>
+                          <div className={`text-[9px] mt-1.5 text-right opacity-70`}>
+                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(msg.createdAt).toLocaleDateString('pt-BR')}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-center text-xs text-[var(--text-muted)] space-y-2">
                   <MessageSquare className="w-10 h-10 text-[var(--text-muted)] opacity-50" />

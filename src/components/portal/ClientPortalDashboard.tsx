@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Building2, 
@@ -42,6 +42,7 @@ import {
 import { 
   subscribeToClientPortal, 
   sendPortalMessage,
+  fetchPortalMessages,
   subscribeToOfficePortals,
   buildClientPortalAccess,
   syncPortalWithOfficeRegistry,
@@ -125,7 +126,7 @@ export const ClientPortalDashboard: React.FC = () => {
       if (list && list.length > 0) {
         setOfficePortals(list);
         if (requestedPortalId) {
-          const matched = list.find((p) => p.id === requestedPortalId);
+          const matched = list.find((p) => p.id === requestedPortalId || p.clientId === requestedPortalId);
           if (matched) {
             setPortal(matched);
             sessionStorage.setItem('client_portal_session', JSON.stringify(matched));
@@ -136,28 +137,129 @@ export const ClientPortalDashboard: React.FC = () => {
     return () => unsubscribe();
   }, [user, requestedPortalId]);
 
+  // Load portal from server when opened in a fresh browser session (or via URL parameters)
+  useEffect(() => {
+    const fetchPortalFromUrlOrServer = async () => {
+      const pId = requestedPortalId || portal.id;
+      const cId = requestedClientId || portal.clientId;
+      const pEmail = portal.clientEmail;
+
+      if (!pId && !cId && !pEmail) return;
+
+      try {
+        const qs = new URLSearchParams();
+        if (pId) qs.set('id', pId);
+        if (cId) qs.set('id', cId);
+        if (pEmail) qs.set('email', pEmail);
+
+        const res = await fetch(`/api/portals/lookup?${qs.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.portal) {
+            setPortal((prev) => {
+              const mergedMessages = (data.portal.messages && data.portal.messages.length > 0)
+                ? data.portal.messages
+                : prev.messages;
+              const mergedProjects = (data.portal.projects && data.portal.projects.length > 0)
+                ? data.portal.projects
+                : prev.projects;
+              const updated = {
+                ...prev,
+                ...data.portal,
+                messages: mergedMessages,
+                projects: mergedProjects
+              };
+              sessionStorage.setItem('client_portal_session', JSON.stringify(updated));
+              savePortalLocally(updated);
+              return updated;
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Notice fetching initial portal from server:', err);
+      }
+    };
+
+    fetchPortalFromUrlOrServer();
+  }, [requestedPortalId, requestedClientId]);
+
   // Subscribe to real-time updates if connected to a real Firestore document
   useEffect(() => {
-    if (!portal || portal.id === SAMPLE_CLIENT_PORTAL.id) {
+    const targetDocId = (portal && portal.id !== SAMPLE_CLIENT_PORTAL.id) ? portal.id : requestedPortalId;
+    if (!targetDocId || targetDocId === SAMPLE_CLIENT_PORTAL.id) {
       return;
     }
 
-    const unsubscribe = subscribeToClientPortal(portal.id, (updatedPortal) => {
+    const unsubscribe = subscribeToClientPortal(targetDocId, (updatedPortal) => {
       if (updatedPortal) {
         setPortal(updatedPortal);
         sessionStorage.setItem('client_portal_session', JSON.stringify(updatedPortal));
-      } else if (!isAdminMode) {
-        sessionStorage.removeItem('client_portal_session');
-        navigate('/cliente/login');
       }
+    }, {
+      clientId: requestedClientId || portal?.clientId,
+      clientEmail: portal?.clientEmail
     });
 
     return () => unsubscribe();
-  }, [portal?.id, isAdminMode, navigate]);
+  }, [portal?.id, requestedPortalId, requestedClientId, portal?.clientId, portal?.clientEmail]);
 
   // Set default active project based on effectivePortal
   const projectIdsKey = (effectivePortal.projects || []).map((p) => p.id).join(',');
   const firstProjectId = effectivePortal.projects?.[0]?.id || '';
+
+  const chatPortalId = effectivePortal.id || portal?.id || requestedPortalId;
+  const chatClientId = effectivePortal.clientId || portal?.clientId || requestedClientId;
+  const chatClientEmail = effectivePortal.clientEmail || portal?.clientEmail;
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Poll server for new messages in real time so client sees office replies immediately
+  useEffect(() => {
+    if (!chatPortalId && !chatClientId && !chatClientEmail) return;
+
+    let isMounted = true;
+
+    const pollMessages = async () => {
+      try {
+        const msgs = await fetchPortalMessages({
+          portalId: chatPortalId,
+          clientId: chatClientId,
+          clientEmail: chatClientEmail
+        });
+        if (isMounted && msgs && msgs.length > 0) {
+          setPortal((prev) => {
+            const currentMsgs = prev.messages || [];
+            if (JSON.stringify(currentMsgs) !== JSON.stringify(msgs)) {
+              const updated = { ...prev, messages: msgs };
+              sessionStorage.setItem('client_portal_session', JSON.stringify(updated));
+              savePortalLocally(updated);
+              return updated;
+            }
+            return prev;
+          });
+        }
+      } catch {}
+    };
+
+    pollMessages();
+    const interval = setInterval(pollMessages, 1500);
+
+    const onUpdate = () => pollMessages();
+    window.addEventListener('portal_messages_updated', onUpdate);
+    window.addEventListener('client_portals_updated', onUpdate);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener('portal_messages_updated', onUpdate);
+      window.removeEventListener('client_portals_updated', onUpdate);
+    };
+  }, [chatPortalId, chatClientId, chatClientEmail]);
+
+  useEffect(() => {
+    if (activeTab === 'mensagens') {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [activeTab, effectivePortal.messages?.length]);
 
   useEffect(() => {
     if (effectivePortal.projects && effectivePortal.projects.length > 0) {
@@ -231,7 +333,11 @@ export const ClientPortalDashboard: React.FC = () => {
         effectivePortal.id || portal.id,
         sender,
         senderName,
-        textToSend
+        textToSend,
+        {
+          clientId: effectivePortal.clientId || portal.clientId,
+          clientEmail: effectivePortal.clientEmail || portal.clientEmail
+        }
       );
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
@@ -830,6 +936,7 @@ export const ClientPortalDashboard: React.FC = () => {
                     </p>
                   </div>
                 )}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* If Admin mode, allow choosing who to send as */}

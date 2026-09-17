@@ -178,59 +178,143 @@ export async function getClientPortalsByOffice(officeUid: string): Promise<Clien
 }
 
 /**
- * Real-time listener for all portals of an office.
+ * Real-time listener for all portals of an office with automated server fallback polling.
  */
 export function subscribeToOfficePortals(
   officeUid: string, 
   callback: (portals: ClientPortalAccess[]) => void
 ): () => void {
-  const q = query(collection(db, 'clientPortals'), where('officeUid', '==', officeUid));
-  const unsubFirestore = onSnapshot(q, (snapshot) => {
-    const list: ClientPortalAccess[] = [];
-    snapshot.forEach((d) => {
-      list.push(d.data() as ClientPortalAccess);
-    });
-    if (list.length > 0) {
-      callback(list);
-    }
-  }, (err) => {
-    console.warn('Error subscribing to client portals:', err);
-  });
+  let isSubscribed = true;
 
+  // 1. Initial & recurring poll to server persistent API
+  const fetchFromServer = async () => {
+    try {
+      const res = await fetch('/api/portals');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.portals) && isSubscribed) {
+          callback(data.portals);
+        }
+      }
+    } catch {}
+  };
+
+  fetchFromServer();
+  const pollInterval = setInterval(fetchFromServer, 2500);
+
+  // 2. Local updates
   const handleLocalUpdate = () => {
     const localList = getLocalPortals();
-    if (localList.length > 0) {
+    if (localList.length > 0 && isSubscribed) {
       callback(localList);
     }
+    fetchFromServer();
   };
   window.addEventListener('client_portals_updated', handleLocalUpdate);
+  window.addEventListener('portal_messages_updated', handleLocalUpdate);
+
+  // 3. Firestore listener as backup
+  let unsubFirestore = () => {};
+  try {
+    const q = query(collection(db, 'clientPortals'), where('officeUid', '==', officeUid));
+    unsubFirestore = onSnapshot(q, (snapshot) => {
+      const list: ClientPortalAccess[] = [];
+      snapshot.forEach((d) => {
+        list.push(d.data() as ClientPortalAccess);
+      });
+      if (list.length > 0 && isSubscribed) {
+        callback(list);
+      }
+    }, () => {});
+  } catch {}
 
   return () => {
+    isSubscribed = false;
+    clearInterval(pollInterval);
     unsubFirestore();
     window.removeEventListener('client_portals_updated', handleLocalUpdate);
+    window.removeEventListener('portal_messages_updated', handleLocalUpdate);
   };
 }
 
 /**
- * Real-time listener for a single client portal.
+ * Real-time listener for a single client portal with automatic server polling.
  */
 export function subscribeToClientPortal(
   portalId: string, 
-  callback: (portal: ClientPortalAccess | null) => void
+  callback: (portal: ClientPortalAccess | null) => void,
+  extraParams?: { clientId?: string; clientEmail?: string }
 ): () => void {
-  const portalRef = doc(db, 'clientPortals', portalId);
-  return onSnapshot(portalRef, (snapshot) => {
-    if (snapshot.exists()) {
-      callback(snapshot.data() as ClientPortalAccess);
-    } else {
-      const local = getLocalPortals().find(p => p.id === portalId);
-      callback(local || null);
+  let isSubscribed = true;
+
+  const fetchUpdatedPortal = async () => {
+    try {
+      const qs = new URLSearchParams();
+      if (portalId) qs.set('id', portalId);
+      if (extraParams?.clientId) qs.set('id', extraParams.clientId);
+      if (extraParams?.clientEmail) qs.set('email', extraParams.clientEmail);
+      const res = await fetch(`/api/portals/lookup?${qs.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.portal && isSubscribed) {
+          callback(data.portal);
+        }
+      }
+    } catch {}
+  };
+
+  fetchUpdatedPortal();
+  const pollInterval = setInterval(fetchUpdatedPortal, 2000);
+
+  const handleMessageEvent = () => {
+    fetchUpdatedPortal();
+  };
+  window.addEventListener('portal_messages_updated', handleMessageEvent);
+  window.addEventListener('client_portals_updated', handleMessageEvent);
+
+  let unsubFirestore = () => {};
+  try {
+    const portalRef = doc(db, 'clientPortals', portalId);
+    unsubFirestore = onSnapshot(portalRef, (snapshot) => {
+      if (snapshot.exists() && isSubscribed) {
+        callback(snapshot.data() as ClientPortalAccess);
+      }
+    }, () => {});
+  } catch {}
+
+  return () => {
+    isSubscribed = false;
+    clearInterval(pollInterval);
+    unsubFirestore();
+    window.removeEventListener('portal_messages_updated', handleMessageEvent);
+    window.removeEventListener('client_portals_updated', handleMessageEvent);
+  };
+}
+
+/**
+ * Fetches latest messages for a specific portal directly from server.
+ */
+export async function fetchPortalMessages(params: {
+  portalId?: string;
+  clientId?: string;
+  clientEmail?: string;
+}): Promise<ClientPortalMessage[]> {
+  try {
+    const qs = new URLSearchParams();
+    if (params.portalId) qs.set('portalId', params.portalId);
+    if (params.clientId) qs.set('clientId', params.clientId);
+    if (params.clientEmail) qs.set('clientEmail', params.clientEmail);
+    const res = await fetch(`/api/portals/messages?${qs.toString()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.messages)) {
+        return data.messages;
+      }
     }
-  }, (err) => {
-    console.warn('Error subscribing to client portal doc:', err);
-    const local = getLocalPortals().find(p => p.id === portalId);
-    callback(local || null);
-  });
+  } catch (e) {
+    console.warn('Error fetching portal messages from server:', e);
+  }
+  return [];
 }
 
 /**
@@ -691,7 +775,8 @@ export async function sendPortalMessage(
   portalId: string, 
   sender: 'office' | 'client', 
   senderName: string, 
-  text: string
+  text: string,
+  extra?: { clientId?: string; clientEmail?: string }
 ): Promise<void> {
   const newMessage: ClientPortalMessage = {
     id: 'msg-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
@@ -699,12 +784,12 @@ export async function sendPortalMessage(
     senderName,
     text: text.trim(),
     createdAt: new Date().toISOString(),
-    read: false
+    read: sender === 'office'
   };
 
   // 1. Instant local persistence
   const localPortals = getLocalPortals();
-  const localIndex = localPortals.findIndex(p => p.id === portalId);
+  const localIndex = localPortals.findIndex(p => p.id === portalId || (extra?.clientId && p.clientId === extra.clientId));
   if (localIndex >= 0) {
     const p = localPortals[localIndex];
     p.messages = [...(p.messages || []), newMessage];
@@ -716,7 +801,7 @@ export async function sendPortalMessage(
       const raw = sessionStorage.getItem('client_portal_session');
       if (raw) {
         const p = JSON.parse(raw) as ClientPortalAccess;
-        if (p.id === portalId) {
+        if (p.id === portalId || (extra?.clientId && p.clientId === extra.clientId)) {
           p.messages = [...(p.messages || []), newMessage];
           p.updatedAt = new Date().toISOString();
           savePortalLocally(p);
@@ -727,12 +812,23 @@ export async function sendPortalMessage(
 
   // 1c. Sync message to server persistent storage
   try {
-    fetch('/api/portals/messages', {
+    await fetch('/api/portals/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ portalId, message: newMessage })
-    }).catch(() => {});
-  } catch {}
+      body: JSON.stringify({
+        portalId,
+        clientId: extra?.clientId,
+        clientEmail: extra?.clientEmail,
+        message: newMessage
+      })
+    });
+  } catch (err) {
+    console.warn('Notice syncing message to server:', err);
+  }
+
+  // Broadcast events to all listeners on this browser
+  window.dispatchEvent(new CustomEvent('portal_messages_updated', { detail: { portalId, message: newMessage } }));
+  window.dispatchEvent(new CustomEvent('client_portals_updated'));
 
   // 2. Firestore persistence
   try {
@@ -1265,18 +1361,34 @@ export function buildClientPortalAccess(
     return false;
   });
 
-  const portalProjects: ClientPortalProject[] = clientProjects.map(p => 
-    convertArchitectureProjectToPortalProject(p, milestones)
-  );
+  const sanitizedClientName = client.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+  const generatedEmail = `${sanitizedClientName || 'cliente'}@cliente.com`;
+  const cleanClientEmail = (client.email && client.email.trim()) ? client.email.trim().toLowerCase() : generatedEmail;
+
+  const portalProjects: ClientPortalProject[] = clientProjects.length > 0
+    ? clientProjects.map(p => convertArchitectureProjectToPortalProject(p, milestones))
+    : (existingPortal?.projects && existingPortal.projects.length > 0)
+      ? existingPortal.projects
+      : [
+          convertArchitectureProjectToPortalProject({
+            id: `proj-${client.id}-1`,
+            title: `Projeto de Arquitetura e Interiores`,
+            clientName: client.name,
+            clientEmail: cleanClientEmail,
+            category: 'interiores',
+            projectType: 'Projeto Completo',
+            status: 'executivo',
+            honorarios: client.totalBilled || 25000,
+            currency: 'BRL',
+            startDate: client.createdAt || new Date().toLocaleDateString('pt-BR'),
+            deliveryDate: 'A combinar com o escritório'
+          } as any)
+        ];
 
   const portalId = existingPortal?.id || `portal-${client.id}`;
   const accessCode = existingPortal?.accessCode || `MEO-${client.id.replace(/\D/g, '').slice(-4) || '2026'}`;
 
   const profileAny = profile as any;
-
-  const sanitizedClientName = client.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
-  const generatedEmail = `${sanitizedClientName || 'cliente'}@cliente.com`;
-  const cleanClientEmail = (client.email && client.email.trim()) ? client.email.trim().toLowerCase() : generatedEmail;
 
   return {
     id: portalId,
@@ -1350,8 +1462,26 @@ export function syncPortalWithOfficeRegistry(
     return false;
   });
 
-  // If projects exist in Gestor for this client, convert them
-  const portalProjects = activeProjects.map(p => convertArchitectureProjectToPortalProject(p, milestones));
+  // If projects exist in Gestor for this client, convert them. Otherwise preserve existing portal.projects!
+  const portalProjects = activeProjects.length > 0
+    ? activeProjects.map(p => convertArchitectureProjectToPortalProject(p, milestones))
+    : (portal.projects && portal.projects.length > 0)
+      ? portal.projects
+      : [
+          convertArchitectureProjectToPortalProject({
+            id: `proj-${portal.clientId || 'default'}-1`,
+            title: portal.clientName ? `Projeto de Arquitetura - ${portal.clientName}` : 'Projeto de Arquitetura e Interiores',
+            clientName: portal.clientName || 'Cliente',
+            clientEmail: portal.clientEmail || '',
+            category: 'interiores',
+            projectType: 'Projeto Completo',
+            status: 'executivo',
+            honorarios: 25000,
+            currency: 'BRL',
+            startDate: new Date().toLocaleDateString('pt-BR'),
+            deliveryDate: 'A combinar com o escritório'
+          } as any)
+        ];
 
   const profileAny = profile as any;
 

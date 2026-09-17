@@ -638,11 +638,46 @@ Acesse o painel administrativo: ${baseUrl}/admin
     return e.trim().toLowerCase().replace(/[^a-z0-9@._-]/g, '');
   }
 
+  // Helper to safely merge message arrays without dropping client messages
+  function mergePortalMessages(existing: any[] = [], incoming: any[] = []): any[] {
+    const map = new Map<string, any>();
+    for (const m of existing) {
+      if (!m) continue;
+      const key = m.id || `${m.sender}_${m.text}_${(m.createdAt || '').slice(0, 16)}`;
+      map.set(key, m);
+    }
+    for (const m of incoming) {
+      if (!m) continue;
+      const key = m.id || `${m.sender}_${m.text}_${(m.createdAt || '').slice(0, 16)}`;
+      if (!map.has(key)) {
+        map.set(key, m);
+      } else {
+        const ex = map.get(key);
+        map.set(key, { ...ex, ...m });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+  }
+
   // GET all portals
   app.get('/api/portals', (req, res) => {
     const map = loadPortalsMap();
-    const list = Object.values(map);
-    res.json({ success: true, count: list.length, portals: list });
+    const list = Object.values(map).filter((p: any) => p && typeof p === 'object' && p.id && !p.id.startsWith('email_') && !p.id.startsWith('code_'));
+    // deduplicate and merge messages across matching portal records
+    const uniqueMap = new Map<string, any>();
+    for (const p of list) {
+      const key = p.id || p.clientId || (p.clientEmail ? `email_${normalizeEmailStr(p.clientEmail)}` : null);
+      if (!key) continue;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, p);
+      } else {
+        const existing = uniqueMap.get(key);
+        const mergedMessages = mergePortalMessages(existing?.messages || [], p.messages || []);
+        uniqueMap.set(key, { ...existing, ...p, messages: mergedMessages });
+      }
+    }
+    const result = Array.from(uniqueMap.values());
+    res.json({ success: true, count: result.length, portals: result });
   });
 
   // POST save one or multiple portals
@@ -661,14 +696,25 @@ Acesse o painel administrativo: ${baseUrl}/admin
         const pId = p.id || `portal-${p.clientId || Date.now()}`;
         const cleanEmail = normalizeEmailStr(p.clientEmail);
         const cleanCode = (p.accessCode || '').trim().toUpperCase();
+
+        const existing = map[pId] || (cleanEmail ? map[`email_${cleanEmail}`] : null) || Object.values(map).find((x: any) => x && typeof x === 'object' && (x.id === pId || x.clientId === p.clientId));
+        const mergedMessages = mergePortalMessages(existing?.messages || [], p.messages || []);
+
         const enriched = {
+          ...(existing || {}),
           ...p,
           id: pId,
+          clientId: p.clientId || existing?.clientId,
           clientEmail: cleanEmail || p.clientEmail,
-          accessCode: cleanCode || p.accessCode,
+          accessCode: cleanCode || existing?.accessCode || p.accessCode,
+          messages: mergedMessages,
           updatedAt: new Date().toISOString()
         };
         map[pId] = enriched;
+        if (enriched.clientId) {
+          map[enriched.clientId] = enriched;
+          map[`portal-${enriched.clientId}`] = enriched;
+        }
         if (cleanEmail) {
           map[`email_${cleanEmail}`] = enriched;
         }
@@ -964,35 +1010,160 @@ Acesse o painel administrativo: ${baseUrl}/admin
     }
   });
 
+  // GET chat messages for a portal
+  app.get('/api/portals/messages', (req, res) => {
+    try {
+      const portalId = (req.query.portalId as string || '').trim();
+      const clientId = (req.query.clientId as string || '').trim();
+      const clientEmail = normalizeEmailStr(req.query.clientEmail as string);
+
+      const map = loadPortalsMap();
+      let p: any = null;
+
+      // 1. Direct key lookups
+      if (portalId && map[portalId]) {
+        p = map[portalId];
+      } else if (clientId && map[clientId]) {
+        p = map[clientId];
+      } else if (clientId && map[`portal-${clientId}`]) {
+        p = map[`portal-${clientId}`];
+      } else if (portalId && map[`portal-${portalId}`]) {
+        p = map[`portal-${portalId}`];
+      } else if (clientEmail && map[`email_${clientEmail}`]) {
+        p = map[`email_${clientEmail}`];
+      }
+
+      // 2. Comprehensive scan
+      if (!p) {
+        for (const item of Object.values(map)) {
+          if (!item || typeof item !== 'object') continue;
+          if (
+            (portalId && (item.id === portalId || item.clientId === portalId || item.id === `portal-${portalId}` || (item.id && portalId && item.id.replace('portal-', '') === portalId.replace('portal-', '')))) ||
+            (clientId && (item.clientId === clientId || item.id === clientId || item.id === `portal-${clientId}` || (item.clientId && clientId && item.clientId.replace('portal-', '') === clientId.replace('portal-', '')))) ||
+            (clientEmail && normalizeEmailStr(item.clientEmail) === clientEmail)
+          ) {
+            p = item;
+            break;
+          }
+        }
+      }
+
+      if (p) {
+        res.json({
+          success: true,
+          portalId: p.id,
+          clientId: p.clientId,
+          clientName: p.clientName,
+          clientEmail: p.clientEmail,
+          messages: p.messages || [],
+          updatedAt: p.updatedAt
+        });
+      } else {
+        res.json({ success: true, messages: [] });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // POST chat message to client portal
   app.post('/api/portals/messages', (req, res) => {
     try {
-      const { portalId, message } = req.body;
-      if (!portalId || !message) {
-        res.status(400).json({ success: false, error: 'portalId and message required' });
+      const { portalId, clientId, clientEmail, message } = req.body;
+      if ((!portalId && !clientId && !clientEmail) || !message) {
+        res.status(400).json({ success: false, error: 'portal identification and message required' });
         return;
       }
       const map = loadPortalsMap();
-      const p = map[portalId];
-      if (!p) {
-        res.status(404).json({ success: false, error: 'Portal not found' });
-        return;
+      let p: any = null;
+      let targetKey: string = portalId || clientId || '';
+
+      const cleanEmail = normalizeEmailStr(clientEmail);
+
+      // 1. Direct key lookups
+      if (portalId && map[portalId]) {
+        p = map[portalId];
+        targetKey = portalId;
+      } else if (clientId && map[clientId]) {
+        p = map[clientId];
+        targetKey = p.id || clientId;
+      } else if (clientId && map[`portal-${clientId}`]) {
+        p = map[`portal-${clientId}`];
+        targetKey = p.id || `portal-${clientId}`;
+      } else if (cleanEmail && map[`email_${cleanEmail}`]) {
+        p = map[`email_${cleanEmail}`];
+        targetKey = p.id || portalId || `portal-${clientId || 'client'}`;
       }
+
+      // 2. Comprehensive scan
+      if (!p) {
+        for (const item of Object.values(map)) {
+          if (!item || typeof item !== 'object') continue;
+          if (
+            (portalId && (item.id === portalId || item.clientId === portalId || item.id === `portal-${portalId}` || (item.id && portalId && item.id.replace('portal-', '') === portalId.replace('portal-', '')))) ||
+            (clientId && (item.clientId === clientId || item.id === clientId || item.id === `portal-${clientId}` || (item.clientId && clientId && item.clientId.replace('portal-', '') === clientId.replace('portal-', '')))) ||
+            (cleanEmail && normalizeEmailStr(item.clientEmail) === cleanEmail)
+          ) {
+            p = item;
+            targetKey = item.id;
+            break;
+          }
+        }
+      }
+
+      if (!p) {
+        // Create an entry so message is never discarded
+        const defaultId = portalId || (clientId ? `portal-${clientId}` : `portal-${Date.now()}`);
+        p = {
+          id: defaultId,
+          clientId: clientId || defaultId.replace('portal-', ''),
+          clientName: message.senderName || 'Cliente',
+          clientEmail: cleanEmail || '',
+          accessCode: 'MEO-2026',
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          messages: []
+        };
+        targetKey = defaultId;
+      }
+
       if (!Array.isArray(p.messages)) {
         p.messages = [];
       }
+
       const newMsg = {
         ...message,
-        id: message.id || `msg-${Date.now()}`,
+        id: message.id || `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         createdAt: message.createdAt || new Date().toISOString()
       };
-      p.messages.push(newMsg);
+
+      // Check if message already exists by ID or content/timestamp
+      const existingIdx = p.messages.findIndex((m: any) =>
+        m.id === newMsg.id ||
+        (m.text === newMsg.text && m.sender === newMsg.sender && Math.abs(new Date(m.createdAt || 0).getTime() - new Date(newMsg.createdAt || 0).getTime()) < 3000)
+      );
+
+      if (existingIdx >= 0) {
+        p.messages[existingIdx] = { ...p.messages[existingIdx], ...newMsg };
+      } else {
+        p.messages.push(newMsg);
+      }
+
       p.updatedAt = new Date().toISOString();
-      map[portalId] = p;
-      if (p.clientEmail) map[`email_${normalizeEmailStr(p.clientEmail)}`] = p;
+      map[targetKey] = p;
+      if (p.id) map[p.id] = p;
+      if (p.clientId) {
+        map[p.clientId] = p;
+        map[`portal-${p.clientId}`] = p;
+      }
+      if (portalId) map[portalId] = p;
+      if (clientId) map[clientId] = p;
+      const finalEmail = cleanEmail || normalizeEmailStr(p.clientEmail);
+      if (finalEmail) map[`email_${finalEmail}`] = p;
       if (p.accessCode) map[`code_${p.accessCode.toUpperCase().trim()}`] = p;
       savePortalsMap(map);
-      res.json({ success: true, portal: p });
+
+      res.json({ success: true, messages: p.messages, portal: p });
     } catch (err: any) {
       console.error('Error saving portal message:', err);
       res.status(500).json({ success: false, error: err.message });
