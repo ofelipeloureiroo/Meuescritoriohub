@@ -189,9 +189,9 @@ export const ClientPortalDashboard: React.FC = () => {
     fetchPortalFromUrlOrServer();
   }, [requestedPortalId, requestedClientId]);
 
-  const targetDocId = (portal && portal.id !== SAMPLE_CLIENT_PORTAL.id) ? portal.id : requestedPortalId;
-  const currentClientId = requestedClientId || portal?.clientId;
-  const currentClientEmail = portal?.clientEmail;
+  const targetDocId = useMemo(() => (portal && portal.id !== SAMPLE_CLIENT_PORTAL.id) ? portal.id : requestedPortalId, [portal?.id, requestedPortalId]);
+  const currentClientId = useMemo(() => requestedClientId || portal?.clientId, [requestedClientId, portal?.clientId]);
+  const currentClientEmail = useMemo(() => portal?.clientEmail, [portal?.clientEmail]);
 
   // Subscribe to real-time updates if connected to a real Firestore document
   useEffect(() => {
