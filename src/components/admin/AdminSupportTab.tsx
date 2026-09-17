@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { db, sanitizeFirestoreData } from '../../lib/firebase';
 import { SupportTicket, SupportMessage } from '../../types';
 import { UserProfile, useAuth } from '../../context/AuthContext';
@@ -19,89 +19,13 @@ import {
   Sparkles,
   Headset,
   CornerDownLeft,
-  CheckCheck
+  Plus,
+  X
 } from 'lucide-react';
 
 interface AdminSupportTabProps {
   users?: UserProfile[];
 }
-
-const DEFAULT_SAMPLE_TICKETS: SupportTicket[] = [
-  {
-    id: 'ticket_carlos_felipe',
-    subscriberUid: 'sub_carlos_felipe',
-    subscriberName: 'Carlos Felipe',
-    subscriberEmail: 'carlos.felipe.123@hotmail.com',
-    subscriberPhone: '(21) 99821-3069',
-    status: 'waiting_admin',
-    unreadByAdmin: 1,
-    unreadByUser: 0,
-    lastMessage: 'Olá! Gostaria de saber como emitir relatórios de fluxo de caixa em PDF.',
-    lastMessageTime: new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }),
-    lastMessageSender: 'user',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    messages: [
-      {
-        id: 'msg_1',
-        sender: 'user',
-        senderName: 'Carlos Felipe',
-        senderEmail: 'carlos.felipe.123@hotmail.com',
-        text: 'Olá! Gostaria de saber como emitir relatórios de fluxo de caixa em PDF.',
-        time: new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }),
-        date: new Date().toISOString().split('T')[0],
-        timestamp: new Date().toISOString(),
-      }
-    ]
-  },
-  {
-    id: 'ticket_laine_loureiro',
-    subscriberUid: 'sub_laine_loureiro',
-    subscriberName: 'Laíne Paula Loureiro',
-    subscriberEmail: 'laine@lparquitetura.com.br',
-    subscriberPhone: '(11) 98765-4321',
-    status: 'in_progress',
-    unreadByAdmin: 0,
-    unreadByUser: 0,
-    lastMessage: 'Perfeito, deu tudo certo com a importação do projeto 3D!',
-    lastMessageTime: '11:45',
-    lastMessageSender: 'user',
-    createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-    messages: [
-      {
-        id: 'msg_l1',
-        sender: 'user',
-        senderName: 'Laíne Paula Loureiro',
-        senderEmail: 'laine@lparquitetura.com.br',
-        text: 'Oi equipe! Como adiciono novos colaboradores no projeto?',
-        time: '10:30',
-        date: new Date().toISOString().split('T')[0],
-        timestamp: new Date(Date.now() - 3600000 * 3).toISOString(),
-      },
-      {
-        id: 'msg_l2',
-        sender: 'admin',
-        senderName: 'Carlos Felipe (Suporte Admin)',
-        senderEmail: 'lfquadrosdecorativos@gmail.com',
-        text: 'Olá Laíne! Basta acessar o projeto, clicar na aba "Equipe & Colaboradores" e convidar pelo e-mail.',
-        time: '11:15',
-        date: new Date().toISOString().split('T')[0],
-        timestamp: new Date(Date.now() - 3600000 * 2.5).toISOString(),
-      },
-      {
-        id: 'msg_l3',
-        sender: 'user',
-        senderName: 'Laíne Paula Loureiro',
-        senderEmail: 'laine@lparquitetura.com.br',
-        text: 'Perfeito, deu tudo certo com a importação do projeto 3D!',
-        time: '11:45',
-        date: new Date().toISOString().split('T')[0],
-        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
-      }
-    ]
-  }
-];
 
 const QUICK_RESPONSES = [
   'Olá! Seja bem-vindo(a) ao suporte do Meu Escritório Online. Como posso te ajudar hoje?',
@@ -113,62 +37,62 @@ const QUICK_RESPONSES = [
 
 export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) => {
   const { user: currentAdminUser, profile } = useAuth();
-  const [tickets, setTickets] = useState<SupportTicket[]>(() => {
-    try {
-      const stored = localStorage.getItem('meu_escritorio_admin_support_tickets_v1');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return DEFAULT_SAMPLE_TICKETS;
-  });
-
-  const [selectedTicketId, setSelectedTicketId] = useState<string>(() => {
-    return DEFAULT_SAMPLE_TICKETS[0]?.id || '';
-  });
-
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [selectedTicketId, setSelectedTicketId] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'waiting_admin' | 'in_progress' | 'resolved'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [replyInput, setReplyInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
+  const [selectedUserForNewChat, setSelectedUserForNewChat] = useState<UserProfile | null>(null);
+  const [initialMessageInput, setInitialMessageInput] = useState('');
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Cleanup old dummy sample tickets if they exist
+  useEffect(() => {
+    try {
+      localStorage.removeItem('meu_escritorio_admin_support_tickets_v1');
+    } catch {}
+
+    const deleteMockTickets = async () => {
+      try {
+        const mockIds = ['ticket_carlos_felipe', 'ticket_laine_loureiro'];
+        for (const mId of mockIds) {
+          await deleteDoc(doc(db, 'support_tickets', mId)).catch(() => {});
+        }
+      } catch {}
+    };
+    deleteMockTickets();
+  }, []);
 
   // Sync real-time with Firestore support_tickets collection
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'support_tickets'), (snapshot) => {
-      if (!snapshot.empty) {
-        const list: SupportTicket[] = [];
-        snapshot.forEach((d) => {
-          const data = d.data() as SupportTicket;
-          list.push({ ...data, id: d.id });
-        });
-
-        // Sort: tickets waiting for admin first, then by latest update
-        list.sort((a, b) => {
-          if (a.status === 'waiting_admin' && b.status !== 'waiting_admin') return -1;
-          if (b.status === 'waiting_admin' && a.status !== 'waiting_admin') return 1;
-          return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
-        });
-
-        setTickets(list);
-        try {
-          localStorage.setItem('meu_escritorio_admin_support_tickets_v1', JSON.stringify(list));
-        } catch {}
-
-        // Ensure active ticket is selected
-        if (list.length > 0 && !selectedTicketId) {
-          setSelectedTicketId(list[0].id);
+      const list: SupportTicket[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as SupportTicket;
+        // Exclude dummy templates
+        if (d.id === 'ticket_carlos_felipe' || d.id === 'ticket_laine_loureiro') {
+          return;
         }
+        list.push({ ...data, id: d.id });
+      });
+
+      // Sort: tickets waiting for admin first, then by latest update
+      list.sort((a, b) => {
+        if (a.status === 'waiting_admin' && b.status !== 'waiting_admin') return -1;
+        if (b.status === 'waiting_admin' && a.status !== 'waiting_admin') return 1;
+        return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+      });
+
+      setTickets(list);
+
+      // Maintain selection or select first
+      if (list.length > 0) {
+        setSelectedTicketId((prev) => (prev && list.some(t => t.id === prev) ? prev : list[0].id));
       } else {
-        // Initialize default sample tickets in Firestore if completely empty
-        DEFAULT_SAMPLE_TICKETS.forEach(async (sample) => {
-          try {
-            await setDoc(doc(db, 'support_tickets', sample.id), sanitizeFirestoreData(sample), { merge: true });
-          } catch (e) {
-            console.warn('Init sample support ticket notice:', e);
-          }
-        });
+        setSelectedTicketId('');
       }
     }, (err) => {
       console.warn('Firestore onSnapshot support_tickets notice:', err);
@@ -177,7 +101,7 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
     return () => unsub();
   }, []);
 
-  const activeTicket = tickets.find((t) => t.id === selectedTicketId) || tickets[0] || null;
+  const activeTicket = tickets.find((t) => t.id === selectedTicketId) || (tickets.length > 0 ? tickets[0] : null);
 
   // Auto scroll to bottom of messages
   useEffect(() => {
@@ -187,25 +111,12 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
   // When admin opens a ticket with unread messages, mark as read
   useEffect(() => {
     if (activeTicket && activeTicket.unreadByAdmin > 0) {
-      const updatedTicket: SupportTicket = {
-        ...activeTicket,
-        unreadByAdmin: 0,
-        status: activeTicket.status === 'waiting_admin' ? 'in_progress' : activeTicket.status,
-        messages: activeTicket.messages.map((m) => ({ ...m, read: true })),
-      };
-
-      setTickets((prev) => prev.map((t) => (t.id === activeTicket.id ? updatedTicket : t)));
-      try {
-        localStorage.setItem('meu_escritorio_admin_support_tickets_v1', JSON.stringify(tickets));
-      } catch {}
-
-      // Update in Firestore
       updateDoc(doc(db, 'support_tickets', activeTicket.id), {
         unreadByAdmin: 0,
         status: activeTicket.status === 'waiting_admin' ? 'in_progress' : activeTicket.status,
       }).catch(console.warn);
     }
-  }, [selectedTicketId]);
+  }, [activeTicket?.id, activeTicket?.unreadByAdmin]);
 
   // Send message from Admin to Subscriber
   const handleSendReply = async (customText?: string) => {
@@ -219,7 +130,7 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
     const adminDisplayName = profile?.name || currentAdminUser?.displayName || 'Carlos Felipe (Admin)';
 
     const newMsg: SupportMessage = {
-      id: `msg_admin_${Date.now()}`,
+      id: `msg_admin_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       sender: 'admin',
       senderName: adminDisplayName,
       senderEmail: currentAdminUser?.email || 'lfquadrosdecorativos@gmail.com',
@@ -243,14 +154,6 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
       updatedAt: now.toISOString(),
     };
 
-    // Optimistic UI update
-    setTickets((prev) => prev.map((t) => (t.id === activeTicket.id ? updatedTicket : t)));
-    try {
-      localStorage.setItem('meu_escritorio_admin_support_tickets_v1', JSON.stringify(
-        tickets.map((t) => (t.id === activeTicket.id ? updatedTicket : t))
-      ));
-    } catch {}
-
     setReplyInput('');
 
     // Persist to Firestore
@@ -263,18 +166,60 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
     }
   };
 
-  // Change ticket status
-  const handleChangeStatus = async (ticketId: string, newStatus: SupportTicket['status']) => {
-    const target = tickets.find((t) => t.id === ticketId);
-    if (!target) return;
+  // Start a new conversation manually with an existing subscriber
+  const handleStartNewChatWithSubscriber = async (targetUser: UserProfile) => {
+    if (!targetUser || !targetUser.email) return;
 
-    const updated: SupportTicket = {
-      ...target,
-      status: newStatus,
-      updatedAt: new Date().toISOString(),
+    const cleanEmail = targetUser.email.toLowerCase().trim();
+    const docId = `ticket_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+    const adminDisplayName = profile?.name || currentAdminUser?.displayName || 'Carlos Felipe (Admin)';
+
+    const initialText = initialMessageInput.trim() || 'Olá! Sou do suporte do Meu Escritório Online. Como posso ajudar você hoje?';
+
+    const firstMsg: SupportMessage = {
+      id: `msg_admin_${Date.now()}`,
+      sender: 'admin',
+      senderName: adminDisplayName,
+      senderEmail: currentAdminUser?.email || 'lfquadrosdecorativos@gmail.com',
+      text: initialText,
+      time: timeStr,
+      date: now.toISOString().split('T')[0],
+      timestamp: now.toISOString(),
+      read: true,
     };
 
-    setTickets((prev) => prev.map((t) => (t.id === ticketId ? updated : t)));
+    const newTicket: SupportTicket = {
+      id: docId,
+      subscriberUid: targetUser.uid || cleanEmail,
+      subscriberName: targetUser.name || cleanEmail.split('@')[0],
+      subscriberEmail: cleanEmail,
+      subscriberPhone: (targetUser as any).phone || '',
+      status: 'in_progress',
+      unreadByAdmin: 0,
+      unreadByUser: 1,
+      lastMessage: initialText,
+      lastMessageTime: timeStr,
+      lastMessageSender: 'admin',
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      messages: [firstMsg],
+    };
+
+    try {
+      await setDoc(doc(db, 'support_tickets', docId), sanitizeFirestoreData(newTicket), { merge: true });
+      setSelectedTicketId(docId);
+      setIsNewChatModalOpen(false);
+      setSelectedUserForNewChat(null);
+      setInitialMessageInput('');
+    } catch (err) {
+      console.warn('Error starting support conversation:', err);
+    }
+  };
+
+  // Change ticket status
+  const handleChangeStatus = async (ticketId: string, newStatus: SupportTicket['status']) => {
     try {
       await updateDoc(doc(db, 'support_tickets', ticketId), {
         status: newStatus,
@@ -289,20 +234,11 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
   const handleDeleteTicket = async (ticketId: string) => {
     if (!confirm('Deseja realmente excluir este atendimento de suporte?')) return;
 
-    const nextList = tickets.filter((t) => t.id !== ticketId);
-    setTickets(nextList);
-    try {
-      localStorage.setItem('meu_escritorio_admin_support_tickets_v1', JSON.stringify(nextList));
-    } catch {}
-
-    if (selectedTicketId === ticketId && nextList.length > 0) {
-      setSelectedTicketId(nextList[0].id);
-    } else if (nextList.length === 0) {
-      setSelectedTicketId('');
-    }
-
     try {
       await deleteDoc(doc(db, 'support_tickets', ticketId));
+      if (selectedTicketId === ticketId) {
+        setSelectedTicketId('');
+      }
     } catch (e) {
       console.warn('Error deleting support ticket:', e);
     }
@@ -310,22 +246,21 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
 
   // Filter tickets
   const filteredTickets = tickets.filter((ticket) => {
-    const matchesSearch =
-      ticket.subscriberName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.subscriberEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (ticket.subscriberPhone && ticket.subscriberPhone.includes(searchTerm)) ||
-      ticket.lastMessage.toLowerCase().includes(searchTerm.toLowerCase());
+    const nameMatch = (ticket.subscriberName || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const emailMatch = (ticket.subscriberEmail || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const phoneMatch = ticket.subscriberPhone && ticket.subscriberPhone.includes(searchTerm);
+    const messageMatch = (ticket.lastMessage || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-    if (!matchesSearch) return false;
+    if (!nameMatch && !emailMatch && !phoneMatch && !messageMatch) return false;
 
-    if (filterStatus === 'waiting_admin') return ticket.status === 'waiting_admin' || ticket.unreadByAdmin > 0;
+    if (filterStatus === 'waiting_admin') return ticket.status === 'waiting_admin' || (ticket.unreadByAdmin || 0) > 0;
     if (filterStatus === 'in_progress') return ticket.status === 'in_progress';
     if (filterStatus === 'resolved') return ticket.status === 'resolved';
 
     return true;
   });
 
-  const totalWaiting = tickets.filter((t) => t.status === 'waiting_admin' || t.unreadByAdmin > 0).length;
+  const totalWaiting = tickets.filter((t) => t.status === 'waiting_admin' || (t.unreadByAdmin || 0) > 0).length;
 
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
@@ -370,9 +305,20 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
                 <Headset className="w-4 h-4 text-[#b5986e]" />
                 <h3 className="font-serif font-bold text-sm text-zinc-900">Conversas de Suporte</h3>
               </div>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600">
-                {tickets.length} total
-              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setIsNewChatModalOpen(true)}
+                  className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                  title="Iniciar conversa com um assinante"
+                >
+                  <Plus className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Novo Chat</span>
+                </button>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600">
+                  {tickets.length}
+                </span>
+              </div>
             </div>
 
             <div className="relative">
@@ -440,7 +386,7 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
                   }}
                   className={`p-3.5 transition-all cursor-pointer flex items-start gap-3 relative group select-none ${
                     isSelected
-                      ? 'bg-amber-50/80 border-l-4 border-l-[#b5986e] shadow-2xs'
+                      ? 'bg-amber-50/90 border-l-4 border-l-[#b5986e] shadow-2xs'
                       : isWaiting
                       ? 'bg-amber-50/40 hover:bg-amber-50/60'
                       : 'hover:bg-zinc-100/80 active:bg-zinc-200/60'
@@ -476,7 +422,7 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
 
                     <p className={`text-xs truncate mt-1 ${hasUnread ? 'font-bold text-zinc-900' : 'text-zinc-500 font-normal'}`}>
                       {ticket.lastMessageSender === 'admin' ? <span className="text-[#b5986e] font-semibold">Você: </span> : ''}
-                      {ticket.lastMessage}
+                      {ticket.lastMessage || 'Nova conversa iniciada'}
                     </p>
 
                     <div className="flex items-center justify-between gap-2 mt-2 pt-1 border-t border-zinc-100/60">
@@ -506,12 +452,20 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
             })}
 
             {filteredTickets.length === 0 && (
-              <div className="p-8 text-center text-zinc-400 space-y-2">
-                <MessageSquare className="w-8 h-8 mx-auto opacity-30 text-zinc-400" />
-                <p className="text-xs font-bold text-zinc-600">Nenhum atendimento encontrado</p>
-                <p className="text-[11px] text-zinc-400 max-w-[200px] mx-auto">
-                  Quando um assinante enviar mensagem pelo botão de suporte, aparecerá aqui instantaneamente.
+              <div className="p-8 text-center text-zinc-400 space-y-3">
+                <MessageSquare className="w-10 h-10 mx-auto opacity-30 text-zinc-400" />
+                <p className="text-xs font-bold text-zinc-700">Nenhum atendimento no momento</p>
+                <p className="text-[11px] text-zinc-400 max-w-[220px] mx-auto leading-relaxed">
+                  Quando um assinante enviar mensagem pelo botão de suporte no app, aparecerá aqui instantaneamente em tempo real.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setIsNewChatModalOpen(true)}
+                  className="px-3 py-1.5 bg-[#b5986e] hover:bg-[#a3865c] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Iniciar Atendimento Manual</span>
+                </button>
               </div>
             )}
           </div>
@@ -666,7 +620,7 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
             >
               <input
                 type="text"
-                placeholder={`Responder ${activeTicket.subscriberName.split(' ')[0]}... (Pressione Enter para enviar)`}
+                placeholder={`Responder ${activeTicket.subscriberName ? activeTicket.subscriberName.split(' ')[0] : 'Assinante'}... (Pressione Enter para enviar)`}
                 value={replyInput}
                 onChange={(e) => setReplyInput(e.target.value)}
                 disabled={isSending}
@@ -686,13 +640,100 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
         ) : (
           <div className="lg:col-span-8 flex flex-col items-center justify-center p-8 text-center text-zinc-400 bg-zinc-50/50">
             <MessageSquare className="w-12 h-12 mb-3 text-zinc-300" />
-            <h4 className="text-sm font-bold text-zinc-700">Selecione uma conversa ao lado</h4>
+            <h4 className="text-sm font-bold text-zinc-700">Selecione uma conversa ou inicie um atendimento</h4>
             <p className="text-xs text-zinc-400 max-w-sm mt-1">
-              Escolha um assinante na lista para visualizar o histórico de suporte e responder em tempo real.
+              Escolha um assinante na lista ou clique em "Novo Chat" para enviar uma mensagem para um usuário cadastrado.
             </p>
           </div>
         )}
       </div>
+
+      {/* Modal: Iniciar Novo Chat com Assinante */}
+      {isNewChatModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-zinc-200 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <Headset className="w-5 h-5 text-[#b5986e]" />
+                <h3 className="font-serif font-bold text-base text-zinc-900">Iniciar Chat com Assinante</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsNewChatModalOpen(false);
+                  setSelectedUserForNewChat(null);
+                  setInitialMessageInput('');
+                }}
+                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 mb-1">
+                  Selecione o Assinante:
+                </label>
+                <select
+                  value={selectedUserForNewChat?.uid || ''}
+                  onChange={(e) => {
+                    const u = users.find(x => x.uid === e.target.value);
+                    setSelectedUserForNewChat(u || null);
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-xs font-semibold text-zinc-900 bg-zinc-50 focus:bg-white focus:outline-none focus:border-[#b5986e]"
+                >
+                  <option value="">Selecione um usuário...</option>
+                  {users.filter(u => u.role !== 'admin').map((u) => (
+                    <option key={u.uid} value={u.uid}>
+                      {u.name ? `${u.name} (${u.email})` : u.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 mb-1">
+                  Primeira Mensagem:
+                </label>
+                <textarea
+                  rows={3}
+                  value={initialMessageInput}
+                  onChange={(e) => setInitialMessageInput(e.target.value)}
+                  placeholder="Olá! Sou do suporte do Meu Escritório Online. Como posso te ajudar hoje?"
+                  className="w-full px-3.5 py-2 rounded-xl border border-zinc-300 text-xs font-medium text-zinc-900 bg-zinc-50 focus:bg-white focus:outline-none focus:border-[#b5986e]"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsNewChatModalOpen(false);
+                  setSelectedUserForNewChat(null);
+                  setInitialMessageInput('');
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-zinc-600 hover:bg-zinc-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!selectedUserForNewChat}
+                onClick={() => {
+                  if (selectedUserForNewChat) {
+                    handleStartNewChatWithSubscriber(selectedUserForNewChat);
+                  }
+                }}
+                className="px-4 py-2 bg-[#b5986e] hover:bg-[#a3865c] disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+              >
+                Iniciar Conversa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

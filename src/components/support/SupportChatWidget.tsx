@@ -10,11 +10,14 @@ export const SupportChatWidget: React.FC = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const { user, profile } = useAuth();
-  const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Assinante';
-  const userEmail = user?.email || 'contato@escritorio.com';
-  const userUid = user?.uid || (userEmail ? `sub_${userEmail.replace(/[^a-zA-Z0-9]/g, '_')}` : 'guest_user');
   
-  const ticketId = `ticket_${userUid}`;
+  const rawEmail = (user?.email || profile?.email || '').toLowerCase().trim();
+  const userName = profile?.name || user?.displayName || (rawEmail ? rawEmail.split('@')[0] : 'Assinante');
+  const userEmail = rawEmail || 'contato@escritorio.com';
+  const userUid = user?.uid || (rawEmail ? `sub_${rawEmail.replace(/[^a-zA-Z0-9]/g, '_')}` : 'guest_user');
+  
+  // Standardized document ID based on clean email or uid
+  const ticketId = rawEmail ? `ticket_${rawEmail.replace(/[^a-zA-Z0-9]/g, '_')}` : `ticket_${userUid}`;
 
   const defaultInitialMessages: SupportMessage[] = [
     {
@@ -32,7 +35,7 @@ export const SupportChatWidget: React.FC = () => {
 
   const [ticketData, setTicketData] = useState<SupportTicket | null>(() => {
     try {
-      const local = localStorage.getItem(`meu_escritorio_user_support_ticket_${userUid}`);
+      const local = localStorage.getItem(`meu_escritorio_user_support_ticket_${ticketId}`);
       if (local) return JSON.parse(local);
     } catch {}
     return null;
@@ -46,7 +49,7 @@ export const SupportChatWidget: React.FC = () => {
 
   // Real-time Firestore sync with the user's support ticket document
   useEffect(() => {
-    if (!userUid) return;
+    if (!ticketId) return;
 
     const docRef = doc(db, 'support_tickets', ticketId);
     const unsub = onSnapshot(docRef, (docSnap) => {
@@ -54,7 +57,7 @@ export const SupportChatWidget: React.FC = () => {
         const data = docSnap.data() as SupportTicket;
         setTicketData(data);
         try {
-          localStorage.setItem(`meu_escritorio_user_support_ticket_${userUid}`, JSON.stringify(data));
+          localStorage.setItem(`meu_escritorio_user_support_ticket_${ticketId}`, JSON.stringify(data));
         } catch {}
       }
     }, (err) => {
@@ -62,7 +65,7 @@ export const SupportChatWidget: React.FC = () => {
     });
 
     return () => unsub();
-  }, [userUid, ticketId]);
+  }, [ticketId]);
 
   // When user opens the chat, mark unread admin messages as read
   useEffect(() => {
@@ -74,7 +77,7 @@ export const SupportChatWidget: React.FC = () => {
         }).catch(() => {});
       }
     }
-  }, [isOpen, ticketData?.messages]);
+  }, [isOpen, ticketData?.messages, ticketId]);
 
   const messagesToDisplay: SupportMessage[] = ticketData?.messages && ticketData.messages.length > 0
     ? ticketData.messages
@@ -94,7 +97,7 @@ export const SupportChatWidget: React.FC = () => {
     const dateStr = now.toISOString().split('T')[0];
 
     const newMsg: SupportMessage = {
-      id: `msg_user_${Date.now()}`,
+      id: `msg_user_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       sender: 'user',
       senderName: userName,
       senderEmail: userEmail,
@@ -113,7 +116,7 @@ export const SupportChatWidget: React.FC = () => {
       subscriberUid: userUid,
       subscriberName: userName,
       subscriberEmail: userEmail,
-      subscriberPhone: profile?.phone || '',
+      subscriberPhone: (profile as any)?.phone || '',
       status: 'waiting_admin',
       unreadByAdmin: (ticketData?.unreadByAdmin || 0) + 1,
       unreadByUser: 0,
@@ -128,7 +131,7 @@ export const SupportChatWidget: React.FC = () => {
     // Optimistic UI state
     setTicketData(updatedTicket);
     try {
-      localStorage.setItem(`meu_escritorio_user_support_ticket_${userUid}`, JSON.stringify(updatedTicket));
+      localStorage.setItem(`meu_escritorio_user_support_ticket_${ticketId}`, JSON.stringify(updatedTicket));
     } catch {}
 
     setInputMessage('');
@@ -190,7 +193,7 @@ export const SupportChatWidget: React.FC = () => {
 
           {/* Messages Body */}
           <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-[var(--bg-card-secondary)]">
-            <div className="text-center my-1">
+            <div className="text-center my-2">
               <span className="text-[10px] text-[var(--text-muted)] bg-[var(--bg-card)] px-3 py-1 rounded-full border border-[var(--border-color)]">
                 Canal direto com o suporte • Atendimento ao assinante
               </span>
