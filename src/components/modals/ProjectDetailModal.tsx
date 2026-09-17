@@ -124,15 +124,15 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-5xl my-6 bg-[#1a1614] border border-[#3d342f] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="relative w-full max-w-5xl my-6 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Top Bar */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-[#3d342f] bg-[#14110f]">
+        <div className="flex items-center justify-between px-6 py-3.5 border-b border-[var(--border-color)] bg-[var(--bg-card-secondary)]">
           <div className="flex items-center gap-3">
             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${statusBadge.bg}`}>
               {statusBadge.label}
             </span>
-            <span className="text-xs text-[#a89c93] flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-[#d48b8e]" /> {project.location}
+            <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5" style={{ color: 'var(--theme-accent)' }} /> {project.location}
             </span>
           </div>
 
@@ -142,20 +142,20 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 onClose();
                 onEdit(project);
               }}
-              className="px-3 py-1.5 rounded-lg bg-[#28221e] hover:bg-[#3d342f] text-xs font-semibold text-[#fcf8f5] flex items-center gap-1.5 border border-[#3d342f] transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-[var(--bg-card-hover)] hover:bg-[var(--border-color)] text-xs font-semibold text-[var(--text-main)] flex items-center gap-1.5 border border-[var(--border-color)] transition-colors cursor-pointer"
             >
-              <Edit className="w-3.5 h-3.5 text-[#c58a4b]" /> Editar
+              <Edit className="w-3.5 h-3.5" style={{ color: 'var(--theme-primary)' }} /> Editar
             </button>
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="p-1.5 rounded-lg bg-[#28221e] hover:bg-rose-900/40 text-rose-400 hover:text-rose-300 border border-[#3d342f] transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg bg-[var(--bg-card-hover)] hover:bg-rose-900/40 text-rose-400 hover:text-rose-300 border border-[var(--border-color)] transition-colors cursor-pointer"
               title="Excluir Projeto"
             >
               <Trash2 className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#28221e] transition-colors ml-2 cursor-pointer"
+              className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-colors ml-2 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -175,26 +175,26 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
         {/* Delete Confirmation Dialog Inside Modal */}
         {showDeleteConfirm && (
           <div className="absolute inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="w-full max-w-md bg-[#1a1614] border border-rose-900/60 rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="w-full max-w-md bg-[var(--bg-card)] border border-rose-900/60 rounded-2xl p-6 shadow-2xl space-y-4">
               <div className="flex items-center gap-3.5">
                 <div className="w-11 h-11 rounded-xl bg-rose-950/70 border border-rose-900/60 flex items-center justify-center text-rose-400 shrink-0">
                   <Trash2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold font-serif text-[#fcf8f5]">Excluir {form.itemLabel}</h3>
-                  <p className="text-xs text-[#a89c93]">Confirmação de segurança</p>
+                  <h3 className="text-base font-bold font-serif text-[var(--text-main)]">Excluir {form.itemLabel}</h3>
+                  <p className="text-xs text-[var(--text-muted)]">Confirmação de segurança</p>
                 </div>
               </div>
 
-              <p className="text-xs text-[#d4c8c1] leading-relaxed">
-                Tem certeza que deseja excluir o cadastro <strong className="text-[#fcf8f5]">"{project.title}"</strong>? Esta ação removerá todas as fotos e registros associados.
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                Tem certeza que deseja excluir o cadastro <strong className="text-[var(--text-main)]">"{project.title}"</strong>? Esta ação removerá todas as fotos e registros associados.
               </p>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#3d342f]">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border-color)]">
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="px-4 py-2 rounded-xl bg-[#28221e] hover:bg-[#342d28] text-xs font-semibold text-[#e8ded7] transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[var(--bg-card-hover)] hover:bg-[var(--border-color)] text-xs font-semibold text-[var(--text-main)] transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>

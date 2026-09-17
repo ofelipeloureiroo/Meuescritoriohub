@@ -215,9 +215,9 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-      <div className="relative w-full max-w-3xl my-8 bg-[#1a1614] border border-[#3d342f] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-3xl my-8 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#3d342f] bg-[#14110f]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color)] bg-[var(--bg-card-secondary)]">
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center"
@@ -230,17 +230,17 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
               <FolderPlus className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-[#fcf8f5] font-serif">
+              <h2 className="text-lg font-bold text-[var(--text-main)] font-serif">
                 {initialProject ? form.modalTitleEdit : form.modalTitleNew}
               </h2>
-              <p className="text-xs text-[#a89c93]">
+              <p className="text-xs text-[var(--text-muted)]">
                 {form.modalSubtitle}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#28221e] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -263,7 +263,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                 placeholder={form.titlePlaceholder}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-[#fcf8f5] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
               />
             </div>
 
@@ -281,7 +281,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 list="client-suggestions"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-[#fcf8f5] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
               />
               <datalist id="client-suggestions">
                 {clients.map((c) => (
@@ -300,7 +300,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as ArchitectureProject['category'])}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-[#fcf8f5] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
               >
                 {categoryOptions.map((opt) => (
                   <option key={opt.id} value={opt.id}>
@@ -320,7 +320,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as ArchitectureProject['status'])}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-[#fcf8f5] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
               >
                 {statusOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -342,7 +342,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                 placeholder={form.locationPlaceholder}
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-[#fcf8f5] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
               />
             </div>
 
@@ -360,7 +360,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                     placeholder={form.metricPlaceholder}
                     value={areaM2}
                     onChange={(e) => setAreaM2(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-[#fcf8f5] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
                   />
                 </div>
 
@@ -376,7 +376,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                     placeholder={form.valuePlaceholder}
                     value={honorarios}
                     onChange={(e) => setHonorarios(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-[#fcf8f5] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
                   />
                 </div>
               </div>
@@ -393,28 +393,28 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                   placeholder={form.valuePlaceholder}
                   value={honorarios}
                   onChange={(e) => setHonorarios(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-[#fcf8f5] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
                 />
               </div>
             )}
           </div>
 
           {/* Photos Showcase & Upload Section */}
-          <div className="p-4 rounded-xl bg-[#14110f] border border-[#3d342f] space-y-4">
+          <div className="p-4 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)] space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Camera className="w-4 h-4" style={{ color: 'var(--theme-accent)' }} />
-                <h3 className="text-sm font-bold text-[#fcf8f5]">{form.photosSectionTitle}</h3>
+                <h3 className="text-sm font-bold text-[var(--text-main)]">{form.photosSectionTitle}</h3>
               </div>
-              <span className="text-xs text-[#a89c93]">{galleryImages.length} foto(s)</span>
+              <span className="text-xs text-[var(--text-muted)]">{galleryImages.length} foto(s)</span>
             </div>
 
             {/* Quick Upload / File Drop */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="flex flex-col items-center justify-center p-3.5 border-2 border-dashed border-[#4a3e37] hover:border-[var(--theme-primary)] rounded-xl bg-[#1b1714]/60 cursor-pointer transition-colors text-center group">
+              <label className="flex flex-col items-center justify-center p-3.5 border-2 border-dashed border-[var(--border-subtle)] hover:border-[var(--theme-primary)] rounded-xl bg-[var(--bg-body)]/60 cursor-pointer transition-colors text-center group">
                 <Upload className="w-5 h-5 mb-1 group-hover:scale-110 transition-transform" style={{ color: 'var(--theme-primary)' }} />
-                <span className="text-xs font-semibold text-[#fcf8f5]">Carregar Foto de Capa</span>
-                <span className="text-[10px] text-[#a89c93]">Imagem principal do card</span>
+                <span className="text-xs font-semibold text-[var(--text-main)]">Carregar Foto de Capa</span>
+                <span className="text-[10px] text-[var(--text-muted)]">Imagem principal do card</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -423,10 +423,10 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                 />
               </label>
 
-              <label className="flex flex-col items-center justify-center p-3.5 border-2 border-dashed border-[#4a3e37] hover:border-[var(--theme-primary)] rounded-xl bg-[#1b1714]/60 cursor-pointer transition-colors text-center group">
+              <label className="flex flex-col items-center justify-center p-3.5 border-2 border-dashed border-[var(--border-subtle)] hover:border-[var(--theme-primary)] rounded-xl bg-[var(--bg-body)]/60 cursor-pointer transition-colors text-center group">
                 <Upload className="w-5 h-5 mb-1 group-hover:scale-110 transition-transform" style={{ color: 'var(--theme-accent)' }} />
-                <span className="text-xs font-semibold text-[#fcf8f5]">Carregar Galeria (Múltiplas)</span>
-                <span className="text-[10px] text-[#a89c93]">Adicionar várias fotos</span>
+                <span className="text-xs font-semibold text-[var(--text-main)]">Carregar Galeria (Múltiplas)</span>
+                <span className="text-[10px] text-[var(--text-muted)]">Adicionar várias fotos</span>
                 <input
                   type="file"
                   multiple
@@ -437,15 +437,15 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
               </label>
             </div>
 
-            <div className="flex flex-col justify-center gap-2 p-3 bg-[#1b1714]/60 border border-[#3d342f] rounded-xl">
-              <span className="text-xs font-medium text-[#a89c93]">Ou adicionar link de foto (URL):</span>
+            <div className="flex flex-col justify-center gap-2 p-3 bg-[var(--bg-body)]/60 border border-[var(--border-color)] rounded-xl">
+              <span className="text-xs font-medium text-[var(--text-muted)]">Ou adicionar link de foto (URL):</span>
               <div className="flex gap-2">
                 <input
                   type="url"
                   placeholder="https://exemplo.com/foto.jpg"
                   value={newImageUrl}
                   onChange={(e) => setNewImageUrl(e.target.value)}
-                  className="flex-1 px-3 py-1.5 rounded-lg bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5] focus:outline-none focus:border-[var(--theme-primary)]"
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)]"
                 />
                 <button
                   type="button"
@@ -461,7 +461,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
             {/* Presets Quick Picker */}
             {form.presetPhotos && form.presetPhotos.length > 0 && (
               <div>
-                <span className="text-[11px] text-[#a89c93] block mb-1.5 font-medium">
+                <span className="text-[11px] text-[var(--text-muted)] block mb-1.5 font-medium">
                   {form.presetPhotosLabel}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -475,7 +475,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                         }
                         if (!coverImage) setCoverImage(preset.url);
                       }}
-                      className="px-2.5 py-1 rounded-lg bg-[#28221e] hover:bg-[#3d342f] text-[11px] text-[#e8ded7] border border-[#4a3e37] transition-colors cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg bg-[var(--bg-card-hover)] hover:bg-[var(--border-color)] text-[11px] text-[var(--text-main)] border border-[var(--border-subtle)] transition-colors cursor-pointer"
                     >
                       + {preset.name}
                     </button>
@@ -486,7 +486,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
 
             {/* Gallery Thumbnails Strip */}
             {galleryImages.length > 0 && (
-              <div className="space-y-2 pt-2 border-t border-[#2d2622]">
+              <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
                 <span className="text-xs font-semibold" style={{ color: 'var(--theme-accent)' }}>
                   Galeria Atual (Clique para definir a Capa):
                 </span>
@@ -497,7 +497,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                       <div
                         key={idx}
                         className={`relative rounded-xl overflow-hidden border-2 aspect-video group cursor-pointer transition-all ${
-                          isCover ? 'border-[var(--theme-primary)] ring-2 ring-[var(--theme-primary)]/30' : 'border-[#3d342f] opacity-80 hover:opacity-100'
+                          isCover ? 'border-[var(--theme-primary)] ring-2 ring-[var(--theme-primary)]/30' : 'border-[var(--border-color)] opacity-80 hover:opacity-100'
                         }`}
                         onClick={() => setCoverImage(img)}
                       >
@@ -531,22 +531,22 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
 
           {/* Antes e Depois (Transformação) */}
           {form.showBeforeAfter !== false && (
-            <div className="p-4 rounded-xl bg-[#14110f] border border-[#3d342f] space-y-3">
-              <h3 className="text-sm font-bold text-[#fcf8f5] flex items-center gap-2">
+            <div className="p-4 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)] space-y-3">
+              <h3 className="text-sm font-bold text-[var(--text-main)] flex items-center gap-2">
                 <span>{form.beforeAfterTitle}</span>
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-[#a89c93] mb-1">{form.beforeLabel}</label>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1">{form.beforeLabel}</label>
                   <div className="flex gap-2 mb-2">
                     <input
                       type="text"
                       placeholder="URL da foto"
                       value={beforeImage}
                       onChange={(e) => setBeforeImage(e.target.value)}
-                      className="flex-1 px-3 py-1.5 rounded-lg bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5]"
+                      className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-main)]"
                     />
-                    <label className="px-2.5 py-1.5 rounded-lg bg-[#28221e] hover:bg-[#3d342f] text-xs text-[#fcf8f5] cursor-pointer flex items-center">
+                    <label className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-card-hover)] hover:bg-[var(--border-color)] text-xs text-[var(--text-main)] cursor-pointer flex items-center">
                       <Upload className="w-3.5 h-3.5 mr-1" /> Arquivo
                       <input
                         type="file"
@@ -557,23 +557,23 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                     </label>
                   </div>
                   {beforeImage && (
-                    <div className="h-28 rounded-lg overflow-hidden border border-[#3d342f]">
+                    <div className="h-28 rounded-lg overflow-hidden border border-[var(--border-color)]">
                       <img src={beforeImage} alt="Antes" className="w-full h-full object-cover" />
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-xs text-[#a89c93] mb-1">{form.afterLabel}</label>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1">{form.afterLabel}</label>
                   <div className="flex gap-2 mb-2">
                     <input
                       type="text"
                       placeholder="URL da foto"
                       value={afterImage}
                       onChange={(e) => setAfterImage(e.target.value)}
-                      className="flex-1 px-3 py-1.5 rounded-lg bg-[#12100e] border border-[#3d342f] text-xs text-[#fcf8f5]"
+                      className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-main)]"
                     />
-                    <label className="px-2.5 py-1.5 rounded-lg bg-[#28221e] hover:bg-[#3d342f] text-xs text-[#fcf8f5] cursor-pointer flex items-center">
+                    <label className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-card-hover)] hover:bg-[var(--border-color)] text-xs text-[var(--text-main)] cursor-pointer flex items-center">
                       <Upload className="w-3.5 h-3.5 mr-1" /> Arquivo
                       <input
                         type="file"
@@ -584,7 +584,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                     </label>
                   </div>
                   {afterImage && (
-                    <div className="h-28 rounded-lg overflow-hidden border border-[#3d342f]">
+                    <div className="h-28 rounded-lg overflow-hidden border border-[var(--border-color)]">
                       <img src={afterImage} alt="Depois" className="w-full h-full object-cover" />
                     </div>
                   )}
@@ -607,7 +607,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                 placeholder={form.conceptPlaceholder}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#12100e] border border-[#3d342f] text-[#fcf8f5] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
               />
             </div>
 
@@ -630,12 +630,12 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                       handleAddTag();
                     }
                   }}
-                  className="flex-1 px-3.5 py-2 rounded-xl bg-[#12100e] border border-[#3d342f] text-[#fcf8f5] text-xs focus:outline-none focus:border-[var(--theme-primary)]"
+                  className="flex-1 px-3.5 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--theme-primary)]"
                 />
                 <button
                   type="button"
                   onClick={handleAddTag}
-                  className="px-4 py-2 rounded-xl bg-[#28221e] hover:bg-[#3d342f] text-xs font-medium text-[#fcf8f5] border border-[#4a3e37] cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[var(--bg-card-hover)] hover:bg-[var(--border-color)] text-xs font-medium text-[var(--text-main)] border border-[var(--border-subtle)] cursor-pointer"
                 >
                   + Adicionar Tag
                 </button>
@@ -644,7 +644,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                 {tags.map((t, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#28221e] text-xs text-[#e8ded7] border border-[#3d342f]"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-card-hover)] text-xs text-[var(--text-main)] border border-[var(--border-color)]"
                   >
                     #{t}
                     <button
@@ -661,7 +661,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
           </div>
 
           {/* Modal Footer Actions */}
-          <div className="flex items-center justify-between gap-3 pt-4 border-t border-[#3d342f]">
+          <div className="flex items-center justify-between gap-3 pt-4 border-t border-[var(--border-color)]">
             <div>
               {initialProject && (
                 showDeleteConfirm ? (
@@ -702,7 +702,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2.5 rounded-xl bg-[#28221e] hover:bg-[#342d28] text-xs font-semibold text-[#e8ded7] transition-colors cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-[var(--bg-card-hover)] hover:bg-[var(--border-color)] text-xs font-semibold text-[var(--text-main)] transition-colors cursor-pointer"
               >
                 Cancelar
               </button>

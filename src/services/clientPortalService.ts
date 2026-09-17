@@ -1444,14 +1444,36 @@ export function buildClientPortalAccess(
   const accessCode = existingPortal?.accessCode || `MEO-${client.id.replace(/\D/g, '').slice(-4) || '2026'}`;
 
   const profileAny = profile as any;
+  let resolvedProfileName = profile?.name || profile?.title;
+  let resolvedProfileEmail = profileAny?.email;
+  let resolvedProfilePhone = profileAny?.phone;
+  let resolvedProfileLogo = profile?.logoUrl || profile?.photoUrl;
+
+  if (!resolvedProfileName) {
+    try {
+      const rawProf = localStorage.getItem('profile');
+      if (rawProf) {
+        const parsed = JSON.parse(rawProf);
+        resolvedProfileName = parsed.name || parsed.title || parsed.companyName;
+        resolvedProfileEmail = resolvedProfileEmail || parsed.email;
+        resolvedProfilePhone = resolvedProfilePhone || parsed.phone;
+        resolvedProfileLogo = resolvedProfileLogo || parsed.logoUrl || parsed.photoUrl;
+      }
+    } catch {}
+  }
+
+  const finalOfficeName = resolvedProfileName || existingPortal?.officeName || 'LF Quadros & Decoração';
+  const finalOfficeEmail = resolvedProfileEmail || profileAny?.email || 'lfquadrosdecorativos@gmail.com';
+  const finalOfficePhone = resolvedProfilePhone || profileAny?.phone || '(11) 98765-4321';
+  const finalOfficeLogo = resolvedProfileLogo || profile?.logoUrl || profile?.photoUrl;
 
   return {
     id: portalId,
     officeUid: existingPortal?.officeUid || 'office-current',
-    officeName: profile?.name || profile?.title || existingPortal?.officeName || 'Escritório',
-    officeEmail: profileAny?.email || 'contato@escritorio.com',
-    officePhone: profileAny?.phone || '(11) 98765-4321',
-    officeLogo: profile?.logoUrl || profile?.photoUrl,
+    officeName: finalOfficeName,
+    officeEmail: finalOfficeEmail,
+    officePhone: finalOfficePhone,
+    officeLogo: finalOfficeLogo,
     clientId: client.id,
     clientName: client.name,
     clientEmail: cleanClientEmail,
@@ -1539,13 +1561,35 @@ export function syncPortalWithOfficeRegistry(
         ];
 
   const profileAny = profile as any;
+  let resolvedProfileName = profile?.name || profile?.title;
+  let resolvedProfileEmail = profileAny?.email;
+  let resolvedProfilePhone = profileAny?.phone;
+  let resolvedProfileLogo = profile?.logoUrl || profile?.photoUrl;
+
+  if (!resolvedProfileName) {
+    try {
+      const rawProf = localStorage.getItem('profile');
+      if (rawProf) {
+        const parsed = JSON.parse(rawProf);
+        resolvedProfileName = parsed.name || parsed.title || parsed.companyName;
+        resolvedProfileEmail = resolvedProfileEmail || parsed.email;
+        resolvedProfilePhone = resolvedProfilePhone || parsed.phone;
+        resolvedProfileLogo = resolvedProfileLogo || parsed.logoUrl || parsed.photoUrl;
+      }
+    } catch {}
+  }
+
+  const finalOfficeName = resolvedProfileName || portal.officeName || 'LF Quadros & Decoração';
+  const finalOfficeEmail = resolvedProfileEmail || profileAny?.email || 'lfquadrosdecorativos@gmail.com';
+  const finalOfficePhone = resolvedProfilePhone || profileAny?.phone || '(11) 98765-4321';
+  const finalOfficeLogo = resolvedProfileLogo || profile?.logoUrl || profile?.photoUrl;
 
   return {
     ...portal,
-    officeName: profile?.name || profile?.title || portal.officeName,
-    officeEmail: profileAny?.email || portal.officeEmail,
-    officePhone: profileAny?.phone || portal.officePhone,
-    officeLogo: profile?.logoUrl || profile?.photoUrl || portal.officeLogo,
+    officeName: finalOfficeName,
+    officeEmail: finalOfficeEmail,
+    officePhone: finalOfficePhone,
+    officeLogo: finalOfficeLogo,
     projects: portalProjects
   };
 }

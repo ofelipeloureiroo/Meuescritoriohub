@@ -417,191 +417,156 @@ Acesse o painel administrativo: ${baseUrl}/admin
   const WORKSPACE_FILE = path.join(DATA_DIR, 'workspace.json');
 
   function loadPortalsMap(): Record<string, any> {
+    let map: Record<string, any> = {};
     try {
       if (fs.existsSync(PORTALS_FILE)) {
         const raw = fs.readFileSync(PORTALS_FILE, 'utf-8');
         const parsed = JSON.parse(raw);
-        if (parsed && Object.keys(parsed).length > 0) {
-          return parsed;
+        if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+          map = parsed;
         }
       }
     } catch (err) {
       console.warn('Error reading portals.json:', err);
     }
 
-    // Seed default portals so portal logins work out-of-the-box in any browser
-    const seedPortals: any = {
-      'portal-cli-silveira-1': {
-        id: 'portal-cli-silveira-1',
-        officeUid: 'office-canonical',
-        officeName: 'LF Quadros & Interiores',
-        officeEmail: 'lfquadrosdecorativos@gmail.com',
-        officePhone: '(11) 99888-7766',
-        clientId: 'cli-silveira-1',
-        clientName: 'Roberto & Camila Silveira',
-        clientEmail: 'roberto.silveira@exemplo.com',
-        clientPhone: '(11) 99888-7766',
-        accessCode: 'MEO-2026',
-        status: 'active',
-        createdAt: '2026-03-01T10:00:00.000Z',
-        projects: [
-          {
-            id: 'proj-arch-1',
-            title: 'Residência Alphaville - Reforma Completa & Design',
-            category: 'Residencial',
-            status: 'em_andamento',
-            progress: 68,
-            startDate: '2026-02-01',
-            expectedEndDate: '2026-11-30',
-            budget: 145000,
-            description: 'Projeto completo de reforma e interiores.',
-            stages: [
-              { id: 'stg-1', title: 'Estudo Preliminar', status: 'completed', date: '2026-02-15' },
-              { id: 'stg-2', title: 'Anteprojeto & Aprovação', status: 'completed', date: '2026-04-10' },
-              { id: 'stg-3', title: 'Projeto Executivo & Marcenaria', status: 'in_progress', date: '2026-07-25' },
-              { id: 'stg-4', title: 'Acompanhamento & Decoração', status: 'pending', date: '2026-11-20' }
-            ]
-          }
-        ],
-        documents: [
-          {
-            id: 'doc-silveira-1',
-            title: 'Contrato de Prestação de Serviços - Residência Alphaville',
-            category: 'contrato',
-            fileName: 'Contrato_Silveira_2026.pdf',
-            date: '15/02/2026',
-            size: '2.4 MB'
-          }
-        ],
-        messages: [
-          {
-            id: 'msg-silveira-1',
-            sender: 'office',
-            senderName: 'Equipe do Escritório',
-            text: 'Olá, Roberto e Camila! Sejam bem-vindos ao seu Portal exclusivo. Acompanhem por aqui o progresso e etapas da sua Residência Alphaville!',
-            createdAt: '2026-03-01T10:00:00.000Z',
-            read: true
-          }
-        ]
-      },
-      'portal-cli-lucas-1': {
-        id: 'portal-cli-lucas-1',
-        officeUid: 'office-canonical',
-        officeName: 'LF Quadros & Interiores',
-        officeEmail: 'lfquadrosdecorativos@gmail.com',
-        officePhone: '(11) 98765-4321',
-        clientId: 'cli-lucas-1',
-        clientName: 'Lucas Holanda',
-        clientEmail: 'lucas.holanda@cliente.com',
-        clientPhone: '(11) 97654-3210',
-        accessCode: 'MEO-2026',
-        status: 'active',
-        createdAt: '2026-03-01T10:00:00.000Z',
-        projects: [
-          {
-            id: 'proj-arch-lucas',
-            title: 'Projeto Residencial & Reforma de Interiores',
-            category: 'Residencial',
-            status: 'em_andamento',
-            progress: 45,
-            startDate: '2026-02-15',
-            expectedEndDate: '2026-10-30',
-            budget: 65000,
-            description: 'Projeto de arquitetura de interiores residencial.',
-            stages: [
-              { id: 'stg-1', title: 'Briefing & Estudo Preliminar', status: 'completed', date: '2026-03-01' },
-              { id: 'stg-2', title: 'Modelagem 3D & Anteprojeto', status: 'completed', date: '2026-04-15' },
-              { id: 'stg-3', title: 'Projeto Executivo & Especificações', status: 'in_progress', date: '2026-07-10' },
-              { id: 'stg-4', title: 'Entrega Final & Obra', status: 'pending', date: '2026-10-25' }
-            ]
-          }
-        ],
-        documents: [
-          {
-            id: 'doc-lucas-1',
-            title: 'Contrato de Arquitetura e Interiores - Lucas Holanda',
-            category: 'contrato',
-            fileName: 'Contrato_Lucas_Holanda.pdf',
-            date: '01/03/2026',
-            size: '1.8 MB'
-          }
-        ],
-        messages: [
-          {
-            id: 'msg-lucas-1',
-            sender: 'office',
-            senderName: 'Equipe do Escritório',
-            text: 'Olá, Lucas! Seja muito bem-vindo ao seu Portal exclusivo. Aqui você acompanha as etapas, prazos e novidades do seu projeto em tempo real.',
-            createdAt: '2026-03-01T10:00:00.000Z',
-            read: true
-          }
-        ]
-      },
-      'portal-cli-machado-1': {
-        id: 'portal-cli-machado-1',
-        officeUid: 'office-canonical',
-        officeName: 'LF Quadros & Interiores',
-        officeEmail: 'lfquadrosdecorativos@gmail.com',
-        officePhone: '(21) 97654-9988',
-        clientId: 'cli-machado-1',
-        clientName: 'Lucas & Fabiana Machado',
-        clientEmail: 'lucas.machado@empresa.com',
-        clientPhone: '(21) 97654-9988',
-        accessCode: 'MEO-2026',
-        status: 'active',
-        createdAt: '2026-03-01T10:00:00.000Z',
-        projects: [
-          {
-            id: 'proj-arch-3',
-            title: 'Suíte Master Aconchego & Spa',
-            category: 'suite_master',
-            status: 'em_andamento',
-            progress: 55,
-            startDate: '2026-03-10',
-            expectedEndDate: '2026-09-15',
-            budget: 48000,
-            description: 'Transformação de suíte master com spa e closet integrado.',
-            stages: [
-              { id: 'stg-1', title: 'Estudo Preliminar & Moodboard', status: 'completed', date: '2026-03-25' },
-              { id: 'stg-2', title: 'Anteprojeto & Detalhamento 3D', status: 'completed', date: '2026-05-10' },
-              { id: 'stg-3', title: 'Marcenaria & Iluminação', status: 'in_progress', date: '2026-07-30' },
-              { id: 'stg-4', title: 'Finalização & Decoração', status: 'pending', date: '2026-09-10' }
-            ]
-          }
-        ],
-        documents: [
-          {
-            id: 'doc-machado-1',
-            title: 'Contrato de Projeto - Suíte Master',
-            category: 'contrato',
-            fileName: 'Contrato_Machado.pdf',
-            date: '10/03/2026',
-            size: '1.2 MB'
-          }
-        ],
-        messages: [
-          {
-            id: 'msg-machado-1',
-            sender: 'office',
-            senderName: 'Equipe do Escritório',
-            text: 'Olá, Lucas e Fabiana! Acompanhem por aqui todos os detalhes da Suíte Master.',
-            createdAt: '2026-03-10T10:00:00.000Z',
-            read: true
-          }
-        ]
-      }
-    };
+    if (Object.keys(map).length === 0) {
+      // Seed default portals so portal logins work out-of-the-box in any browser
+      const seedPortals: any = {
+        'portal-cli-silveira-1': {
+          id: 'portal-cli-silveira-1',
+          officeUid: 'office-canonical',
+          officeName: 'LF Quadros & Decoração',
+          officeEmail: 'lfquadrosdecorativos@gmail.com',
+          officePhone: '(11) 99888-7766',
+          clientId: 'cli-silveira-1',
+          clientName: 'Roberto & Camila Silveira',
+          clientEmail: 'roberto.silveira@exemplo.com',
+          clientPhone: '(11) 99888-7766',
+          accessCode: 'MEO-2026',
+          status: 'active',
+          createdAt: '2026-03-01T10:00:00.000Z',
+          projects: [
+            {
+              id: 'proj-arch-1',
+              title: 'Residência Alphaville - Reforma Completa & Design',
+              category: 'Residencial',
+              status: 'em_andamento',
+              progress: 68,
+              startDate: '2026-02-01',
+              expectedEndDate: '2026-11-30',
+              budget: 145000,
+              description: 'Projeto completo de reforma e interiores.',
+              stages: [
+                { id: 'stg-1', title: 'Estudo Preliminar', status: 'completed', date: '2026-02-15' },
+                { id: 'stg-2', title: 'Anteprojeto & Aprovação', status: 'completed', date: '2026-04-10' },
+                { id: 'stg-3', title: 'Projeto Executivo & Marcenaria', status: 'in_progress', date: '2026-07-25' },
+                { id: 'stg-4', title: 'Acompanhamento & Decoração', status: 'pending', date: '2026-11-20' }
+              ]
+            }
+          ],
+          documents: [
+            {
+              id: 'doc-silveira-1',
+              title: 'Contrato de Prestação de Serviços - Residência Alphaville',
+              category: 'contrato',
+              fileName: 'Contrato_Silveira_2026.pdf',
+              date: '15/02/2026',
+              size: '2.4 MB'
+            }
+          ],
+          messages: [
+            {
+              id: 'msg-silveira-1',
+              sender: 'office',
+              senderName: 'Equipe do Escritório',
+              text: 'Olá, Roberto e Camila! Sejam bem-vindos ao seu Portal exclusivo. Acompanhem por aqui o progresso e etapas da sua Residência Alphaville!',
+              createdAt: '2026-03-01T10:00:00.000Z',
+              read: true
+            }
+          ]
+        },
+        'portal-cli-lucas-1': {
+          id: 'portal-cli-lucas-1',
+          officeUid: 'office-canonical',
+          officeName: 'LF Quadros & Decoração',
+          officeEmail: 'lfquadrosdecorativos@gmail.com',
+          officePhone: '(11) 98765-4321',
+          clientId: 'cli-lucas-1',
+          clientName: 'Lucas Holanda',
+          clientEmail: 'lucas.holanda@cliente.com',
+          clientPhone: '(11) 97654-3210',
+          accessCode: 'MEO-2026',
+          status: 'active',
+          createdAt: '2026-03-01T10:00:00.000Z',
+          projects: [
+            {
+              id: 'proj-arch-lucas',
+              title: 'Projeto Residencial & Reforma de Interiores',
+              category: 'Residencial',
+              status: 'em_andamento',
+              progress: 45,
+              startDate: '2026-02-15',
+              expectedEndDate: '2026-10-30',
+              budget: 65000,
+              description: 'Projeto de arquitetura de interiores residencial.',
+              stages: [
+                { id: 'stg-1', title: 'Briefing & Estudo Preliminar', status: 'completed', date: '2026-03-01' },
+                { id: 'stg-2', title: 'Modelagem 3D & Anteprojeto', status: 'completed', date: '2026-04-15' },
+                { id: 'stg-3', title: 'Projeto Executivo & Especificações', status: 'in_progress', date: '2026-07-10' },
+                { id: 'stg-4', title: 'Entrega Final & Obra', status: 'pending', date: '2026-10-25' }
+              ]
+            }
+          ],
+          documents: [
+            {
+              id: 'doc-lucas-1',
+              title: 'Contrato de Arquitetura e Interiores - Lucas Holanda',
+              category: 'contrato',
+              fileName: 'Contrato_Lucas_Holanda.pdf',
+              date: '01/03/2026',
+              size: '1.8 MB'
+            }
+          ],
+          messages: [
+            {
+              id: 'msg-lucas-1',
+              sender: 'office',
+              senderName: 'Equipe do Escritório',
+              text: 'Olá, Lucas! Seja muito bem-vindo ao seu Portal exclusivo. Aqui você acompanha as etapas, prazos e novidades do seu projeto em tempo real.',
+              createdAt: '2026-03-01T10:00:00.000Z',
+              read: true
+            }
+          ]
+        }
+      };
+      map = seedPortals;
+    }
 
-    seedPortals['email_roberto.silveira@exemplo.com'] = seedPortals['portal-cli-silveira-1'];
-    seedPortals['email_lucas.holanda@cliente.com'] = seedPortals['portal-cli-lucas-1'];
-    seedPortals['email_lucas.machado@empresa.com'] = seedPortals['portal-cli-machado-1'];
-    seedPortals['code_MEO-2026'] = seedPortals['portal-cli-silveira-1'];
-
+    // Always synchronize officeName with current workspace profile
     try {
-      fs.writeFileSync(PORTALS_FILE, JSON.stringify(seedPortals, null, 2), 'utf-8');
-    } catch {}
+      const ws = loadWorkspaceData();
+      const wsProfile = ws?.profile || {};
+      const currentOfficeName = wsProfile.name || wsProfile.title;
+      const currentOfficeEmail = wsProfile.email;
+      const currentOfficePhone = wsProfile.phone;
+      const currentOfficeLogo = wsProfile.logoUrl || wsProfile.photoUrl;
 
-    return seedPortals;
+      if (currentOfficeName) {
+        for (const k of Object.keys(map)) {
+          if (map[k] && typeof map[k] === 'object') {
+            map[k].officeName = currentOfficeName;
+            if (currentOfficeEmail) map[k].officeEmail = currentOfficeEmail;
+            if (currentOfficePhone) map[k].officePhone = currentOfficePhone;
+            if (currentOfficeLogo) map[k].officeLogo = currentOfficeLogo;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Error syncing office profile into portals:', e);
+    }
+
+    return map;
   }
 
   function savePortalsMap(map: Record<string, any>) {
