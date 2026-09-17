@@ -66,7 +66,7 @@ export const ClientPortalDashboard: React.FC = () => {
   const [adminSenderRole, setAdminSenderRole] = useState<'office' | 'client'>('office');
 
   const [portal, setPortal] = useState<ClientPortalAccess>(() => {
-    const raw = sessionStorage.getItem('client_portal_session');
+    const raw = sessionStorage.getItem('client_portal_session') || localStorage.getItem('client_portal_session');
     if (raw) {
       try {
         return JSON.parse(raw);

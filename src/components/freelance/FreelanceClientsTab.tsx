@@ -141,8 +141,15 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
   const [actionEffortHours, setActionEffortHours] = useState('0');
   const [actionEffortMinutes, setActionEffortMinutes] = useState('0');
   const [actionSpecificTime, setActionSpecificTime] = useState('');
-  const [actionResponsible, setActionResponsible] = useState('Laíne Paula Loureiro');
+  const [actionResponsible, setActionResponsible] = useState(teamMembers[0]?.name || '');
   const [actionNotes, setActionNotes] = useState('');
+
+  // Keep actionResponsible initialized with the office team members
+  useEffect(() => {
+    if (!actionResponsible && teamMembers.length > 0) {
+      setActionResponsible(teamMembers[0].name);
+    }
+  }, [teamMembers, actionResponsible]);
 
   // Associate Contract Modal State
   const [isAssociateModalOpen, setIsAssociateModalOpen] = useState(false);
@@ -643,7 +650,14 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setIsActionModalOpen(true)}
+                  onClick={() => {
+                    const defaultResp = 
+                      (activeViewingClient?.responsibleName && teamMembers.some(m => m.name === activeViewingClient.responsibleName))
+                        ? activeViewingClient.responsibleName
+                        : (teamMembers[0]?.name || '');
+                    setActionResponsible(defaultResp);
+                    setIsActionModalOpen(true);
+                  }}
                   className="px-3.5 py-2 rounded-xl bg-[#c8a97e] hover:bg-[#b8986d] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -663,7 +677,14 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                   </p>
                   <button
                     type="button"
-                    onClick={() => setIsActionModalOpen(true)}
+                    onClick={() => {
+                      const defaultResp = 
+                        (activeViewingClient?.responsibleName && teamMembers.some(m => m.name === activeViewingClient.responsibleName))
+                          ? activeViewingClient.responsibleName
+                          : (teamMembers[0]?.name || '');
+                      setActionResponsible(defaultResp);
+                      setIsActionModalOpen(true);
+                    }}
                     className="px-4 py-2.5 rounded-xl bg-[#faf6f0] text-[#8a6a3e] hover:bg-[#f3ebe0] font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1.5 mx-auto"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -845,7 +866,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                   setActionEffortHours('0');
                   setActionEffortMinutes('0');
                   setActionSpecificTime('');
-                  setActionResponsible('Laíne Paula Loureiro');
+                  setActionResponsible(teamMembers[0]?.name || '');
                   setActionNotes('');
                   setIsActionModalOpen(false);
                 }}
@@ -1033,9 +1054,11 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                       className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-800 focus:outline-none focus:border-[#c8a97e] bg-white cursor-pointer"
                     >
                       <option value="">Selecione o responsável</option>
-                      <option value="Laíne Paula Loureiro">Laíne Paula Loureiro</option>
-                      <option value="Bárbara Cristina da Silva">Bárbara Cristina da Silva</option>
-                      <option value="Administrador">Administrador</option>
+                      {teamMembers.map((member) => (
+                        <option key={member.id} value={member.name}>
+                          {member.name}{member.roleTitle ? ` (${member.roleTitle})` : ''}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>

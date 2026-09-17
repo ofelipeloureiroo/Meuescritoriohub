@@ -1107,6 +1107,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         };
         const sanitized = JSON.parse(JSON.stringify(payload));
         await setDoc(canonicalWorkspaceRef, sanitized, { merge: true });
+        await setDoc(doc(db, 'workspaces', 'canonical'), sanitized, { merge: true }).catch(() => {});
 
         if (targetUid && targetUid !== canonicalUid) {
           const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
@@ -1153,7 +1154,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } catch (e) {
         console.warn('Auto sync client portals warning:', e);
       }
-    }, 1200);
+    }, 400);
     return () => clearTimeout(timer);
   }, [clients, architectureProjects, architectProfile, projectMilestones]);
 

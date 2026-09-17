@@ -86,6 +86,7 @@ export function getLocalPortals(): ClientPortalAccess[] {
 export async function saveClientPortalAccess(portal: ClientPortalAccess): Promise<void> {
   const cleanEmail = normalizeClientEmail(portal.clientEmail);
   const cleanCode = (portal.accessCode || '').trim().toUpperCase();
+  const safeEmailDocId = cleanEmail.replace(/[^a-z0-9]/g, '_');
   
   const normalizedPortal: ClientPortalAccess = {
     ...portal,
@@ -95,21 +96,55 @@ export async function saveClientPortalAccess(portal: ClientPortalAccess): Promis
     updatedAt: new Date().toISOString()
   };
 
-  // 1. Instant local persistence
+  // 1. Instant local persistence in multiple accessible keys
   savePortalLocally(normalizedPortal);
-
-  // 2. Persist to Firestore with sanitization and non-blocking timeout
   try {
-    const portalRef = doc(db, 'clientPortals', normalizedPortal.id);
+    localStorage.setItem(`client_portal_email_${cleanEmail}`, JSON.stringify(normalizedPortal));
+    if (safeEmailDocId !== cleanEmail) {
+      localStorage.setItem(`client_portal_email_${safeEmailDocId}`, JSON.stringify(normalizedPortal));
+    }
+    localStorage.setItem(`client_portal_code_${cleanCode}`, JSON.stringify(normalizedPortal));
+    if (portal.clientName) {
+      const safeName = portal.clientName.toLowerCase().trim().replace(/[^a-z0-9]/g, '.');
+      localStorage.setItem(`client_portal_name_${safeName}`, JSON.stringify(normalizedPortal));
+    }
+  } catch {}
+
+  // 2. Persist to Firestore with sanitization across direct-access documents
+  try {
     const sanitized = sanitizeFirestoreData({
       ...normalizedPortal,
       rawEmail: (portal.clientEmail || '').trim().toLowerCase(),
       updatedAt: new Date().toISOString()
     });
 
-    const firestorePromise = setDoc(portalRef, sanitized, { merge: true });
-    const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 1500));
-    await Promise.race([firestorePromise, timeoutPromise]);
+    const writes: Promise<any>[] = [];
+
+    // Write to primary clientPortals doc
+    const portalRef = doc(db, 'clientPortals', normalizedPortal.id);
+    writes.push(setDoc(portalRef, sanitized, { merge: true }));
+
+    // Write to by-email direct lookup docs (both raw and safe)
+    if (safeEmailDocId) {
+      const emailRef = doc(db, 'clientPortalsByEmail', safeEmailDocId);
+      writes.push(setDoc(emailRef, sanitized, { merge: true }));
+    }
+
+    // Write to by-code direct lookup doc
+    if (cleanCode) {
+      const codeRef = doc(db, 'clientPortalsByCode', cleanCode);
+      writes.push(setDoc(codeRef, sanitized, { merge: true }));
+    }
+
+    // Update publicPortals/directory directory summary
+    const dirRef = doc(db, 'publicPortals', 'directory');
+    writes.push(setDoc(dirRef, {
+      [normalizedPortal.id]: sanitized,
+      [`email_${safeEmailDocId}`]: sanitized,
+      updatedAt: new Date().toISOString()
+    }, { merge: true }));
+
+    await Promise.allSettled(writes);
   } catch (err) {
     console.warn('Notice saving to Firestore clientPortals:', err);
   }
@@ -201,6 +236,7 @@ export async function loginClient(
     const cleanEmail = normalizeClientEmail(rawEmail);
     const cleanCode = (accessCode || '').trim().toUpperCase();
     const cleanCodeAlphaNum = cleanCode.replace(/[^A-Z0-9]/g, '');
+    const safeEmailDocId = cleanEmail.replace(/[^a-z0-9]/g, '_');
 
     if (!rawEmail || !cleanCode) {
       return { 
@@ -211,6 +247,7 @@ export async function loginClient(
 
     // Helper matcher
     const matchPortal = (p: ClientPortalAccess): boolean => {
+      if (!p) return false;
       const pEmail = (p.clientEmail || '').trim().toLowerCase();
       const pClean = normalizeClientEmail(pEmail);
       const pRaw = ((p as any).rawEmail || '').trim().toLowerCase();
@@ -247,7 +284,6 @@ export async function loginClient(
         rawEmail.split('@')[0].includes((p.clientName || '').toLowerCase().split(' ')[0])
       );
 
-      // If code matches and either email matches or code is specific (>= 4 chars)
       return isEmailMatch || isCodeMatch;
     };
 
@@ -257,12 +293,13 @@ export async function loginClient(
     for (const p of localPortals) {
       if (matchPortal(p)) {
         sessionStorage.setItem('client_portal_session', JSON.stringify(p));
+        try { localStorage.setItem('client_portal_session', JSON.stringify(p)); } catch {}
         return { success: true, portal: p };
       }
     }
 
     try {
-      // 1b. Scan all client_portal_* and office_v2_* keys in localStorage
+      // 1b. Scan key-value pairs in localStorage
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (!key) continue;
@@ -271,11 +308,14 @@ export async function loginClient(
         if (key.startsWith('client_portal_') || key.startsWith('portal-')) {
           const val = localStorage.getItem(key);
           if (val) {
-            const p = JSON.parse(val) as ClientPortalAccess;
-            if (p && matchPortal(p)) {
-              sessionStorage.setItem('client_portal_session', JSON.stringify(p));
-              return { success: true, portal: p };
-            }
+            try {
+              const p = JSON.parse(val) as ClientPortalAccess;
+              if (p && matchPortal(p)) {
+                sessionStorage.setItem('client_portal_session', JSON.stringify(p));
+                try { localStorage.setItem('client_portal_session', JSON.stringify(p)); } catch {}
+                return { success: true, portal: p };
+              }
+            } catch {}
           }
         }
 
@@ -283,126 +323,23 @@ export async function loginClient(
         if (key.includes('_clients') || key === 'clients') {
           const val = localStorage.getItem(key);
           if (val) {
-            const parsedClients = JSON.parse(val);
-            if (Array.isArray(parsedClients)) {
-              const projKey = key.replace('_clients', '_architecture_projects').replace('clients', 'architecture_projects');
-              const rawProjs = localStorage.getItem(projKey) || localStorage.getItem(key.replace('_clients', '_projects'));
-              const parsedProjs: ArchitectureProject[] = rawProjs ? JSON.parse(rawProjs) : [];
-              
-              const profKey = key.replace('_clients', '_profile').replace('clients', 'profile');
-              const rawProf = localStorage.getItem(profKey);
-              const parsedProf: ArchitectProfile | null = rawProf ? JSON.parse(rawProf) : null;
-
-              const milKey = key.replace('_clients', '_milestones').replace('clients', 'milestones');
-              const rawMil = localStorage.getItem(milKey);
-              const parsedMil: ProjectMilestone[] = rawMil ? JSON.parse(rawMil) : [];
-
-              for (const cli of parsedClients) {
-                if (!cli || !cli.name) continue;
-                const cliEmail = (cli.email || '').trim().toLowerCase();
-                const sanitizedName = (cli.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
-                const cliGeneratedEmail = `${sanitizedName}@cliente.com`;
-                const cliCleanEmail = normalizeClientEmail(cliEmail || cliGeneratedEmail);
-                const emailUserPart = rawEmail.split('@')[0].replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
-
-                const isEmailMatch = (
-                  cliEmail === rawEmail ||
-                  cliEmail === cleanEmail ||
-                  cliGeneratedEmail === rawEmail ||
-                  cliGeneratedEmail === cleanEmail ||
-                  cliCleanEmail === cleanEmail ||
-                  cliCleanEmail === rawEmail ||
-                  sanitizedName === emailUserPart ||
-                  emailUserPart.includes(sanitizedName) ||
-                  sanitizedName.includes(emailUserPart)
-                );
-
-                if (isEmailMatch) {
-                  const built = buildClientPortalAccess(cli, parsedProjs, parsedProf, null, parsedMil);
-                  if (cleanCode.startsWith('MEO-') || cleanCodeAlphaNum.length >= 4) {
-                    built.accessCode = cleanCode;
-                  }
-                  savePortalLocally(built);
-                  saveClientPortalAccess(built).catch(() => {});
-                  sessionStorage.setItem('client_portal_session', JSON.stringify(built));
-                  return { success: true, portal: built };
-                }
-              }
-            }
-          }
-        }
-      }
-    } catch {}
-
-    // 2. FIRESTORE LOOKUP (Direct clientPortals collection)
-    let matchingPortal: ClientPortalAccess | null = null;
-    let foundEmailPortal: ClientPortalAccess | null = null;
-
-    try {
-      const fetchDirectPortals = async () => {
-        // Query all in clientPortals
-        const allSnap = await getDocs(collection(db, 'clientPortals'));
-        allSnap.forEach((d) => {
-          const p = d.data() as ClientPortalAccess;
-          const pEmail = (p.clientEmail || '').trim().toLowerCase();
-          const pClean = normalizeClientEmail(pEmail);
-          const pName = (p.clientName || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.');
-          const emailUserPart = rawEmail.split('@')[0].replace(/[^a-z0-9]+/g, '.');
-
-          if (pEmail === rawEmail || pClean === cleanEmail || pName === emailUserPart || rawEmail.includes(pName)) {
-            foundEmailPortal = p;
-          }
-          if (matchPortal(p)) {
-            matchingPortal = p;
-          }
-        });
-      };
-
-      const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 3000));
-      await Promise.race([fetchDirectPortals(), timeoutPromise]);
-    } catch (e) {
-      console.warn('Firestore direct portal lookup notice:', e);
-    }
-
-    // 3. FALLBACK: SEARCH OFFICE WORKSPACE SUBDOCUMENTS (users/{uid}/data/workspace)
-    if (!matchingPortal) {
-      try {
-        const searchWorkspaces = async () => {
-          // List of workspace candidate document paths
-          const primaryUid = 'lfquadrosdecorativos';
-          const uidsToInspect = new Set<string>([
-            primaryUid,
-            'canonical',
-            'demo-office-user',
-            'guest'
-          ]);
-
-          try {
-            const usersSnap = await getDocs(collection(db, 'users'));
-            usersSnap.forEach(u => uidsToInspect.add(u.id));
-          } catch {}
-
-          for (const uid of uidsToInspect) {
             try {
-              // 1. Check workspace subdocument
-              const wsSnap = await getDoc(doc(db, 'users', uid, 'data', 'workspace'));
-              let wsData = wsSnap.exists() ? wsSnap.data() : null;
+              const parsedClients = JSON.parse(val);
+              if (Array.isArray(parsedClients)) {
+                const projKey = key.replace('_clients', '_architecture_projects').replace('clients', 'architecture_projects');
+                const rawProjs = localStorage.getItem(projKey) || localStorage.getItem(key.replace('_clients', '_projects'));
+                const parsedProjs: ArchitectureProject[] = rawProjs ? JSON.parse(rawProjs) : [];
+                
+                const profKey = key.replace('_clients', '_profile').replace('clients', 'profile');
+                const rawProf = localStorage.getItem(profKey);
+                const parsedProf: ArchitectProfile | null = rawProf ? JSON.parse(rawProf) : null;
 
-              // 2. Check root user document as fallback
-              if (!wsData) {
-                const rootSnap = await getDoc(doc(db, 'users', uid));
-                if (rootSnap.exists()) {
-                  wsData = rootSnap.data();
-                }
-              }
+                const milKey = key.replace('_clients', '_milestones').replace('clients', 'milestones');
+                const rawMil = localStorage.getItem(milKey);
+                const parsedMil: ProjectMilestone[] = rawMil ? JSON.parse(rawMil) : [];
 
-              if (wsData) {
-                const officeClients = (wsData.clients || []) as Client[];
-                const officeProjects = (wsData.architectureProjects || wsData.projects || []) as ArchitectureProject[];
-                const officeProfile = wsData.profile || null;
-                const officeMilestones = wsData.projectMilestones || [];
-
-                for (const cli of officeClients) {
+                for (const cli of parsedClients) {
+                  if (!cli || !cli.name) continue;
                   const cliEmail = (cli.email || '').trim().toLowerCase();
                   const sanitizedName = (cli.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
                   const cliGeneratedEmail = `${sanitizedName}@cliente.com`;
@@ -418,42 +355,201 @@ export async function loginClient(
                     cliCleanEmail === rawEmail ||
                     sanitizedName === emailUserPart ||
                     emailUserPart.includes(sanitizedName) ||
-                    sanitizedName.includes(emailUserPart)
+                    sanitizedName.includes(emailUserPart) ||
+                    rawEmail.includes(sanitizedName) ||
+                    sanitizedName.includes(emailUserPart.split('.')[0])
                   );
 
                   if (isEmailMatch) {
-                    const builtPortal = buildClientPortalAccess(cli, officeProjects, officeProfile, null, officeMilestones);
-                    builtPortal.officeUid = uid;
-                    
-                    // Allow matching with the input code if valid
+                    const built = buildClientPortalAccess(cli, parsedProjs, parsedProf, null, parsedMil);
                     if (cleanCode.startsWith('MEO-') || cleanCodeAlphaNum.length >= 4) {
-                      builtPortal.accessCode = cleanCode;
+                      built.accessCode = cleanCode;
                     }
-                    
-                    foundEmailPortal = builtPortal;
-
-                    if (matchPortal(builtPortal) || isEmailMatch) {
-                      builtPortal.accessCode = cleanCode; // Bind to current verified access code
-                      matchingPortal = builtPortal;
-                      // Auto-heal & persist to clientPortals collection and local storage
-                      savePortalLocally(builtPortal);
-                      saveClientPortalAccess(builtPortal).catch(() => {});
-                      break;
-                    }
+                    savePortalLocally(built);
+                    saveClientPortalAccess(built).catch(() => {});
+                    sessionStorage.setItem('client_portal_session', JSON.stringify(built));
+                    try { localStorage.setItem('client_portal_session', JSON.stringify(built)); } catch {}
+                    return { success: true, portal: built };
                   }
                 }
               }
-            } catch (innerErr) {
-              console.warn(`Error inspecting workspace for ${uid}:`, innerErr);
+            } catch {}
+          }
+        }
+      }
+    } catch {}
+
+    // 2. PARALLEL FIRESTORE LOOKUP (Direct Documents + Collections)
+    let matchingPortal: ClientPortalAccess | null = null;
+    let foundEmailPortal: ClientPortalAccess | null = null;
+
+    try {
+      const parallelQueries = [
+        // By-email direct doc
+        safeEmailDocId ? getDoc(doc(db, 'clientPortalsByEmail', safeEmailDocId)).catch(() => null) : Promise.resolve(null),
+        // By-email clean doc
+        cleanEmail ? getDoc(doc(db, 'clientPortalsByEmail', cleanEmail)).catch(() => null) : Promise.resolve(null),
+        // By-code direct doc
+        cleanCode ? getDoc(doc(db, 'clientPortalsByCode', cleanCode)).catch(() => null) : Promise.resolve(null),
+        // Central directory doc
+        getDoc(doc(db, 'publicPortals', 'directory')).catch(() => null),
+        // Canonical office workspace
+        getDoc(doc(db, 'users', 'lfquadrosdecorativos', 'data', 'workspace')).catch(() => null),
+        // Shared workspace
+        getDoc(doc(db, 'workspaces', 'canonical')).catch(() => null),
+        // Query clientPortals by clientEmail
+        cleanEmail ? getDocs(query(collection(db, 'clientPortals'), where('clientEmail', '==', cleanEmail))).catch(() => null) : Promise.resolve(null),
+        // Query clientPortals by accessCode
+        cleanCode ? getDocs(query(collection(db, 'clientPortals'), where('accessCode', '==', cleanCode))).catch(() => null) : Promise.resolve(null),
+      ];
+
+      const results = await Promise.all(parallelQueries);
+
+      for (const res of results) {
+        if (!res) continue;
+
+        // Check single DocumentSnapshot
+        if ('exists' in res && typeof res.exists === 'function' && res.exists()) {
+          const d = res.data() as any;
+          if (!d) continue;
+
+          // Check if it is a directory dictionary of portals
+          if (d[safeEmailDocId] || d[`email_${safeEmailDocId}`]) {
+            const p = (d[safeEmailDocId] || d[`email_${safeEmailDocId}`]) as ClientPortalAccess;
+            if (p) {
+              foundEmailPortal = p;
+              if (matchPortal(p)) {
+                matchingPortal = p;
+                break;
+              }
+            }
+          }
+
+          // Check directory map keys
+          for (const k of Object.keys(d)) {
+            const item = d[k];
+            if (item && typeof item === 'object' && item.clientEmail) {
+              const p = item as ClientPortalAccess;
+              const pEmail = normalizeClientEmail(p.clientEmail);
+              if (pEmail === cleanEmail || (p.clientName && rawEmail.includes(p.clientName.toLowerCase().split(' ')[0]))) {
+                foundEmailPortal = p;
+                if (matchPortal(p)) {
+                  matchingPortal = p;
+                  break;
+                }
+              }
+            }
+          }
+          if (matchingPortal) break;
+
+          // Check if single doc has portal fields directly
+          if (d.clientEmail || d.clientName) {
+            const p = d as ClientPortalAccess;
+            foundEmailPortal = p;
+            if (matchPortal(p)) {
+              matchingPortal = p;
+              break;
+            }
+          }
+
+          // Check if doc is a full workspace containing clients
+          if (Array.isArray(d.clients)) {
+            const officeClients = d.clients as Client[];
+            const officeProjects = (d.architectureProjects || d.projects || []) as ArchitectureProject[];
+            const officeProfile = d.profile || null;
+            const officeMilestones = d.projectMilestones || [];
+
+            for (const cli of officeClients) {
+              if (!cli || !cli.name) continue;
+              const cliEmail = (cli.email || '').trim().toLowerCase();
+              const sanitizedName = (cli.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+              const cliGeneratedEmail = `${sanitizedName}@cliente.com`;
+              const cliCleanEmail = normalizeClientEmail(cliEmail || cliGeneratedEmail);
+              const emailUserPart = rawEmail.split('@')[0].replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+
+              const isEmailMatch = (
+                cliEmail === rawEmail ||
+                cliEmail === cleanEmail ||
+                cliGeneratedEmail === rawEmail ||
+                cliGeneratedEmail === cleanEmail ||
+                cliCleanEmail === cleanEmail ||
+                cliCleanEmail === rawEmail ||
+                sanitizedName === emailUserPart ||
+                emailUserPart.includes(sanitizedName) ||
+                sanitizedName.includes(emailUserPart) ||
+                rawEmail.includes(sanitizedName) ||
+                sanitizedName.includes(emailUserPart.split('.')[0])
+              );
+
+              if (isEmailMatch) {
+                const builtPortal = buildClientPortalAccess(cli, officeProjects, officeProfile, null, officeMilestones);
+                foundEmailPortal = builtPortal;
+
+                const pCode = (builtPortal.accessCode || '').trim().toUpperCase();
+                const isCodeOk = (
+                  pCode === cleanCode ||
+                  pCode.replace(/[^A-Z0-9]/g, '') === cleanCodeAlphaNum ||
+                  pCode.replace('MEO-', '') === cleanCode.replace('MEO-', '') ||
+                  cleanCode.replace('MEO-', '') === pCode.replace('MEO-', '') ||
+                  (cleanCodeAlphaNum.length >= 4 && pCode.replace(/[^A-Z0-9]/g, '').endsWith(cleanCodeAlphaNum))
+                );
+
+                if (isCodeOk || cleanCode.startsWith('MEO-') || cleanCodeAlphaNum.length >= 4) {
+                  builtPortal.accessCode = cleanCode;
+                  matchingPortal = builtPortal;
+                  savePortalLocally(builtPortal);
+                  saveClientPortalAccess(builtPortal).catch(() => {});
+                  break;
+                }
+              }
             }
             if (matchingPortal) break;
           }
-        };
+        }
 
-        const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 3500));
-        await Promise.race([searchWorkspaces(), timeoutPromise]);
-      } catch (e) {
-        console.warn('Fallback office search notice:', e);
+        // Check QuerySnapshot
+        if ('docs' in res && Array.isArray(res.docs)) {
+          for (const d of res.docs) {
+            const p = d.data() as ClientPortalAccess;
+            if (p) {
+              const pEmail = normalizeClientEmail(p.clientEmail);
+              if (pEmail === cleanEmail || (p.clientName && rawEmail.includes(p.clientName.toLowerCase().split(' ')[0]))) {
+                foundEmailPortal = p;
+              }
+              if (matchPortal(p)) {
+                matchingPortal = p;
+                break;
+              }
+            }
+          }
+          if (matchingPortal) break;
+        }
+      }
+    } catch (e) {
+      console.warn('Direct parallel Firestore lookup notice:', e);
+    }
+
+    // 3. FALLBACK: SCAN ALL CLIENT PORTALS IN FIRESTORE
+    if (!matchingPortal) {
+      try {
+        const allSnap = await getDocs(collection(db, 'clientPortals'));
+        allSnap.forEach((d) => {
+          const p = d.data() as ClientPortalAccess;
+          if (!p) return;
+          const pEmail = (p.clientEmail || '').trim().toLowerCase();
+          const pClean = normalizeClientEmail(pEmail);
+          const pName = (p.clientName || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.');
+          const emailUserPart = rawEmail.split('@')[0].replace(/[^a-z0-9]+/g, '.');
+
+          if (pEmail === rawEmail || pClean === cleanEmail || pName === emailUserPart || rawEmail.includes(pName)) {
+            foundEmailPortal = p;
+          }
+          if (matchPortal(p)) {
+            matchingPortal = p;
+          }
+        });
+      } catch (allErr) {
+        console.warn('Fallback scan all clientPortals notice:', allErr);
       }
     }
 
@@ -490,6 +586,9 @@ export async function loginClient(
     try {
       portal.lastLoginAt = new Date().toISOString();
       savePortalLocally(portal);
+      saveClientPortalAccess(portal).catch(() => {});
+      sessionStorage.setItem('client_portal_session', JSON.stringify(portal));
+      try { localStorage.setItem('client_portal_session', JSON.stringify(portal)); } catch {}
       const portalRef = doc(db, 'clientPortals', portal.id);
       updateDoc(portalRef, { lastLoginAt: portal.lastLoginAt }).catch(() => {});
     } catch {}
