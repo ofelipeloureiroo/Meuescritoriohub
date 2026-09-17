@@ -27,11 +27,14 @@ import {
   Building2,
   Link2,
   RefreshCw,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Send,
+  X,
+  Loader2
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
-import { ClientPortalAccess, ArchitectureProject, Client } from '../../types';
+import { ClientPortalAccess, ArchitectureProject, Client, ClientPortalMessage } from '../../types';
 import { 
   subscribeToOfficePortals, 
   setPortalStatus, 
@@ -39,6 +42,8 @@ import {
   buildClientPortalAccess,
   syncPortalWithOfficeRegistry,
   saveClientPortalAccess,
+  sendPortalMessage,
+  savePortalLocally,
   SAMPLE_CLIENT_PORTAL 
 } from '../../services/clientPortalService';
 import { OfficeClientPortalManagerModal } from './OfficeClientPortalManagerModal';
@@ -62,6 +67,9 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
   // Modal state
   const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
   const [selectedPortalForEdit, setSelectedPortalForEdit] = useState<ClientPortalAccess | null>(null);
+  const [selectedPortalForChat, setSelectedPortalForChat] = useState<ClientPortalAccess | null>(null);
+  const [chatReplyText, setChatReplyText] = useState('');
+  const [isSendingChat, setIsSendingChat] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
 
@@ -158,6 +166,44 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
     }
     if (window.confirm(`Tem certeza de que deseja remover o acesso do cliente "${p.clientName}" ao portal?`)) {
       await deleteClientPortalAccess(p.id);
+    }
+  };
+
+  const handleSendChatReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPortalForChat || !chatReplyText.trim() || isSendingChat) return;
+
+    const textToSend = chatReplyText.trim();
+    setChatReplyText('');
+    setIsSendingChat(true);
+
+    try {
+      const senderName = architectProfile?.name || architectProfile?.title || 'Equipe do Escritório';
+      await sendPortalMessage(
+        selectedPortalForChat.id,
+        'office',
+        `${senderName} (Equipe)`,
+        textToSend
+      );
+
+      // Locally update selected portal messages for instant feedback
+      const newMsg: ClientPortalMessage = {
+        id: 'msg-' + Date.now(),
+        sender: 'office',
+        senderName: `${senderName} (Equipe)`,
+        text: textToSend,
+        createdAt: new Date().toISOString(),
+        read: true
+      };
+
+      setSelectedPortalForChat(prev => prev ? {
+        ...prev,
+        messages: [...(prev.messages || []), newMsg]
+      } : null);
+    } catch (err) {
+      console.error('Erro ao responder chat do cliente:', err);
+    } finally {
+      setIsSendingChat(false);
     }
   };
 
@@ -452,6 +498,15 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                   {/* Top Action Buttons */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
+                      onClick={() => setSelectedPortalForChat(p)}
+                      className="px-3 py-1.5 rounded-xl bg-[var(--theme-primary)]/10 hover:bg-[var(--theme-primary)]/20 text-[var(--theme-primary)] border border-[var(--theme-primary)]/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                      title="Ver e responder mensagens deste cliente"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Chat ({p.messages?.length || 0})</span>
+                    </button>
+
+                    <button
                       onClick={() => handleOpenClientPortal(p)}
                       className="px-3 py-1.5 rounded-xl bg-[var(--bg-card-secondary)] hover:opacity-90 text-[var(--text-main)] border border-[var(--border-color)] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                       title="Visualizar o portal como o cliente visualiza"
@@ -680,6 +735,123 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
         }}
         initialPortal={selectedPortalForEdit}
       />
+
+      {/* Direct Quick Chat Modal for Office */}
+      {selectedPortalForChat && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col h-[640px] max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Header */}
+            <div className="px-6 py-4 bg-[var(--bg-card-secondary)] border-b border-[var(--border-color)] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] flex items-center justify-center font-bold text-base border border-[var(--theme-primary)]/20">
+                  {selectedPortalForChat.clientName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-sm sm:text-base text-[var(--text-main)]">
+                      {selectedPortalForChat.clientName}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">
+                      Canal do Radar
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {selectedPortalForChat.projects?.[0]?.title ? `Projeto: ${selectedPortalForChat.projects[0].title}` : selectedPortalForChat.clientEmail}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenClientPortal(selectedPortalForChat);
+                    setSelectedPortalForChat(null);
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-xs text-[var(--theme-primary)] border border-[var(--border-color)] font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Abrir visão completa do portal do cliente"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Visualizar Portal</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedPortalForChat(null)}
+                  className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Messages Thread */}
+            <div className="flex-1 p-6 overflow-y-auto space-y-3 bg-[var(--bg-card)]">
+              {selectedPortalForChat.messages && selectedPortalForChat.messages.length > 0 ? (
+                selectedPortalForChat.messages.map((msg) => {
+                  const isOffice = msg.sender === 'office';
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col ${isOffice ? 'items-end' : 'items-start'}`}
+                    >
+                      <div
+                        className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed shadow-xs ${
+                          isOffice
+                            ? 'bg-[var(--theme-primary)] text-black font-medium rounded-br-none'
+                            : 'bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-[var(--text-main)] rounded-bl-none'
+                        }`}
+                      >
+                        <div className={`text-[10px] font-bold mb-1 ${isOffice ? 'text-black/80' : 'text-[var(--theme-primary)]'}`}>
+                          {msg.senderName || (isOffice ? 'Equipe do Escritório' : selectedPortalForChat.clientName)}
+                        </div>
+                        <p className="whitespace-pre-wrap">{msg.text}</p>
+                        <div className={`text-[9px] mt-1.5 text-right opacity-70`}>
+                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(msg.createdAt).toLocaleDateString('pt-BR')}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center text-xs text-[var(--text-muted)] space-y-2">
+                  <MessageSquare className="w-10 h-10 text-[var(--text-muted)] opacity-50" />
+                  <p className="font-bold text-sm text-[var(--text-main)]">Nenhuma mensagem trocada ainda</p>
+                  <p className="max-w-xs text-[11px]">
+                    Envie uma mensagem abaixo para iniciar o atendimento deste cliente no radar.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Reply Input Form */}
+            <form onSubmit={handleSendChatReply} className="p-4 bg-[var(--bg-card-secondary)] border-t border-[var(--border-color)] flex items-center gap-3">
+              <input
+                type="text"
+                placeholder="Escreva uma resposta da equipe para o cliente..."
+                value={chatReplyText}
+                onChange={(e) => setChatReplyText(e.target.value)}
+                disabled={isSendingChat}
+                className="flex-1 bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] rounded-xl px-4 py-2.5 text-xs placeholder-[var(--text-muted)] focus:outline-hidden focus:border-[var(--theme-primary)] disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={!chatReplyText.trim() || isSendingChat}
+                className="px-4 py-2.5 rounded-xl bg-[var(--theme-primary)] hover:brightness-110 disabled:opacity-40 text-black font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-md"
+              >
+                {isSendingChat ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                <span>Enviar</span>
+              </button>
+            </form>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

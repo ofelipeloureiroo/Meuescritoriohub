@@ -45,6 +45,7 @@ import {
   subscribeToOfficePortals,
   buildClientPortalAccess,
   syncPortalWithOfficeRegistry,
+  savePortalLocally,
   SAMPLE_CLIENT_PORTAL 
 } from '../../services/clientPortalService';
 import { OfficeClientPortalManagerModal } from './OfficeClientPortalManagerModal';
@@ -193,12 +194,15 @@ export const ClientPortalDashboard: React.FC = () => {
 
     const updated = {
       ...portal,
-      messages: [...(effectivePortal.messages || []), newMsg]
+      id: effectivePortal.id || portal.id,
+      clientId: effectivePortal.clientId || portal.clientId,
+      messages: [...(effectivePortal.messages || portal.messages || []), newMsg]
     };
     setPortal(updated);
     sessionStorage.setItem('client_portal_session', JSON.stringify(updated));
+    savePortalLocally(updated);
 
-    if (portal.id === SAMPLE_CLIENT_PORTAL.id || !portal.id.startsWith('portal-')) {
+    if (portal.id === SAMPLE_CLIENT_PORTAL.id) {
       if (sender === 'client') {
         setTimeout(() => {
           const replyMsg: ClientPortalMessage = {
@@ -211,6 +215,7 @@ export const ClientPortalDashboard: React.FC = () => {
           setPortal((prev) => {
             const up = { ...prev, messages: [...(prev.messages || []), replyMsg] };
             sessionStorage.setItem('client_portal_session', JSON.stringify(up));
+            savePortalLocally(up);
             return up;
           });
         }, 1200);
@@ -221,7 +226,7 @@ export const ClientPortalDashboard: React.FC = () => {
     setSendingMessage(true);
     try {
       await sendPortalMessage(
-        portal.id,
+        effectivePortal.id || portal.id,
         sender,
         senderName,
         textToSend

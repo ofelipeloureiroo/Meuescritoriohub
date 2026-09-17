@@ -32,12 +32,12 @@ export const ClientLogin: React.FC = () => {
   const [recoverLoading, setRecoverLoading] = useState(false);
   const [recoverResult, setRecoverResult] = useState<{ success: boolean; message: string; code?: string } | null>(null);
 
-  // Auto-login if token is present
+  // Auto-login if code/token is present in URL
   useEffect(() => {
-    const token = searchParams.get('token');
+    const codeParam = searchParams.get('code') || searchParams.get('codigo') || searchParams.get('token');
     const paramEmail = searchParams.get('email');
-    if (token && paramEmail) {
-      handleDirectLogin(paramEmail, token);
+    if (codeParam && paramEmail) {
+      handleDirectLogin(paramEmail, codeParam);
     }
   }, []);
 

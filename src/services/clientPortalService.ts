@@ -469,11 +469,6 @@ export async function sendPortalMessage(
   senderName: string, 
   text: string
 ): Promise<void> {
-  const portalRef = doc(db, 'clientPortals', portalId);
-  const snap = await getDoc(portalRef);
-  if (!snap.exists()) return;
-
-  const portal = snap.data() as ClientPortalAccess;
   const newMessage: ClientPortalMessage = {
     id: 'msg-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
     sender,
@@ -483,11 +478,54 @@ export async function sendPortalMessage(
     read: false
   };
 
-  const updatedMessages = [...(portal.messages || []), newMessage];
-  await updateDoc(portalRef, {
-    messages: updatedMessages,
-    updatedAt: new Date().toISOString()
-  });
+  // 1. Instant local persistence
+  const localPortals = getLocalPortals();
+  const localIndex = localPortals.findIndex(p => p.id === portalId);
+  if (localIndex >= 0) {
+    const p = localPortals[localIndex];
+    p.messages = [...(p.messages || []), newMessage];
+    p.updatedAt = new Date().toISOString();
+    savePortalLocally(p);
+  } else {
+    // Check if session storage portal matches
+    try {
+      const raw = sessionStorage.getItem('client_portal_session');
+      if (raw) {
+        const p = JSON.parse(raw) as ClientPortalAccess;
+        if (p.id === portalId) {
+          p.messages = [...(p.messages || []), newMessage];
+          p.updatedAt = new Date().toISOString();
+          savePortalLocally(p);
+        }
+      }
+    } catch {}
+  }
+
+  // 2. Firestore persistence
+  try {
+    const portalRef = doc(db, 'clientPortals', portalId);
+    const snap = await getDoc(portalRef);
+    if (snap.exists()) {
+      const portal = snap.data() as ClientPortalAccess;
+      const updatedMessages = [...(portal.messages || []), newMessage];
+      await updateDoc(portalRef, {
+        messages: sanitizeFirestoreData(updatedMessages),
+        updatedAt: new Date().toISOString()
+      });
+    } else {
+      // Find in local and save whole document
+      const current = getLocalPortals().find(p => p.id === portalId);
+      if (current) {
+        await setDoc(portalRef, sanitizeFirestoreData({
+          ...current,
+          messages: [...(current.messages || []), newMessage],
+          updatedAt: new Date().toISOString()
+        }), { merge: true });
+      }
+    }
+  } catch (err) {
+    console.warn('Notice persisting portal message to Firestore:', err);
+  }
 }
 
 /**
@@ -497,22 +535,37 @@ export async function addPortalDocument(
   portalId: string, 
   document: Omit<ClientPortalDocument, 'id' | 'date'>
 ): Promise<void> {
-  const portalRef = doc(db, 'clientPortals', portalId);
-  const snap = await getDoc(portalRef);
-  if (!snap.exists()) return;
-
-  const portal = snap.data() as ClientPortalAccess;
   const newDoc: ClientPortalDocument = {
     ...document,
     id: 'doc-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
     date: new Date().toISOString()
   };
 
-  const updatedDocs = [...(portal.documents || []), newDoc];
-  await updateDoc(portalRef, {
-    documents: updatedDocs,
-    updatedAt: new Date().toISOString()
-  });
+  // 1. Instant local persistence
+  const localPortals = getLocalPortals();
+  const localIndex = localPortals.findIndex(p => p.id === portalId);
+  if (localIndex >= 0) {
+    const p = localPortals[localIndex];
+    p.documents = [...(p.documents || []), newDoc];
+    p.updatedAt = new Date().toISOString();
+    savePortalLocally(p);
+  }
+
+  // 2. Firestore persistence
+  try {
+    const portalRef = doc(db, 'clientPortals', portalId);
+    const snap = await getDoc(portalRef);
+    if (snap.exists()) {
+      const portal = snap.data() as ClientPortalAccess;
+      const updatedDocs = [...(portal.documents || []), newDoc];
+      await updateDoc(portalRef, {
+        documents: sanitizeFirestoreData(updatedDocs),
+        updatedAt: new Date().toISOString()
+      });
+    }
+  } catch (err) {
+    console.warn('Notice adding document to Firestore:', err);
+  }
 }
 
 /**
@@ -522,16 +575,31 @@ export async function deletePortalDocument(
   portalId: string, 
   documentId: string
 ): Promise<void> {
-  const portalRef = doc(db, 'clientPortals', portalId);
-  const snap = await getDoc(portalRef);
-  if (!snap.exists()) return;
+  // 1. Instant local persistence
+  const localPortals = getLocalPortals();
+  const localIndex = localPortals.findIndex(p => p.id === portalId);
+  if (localIndex >= 0) {
+    const p = localPortals[localIndex];
+    p.documents = (p.documents || []).filter(d => d.id !== documentId);
+    p.updatedAt = new Date().toISOString();
+    savePortalLocally(p);
+  }
 
-  const portal = snap.data() as ClientPortalAccess;
-  const updatedDocs = (portal.documents || []).filter(d => d.id !== documentId);
-  await updateDoc(portalRef, {
-    documents: updatedDocs,
-    updatedAt: new Date().toISOString()
-  });
+  // 2. Firestore persistence
+  try {
+    const portalRef = doc(db, 'clientPortals', portalId);
+    const snap = await getDoc(portalRef);
+    if (snap.exists()) {
+      const portal = snap.data() as ClientPortalAccess;
+      const updatedDocs = (portal.documents || []).filter(d => d.id !== documentId);
+      await updateDoc(portalRef, {
+        documents: sanitizeFirestoreData(updatedDocs),
+        updatedAt: new Date().toISOString()
+      });
+    }
+  } catch (err) {
+    console.warn('Notice deleting document from Firestore:', err);
+  }
 }
 
 /**
