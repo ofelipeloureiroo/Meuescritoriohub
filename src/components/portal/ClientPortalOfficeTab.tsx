@@ -98,27 +98,6 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
     });
   }, [clients, portals, architectureProjects, architectProfile, projectMilestones]);
 
-  // Automatically ensure all active portals are synced with Firestore so clients can log in immediately from any device
-  useEffect(() => {
-    if (!user || !displayPortals || displayPortals.length === 0) return;
-
-    displayPortals.forEach((p) => {
-      const existingInCloud = portals.find((cp) => cp.id === p.id);
-      const shouldSync =
-        !existingInCloud ||
-        existingInCloud.accessCode !== p.accessCode ||
-        existingInCloud.clientEmail !== p.clientEmail ||
-        (existingInCloud.projects?.length || 0) !== (p.projects?.length || 0);
-
-      if (shouldSync) {
-        saveClientPortalAccess({
-          ...p,
-          officeUid: user.uid
-        }).catch((err) => console.warn('Auto-sync portal notice:', err));
-      }
-    });
-  }, [displayPortals, portals, user]);
-
   const filteredPortals = displayPortals.filter((p) => {
     const matchSearch =
       p.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||

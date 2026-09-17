@@ -785,6 +785,7 @@ export interface ClientPortalAccess {
   accessCode: string; // Provisional password / access key
   status: 'active' | 'inactive';
   createdAt: string;
+  updatedAt?: string;
   lastLoginAt?: string;
   projects: ClientPortalProject[];
   messages: ClientPortalMessage[];

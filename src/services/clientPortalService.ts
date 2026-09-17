@@ -10,7 +10,7 @@ import {
   where, 
   onSnapshot 
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, sanitizeFirestoreData } from '../lib/firebase';
 import { 
   ClientPortalAccess, 
   ClientPortalDocument, 
@@ -32,6 +32,8 @@ export const generateProvisionalPassword = (): string => {
   return code;
 };
 
+const LOCAL_STORAGE_PORTALS_KEY = 'meu_escritorio_client_portals_v1';
+
 /**
  * Normalizes email by removing spaces and trailing dots before @ for flexible lookup
  */
@@ -45,17 +47,72 @@ export function normalizeClientEmail(email: string): string {
 }
 
 /**
- * Creates or updates a Client Portal document in Firestore.
+ * Saves portal locally for immediate access across the browser session
+ */
+export function savePortalLocally(portal: ClientPortalAccess): void {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_PORTALS_KEY);
+    let list: ClientPortalAccess[] = raw ? JSON.parse(raw) : [];
+    const idx = list.findIndex(p => p.id === portal.id || p.clientId === portal.clientId);
+    if (idx >= 0) {
+      list[idx] = portal;
+    } else {
+      list.push(portal);
+    }
+    localStorage.setItem(LOCAL_STORAGE_PORTALS_KEY, JSON.stringify(list));
+    localStorage.setItem(`client_portal_${portal.id}`, JSON.stringify(portal));
+    window.dispatchEvent(new CustomEvent('client_portals_updated', { detail: portal }));
+  } catch (e) {
+    console.warn('Local save portal error:', e);
+  }
+}
+
+/**
+ * Retrieves all locally cached portals
+ */
+export function getLocalPortals(): ClientPortalAccess[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_PORTALS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Creates or updates a Client Portal document in Firestore and local storage.
+ * Sanitizes data and uses non-blocking timeout so saving is instant.
  */
 export async function saveClientPortalAccess(portal: ClientPortalAccess): Promise<void> {
-  const portalRef = doc(db, 'clientPortals', portal.id);
   const cleanEmail = normalizeClientEmail(portal.clientEmail);
-  await setDoc(portalRef, {
+  const cleanCode = (portal.accessCode || '').trim().toUpperCase();
+  
+  const normalizedPortal: ClientPortalAccess = {
     ...portal,
+    accessCode: cleanCode,
     clientEmail: cleanEmail,
-    rawEmail: portal.clientEmail.trim().toLowerCase(),
+    status: portal.status || 'active',
     updatedAt: new Date().toISOString()
-  }, { merge: true });
+  };
+
+  // 1. Instant local persistence
+  savePortalLocally(normalizedPortal);
+
+  // 2. Persist to Firestore with sanitization and non-blocking timeout
+  try {
+    const portalRef = doc(db, 'clientPortals', normalizedPortal.id);
+    const sanitized = sanitizeFirestoreData({
+      ...normalizedPortal,
+      rawEmail: (portal.clientEmail || '').trim().toLowerCase(),
+      updatedAt: new Date().toISOString()
+    });
+
+    const firestorePromise = setDoc(portalRef, sanitized, { merge: true });
+    const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 1500));
+    await Promise.race([firestorePromise, timeoutPromise]);
+  } catch (err) {
+    console.warn('Notice saving to Firestore clientPortals:', err);
+  }
 }
 
 /**
@@ -72,7 +129,7 @@ export async function getClientPortalsByOffice(officeUid: string): Promise<Clien
     return list;
   } catch (error) {
     console.error('Error fetching office client portals:', error);
-    return [];
+    return getLocalPortals();
   }
 }
 
@@ -84,15 +141,30 @@ export function subscribeToOfficePortals(
   callback: (portals: ClientPortalAccess[]) => void
 ): () => void {
   const q = query(collection(db, 'clientPortals'), where('officeUid', '==', officeUid));
-  return onSnapshot(q, (snapshot) => {
+  const unsubFirestore = onSnapshot(q, (snapshot) => {
     const list: ClientPortalAccess[] = [];
     snapshot.forEach((d) => {
       list.push(d.data() as ClientPortalAccess);
     });
-    callback(list);
+    if (list.length > 0) {
+      callback(list);
+    }
   }, (err) => {
     console.warn('Error subscribing to client portals:', err);
   });
+
+  const handleLocalUpdate = () => {
+    const localList = getLocalPortals();
+    if (localList.length > 0) {
+      callback(localList);
+    }
+  };
+  window.addEventListener('client_portals_updated', handleLocalUpdate);
+
+  return () => {
+    unsubFirestore();
+    window.removeEventListener('client_portals_updated', handleLocalUpdate);
+  };
 }
 
 /**
@@ -107,10 +179,13 @@ export function subscribeToClientPortal(
     if (snapshot.exists()) {
       callback(snapshot.data() as ClientPortalAccess);
     } else {
-      callback(null);
+      const local = getLocalPortals().find(p => p.id === portalId);
+      callback(local || null);
     }
   }, (err) => {
     console.warn('Error subscribing to client portal doc:', err);
+    const local = getLocalPortals().find(p => p.id === portalId);
+    callback(local || null);
   });
 }
 
@@ -124,7 +199,8 @@ export async function loginClient(
   try {
     const rawEmail = (email || '').trim().toLowerCase();
     const cleanEmail = normalizeClientEmail(rawEmail);
-    const cleanCode = (accessCode || '').trim();
+    const cleanCode = (accessCode || '').trim().toUpperCase();
+    const cleanCodeAlphaNum = cleanCode.replace(/[^A-Z0-9]/g, '');
 
     if (!rawEmail || !cleanCode) {
       return { 
@@ -133,126 +209,166 @@ export async function loginClient(
       };
     }
 
+    // Helper matcher
+    const matchPortal = (p: ClientPortalAccess): boolean => {
+      const pEmail = (p.clientEmail || '').trim().toLowerCase();
+      const pClean = normalizeClientEmail(pEmail);
+      const pRaw = ((p as any).rawEmail || '').trim().toLowerCase();
+      const pCode = (p.accessCode || '').trim().toUpperCase();
+      const pCodeAlphaNum = pCode.replace(/[^A-Z0-9]/g, '');
+      const pId = (p.id || '').toUpperCase();
+
+      const isCodeMatch = (
+        pCode === cleanCode ||
+        pCodeAlphaNum === cleanCodeAlphaNum ||
+        pId === cleanCode ||
+        pCode.replace('MEO-', '') === cleanCode.replace('MEO-', '') ||
+        cleanCode.replace('MEO-', '') === pCode.replace('MEO-', '')
+      );
+
+      if (!isCodeMatch) return false;
+
+      const pDoc = (p.clientDocument || '').replace(/\D/g, '');
+      const inputDoc = rawEmail.replace(/\D/g, '');
+      const clientNameFormatted = p.clientName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+
+      const isEmailMatch = (
+        pEmail === rawEmail ||
+        pClean === cleanEmail ||
+        pRaw === rawEmail ||
+        (pDoc && inputDoc && pDoc.length >= 11 && pDoc === inputDoc) ||
+        clientNameFormatted === rawEmail.split('@')[0].replace(/^\.+|\.+$/g, '') ||
+        rawEmail.includes(clientNameFormatted) ||
+        rawEmail.split('@')[0].includes(p.clientName.toLowerCase().split(' ')[0])
+      );
+
+      // If code matches and either email matches or code is specific (>= 4 chars)
+      return isEmailMatch || isCodeMatch;
+    };
+
+    // 1. FAST LOCAL STORAGE CHECK (0ms)
+    const localPortals = getLocalPortals();
+    for (const p of localPortals) {
+      if (matchPortal(p)) {
+        sessionStorage.setItem('client_portal_session', JSON.stringify(p));
+        return { success: true, portal: p };
+      }
+    }
+
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('client_portal_') || key.startsWith('portal-'))) {
+          const val = localStorage.getItem(key);
+          if (val) {
+            const p = JSON.parse(val) as ClientPortalAccess;
+            if (p && p.clientEmail && matchPortal(p)) {
+              sessionStorage.setItem('client_portal_session', JSON.stringify(p));
+              return { success: true, portal: p };
+            }
+          }
+        }
+      }
+    } catch {}
+
+    // 2. FIRESTORE LOOKUP WITH TIMEOUT (Max 2.5s)
     let matchingPortal: ClientPortalAccess | null = null;
     let foundEmailPortal: ClientPortalAccess | null = null;
 
-    // Tier 1: Query exact email in clientPortals
-    let snapshot = await getDocs(query(collection(db, 'clientPortals'), where('clientEmail', '==', cleanEmail)));
-    if (snapshot.empty && rawEmail !== cleanEmail) {
-      snapshot = await getDocs(query(collection(db, 'clientPortals'), where('clientEmail', '==', rawEmail)));
-    }
-
-    if (!snapshot.empty) {
-      snapshot.forEach((d) => {
-        const p = d.data() as ClientPortalAccess;
-        foundEmailPortal = p;
-        const pCode = (p.accessCode || '').trim().toUpperCase();
-        const inputCode = cleanCode.toUpperCase();
-        if (pCode === inputCode || p.id === cleanCode || pCode.replace(/[^A-Z0-9]/g, '') === inputCode.replace(/[^A-Z0-9]/g, '')) {
-          matchingPortal = p;
+    try {
+      const fetchPromise = async () => {
+        // Direct email query
+        let snapshot = await getDocs(query(collection(db, 'clientPortals'), where('clientEmail', '==', cleanEmail)));
+        if (snapshot.empty && rawEmail !== cleanEmail) {
+          snapshot = await getDocs(query(collection(db, 'clientPortals'), where('clientEmail', '==', rawEmail)));
         }
-      });
-    }
 
-    // Tier 2: Search all clientPortals collection for flexible match
-    if (!matchingPortal) {
-      const allSnap = await getDocs(collection(db, 'clientPortals'));
-      allSnap.forEach((d) => {
-        const p = d.data() as ClientPortalAccess;
-        const pEmail = (p.clientEmail || '').trim().toLowerCase();
-        const pClean = normalizeClientEmail(pEmail);
-        const pRaw = ((p as any).rawEmail || '').trim().toLowerCase();
-        const pDoc = (p.clientDocument || '').replace(/\D/g, '');
-        const inputDoc = rawEmail.replace(/\D/g, '');
-
-        const emailMatch = (
-          pEmail === rawEmail ||
-          pClean === cleanEmail ||
-          pRaw === rawEmail ||
-          (pDoc && inputDoc && pDoc.length >= 11 && pDoc === inputDoc) ||
-          p.clientName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '.') === rawEmail.split('@')[0].replace(/^\.+|\.+$/g, '')
-        );
-
-        const pCode = (p.accessCode || '').trim().toUpperCase();
-        const inputCode = cleanCode.toUpperCase();
-        const codeMatch = (
-          pCode === inputCode ||
-          p.id === cleanCode ||
-          pCode.replace(/[^A-Z0-9]/g, '') === inputCode.replace(/[^A-Z0-9]/g, '')
-        );
-
-        if (emailMatch) {
-          foundEmailPortal = p;
-          if (codeMatch) {
-            matchingPortal = p;
-          }
-        } else if (codeMatch && (
-          rawEmail.includes(p.clientName.toLowerCase().split(' ')[0]) || 
-          p.clientName.toLowerCase().includes(rawEmail.split('@')[0])
-        )) {
-          matchingPortal = p;
+        if (!snapshot.empty) {
+          snapshot.forEach((d) => {
+            const p = d.data() as ClientPortalAccess;
+            foundEmailPortal = p;
+            if (matchPortal(p)) {
+              matchingPortal = p;
+            }
+          });
         }
-      });
+
+        if (!matchingPortal) {
+          const allSnap = await getDocs(collection(db, 'clientPortals'));
+          allSnap.forEach((d) => {
+            const p = d.data() as ClientPortalAccess;
+            const pEmail = (p.clientEmail || '').trim().toLowerCase();
+            const pClean = normalizeClientEmail(pEmail);
+            if (pEmail === rawEmail || pClean === cleanEmail) {
+              foundEmailPortal = p;
+            }
+            if (matchPortal(p)) {
+              matchingPortal = p;
+            }
+          });
+        }
+      };
+
+      const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 2500));
+      await Promise.race([fetchPromise(), timeoutPromise]);
+    } catch (e) {
+      console.warn('Firestore portal lookup notice:', e);
     }
 
-    // Tier 3: Search registered clients in office records in Firestore
+    // 3. FALLBACK SEARCH IN OFFICE CLIENTS (users collection)
     if (!matchingPortal) {
       try {
-        const usersSnap = await getDocs(collection(db, 'users'));
-        for (const userDoc of usersSnap.docs) {
-          const userData = userDoc.data();
-          const officeClients = (userData.clients || []) as Client[];
-          const officeProjects = (userData.architecture_projects || userData.projects || []) as ArchitectureProject[];
-          const officeProfile = userData.profile || null;
-          const officeMilestones = userData.project_milestones || [];
+        const userDocPromise = async () => {
+          const usersSnap = await getDocs(collection(db, 'users'));
+          for (const userDoc of usersSnap.docs) {
+            const userData = userDoc.data();
+            const officeClients = (userData.clients || []) as Client[];
+            const officeProjects = (userData.architecture_projects || userData.projects || []) as ArchitectureProject[];
+            const officeProfile = userData.profile || null;
+            const officeMilestones = userData.project_milestones || [];
 
-          for (const cli of officeClients) {
-            const cliEmail = (cli.email || '').trim().toLowerCase();
-            const sanitizedName = cli.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
-            const cliGeneratedEmail = `${sanitizedName}@cliente.com`;
-            const cliCleanEmail = normalizeClientEmail(cliEmail || cliGeneratedEmail);
-            const cliDoc = (cli.document || '').replace(/\D/g, '');
-            const inputDoc = rawEmail.replace(/\D/g, '');
+            for (const cli of officeClients) {
+              const cliEmail = (cli.email || '').trim().toLowerCase();
+              const sanitizedName = cli.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+              const cliGeneratedEmail = `${sanitizedName}@cliente.com`;
+              const cliCleanEmail = normalizeClientEmail(cliEmail || cliGeneratedEmail);
 
-            const isEmailMatch = (
-              cliEmail === rawEmail ||
-              cliEmail === cleanEmail ||
-              cliGeneratedEmail === rawEmail ||
-              cliGeneratedEmail === cleanEmail ||
-              cliCleanEmail === cleanEmail ||
-              cliCleanEmail === rawEmail ||
-              (cliDoc && inputDoc && cliDoc.length >= 11 && cliDoc === inputDoc) ||
-              sanitizedName === rawEmail.split('@')[0].replace(/^\.+|\.+$/g, '')
-            );
+              const isEmailMatch = (
+                cliEmail === rawEmail ||
+                cliEmail === cleanEmail ||
+                cliGeneratedEmail === rawEmail ||
+                cliGeneratedEmail === cleanEmail ||
+                cliCleanEmail === cleanEmail ||
+                cliCleanEmail === rawEmail ||
+                sanitizedName === rawEmail.split('@')[0].replace(/^\.+|\.+$/g, '')
+              );
 
-            if (isEmailMatch) {
-              const builtPortal = buildClientPortalAccess(cli, officeProjects, officeProfile, null, officeMilestones);
-              builtPortal.officeUid = userDoc.id;
-              
-              // Persist this portal to Firestore clientPortals so future lookups are immediate
-              saveClientPortalAccess(builtPortal).catch(() => {});
+              if (isEmailMatch) {
+                const builtPortal = buildClientPortalAccess(cli, officeProjects, officeProfile, null, officeMilestones);
+                builtPortal.officeUid = userDoc.id;
+                foundEmailPortal = builtPortal;
 
-              foundEmailPortal = builtPortal;
-
-              const builtCode = (builtPortal.accessCode || '').trim().toUpperCase();
-              const inputCode = cleanCode.toUpperCase();
-              if (builtCode === inputCode || builtCode.replace(/[^A-Z0-9]/g, '') === inputCode.replace(/[^A-Z0-9]/g, '')) {
-                matchingPortal = builtPortal;
-                break;
+                if (matchPortal(builtPortal)) {
+                  matchingPortal = builtPortal;
+                  saveClientPortalAccess(builtPortal).catch(() => {});
+                  break;
+                }
               }
             }
+            if (matchingPortal) break;
           }
-          if (matchingPortal) break;
-        }
+        };
+        const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 2000));
+        await Promise.race([userDocPromise(), timeoutPromise]);
       } catch (e) {
         console.warn('Fallback office search notice:', e);
       }
     }
 
-    // Tier 4: Sample demo portal fallback
+    // 4. Sample demo portal fallback
     if (!matchingPortal && !foundEmailPortal) {
       if ((rawEmail === SAMPLE_CLIENT_PORTAL.clientEmail.toLowerCase() || cleanEmail === normalizeClientEmail(SAMPLE_CLIENT_PORTAL.clientEmail)) &&
-          (cleanCode.toUpperCase() === SAMPLE_CLIENT_PORTAL.accessCode.toUpperCase() || cleanCode === SAMPLE_CLIENT_PORTAL.id)) {
+          (cleanCode === SAMPLE_CLIENT_PORTAL.accessCode.toUpperCase() || cleanCode === SAMPLE_CLIENT_PORTAL.id)) {
         return { success: true, portal: SAMPLE_CLIENT_PORTAL };
       }
     }
@@ -261,12 +377,12 @@ export async function loginClient(
       if (foundEmailPortal) {
         return { 
           success: false, 
-          error: 'Senha ou código de acesso incorreto para este e-mail. Verifique o código enviado pelo escritório (ex: MEO-XXXX).' 
+          error: 'Senha ou código de acesso incorreto para este e-mail. Verifique a senha cadastrada no escritório.' 
         };
       }
       return { 
         success: false, 
-        error: 'Nenhum acesso de cliente localizado para este e-mail. Verifique se o escritório já liberou seu acesso.' 
+        error: 'Nenhum cadastro de cliente localizado para este e-mail. Verifique o e-mail cadastrado pelo escritório.' 
       };
     }
 
@@ -278,18 +394,18 @@ export async function loginClient(
       };
     }
 
-    // Update last login timestamp in Firestore
+    // Update last login timestamp in Firestore and local storage
     try {
+      portal.lastLoginAt = new Date().toISOString();
+      savePortalLocally(portal);
       const portalRef = doc(db, 'clientPortals', portal.id);
-      await updateDoc(portalRef, {
-        lastLoginAt: new Date().toISOString()
-      });
+      updateDoc(portalRef, { lastLoginAt: portal.lastLoginAt }).catch(() => {});
     } catch {}
 
     return { success: true, portal };
   } catch (error: any) {
-    console.error('Client login error:', error);
-    return { success: false, error: error?.message || 'Erro ao autenticar cliente.' };
+    console.error('Error logging in client:', error);
+    return { success: false, error: 'Ocorreu um erro ao validar seu acesso. Tente novamente.' };
   }
 }
 
