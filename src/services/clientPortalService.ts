@@ -1448,7 +1448,7 @@ export function buildClientPortalAccess(
   return {
     id: portalId,
     officeUid: existingPortal?.officeUid || 'office-current',
-    officeName: profile?.name || profile?.title || 'LF Quadros & Decoração',
+    officeName: profile?.name || profile?.title || existingPortal?.officeName || 'Escritório',
     officeEmail: profileAny?.email || 'contato@escritorio.com',
     officePhone: profileAny?.phone || '(11) 98765-4321',
     officeLogo: profile?.logoUrl || profile?.photoUrl,
