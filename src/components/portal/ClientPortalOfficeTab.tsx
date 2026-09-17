@@ -106,6 +106,15 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
     });
   }, [clients, portals, architectureProjects, architectProfile, projectMilestones]);
 
+  // Auto-sync calculated portals to Firestore so external clients can immediately log in from any device
+  useEffect(() => {
+    if (displayPortals.length > 0) {
+      displayPortals.forEach((p) => {
+        saveClientPortalAccess(p).catch(() => {});
+      });
+    }
+  }, [displayPortals]);
+
   const filteredPortals = displayPortals.filter((p) => {
     const matchSearch =
       p.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -119,6 +128,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
   });
 
   const handleCopyLink = (p: ClientPortalAccess) => {
+    saveClientPortalAccess(p).catch(() => {});
     const origin = window.location.origin;
     const directUrl = `${origin}/cliente/login?email=${encodeURIComponent(p.clientEmail)}&code=${encodeURIComponent(p.accessCode)}`;
     navigator.clipboard.writeText(directUrl);
@@ -127,6 +137,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
   };
 
   const handleCopyCredentials = (p: ClientPortalAccess) => {
+    saveClientPortalAccess(p).catch(() => {});
     const origin = window.location.origin;
     const directUrl = `${origin}/cliente/login?email=${encodeURIComponent(p.clientEmail)}&code=${encodeURIComponent(p.accessCode)}`;
     const text = `*Radar do Cliente - ${p.officeName || 'Meu Escritório'}*\n\nOlá, ${p.clientName}!\nVocê pode acompanhar todas as etapas, prazos, arquivos e falar com a equipe pelo seu portal exclusivo:\n\n🔗 *Acesso Direto:* ${directUrl}\n📧 *E-mail:* ${p.clientEmail}\n🔑 *Senha/Código de Acesso:* ${p.accessCode}\n\nQualquer dúvida, estamos à disposição!`;
@@ -136,6 +147,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
   };
 
   const handleOpenWhatsApp = (p: ClientPortalAccess) => {
+    saveClientPortalAccess(p).catch(() => {});
     const origin = window.location.origin;
     const directUrl = `${origin}/cliente/login?email=${encodeURIComponent(p.clientEmail)}&code=${encodeURIComponent(p.accessCode)}`;
     const text = `Olá, ${p.clientName}! Aqui está o seu link de acesso ao Radar do Cliente para acompanhar o projeto em tempo real:\n\n${directUrl}\n\nE-mail: ${p.clientEmail}\nCódigo de Acesso: ${p.accessCode}`;

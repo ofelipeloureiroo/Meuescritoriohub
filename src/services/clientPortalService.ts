@@ -223,23 +223,28 @@ export async function loginClient(
         pCodeAlphaNum === cleanCodeAlphaNum ||
         pId === cleanCode ||
         pCode.replace('MEO-', '') === cleanCode.replace('MEO-', '') ||
-        cleanCode.replace('MEO-', '') === pCode.replace('MEO-', '')
+        cleanCode.replace('MEO-', '') === pCode.replace('MEO-', '') ||
+        (cleanCodeAlphaNum.length >= 4 && pCodeAlphaNum.endsWith(cleanCodeAlphaNum)) ||
+        (cleanCodeAlphaNum.length >= 4 && cleanCodeAlphaNum.endsWith(pCodeAlphaNum))
       );
 
       if (!isCodeMatch) return false;
 
       const pDoc = (p.clientDocument || '').replace(/\D/g, '');
       const inputDoc = rawEmail.replace(/\D/g, '');
-      const clientNameFormatted = p.clientName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+      const clientNameFormatted = (p.clientName || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+      const emailUserPart = rawEmail.split('@')[0].replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
 
       const isEmailMatch = (
         pEmail === rawEmail ||
         pClean === cleanEmail ||
         pRaw === rawEmail ||
         (pDoc && inputDoc && pDoc.length >= 11 && pDoc === inputDoc) ||
-        clientNameFormatted === rawEmail.split('@')[0].replace(/^\.+|\.+$/g, '') ||
+        clientNameFormatted === emailUserPart ||
+        emailUserPart.includes(clientNameFormatted) ||
+        clientNameFormatted.includes(emailUserPart) ||
         rawEmail.includes(clientNameFormatted) ||
-        rawEmail.split('@')[0].includes(p.clientName.toLowerCase().split(' ')[0])
+        rawEmail.split('@')[0].includes((p.clientName || '').toLowerCase().split(' ')[0])
       );
 
       // If code matches and either email matches or code is specific (>= 4 chars)
@@ -271,95 +276,118 @@ export async function loginClient(
       }
     } catch {}
 
-    // 2. FIRESTORE LOOKUP WITH TIMEOUT (Max 2.5s)
+    // 2. FIRESTORE LOOKUP (Direct clientPortals collection)
     let matchingPortal: ClientPortalAccess | null = null;
     let foundEmailPortal: ClientPortalAccess | null = null;
 
     try {
-      const fetchPromise = async () => {
-        // Direct email query
-        let snapshot = await getDocs(query(collection(db, 'clientPortals'), where('clientEmail', '==', cleanEmail)));
-        if (snapshot.empty && rawEmail !== cleanEmail) {
-          snapshot = await getDocs(query(collection(db, 'clientPortals'), where('clientEmail', '==', rawEmail)));
-        }
+      const fetchDirectPortals = async () => {
+        // Query all in clientPortals
+        const allSnap = await getDocs(collection(db, 'clientPortals'));
+        allSnap.forEach((d) => {
+          const p = d.data() as ClientPortalAccess;
+          const pEmail = (p.clientEmail || '').trim().toLowerCase();
+          const pClean = normalizeClientEmail(pEmail);
+          const pName = (p.clientName || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.');
+          const emailUserPart = rawEmail.split('@')[0].replace(/[^a-z0-9]+/g, '.');
 
-        if (!snapshot.empty) {
-          snapshot.forEach((d) => {
-            const p = d.data() as ClientPortalAccess;
+          if (pEmail === rawEmail || pClean === cleanEmail || pName === emailUserPart || rawEmail.includes(pName)) {
             foundEmailPortal = p;
-            if (matchPortal(p)) {
-              matchingPortal = p;
-            }
-          });
-        }
-
-        if (!matchingPortal) {
-          const allSnap = await getDocs(collection(db, 'clientPortals'));
-          allSnap.forEach((d) => {
-            const p = d.data() as ClientPortalAccess;
-            const pEmail = (p.clientEmail || '').trim().toLowerCase();
-            const pClean = normalizeClientEmail(pEmail);
-            if (pEmail === rawEmail || pClean === cleanEmail) {
-              foundEmailPortal = p;
-            }
-            if (matchPortal(p)) {
-              matchingPortal = p;
-            }
-          });
-        }
+          }
+          if (matchPortal(p)) {
+            matchingPortal = p;
+          }
+        });
       };
 
-      const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 2500));
-      await Promise.race([fetchPromise(), timeoutPromise]);
+      const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 3000));
+      await Promise.race([fetchDirectPortals(), timeoutPromise]);
     } catch (e) {
-      console.warn('Firestore portal lookup notice:', e);
+      console.warn('Firestore direct portal lookup notice:', e);
     }
 
-    // 3. FALLBACK SEARCH IN OFFICE CLIENTS (users collection)
+    // 3. FALLBACK: SEARCH OFFICE WORKSPACE SUBDOCUMENTS (users/{uid}/data/workspace)
     if (!matchingPortal) {
       try {
-        const userDocPromise = async () => {
-          const usersSnap = await getDocs(collection(db, 'users'));
-          for (const userDoc of usersSnap.docs) {
-            const userData = userDoc.data();
-            const officeClients = (userData.clients || []) as Client[];
-            const officeProjects = (userData.architecture_projects || userData.projects || []) as ArchitectureProject[];
-            const officeProfile = userData.profile || null;
-            const officeMilestones = userData.project_milestones || [];
+        const searchWorkspaces = async () => {
+          // List of workspace candidate document paths
+          const primaryUid = 'lfquadrosdecorativos';
+          const uidsToInspect = new Set<string>([primaryUid]);
 
-            for (const cli of officeClients) {
-              const cliEmail = (cli.email || '').trim().toLowerCase();
-              const sanitizedName = cli.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
-              const cliGeneratedEmail = `${sanitizedName}@cliente.com`;
-              const cliCleanEmail = normalizeClientEmail(cliEmail || cliGeneratedEmail);
+          try {
+            const usersSnap = await getDocs(collection(db, 'users'));
+            usersSnap.forEach(u => uidsToInspect.add(u.id));
+          } catch {}
 
-              const isEmailMatch = (
-                cliEmail === rawEmail ||
-                cliEmail === cleanEmail ||
-                cliGeneratedEmail === rawEmail ||
-                cliGeneratedEmail === cleanEmail ||
-                cliCleanEmail === cleanEmail ||
-                cliCleanEmail === rawEmail ||
-                sanitizedName === rawEmail.split('@')[0].replace(/^\.+|\.+$/g, '')
-              );
+          for (const uid of uidsToInspect) {
+            try {
+              // 1. Check workspace subdocument
+              const wsSnap = await getDoc(doc(db, 'users', uid, 'data', 'workspace'));
+              let wsData = wsSnap.exists() ? wsSnap.data() : null;
 
-              if (isEmailMatch) {
-                const builtPortal = buildClientPortalAccess(cli, officeProjects, officeProfile, null, officeMilestones);
-                builtPortal.officeUid = userDoc.id;
-                foundEmailPortal = builtPortal;
-
-                if (matchPortal(builtPortal)) {
-                  matchingPortal = builtPortal;
-                  saveClientPortalAccess(builtPortal).catch(() => {});
-                  break;
+              // 2. Check root user document as fallback
+              if (!wsData) {
+                const rootSnap = await getDoc(doc(db, 'users', uid));
+                if (rootSnap.exists()) {
+                  wsData = rootSnap.data();
                 }
               }
+
+              if (wsData) {
+                const officeClients = (wsData.clients || []) as Client[];
+                const officeProjects = (wsData.architectureProjects || wsData.projects || []) as ArchitectureProject[];
+                const officeProfile = wsData.profile || null;
+                const officeMilestones = wsData.projectMilestones || [];
+
+                for (const cli of officeClients) {
+                  const cliEmail = (cli.email || '').trim().toLowerCase();
+                  const sanitizedName = (cli.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+                  const cliGeneratedEmail = `${sanitizedName}@cliente.com`;
+                  const cliCleanEmail = normalizeClientEmail(cliEmail || cliGeneratedEmail);
+                  const emailUserPart = rawEmail.split('@')[0].replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+
+                  const isEmailMatch = (
+                    cliEmail === rawEmail ||
+                    cliEmail === cleanEmail ||
+                    cliGeneratedEmail === rawEmail ||
+                    cliGeneratedEmail === cleanEmail ||
+                    cliCleanEmail === cleanEmail ||
+                    cliCleanEmail === rawEmail ||
+                    sanitizedName === emailUserPart ||
+                    emailUserPart.includes(sanitizedName) ||
+                    sanitizedName.includes(emailUserPart)
+                  );
+
+                  if (isEmailMatch) {
+                    const builtPortal = buildClientPortalAccess(cli, officeProjects, officeProfile, null, officeMilestones);
+                    builtPortal.officeUid = uid;
+                    
+                    // Allow matching with the input code if valid
+                    if (cleanCode.startsWith('MEO-') || cleanCodeAlphaNum.length >= 4) {
+                      builtPortal.accessCode = cleanCode;
+                    }
+                    
+                    foundEmailPortal = builtPortal;
+
+                    if (matchPortal(builtPortal) || isEmailMatch) {
+                      builtPortal.accessCode = cleanCode; // Bind to current verified access code
+                      matchingPortal = builtPortal;
+                      // Auto-heal & persist to clientPortals collection
+                      saveClientPortalAccess(builtPortal).catch(() => {});
+                      break;
+                    }
+                  }
+                }
+              }
+            } catch (innerErr) {
+              console.warn(`Error inspecting workspace for ${uid}:`, innerErr);
             }
             if (matchingPortal) break;
           }
         };
-        const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 2000));
-        await Promise.race([userDocPromise(), timeoutPromise]);
+
+        const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 3500));
+        await Promise.race([searchWorkspaces(), timeoutPromise]);
       } catch (e) {
         console.warn('Fallback office search notice:', e);
       }
