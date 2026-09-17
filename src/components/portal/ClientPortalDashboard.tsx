@@ -486,7 +486,7 @@ export const ClientPortalDashboard: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-serif font-bold text-base sm:text-lg text-[#fcf8f5] leading-tight">
-                  {effectivePortal.officeName || 'Meu Escritório Online'}
+                  {effectivePortal.officeName || 'LF Quadros & Decoração'}
                 </span>
                 <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                   Portal Seguro
