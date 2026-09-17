@@ -52,7 +52,7 @@ import {
 } from '../types';
 import { applyThemeToDocument, NICHES, THEMES } from '../utils/theme';
 import { getNicheSampleProjects } from '../utils/nicheSampleData';
-import { deleteClientPortalsForClient } from '../services/clientPortalService';
+import { deleteClientPortalsForClient, buildClientPortalAccess, saveClientPortalAccess } from '../services/clientPortalService';
 import { deleteGoogleEvent, deleteGoogleTask, addDeletedGcalId, addDeletedGtaskId } from '../services/googleCalendarService';
 
 interface FinanceContextType {
@@ -1140,6 +1140,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     officeSettings,
     actions,
   ]);
+
+  // Auto-sync client portals to Firestore clientPortals collection & local storage
+  useEffect(() => {
+    if (!clients || clients.length === 0) return;
+    const timer = setTimeout(() => {
+      try {
+        clients.forEach((cli) => {
+          const portal = buildClientPortalAccess(cli, architectureProjects, architectProfile, null, projectMilestones);
+          saveClientPortalAccess(portal).catch(() => {});
+        });
+      } catch (e) {
+        console.warn('Auto sync client portals warning:', e);
+      }
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [clients, architectureProjects, architectProfile, projectMilestones]);
 
   // Actions - Profile & Customization
   const updateArchitectProfile = (updatedFields: Partial<ArchitectProfile>) => {

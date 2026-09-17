@@ -252,6 +252,7 @@ export async function loginClient(
     };
 
     // 1. FAST LOCAL STORAGE CHECK (0ms)
+    // 1a. Direct cached portals
     const localPortals = getLocalPortals();
     for (const p of localPortals) {
       if (matchPortal(p)) {
@@ -261,15 +262,72 @@ export async function loginClient(
     }
 
     try {
+      // 1b. Scan all client_portal_* and office_v2_* keys in localStorage
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith('client_portal_') || key.startsWith('portal-'))) {
+        if (!key) continue;
+
+        // Check direct portal records
+        if (key.startsWith('client_portal_') || key.startsWith('portal-')) {
           const val = localStorage.getItem(key);
           if (val) {
             const p = JSON.parse(val) as ClientPortalAccess;
-            if (p && p.clientEmail && matchPortal(p)) {
+            if (p && matchPortal(p)) {
               sessionStorage.setItem('client_portal_session', JSON.stringify(p));
               return { success: true, portal: p };
+            }
+          }
+        }
+
+        // Check office clients databases in localStorage
+        if (key.includes('_clients') || key === 'clients') {
+          const val = localStorage.getItem(key);
+          if (val) {
+            const parsedClients = JSON.parse(val);
+            if (Array.isArray(parsedClients)) {
+              const projKey = key.replace('_clients', '_architecture_projects').replace('clients', 'architecture_projects');
+              const rawProjs = localStorage.getItem(projKey) || localStorage.getItem(key.replace('_clients', '_projects'));
+              const parsedProjs: ArchitectureProject[] = rawProjs ? JSON.parse(rawProjs) : [];
+              
+              const profKey = key.replace('_clients', '_profile').replace('clients', 'profile');
+              const rawProf = localStorage.getItem(profKey);
+              const parsedProf: ArchitectProfile | null = rawProf ? JSON.parse(rawProf) : null;
+
+              const milKey = key.replace('_clients', '_milestones').replace('clients', 'milestones');
+              const rawMil = localStorage.getItem(milKey);
+              const parsedMil: ProjectMilestone[] = rawMil ? JSON.parse(rawMil) : [];
+
+              for (const cli of parsedClients) {
+                if (!cli || !cli.name) continue;
+                const cliEmail = (cli.email || '').trim().toLowerCase();
+                const sanitizedName = (cli.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+                const cliGeneratedEmail = `${sanitizedName}@cliente.com`;
+                const cliCleanEmail = normalizeClientEmail(cliEmail || cliGeneratedEmail);
+                const emailUserPart = rawEmail.split('@')[0].replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+
+                const isEmailMatch = (
+                  cliEmail === rawEmail ||
+                  cliEmail === cleanEmail ||
+                  cliGeneratedEmail === rawEmail ||
+                  cliGeneratedEmail === cleanEmail ||
+                  cliCleanEmail === cleanEmail ||
+                  cliCleanEmail === rawEmail ||
+                  sanitizedName === emailUserPart ||
+                  emailUserPart.includes(sanitizedName) ||
+                  sanitizedName.includes(emailUserPart)
+                );
+
+                if (isEmailMatch) {
+                  const built = buildClientPortalAccess(cli, parsedProjs, parsedProf, null, parsedMil);
+                  if (cleanCode.startsWith('MEO-') || cleanCodeAlphaNum.length >= 4) {
+                    built.accessCode = cleanCode;
+                  }
+                  savePortalLocally(built);
+                  saveClientPortalAccess(built).catch(() => {});
+                  sessionStorage.setItem('client_portal_session', JSON.stringify(built));
+                  return { success: true, portal: built };
+                }
+              }
             }
           }
         }
@@ -312,7 +370,12 @@ export async function loginClient(
         const searchWorkspaces = async () => {
           // List of workspace candidate document paths
           const primaryUid = 'lfquadrosdecorativos';
-          const uidsToInspect = new Set<string>([primaryUid]);
+          const uidsToInspect = new Set<string>([
+            primaryUid,
+            'canonical',
+            'demo-office-user',
+            'guest'
+          ]);
 
           try {
             const usersSnap = await getDocs(collection(db, 'users'));
@@ -372,7 +435,8 @@ export async function loginClient(
                     if (matchPortal(builtPortal) || isEmailMatch) {
                       builtPortal.accessCode = cleanCode; // Bind to current verified access code
                       matchingPortal = builtPortal;
-                      // Auto-heal & persist to clientPortals collection
+                      // Auto-heal & persist to clientPortals collection and local storage
+                      savePortalLocally(builtPortal);
                       saveClientPortalAccess(builtPortal).catch(() => {});
                       break;
                     }

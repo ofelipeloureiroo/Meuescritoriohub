@@ -35,7 +35,8 @@ import {
 } from '../../types';
 import { 
   saveClientPortalAccess, 
-  generateProvisionalPassword 
+  generateProvisionalPassword,
+  getLocalPortals
 } from '../../services/clientPortalService';
 
 interface OfficeClientPortalManagerModalProps {
@@ -217,8 +218,14 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
       setClientName(initialClient.name);
       setClientEmail(initialClient.email || '');
       setClientPhone(initialClient.phone || '');
-      setAccessCode(generateProvisionalPassword());
-      setStatus('active');
+
+      const localPortals = getLocalPortals();
+      const existingPortal = localPortals.find(
+        p => p.clientId === initialClient.id ||
+             (p.clientName && p.clientName.toLowerCase() === initialClient.name.toLowerCase())
+      );
+      setAccessCode(existingPortal?.accessCode || generateProvisionalPassword());
+      setStatus(existingPortal?.status || 'active');
 
       // Look up if client has an associated project in office database
       const clientProject = architectureProjects.find(

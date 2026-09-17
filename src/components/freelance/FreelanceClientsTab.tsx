@@ -1142,48 +1142,6 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
           </div>
         )}
 
-        {/* WORK CONTRACT MODALS */}
-        {isContractModalOpen && selectedContract && (
-          <WorkContractModal
-            isOpen={isContractModalOpen}
-            onClose={() => {
-              setIsContractModalOpen(false);
-              setSelectedContract(null);
-            }}
-            contract={selectedContract}
-            onSendForSignature={() => {
-              sendContractForSignature(selectedContract.id);
-              setIsContractModalOpen(false);
-            }}
-            onOpenDigitalSignature={() => {
-              setSigningContractTarget(selectedContract);
-              setIsContractModalOpen(false);
-            }}
-            onMarkAwaitingPayment={() => {
-              markContractAwaitingPayment(selectedContract.id);
-              setIsContractModalOpen(false);
-            }}
-            onConfirmPayment={() => {
-              confirmContractPayment(selectedContract.id);
-              setIsContractModalOpen(false);
-            }}
-            onDelete={() => {
-              deleteWorkContract(selectedContract.id);
-              setIsContractModalOpen(false);
-            }}
-          />
-        )}
-
-        {isNewContractModalOpen && (
-          <NewContractModal
-            isOpen={isNewContractModalOpen}
-            onClose={() => {
-              setIsNewContractModalOpen(false);
-              setNewContractDefaultClientId(undefined);
-            }}
-            defaultClientId={newContractDefaultClientId}
-          />
-        )}
         </div>
       ) : (
         <div className="space-y-6 pb-12 font-sans bg-[#fdfbf7] min-h-screen p-4 sm:p-6 rounded-3xl">
@@ -1578,6 +1536,8 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
               })
             )}
           </div>
+        </div>
+      )}
         </div>
       )}
 
@@ -2164,7 +2124,48 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
         }}
         initialClient={selectedClientForPortal}
       />
-        </div>
+
+      {/* WORK CONTRACT MODALS */}
+      {isContractModalOpen && selectedContract && (
+        <WorkContractModal
+          isOpen={isContractModalOpen}
+          onClose={() => {
+            setIsContractModalOpen(false);
+            setSelectedContract(null);
+          }}
+          contract={selectedContract}
+          onSendForSignature={() => {
+            sendContractForSignature(selectedContract.id);
+            setIsContractModalOpen(false);
+          }}
+          onOpenDigitalSignature={() => {
+            setSigningContractTarget(selectedContract);
+            setIsContractModalOpen(false);
+          }}
+          onMarkAwaitingPayment={() => {
+            markContractAwaitingPayment(selectedContract.id);
+            setIsContractModalOpen(false);
+          }}
+          onConfirmPayment={() => {
+            confirmContractPayment(selectedContract.id);
+            setIsContractModalOpen(false);
+          }}
+          onDelete={() => {
+            deleteWorkContract(selectedContract.id);
+            setIsContractModalOpen(false);
+          }}
+        />
+      )}
+
+      {isNewContractModalOpen && (
+        <NewContractModal
+          isOpen={isNewContractModalOpen}
+          onClose={() => {
+            setIsNewContractModalOpen(false);
+            setNewContractDefaultClientId(undefined);
+          }}
+          defaultClientId={newContractDefaultClientId}
+        />
       )}
     </>
   );
