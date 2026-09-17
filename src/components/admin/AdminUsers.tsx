@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db, auth, sanitizeFirestoreData } from '../../lib/firebase';
 import { UserProfile, useAuth } from '../../context/AuthContext';
+import { SupportTicket } from '../../types';
 import {
   Loader2,
   CheckCircle2,
@@ -202,19 +203,51 @@ export const AdminUsers: React.FC = () => {
 
   // Real-time support tickets counter for notification badge
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'support_tickets'), (snapshot) => {
+    const calcCount = () => {
       let count = 0;
-      snapshot.forEach((d) => {
-        const data = d.data();
-        if (data.status === 'waiting_admin' || (data.unreadByAdmin && data.unreadByAdmin > 0)) {
-          count++;
+      try {
+        const globalPool = localStorage.getItem('meu_escritorio_global_support_tickets');
+        if (globalPool) {
+          const parsedPool = JSON.parse(globalPool) as SupportTicket[];
+          if (Array.isArray(parsedPool)) {
+            parsedPool.forEach(d => {
+              if (d.status === 'waiting_admin' || (d.unreadByAdmin && d.unreadByAdmin > 0)) {
+                count++;
+              }
+            });
+          }
         }
-      });
+      } catch {}
       setWaitingSupportCount(count);
+    };
+
+    calcCount();
+    const handleUpdate = () => calcCount();
+    window.addEventListener('support_tickets_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+
+    const unsub = onSnapshot(collection(db, 'support_tickets'), (snapshot) => {
+      snapshot.forEach((d) => {
+        const data = d.data() as SupportTicket;
+        try {
+          const rawPool = localStorage.getItem('meu_escritorio_global_support_tickets');
+          let pool: SupportTicket[] = rawPool ? JSON.parse(rawPool) : [];
+          const idx = pool.findIndex(t => t.id === d.id);
+          if (idx >= 0) pool[idx] = { ...data, id: d.id };
+          else pool.push({ ...data, id: d.id });
+          localStorage.setItem('meu_escritorio_global_support_tickets', JSON.stringify(pool));
+        } catch {}
+      });
+      calcCount();
     }, (err) => {
       console.warn('Support count snapshot notice:', err);
     });
-    return () => unsub();
+
+    return () => {
+      unsub();
+      window.removeEventListener('support_tickets_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
   }, []);
 
   // Custom Date Modal & Manual Approval State

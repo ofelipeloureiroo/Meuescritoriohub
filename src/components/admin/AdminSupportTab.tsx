@@ -56,6 +56,16 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
 
       // 1. Load from localStorage first
       try {
+        const globalPool = localStorage.getItem('meu_escritorio_global_support_tickets');
+        if (globalPool) {
+          const parsedPool = JSON.parse(globalPool) as SupportTicket[];
+          if (Array.isArray(parsedPool)) {
+            parsedPool.forEach(t => {
+              if (t && t.id) map.set(t.id, t);
+            });
+          }
+        }
+
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (key && key.startsWith('meu_escritorio_user_support_ticket_')) {

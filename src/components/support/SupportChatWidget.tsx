@@ -132,6 +132,15 @@ export const SupportChatWidget: React.FC = () => {
     setTicketData(updatedTicket);
     try {
       localStorage.setItem(`meu_escritorio_user_support_ticket_${ticketId}`, JSON.stringify(updatedTicket));
+      const rawPool = localStorage.getItem('meu_escritorio_global_support_tickets');
+      let pool: SupportTicket[] = rawPool ? JSON.parse(rawPool) : [];
+      const idx = pool.findIndex(t => t.id === ticketId);
+      if (idx >= 0) {
+        pool[idx] = updatedTicket;
+      } else {
+        pool.push(updatedTicket);
+      }
+      localStorage.setItem('meu_escritorio_global_support_tickets', JSON.stringify(pool));
       window.dispatchEvent(new CustomEvent('support_tickets_updated'));
     } catch {}
 
