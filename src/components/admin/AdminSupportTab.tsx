@@ -49,8 +49,59 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Sync real-time with Firestore support_tickets collection
+  // Sync real-time with Firestore support_tickets collection and localStorage fallback
   useEffect(() => {
+    const loadTickets = () => {
+      const map = new Map<string, SupportTicket>();
+
+      // 1. Load from localStorage first
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('meu_escritorio_user_support_ticket_')) {
+            const val = localStorage.getItem(key);
+            if (val) {
+              const parsed = JSON.parse(val) as SupportTicket;
+              if (parsed && parsed.id) {
+                map.set(parsed.id, parsed);
+              }
+            }
+          }
+        }
+      } catch {}
+
+      // 2. Also check direct ticket list if any
+      try {
+        const directList = localStorage.getItem('meu_escritorio_support_tickets_list');
+        if (directList) {
+          const parsedList = JSON.parse(directList) as SupportTicket[];
+          if (Array.isArray(parsedList)) {
+            parsedList.forEach(t => {
+              if (t && t.id) map.set(t.id, t);
+            });
+          }
+        }
+      } catch {}
+
+      const list = Array.from(map.values());
+      list.sort((a, b) => {
+        if (a.status === 'waiting_admin' && b.status !== 'waiting_admin') return -1;
+        if (b.status === 'waiting_admin' && a.status !== 'waiting_admin') return 1;
+        return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+      });
+
+      if (list.length > 0) {
+        setTickets(list);
+        setSelectedTicketId((prev) => (prev && list.some(t => t.id === prev) ? prev : list[0].id));
+      }
+    };
+
+    loadTickets();
+
+    const handleCustomUpdate = () => loadTickets();
+    window.addEventListener('support_tickets_updated', handleCustomUpdate);
+    window.addEventListener('storage', handleCustomUpdate);
+
     const unsub = onSnapshot(collection(db, 'support_tickets'), (snapshot) => {
       const list: SupportTicket[] = [];
       snapshot.forEach((d) => {
@@ -58,26 +109,24 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
         list.push({ ...data, id: d.id });
       });
 
-      // Sort: tickets waiting for admin first, then by latest update
-      list.sort((a, b) => {
-        if (a.status === 'waiting_admin' && b.status !== 'waiting_admin') return -1;
-        if (b.status === 'waiting_admin' && a.status !== 'waiting_admin') return 1;
-        return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
-      });
-
-      setTickets(list);
-
-      // Maintain selection or select first
       if (list.length > 0) {
-        setSelectedTicketId((prev) => (prev && list.some(t => t.id === prev) ? prev : list[0].id));
-      } else {
-        setSelectedTicketId('');
+        list.forEach(t => {
+          try {
+            localStorage.setItem(`meu_escritorio_user_support_ticket_${t.id}`, JSON.stringify(t));
+          } catch {}
+        });
       }
+
+      loadTickets();
     }, (err) => {
       console.warn('Firestore onSnapshot support_tickets notice:', err);
     });
 
-    return () => unsub();
+    return () => {
+      unsub();
+      window.removeEventListener('support_tickets_updated', handleCustomUpdate);
+      window.removeEventListener('storage', handleCustomUpdate);
+    };
   }, []);
 
   const activeTicket = tickets.find((t) => t.id === selectedTicketId) || (tickets.length > 0 ? tickets[0] : null);
@@ -135,9 +184,15 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
 
     setReplyInput('');
 
-    // Persist to Firestore
+    // Persist to localStorage & Firestore
+    try {
+      localStorage.setItem(`meu_escritorio_user_support_ticket_${activeTicket.id}`, JSON.stringify(updatedTicket));
+      window.dispatchEvent(new CustomEvent('support_tickets_updated'));
+    } catch {}
+
     try {
       await setDoc(doc(db, 'support_tickets', activeTicket.id), sanitizeFirestoreData(updatedTicket), { merge: true });
+      window.dispatchEvent(new CustomEvent('support_tickets_updated'));
     } catch (e) {
       console.warn('Error sending reply to support ticket:', e);
     } finally {

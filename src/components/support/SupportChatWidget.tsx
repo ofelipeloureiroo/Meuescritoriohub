@@ -132,12 +132,14 @@ export const SupportChatWidget: React.FC = () => {
     setTicketData(updatedTicket);
     try {
       localStorage.setItem(`meu_escritorio_user_support_ticket_${ticketId}`, JSON.stringify(updatedTicket));
+      window.dispatchEvent(new CustomEvent('support_tickets_updated'));
     } catch {}
 
     setInputMessage('');
 
     try {
       await setDoc(doc(db, 'support_tickets', ticketId), sanitizeFirestoreData(updatedTicket), { merge: true });
+      window.dispatchEvent(new CustomEvent('support_tickets_updated'));
     } catch (err) {
       console.warn('Error saving support message to Firestore:', err);
     } finally {
