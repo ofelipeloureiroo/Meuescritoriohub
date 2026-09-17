@@ -49,33 +49,12 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Cleanup old dummy sample tickets if they exist
-  useEffect(() => {
-    try {
-      localStorage.removeItem('meu_escritorio_admin_support_tickets_v1');
-    } catch {}
-
-    const deleteMockTickets = async () => {
-      try {
-        const mockIds = ['ticket_carlos_felipe', 'ticket_laine_loureiro'];
-        for (const mId of mockIds) {
-          await deleteDoc(doc(db, 'support_tickets', mId)).catch(() => {});
-        }
-      } catch {}
-    };
-    deleteMockTickets();
-  }, []);
-
   // Sync real-time with Firestore support_tickets collection
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'support_tickets'), (snapshot) => {
       const list: SupportTicket[] = [];
       snapshot.forEach((d) => {
         const data = d.data() as SupportTicket;
-        // Exclude dummy templates
-        if (d.id === 'ticket_carlos_felipe' || d.id === 'ticket_laine_loureiro') {
-          return;
-        }
         list.push({ ...data, id: d.id });
       });
 
