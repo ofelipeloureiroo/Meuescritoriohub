@@ -135,16 +135,31 @@ export const SettingsTab: React.FC = () => {
 
   // Get the appropriate display name for the profile tab
   const getDisplayName = () => {
-    // 1. Use the name from the local profile if it is not the generic business name
-    if (profile?.name && profile.name !== 'LP Arquitetura e Interiores') {
+    // 1. Prioritize owner name from architectProfile (e.g. 'Laine Paula')
+    if (architectProfile?.ownerName?.trim()) {
+      return architectProfile.ownerName.trim();
+    }
+
+    // 2. Use commercial/business name if available
+    if (architectProfile?.name?.trim() && architectProfile.name.trim() !== 'LF Quadros & Decoração' && architectProfile.name.trim() !== 'LF Quadros Decorativos') {
+      return architectProfile.name.trim();
+    }
+
+    // 3. Use authenticated user's display name if available
+    if (user?.displayName) return user.displayName;
+
+    // 4. Use profile company name if available
+    if (profile?.companyName?.trim()) {
+      return profile.companyName.trim();
+    }
+
+    // 5. Fallback to profile name if it's not the old placeholder
+    if (profile?.name && profile.name !== 'LF Quadros Decorativos' && profile.name !== 'LF Quadros & Decoração') {
       return profile.name;
     }
 
-    // 2. Use authenticated user's display name if available
-    if (user?.displayName) return user.displayName;
-
-    // 3. Fallback to architect profile name or generic name
-    return profile?.name || architectProfile.ownerName || architectProfile.name || 'Usuário';
+    // 6. Generic Fallback
+    return 'Laine Paula';
   };
 
   // Password change states
