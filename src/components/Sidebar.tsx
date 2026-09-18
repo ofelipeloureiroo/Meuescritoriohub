@@ -289,6 +289,51 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
   ];
 
+  const CATEGORIES = [
+    {
+      id: 'home',
+      label: 'Início',
+      icon: Home,
+      defaultTab: 'dashboard',
+      tabs: ['dashboard', 'today', 'actions'],
+    },
+    {
+      id: 'projects',
+      label: 'Operação',
+      icon: FolderOpen,
+      defaultTab: 'projects',
+      tabs: ['projects', 'consultoria_expressa', 'suppliers', 'team'],
+    },
+    {
+      id: 'comercial',
+      label: 'Comercial',
+      icon: Users,
+      defaultTab: 'leads',
+      tabs: ['leads', 'whatsapp_center', 'freelance', 'portal_cliente'],
+    },
+    {
+      id: 'financial',
+      label: 'Financeiro',
+      icon: DollarSign,
+      defaultTab: 'banks',
+      tabs: ['banks', 'financeiro', 'deadlines', 'recebimentos', 'listas', 'goals', 'budget'],
+    },
+    {
+      id: 'marketing',
+      label: 'Marketing',
+      icon: Sparkles,
+      defaultTab: 'instagram',
+      tabs: ['instagram', 'home'],
+    },
+    {
+      id: 'settings',
+      label: 'Configurações',
+      icon: Settings,
+      defaultTab: 'settings',
+      tabs: ['settings'],
+    },
+  ];
+
   const handleNavClick = (tabId: string) => {
     setActiveTab(tabId);
     if (setIsMobileOpen) {
@@ -299,6 +344,116 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const instagramUrl = 'https://www.instagram.com/meuescritorio.online';
 
   const isLight = architectProfile?.bgTheme === 'light_cream' || architectProfile?.bgTheme === 'light_pure';
+
+  const desktopSidebarContent = (
+    <div className="flex flex-col h-full bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] text-[var(--text-main)] select-none transition-all duration-300 items-center py-6 justify-between">
+      {/* Top Brand / Photo */}
+      <div className="flex flex-col items-center gap-6 w-full px-2">
+        <button
+          onClick={() => handleNavClick('dashboard')}
+          className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center shadow-md bg-[var(--theme-primary)] text-black shrink-0 hover:opacity-90 transition-all border border-[var(--theme-primary)]/40 relative group cursor-pointer"
+          title="Ir para Painel do Escritório"
+        >
+          {architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL ? (
+            <img
+              src={architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL}
+              alt="Logo"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <Building2 className="w-5 h-5 text-black" />
+          )}
+          {/* Online Dot */}
+          <span className="absolute bottom-[-1px] right-[-1px] w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[var(--bg-sidebar)]" />
+        </button>
+
+        {/* Divider */}
+        <div className="w-8 h-px bg-[var(--border-color)]" />
+
+        {/* Categories Stack */}
+        <div className="flex flex-col gap-3 w-full items-center">
+          {CATEGORIES.map((category) => {
+            const Icon = category.icon;
+            // Check if active
+            const isCategoryActive = category.tabs.includes(activeTab) ||
+              (category.id === 'financial' && ['financeiro', 'recebimentos', 'listas'].includes(activeTab));
+
+            // Check if any sub-item has alerts
+            let hasAlert = false;
+            if (category.id === 'financial' && totalDeadlinesAlerts > 0) hasAlert = true;
+            if (category.id === 'projects' && ongoingArchitectureProjects.length > 0) hasAlert = true;
+
+            return (
+              <button
+                key={category.id}
+                onClick={() => {
+                  // Navigate to the current active tab of this category if already inside it, otherwise the defaultTab
+                  const isCurrent = category.tabs.includes(activeTab) || (category.id === 'financial' && ['financeiro', 'recebimentos', 'listas'].includes(activeTab));
+                  if (!isCurrent) {
+                    handleNavClick(category.defaultTab);
+                  }
+                }}
+                className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-150 cursor-pointer relative group border ${
+                  isCategoryActive
+                    ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)] shadow-xs'
+                    : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                <Icon
+                  className="w-5 h-5 shrink-0 transition-colors"
+                  style={{
+                    color: isCategoryActive ? 'var(--theme-primary)' : 'var(--text-muted)',
+                  }}
+                />
+                
+                {/* Red dot badge for alerts */}
+                {hasAlert && (
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-amber-500 rounded-full ring-2 ring-[var(--bg-sidebar)]" />
+                )}
+
+                {/* Tooltip on hover */}
+                <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-950 text-white text-[11px] font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap shadow-md z-50 pointer-events-none">
+                  {category.label}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bottom Profile / Theme */}
+      <div className="flex flex-col items-center gap-4 w-full px-2">
+        {/* Simple Theme Toggle Icon */}
+        <button
+          onClick={() => changeBgTheme(isLight ? 'dark_warm' : 'light_cream')}
+          className="w-10 h-10 rounded-xl flex items-center justify-center bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer group relative"
+        >
+          {isLight ? <Moon className="w-4.5 h-4.5" /> : <Sun className="w-4.5 h-4.5" />}
+          
+          <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-950 text-white text-[11px] font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap shadow-md z-50 pointer-events-none">
+            {isLight ? 'Modo Escuro' : 'Modo Claro'}
+          </div>
+        </button>
+
+        {/* Settings Shortcut */}
+        <button
+          onClick={() => handleNavClick('settings')}
+          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer group relative border ${
+            activeTab === 'settings'
+              ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)]'
+              : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
+          }`}
+        >
+          <Settings className="w-4.5 h-4.5" />
+          
+          <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-950 text-white text-[11px] font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap shadow-md z-50 pointer-events-none">
+            Configurações
+          </div>
+        </button>
+      </div>
+    </div>
+  );
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] text-[var(--text-main)] select-none transition-all duration-300">
@@ -497,8 +652,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Desktop Sticky Sidebar */}
-      <aside className="hidden lg:block w-64 xl:w-72 shrink-0 h-screen sticky top-0 z-30 shadow-xl">
-        {sidebarContent}
+      <aside className="hidden lg:block w-20 shrink-0 h-screen sticky top-0 z-30 shadow-xl">
+        {desktopSidebarContent}
       </aside>
 
       {/* Mobile Drawer Sidebar */}

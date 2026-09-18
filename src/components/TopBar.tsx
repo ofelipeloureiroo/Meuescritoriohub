@@ -117,6 +117,64 @@ const MONTH_NAMES = [
   'Dezembro',
 ];
 
+const CATEGORIES = [
+  {
+    id: 'home',
+    label: 'Início',
+    tabs: [
+      { id: 'dashboard', label: 'Painel' },
+      { id: 'today', label: 'Meu Dia & Agenda' },
+      { id: 'actions', label: 'Central de Ações' },
+    ],
+  },
+  {
+    id: 'projects',
+    label: 'Operação',
+    tabs: [
+      { id: 'projects', label: 'Gestão de Projetos' },
+      { id: 'consultoria_expressa', label: 'Consultoria Expressa' },
+      { id: 'suppliers', label: 'Fornecedores' },
+      { id: 'team', label: 'Equipe' },
+    ],
+  },
+  {
+    id: 'comercial',
+    label: 'Comercial',
+    tabs: [
+      { id: 'leads', label: 'Leads (Comercial)' },
+      { id: 'whatsapp_center', label: 'Atendimento WhatsApp' },
+      { id: 'freelance', label: 'Clientes & Contratos' },
+      { id: 'portal_cliente', label: 'Site do Cliente' },
+    ],
+  },
+  {
+    id: 'financial',
+    label: 'Financeiro',
+    tabs: [
+      { id: 'banks', label: 'Financeiro & Bancos' },
+      { id: 'deadlines', label: 'Recebimentos & Prazos' },
+      { id: 'listas', label: 'Listas & Tarefas' },
+      { id: 'goals', label: 'Metas & Objetivos' },
+      { id: 'budget', label: 'Orçamento' },
+    ],
+  },
+  {
+    id: 'marketing',
+    label: 'Marketing',
+    tabs: [
+      { id: 'instagram', label: 'Instagram' },
+      { id: 'home', label: 'Portfólio' },
+    ],
+  },
+  {
+    id: 'settings',
+    label: 'Configurações',
+    tabs: [
+      { id: 'settings', label: 'Configurações' },
+    ],
+  },
+];
+
 export const TopBar: React.FC<TopBarProps> = ({
   activeTab,
   setActiveTab,
@@ -171,10 +229,47 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   const userInitials = (userName.slice(0, 2) || 'LF').toUpperCase();
 
+  const activeCategory = CATEGORIES.find(c =>
+    c.tabs.some(t => t.id === activeTab) ||
+    (activeTab === 'financeiro' && c.id === 'financial') ||
+    (activeTab === 'recebimentos' && c.id === 'financial') ||
+    (activeTab === 'listas' && c.id === 'financial')
+  ) || CATEGORIES[0];
+
+  const isCollaborator = !!profile?.joinedOwnerUid;
+  const collaboratorObj = isCollaborator
+    ? profile?.collaborators?.find((c) => c.uid === user?.uid)
+    : null;
+  const permissions = collaboratorObj?.permissions;
+
+  const isTabAllowed = (tabId: string): boolean => {
+    if (!isCollaborator || !permissions) return true;
+    switch (tabId) {
+      case 'today': return permissions.today !== false;
+      case 'listas':
+      case 'actions': return permissions.actions !== false;
+      case 'leads': return permissions.leads !== false;
+      case 'home':
+      case 'projects': return permissions.projects !== false;
+      case 'suppliers': return permissions.suppliers !== false;
+      case 'team': return permissions.team !== false;
+      case 'portal_cliente':
+      case 'freelance': return permissions.clients !== false;
+      case 'recebimentos':
+      case 'deadlines': return permissions.deadlines !== false;
+      case 'financeiro':
+      case 'banks': return permissions.finance !== false;
+      case 'dashboard': return permissions.health !== false && permissions.finance !== false;
+      case 'goals': return permissions.goals !== false;
+      case 'budget': return permissions.budget !== false;
+      default: return true;
+    }
+  };
+
   return (
-    <header className="w-full bg-[var(--bg-header)]/95 backdrop-blur-md border-b border-[var(--border-color)] sticky top-0 z-20 px-3 sm:px-6 lg:px-8 py-2">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
-        {/* Left: Mobile Menu Button & Tab Title */}
+    <header className="w-full bg-[var(--bg-header)]/95 backdrop-blur-md border-b border-[var(--border-color)] sticky top-0 z-20 px-3 sm:px-6 lg:px-8 pt-3 pb-0">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3 pb-3">
+        {/* Left: Mobile Menu Button & Context Title */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
             onClick={onOpenMobileSidebar}
@@ -186,43 +281,25 @@ export const TopBar: React.FC<TopBarProps> = ({
             <span className="hidden xs:inline text-[11px] font-bold text-[var(--text-muted)]">Menu</span>
           </button>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] flex items-center justify-center text-[var(--theme-primary)] shrink-0 shadow-xs">
               <Icon className="w-4 h-4" />
             </div>
             <div className="flex flex-col">
-              <h1 className="font-serif font-bold text-xs sm:text-sm md:text-base text-[var(--text-main)] whitespace-nowrap leading-tight">
-                {currentTabInfo.label}
-              </h1>
-              <span className="hidden 2xl:inline text-[11px] text-[var(--text-muted)] whitespace-nowrap">
+              <div className="flex items-center gap-2">
+                <h1 className="font-serif font-bold text-xs sm:text-sm md:text-base text-[var(--text-main)] whitespace-nowrap leading-tight">
+                  {architectProfile?.name || profile?.companyName || 'Meu Escritório'}
+                </h1>
+                <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)]">
+                  {activeCategory.label}
+                </span>
+              </div>
+              <span className="hidden sm:inline text-[11px] text-[var(--text-muted)] mt-0.5">
                 {currentTabInfo.description}
               </span>
             </div>
           </div>
         </div>
-
-        {/* Center: Quick Navigation Buttons (visible on larger screens) */}
-        <nav className="hidden lg:flex items-center gap-1.5 bg-[var(--bg-input)] p-1.5 rounded-xl border border-[var(--border-color)] shadow-inner shrink-0">
-          {DESKTOP_QUICK_ACTIONS.map((item) => {
-            const ItemIcon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab?.(item.id)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                  isActive
-                    ? 'bg-[var(--theme-primary)]/20 text-[var(--theme-primary)] border border-[var(--theme-primary)]/50 shadow-xs font-bold'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] border border-transparent'
-                }`}
-                title={`Ir para ${item.label}`}
-              >
-                <ItemIcon className={`w-4 h-4 ${isActive ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]'}`} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
 
         {/* Right Corner: User Profile & Date Selector */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
@@ -311,8 +388,37 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
       </div>
 
+      {/* Bottom Row: Desktop Horizontal Navigation Tabs (Vobi style) */}
+      <div className="hidden lg:block max-w-7xl mx-auto border-t border-[var(--border-color)] pt-3 pb-0">
+        <nav className="flex items-center gap-6 overflow-x-auto no-scrollbar pb-0.5">
+          {activeCategory.tabs
+            .filter((tab) => isTabAllowed(tab.id))
+            .map((tab) => {
+              const isActive = activeTab === tab.id ||
+                (tab.id === 'banks' && activeTab === 'financeiro') ||
+                (tab.id === 'deadlines' && activeTab === 'recebimentos') ||
+                (tab.id === 'actions' && activeTab === 'listas');
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab?.(tab.id)}
+                  className={`relative pb-3 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap -mb-[1px] ${
+                    isActive
+                      ? 'text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)] font-bold'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-b-2 hover:border-[var(--border-color)]'
+                  }`}
+                  title={`Ir para ${tab.label}`}
+                >
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+        </nav>
+      </div>
+
       {/* Mobile Horizontally Scrollable Fast Navigation Pills */}
-      <div className="md:hidden mt-2 pt-1.5 border-t border-[var(--border-color)]">
+      <div className="lg:hidden mt-1 pb-3 border-t border-[var(--border-color)] pt-2.5">
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5 scroll-smooth">
           {ALL_QUICK_ACTIONS.map((item) => {
             const ItemIcon = item.icon;
