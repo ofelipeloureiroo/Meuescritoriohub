@@ -114,6 +114,33 @@ const DashboardSubscriptions: React.FC<{ users: UserProfile[] }> = ({ users }) =
 
 const SUBSCRIBERS_STORAGE_KEY = 'meu_escritorio_assinantes_autorizados_v1';
 
+// Helper to ensure ONLY platform subscribers & platform admins are included
+export const isPlatformSubscriber = (u: UserProfile): boolean => {
+  if (!u || !u.email) return false;
+  const em = u.email.toLowerCase().trim();
+  if (em === 'lfquadrosdecorativos@gmail.com' || u.role === 'admin') return true;
+
+  // Exclude team members, collaborators, and portal clients
+  if (u.joinedOwnerUid) return false;
+  if (u.uid?.startsWith('team_') || u.uid?.startsWith('portal_') || u.uid?.startsWith('collab_')) return false;
+  
+  const notesLower = (u.notes || '').toLowerCase();
+  if (
+    notesLower.includes('membro') || 
+    notesLower.includes('equipe') || 
+    notesLower.includes('colaborador') || 
+    notesLower.includes('portal') || 
+    notesLower.includes('sócia') || 
+    notesLower.includes('socia') || 
+    notesLower.includes('projetista') || 
+    notesLower.includes('coordenadora')
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
 // Base authorized accounts to ensure master accounts are always loaded
 const DEFAULT_AUTHORIZED_SUBSCRIBERS: UserProfile[] = [
   {
@@ -124,16 +151,6 @@ const DEFAULT_AUTHORIZED_SUBSCRIBERS: UserProfile[] = [
     status: 'active',
     subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
     createdAt: new Date().toISOString(),
-    notes: 'Assinante Ativo / Usuário da Plataforma',
-  },
-  {
-    uid: 'sub_laine_loureiro',
-    email: 'laine@lparquitetura.com.br',
-    name: 'Laíne Paula Loureiro',
-    role: 'user',
-    status: 'active',
-    subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
-    createdAt: '2024-01-15T10:00:00.000Z',
     notes: 'Assinante da Plataforma',
   },
 ];
@@ -147,7 +164,7 @@ export const AdminUsers: React.FC = () => {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const map = new Map<string, UserProfile>();
-          parsed.forEach((u: UserProfile) => {
+          parsed.filter(isPlatformSubscriber).forEach((u: UserProfile) => {
             if (u.email) map.set(u.email.toLowerCase().trim(), u);
           });
           DEFAULT_AUTHORIZED_SUBSCRIBERS.forEach(d => {
@@ -314,7 +331,7 @@ export const AdminUsers: React.FC = () => {
       if (storedSubs) {
         const parsed = JSON.parse(storedSubs);
         if (Array.isArray(parsed)) {
-          parsed.forEach((s: UserProfile) => {
+          parsed.filter(isPlatformSubscriber).forEach((s: UserProfile) => {
             const em = (s.email || '').toLowerCase().trim();
             if (em && em !== currentEmail && !blacklist.has(em)) {
               usersMap.set(em, { ...s, email: em });
@@ -324,39 +341,14 @@ export const AdminUsers: React.FC = () => {
       }
     } catch {}
 
-    // 3. Load from localStorage team members (instant)
-    try {
-      const storedTeam = localStorage.getItem('meu_escritorio_equipe_v1');
-      if (storedTeam) {
-        const team = JSON.parse(storedTeam);
-        if (Array.isArray(team)) {
-          team.forEach((m: any) => {
-            const mEmail = (m.email || '').toLowerCase().trim();
-            if (mEmail && mEmail !== currentEmail && !blacklist.has(mEmail) && !usersMap.has(mEmail)) {
-              usersMap.set(mEmail, {
-                uid: m.id || `team_${mEmail.replace(/[^a-z0-9]/g, '_')}`,
-                email: mEmail,
-                name: m.name || mEmail.split('@')[0],
-                role: 'user',
-                status: m.status === 'inactive' ? 'inactive' : 'active',
-                subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
-                createdAt: m.joinedAt || new Date().toISOString(),
-                notes: m.roleTitle || 'Membro da Equipe',
-              });
-            }
-          });
-        }
-      }
-    } catch {}
-
-    // 4. Concurrently fetch Firestore system integrations with timeout (non-blocking)
+    // 3. Concurrently fetch Firestore system integrations with timeout (non-blocking)
     try {
       const sysSnap = await fetchWithTimeout(getDoc(doc(db, 'system_integrations', 'authorized_subscribers')), 1500, null);
 
       if (sysSnap && sysSnap.exists && sysSnap.exists()) {
         const sysData = sysSnap.data();
         if (Array.isArray(sysData?.subscribers)) {
-          sysData.subscribers.forEach((s: UserProfile) => {
+          sysData.subscribers.filter(isPlatformSubscriber).forEach((s: UserProfile) => {
             const em = (s.email || '').toLowerCase().trim();
             if (em && em !== currentEmail && !blacklist.has(em)) {
               const existing = usersMap.get(em);
@@ -369,11 +361,11 @@ export const AdminUsers: React.FC = () => {
       console.warn("Notice checking system_integrations:", e);
     }
 
-    // 5. Load from Firestore snapshot docs (collection 'users')
+    // 4. Load from Firestore snapshot docs (collection 'users')
     snapshotDocs.forEach((docSnap) => {
       const d = docSnap.data() as UserProfile;
       const em = (d.email || '').toLowerCase().trim();
-      if (em && !blacklist.has(em)) {
+      if (em && !blacklist.has(em) && isPlatformSubscriber(d)) {
         const existing = usersMap.get(em);
         usersMap.set(em, {
           ...existing,
@@ -382,45 +374,9 @@ export const AdminUsers: React.FC = () => {
           email: em,
         });
       }
-      if (d.collaborators && Array.isArray(d.collaborators)) {
-        d.collaborators.forEach((c: any) => {
-          const cEmail = (c.email || '').toLowerCase().trim();
-          if (cEmail && cEmail !== currentEmail && !blacklist.has(cEmail) && !usersMap.has(cEmail)) {
-            usersMap.set(cEmail, {
-              uid: c.uid || `collab_${cEmail.replace(/[^a-z0-9]/g, '_')}`,
-              email: cEmail,
-              name: c.name || cEmail.split('@')[0],
-              role: 'user',
-              status: 'active',
-              subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
-              createdAt: c.joinedAt || new Date().toISOString(),
-              notes: 'Membro Colaborador',
-            });
-          }
-        });
-      }
     });
 
-    // 6. Load from profile.collaborators if present
-    if (profile?.collaborators && Array.isArray(profile.collaborators)) {
-      profile.collaborators.forEach((c: any) => {
-        const cEmail = (c.email || '').toLowerCase().trim();
-        if (cEmail && cEmail !== currentEmail && !blacklist.has(cEmail) && !usersMap.has(cEmail)) {
-          usersMap.set(cEmail, {
-            uid: c.uid || `collab_${cEmail.replace(/[^a-z0-9]/g, '_')}`,
-            email: cEmail,
-            name: c.name || cEmail.split('@')[0],
-            role: 'user',
-            status: 'active',
-            subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
-            createdAt: c.joinedAt || new Date().toISOString(),
-            notes: 'Membro Colaborador',
-          });
-        }
-      });
-    }
-
-    // 7. Ensure DEFAULT_AUTHORIZED_SUBSCRIBERS (including Carlos Felipe and studio members) are always included
+    // 5. Ensure DEFAULT_AUTHORIZED_SUBSCRIBERS are included
     DEFAULT_AUTHORIZED_SUBSCRIBERS.forEach((defSub) => {
       const em = defSub.email.toLowerCase().trim();
       if (!blacklist.has(em)) {
@@ -437,7 +393,7 @@ export const AdminUsers: React.FC = () => {
       }
     });
 
-    const finalList = Array.from(usersMap.values());
+    const finalList = Array.from(usersMap.values()).filter(isPlatformSubscriber);
     // Background persist to Firestore & LocalStorage
     persistSubscribersAcrossAllLayers(finalList);
 
@@ -753,8 +709,9 @@ export const AdminUsers: React.FC = () => {
     setUserToDelete(target as UserProfile);
   };
 
-  // Filtered users
+  // Filtered users (strictly platform subscribers and master admin)
   const filteredUsers = users.filter((u) => {
+    if (!isPlatformSubscriber(u)) return false;
     const matchesSearch =
       (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1087,10 +1044,6 @@ export const AdminUsers: React.FC = () => {
                               <span className="px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold">
                                 👑 Gestor / Dono
                               </span>
-                            ) : u.joinedOwnerUid || profile?.collaborators?.some(c => c.email?.toLowerCase() === u.email?.toLowerCase()) || u.notes?.includes('Membro') || u.notes?.includes('Sócia') || u.notes?.includes('Coordenadora') ? (
-                              <span className="px-2 py-0.5 rounded-md bg-sky-50 border border-sky-200 text-sky-800 text-[10px] font-bold">
-                                👥 Membro de Equipe
-                              </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold">
                                 🌱 Assinante da Plataforma
@@ -1140,10 +1093,6 @@ export const AdminUsers: React.FC = () => {
                     <td className="px-6 py-4">
                       {u.role === 'admin' ? (
                         <span className="text-xs text-amber-800 font-bold">Acesso Vitalício</span>
-                      ) : u.joinedOwnerUid || profile?.collaborators?.some(c => c.email?.toLowerCase() === u.email?.toLowerCase()) ? (
-                        <span className="text-xs text-sky-700 font-bold flex items-center gap-1">
-                          👥 Incluso na Equipe
-                        </span>
                       ) : (
                         <div>
                           {u.subscriptionDueDate ? (

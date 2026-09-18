@@ -391,58 +391,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const defaultDemoTransactions: Transaction[] = [
-      {
-        id: 'tx-rec-jjc',
-        description: 'Projeto JJC',
-        amount: 2012,
-        type: 'income',
-        structure: 'recorrente',
-        status: 'completed',
-        category: 'Honorários de Projeto',
-        bankAccountId: 'bank-principal',
-        date: '2026-09-01',
-        dueDate: '2026-10-01',
-        isRecurring: true,
-        recurrenceFrequency: 'mensal',
-        recurrenceStartDate: '2026-09-01',
-        clientName: 'JJC',
-        projectName: 'Projeto JJC',
-        notes: 'Recorrência mensal de honorários',
-      },
-      {
-        id: 'tx-rec-bfe',
-        description: 'Projeto BFE',
-        amount: 14000,
-        type: 'income',
-        structure: 'recorrente',
-        status: 'cancelled',
-        category: 'Honorários de Projeto',
-        bankAccountId: 'bank-principal',
-        date: '2026-09-15',
-        dueDate: '2026-09-15',
-        isRecurring: true,
-        recurrenceFrequency: 'mensal',
-        recurrenceStartDate: '2026-08-01',
-        clientName: 'BFE',
-        projectName: 'Projeto BFE',
-        notes: 'Contrato cancelado pelo cliente',
-      },
-    ];
-
     const saved = localStorage.getItem(getStorageKey('transactions'));
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.some((t: any) => t.id === 'tx-1' || t.id === 'tx-freela-1')) {
-          return defaultDemoTransactions;
-        }
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed) && !parsed.some((t: any) => t.id === 'tx-1' || t.id === 'tx-freela-1' || t.id === 'tx-rec-jjc')) {
           return parsed;
         }
       } catch {}
     }
-    return defaultDemoTransactions;
+    return [];
   });
 
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(() => {
@@ -450,10 +408,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.some((a: any) => a.id === 'bank-nubank' || a.balance > 1000)) {
-          return EMPTY_BANK_ACCOUNTS;
+        if (Array.isArray(parsed) && parsed.length > 0 && !parsed.some((a: any) => a.id === 'bank-nubank')) {
+          return parsed;
         }
-        return parsed;
       } catch {}
     }
     return EMPTY_BANK_ACCOUNTS;
@@ -464,10 +421,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.currentDebt === 218400) {
-          return EMPTY_HOUSE_MORTGAGE;
+        if (parsed && typeof parsed === 'object' && parsed.currentDebt !== 218400) {
+          return parsed;
         }
-        return parsed;
       } catch {}
     }
     return EMPTY_HOUSE_MORTGAGE;
@@ -478,10 +434,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.some((d: any) => d.id === 'debt-1' || d.id === 'debt-2')) {
-          return [];
+        if (Array.isArray(parsed) && !parsed.some((d: any) => d.id === 'debt-1' || d.id === 'debt-2')) {
+          return parsed;
         }
-        return parsed;
       } catch {}
     }
     return [];
@@ -492,12 +447,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && !parsed.some((c: any) => c.id === 'client_demo_connected' || c.id === 'client-1')) {
           return parsed;
         }
       } catch {}
     }
-    return [CONNECTED_PORTAL_CLIENT];
+    return [];
   });
 
   const [freelanceProjects, setFreelanceProjects] = useState<FreelanceProject[]>(() => {
@@ -505,7 +460,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && !parsed.some((p: any) => p.id === 'proj-freela-1')) {
           return parsed;
         }
       } catch {}
@@ -519,11 +474,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter((p: any) => p.id !== 'proj-bfe' && p.id !== 'proj-1');
+          return parsed.filter((p: any) => p.id !== 'proj-bfe' && p.id !== 'proj-1' && p.id !== 'proj_demo_connected_1' && p.id !== 'proj_demo_connected_2');
         }
       } catch {}
     }
-    return [CONNECTED_PORTAL_PROJECT_1, CONNECTED_PORTAL_PROJECT_2];
+    return [];
   });
 
   const [projectInstallments, setProjectInstallments] = useState<ProjectInstallment[]>(() => {
@@ -531,12 +486,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && !parsed.some((i: any) => i.id?.startsWith('inst_demo_') || i.id === 'inst-1')) {
           return parsed;
         }
       } catch {}
     }
-    return CONNECTED_PORTAL_INSTALLMENTS;
+    return [];
   });
 
   const [projectMilestones, setProjectMilestones] = useState<ProjectMilestone[]>(() => {
@@ -544,7 +499,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && !parsed.some((m: any) => m.id?.startsWith('mile-demo-') || m.id === 'ms-1')) {
           return parsed;
         }
       } catch {}
@@ -557,12 +512,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && !parsed.some((c: any) => c.id === 'contract_demo_connected_1' || c.id === 'contract-1')) {
           return parsed;
         }
       } catch {}
     }
-    return [CONNECTED_PORTAL_CONTRACT_1];
+    return [];
   });
 
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(() => {
@@ -863,7 +818,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     isCloudLoadedRef.current = false;
-    const primaryUid = 'lfquadrosdecorativos';
+    const primaryUid = targetUid || (isOwner ? CANONICAL_OWNER_UID : (user?.uid || 'guest'));
     const workspaceDocRef = doc(db, 'users', primaryUid, 'data', 'workspace');
     const userDocRef = doc(db, 'users', primaryUid);
 
@@ -878,7 +833,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
               if (prev.photoUrl !== uData.photoUrl) {
                 const updated = { ...prev, photoUrl: uData.photoUrl };
                 safeSetItem('profile', updated);
-                localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(updated));
                 window.dispatchEvent(new CustomEvent('office_profile_updated', { detail: updated }));
                 return updated;
               }
@@ -890,7 +844,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       () => {}
     );
 
-    // First attempt quick load from primary canonical or targetUid
+    // Attempt quick load from workspace doc
     const unsubscribe = onSnapshot(
       workspaceDocRef,
       async (snapshot) => {
@@ -906,7 +860,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setArchitectProfile((prev) => {
               const merged = { ...prev, ...data.profile };
               safeSetItem('profile', merged);
-              localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(merged));
               window.dispatchEvent(new CustomEvent('office_profile_updated', { detail: merged }));
               return merged;
             });
@@ -924,7 +877,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (Array.isArray(data.clients)) setClients(data.clients);
           if (Array.isArray(data.freelanceProjects)) setFreelanceProjects(data.freelanceProjects);
           if (Array.isArray(data.architectureProjects)) {
-            const filteredProjects = data.architectureProjects.filter((p: any) => p.id !== 'proj-bfe' && p.id !== 'proj-1');
+            const filteredProjects = data.architectureProjects.filter((p: any) => p.id !== 'proj-bfe' && p.id !== 'proj-1' && p.id !== 'proj_demo_connected_1' && p.id !== 'proj_demo_connected_2');
             setArchitectureProjects(filteredProjects);
           }
           if (Array.isArray(data.projectInstallments)) setProjectInstallments(data.projectInstallments);
@@ -940,56 +893,28 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             isSyncingFromCloudRef.current = false;
           }, 100);
         } else {
-          // If canonical doc doesn't exist yet, check targetUid or user doc before initializing
+          // If doc doesn't exist yet, seed clean initial workspace for this user
           try {
             isSyncingFromCloudRef.current = true;
-            let existingData: any = null;
-            if (targetUid !== primaryUid) {
-              const altDoc = await getDoc(doc(db, 'users', targetUid, 'data', 'workspace'));
-              if (altDoc.exists()) {
-                existingData = altDoc.data();
-              }
-            }
-            if (!existingData && user?.uid && user.uid !== primaryUid) {
-              const userAltDoc = await getDoc(doc(db, 'users', user.uid, 'data', 'workspace'));
-              if (userAltDoc.exists()) {
-                existingData = userAltDoc.data();
-              }
-            }
-
-            if (existingData) {
-              if (existingData.profile) setArchitectProfile(existingData.profile);
-              if (Array.isArray(existingData.transactions)) setTransactions(existingData.transactions);
-              if (Array.isArray(existingData.bankAccounts)) setBankAccounts(existingData.bankAccounts);
-              if (Array.isArray(existingData.clients)) setClients(existingData.clients);
-              if (Array.isArray(existingData.architectureProjects)) setArchitectureProjects(existingData.architectureProjects);
-              if (Array.isArray(existingData.projectInstallments)) setProjectInstallments(existingData.projectInstallments);
-              if (Array.isArray(existingData.projectMilestones)) setProjectMilestones(existingData.projectMilestones);
-              if (Array.isArray(existingData.actions)) setActions(existingData.actions);
-              
-              // Seed canonical doc
-              await setDoc(workspaceDocRef, existingData, { merge: true });
-            } else {
-              const payload = {
-                profile: architectProfile,
-                transactions,
-                bankAccounts,
-                houseMortgage,
-                debts,
-                clients,
-                freelanceProjects,
-                architectureProjects,
-                projectInstallments,
-                projectMilestones,
-                workContracts,
-                savingsGoals,
-                categoryBudgets,
-                officeSettings: INITIAL_OFFICE_SETTINGS,
-                actions,
-                updatedAt: new Date().toISOString(),
-              };
-              await setDoc(workspaceDocRef, JSON.parse(JSON.stringify(payload)), { merge: true });
-            }
+            const payload = {
+              profile: architectProfile,
+              transactions,
+              bankAccounts,
+              houseMortgage,
+              debts,
+              clients,
+              freelanceProjects,
+              architectureProjects,
+              projectInstallments,
+              projectMilestones,
+              workContracts,
+              savingsGoals,
+              categoryBudgets,
+              officeSettings: INITIAL_OFFICE_SETTINGS,
+              actions,
+              updatedAt: new Date().toISOString(),
+            };
+            await setDoc(workspaceDocRef, JSON.parse(JSON.stringify(payload)), { merge: true });
           } catch (err) {
             handleFirestoreError(err, OperationType.WRITE, `users/${primaryUid}/data/workspace`);
           } finally {
@@ -1003,21 +928,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       (error) => {
         handleFirestoreError(error, OperationType.GET, `users/${primaryUid}/data/workspace`);
         isCloudLoadedRef.current = true;
-        // Fallback to server durable workspace storage
-        fetch('/api/workspace')
-          .then(r => r.json())
-          .then(res => {
-            if (res.success && res.workspace) {
-              const data = res.workspace;
-              if (data.profile) setArchitectProfile(data.profile);
-              if (Array.isArray(data.clients) && data.clients.length > 0) setClients(data.clients);
-              if (Array.isArray(data.architectureProjects)) setArchitectureProjects(data.architectureProjects);
-              if (Array.isArray(data.projectMilestones)) setProjectMilestones(data.projectMilestones);
-              if (Array.isArray(data.workContracts)) setWorkContracts(data.workContracts);
-              if (Array.isArray(data.actions)) setActions(data.actions);
-            }
-          })
-          .catch(() => {});
       }
     );
 
@@ -1055,45 +965,26 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
 
       const sanitized = JSON.parse(JSON.stringify(payload));
-      await setDoc(canonicalWorkspaceRef, sanitized, { merge: true });
-      await setDoc(canonicalUserRef, {
-        uid: canonicalUid,
-        email: user?.email || 'lfquadrosdecorativos@gmail.com',
-        name: activeProf.name || 'LF Quadros & Decoração',
+      const activeUid = targetUid || (isOwner ? CANONICAL_OWNER_UID : (user?.uid || 'guest'));
+      
+      const workspaceDocRef = doc(db, 'users', activeUid, 'data', 'workspace');
+      await setDoc(workspaceDocRef, sanitized, { merge: true }).catch(() => {});
+      await setDoc(doc(db, 'users', activeUid), {
+        uid: activeUid,
+        email: user?.email || '',
+        name: activeProf.name || 'Meu Negócio',
         photoUrl: activeProf.photoUrl || '',
         updatedAt: new Date().toISOString(),
       }, { merge: true }).catch(() => {});
 
-      if (targetUid && targetUid !== canonicalUid) {
-        const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
-        await setDoc(workspaceDocRef, sanitized, { merge: true }).catch(() => {});
-        await setDoc(doc(db, 'users', targetUid), {
-          uid: targetUid,
-          email: user?.email || 'lfquadrosdecorativos@gmail.com',
-          name: activeProf.name || 'LF Quadros & Decoração',
-          photoUrl: activeProf.photoUrl || '',
-          updatedAt: new Date().toISOString(),
-        }, { merge: true }).catch(() => {});
+      if (isOwner) {
+        await setDoc(doc(db, 'workspaces', 'canonical'), sanitized, { merge: true }).catch(() => {});
+        fetch('/api/workspace', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sanitized),
+        }).catch(() => {});
       }
-
-      if (user?.uid && user.uid !== canonicalUid && user.uid !== targetUid) {
-        const mirrorDocRef = doc(db, 'users', user.uid, 'data', 'workspace');
-        await setDoc(mirrorDocRef, sanitized, { merge: true }).catch(() => {});
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: user?.email || 'lfquadrosdecorativos@gmail.com',
-          name: activeProf.name || 'LF Quadros & Decoração',
-          photoUrl: activeProf.photoUrl || '',
-          updatedAt: new Date().toISOString(),
-        }, { merge: true }).catch(() => {});
-      }
-
-      // Also persist to server workspace API for universal multi-browser synchronization
-      fetch('/api/workspace', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sanitized),
-      }).catch(() => {});
     } catch (err) {
       console.warn("Firestore immediate save warning:", err);
     }
@@ -1107,8 +998,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const timer = setTimeout(async () => {
       try {
-        const canonicalUid = 'lfquadrosdecorativos';
-        const canonicalWorkspaceRef = doc(db, 'users', canonicalUid, 'data', 'workspace');
+        const activeUid = targetUid || (isOwner ? CANONICAL_OWNER_UID : (user?.uid || 'guest'));
         const payload = {
           profile: architectProfile,
           transactions,
@@ -1128,26 +1018,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           updatedAt: new Date().toISOString(),
         };
         const sanitized = JSON.parse(JSON.stringify(payload));
-        await setDoc(canonicalWorkspaceRef, sanitized, { merge: true });
-        await setDoc(doc(db, 'workspaces', 'canonical'), sanitized, { merge: true }).catch(() => {});
+        const workspaceDocRef = doc(db, 'users', activeUid, 'data', 'workspace');
+        await setDoc(workspaceDocRef, sanitized, { merge: true }).catch(() => {});
 
-        // Always sync with backend server workspace API
-        fetch('/api/workspace', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(sanitized),
-        }).catch(() => {});
-
-        if (targetUid && targetUid !== canonicalUid) {
-          const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
-          await setDoc(workspaceDocRef, sanitized, { merge: true }).catch(() => {});
-        }
-        if (user?.uid && user.uid !== canonicalUid && user.uid !== targetUid) {
-          const userWorkspaceRef = doc(db, 'users', user.uid, 'data', 'workspace');
-          await setDoc(userWorkspaceRef, sanitized, { merge: true }).catch(() => {});
+        if (isOwner) {
+          await setDoc(doc(db, 'workspaces', 'canonical'), sanitized, { merge: true }).catch(() => {});
+          fetch('/api/workspace', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sanitized),
+          }).catch(() => {});
         }
       } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, `users/lfquadrosdecorativos/data/workspace`);
+        handleFirestoreError(err, OperationType.WRITE, `users/${targetUid}/data/workspace`);
       }
     }, 500);
 

@@ -115,11 +115,11 @@ export const TeamTab: React.FC = () => {
   useEffect(() => {
     const defaultOwner: TeamMember = {
       id: user?.uid || 'member_owner',
-      name: architectProfile?.ownerName || architectProfile?.name || profile?.companyName || user?.displayName || 'LF Quadros & Decoração',
-      email: user?.email || 'lfquadrosdecorativos@gmail.com',
+      name: architectProfile?.ownerName || architectProfile?.name || profile?.companyName || user?.displayName || user?.email?.split('@')[0] || 'Gestor',
+      email: user?.email || '',
       role: 'admin',
       roleTitle: 'Administrador / Gestor',
-      initials: (user?.displayName || 'LF').substring(0, 2).toUpperCase(),
+      initials: (architectProfile?.name || user?.displayName || user?.email || 'AD').substring(0, 2).toUpperCase(),
       color: '#b8a38b',
       isCurrentUser: true,
       status: 'active',
