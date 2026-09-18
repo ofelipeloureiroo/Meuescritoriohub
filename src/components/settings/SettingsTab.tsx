@@ -104,6 +104,49 @@ export const SettingsTab: React.FC = () => {
   // Top level horizontal tabs
   const [activeSubTab, setActiveSubTab] = useState<'minha-conta' | 'sistema' | 'operacao' | 'financeiro' | 'inteligencia'>('minha-conta');
 
+  // Get the real email the user registered/logged in with (prioritizes Firebase user email or Google provider email, filters system fallbacks)
+  const getDisplayEmail = () => {
+    // 1. Google provider email if authenticated with Google
+    const googleEmail = user?.providerData?.find(p => p.providerId === 'google.com')?.email;
+    if (googleEmail) return googleEmail;
+
+    // 2. Auth user email if it is a real user email
+    if (user?.email && !user.email.includes('master_escritorio')) {
+      return user.email;
+    }
+
+    // 3. Local session fallback email
+    try {
+      const saved = localStorage.getItem('office_local_session');
+      const local = saved ? JSON.parse(saved) : null;
+      if (local?.email && !local.email.includes('master_escritorio')) {
+        return local.email;
+      }
+    } catch {}
+
+    // 4. Firestore profile email if it is a real user email
+    if (profile?.email && !profile.email.includes('master_escritorio')) {
+      return profile.email;
+    }
+
+    // 5. Global owner default fallback
+    return 'lfquadrosdecorativos@gmail.com';
+  };
+
+  // Get the appropriate display name for the profile tab
+  const getDisplayName = () => {
+    // 1. Use the name from the local profile if it is not the generic business name
+    if (profile?.name && profile.name !== 'LP Arquitetura e Interiores') {
+      return profile.name;
+    }
+
+    // 2. Use authenticated user's display name if available
+    if (user?.displayName) return user.displayName;
+
+    // 3. Fallback to architect profile name or generic name
+    return profile?.name || architectProfile.ownerName || architectProfile.name || 'Usuário';
+  };
+
   // Password change states
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -638,13 +681,13 @@ export const SettingsTab: React.FC = () => {
                 <div>
                   <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)] mb-1">Nome</label>
                   <div className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-medium">
-                    {profile?.name || architectProfile.name || user?.displayName || 'Usuário'}
+                    {getDisplayName()}
                   </div>
                 </div>
                 <div>
                   <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)] mb-1">E-mail</label>
                   <div className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-medium">
-                    {user?.email || profile?.email || 'N/A'}
+                    {getDisplayEmail()}
                   </div>
                 </div>
               </div>
