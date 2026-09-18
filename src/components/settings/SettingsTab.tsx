@@ -42,6 +42,8 @@ import {
   EyeOff,
   Zap,
   ShieldCheck,
+  CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 import { compressImage } from '../../utils/imageCompressor';
 import { useFinance } from '../../context/FinanceContext';
@@ -109,8 +111,16 @@ export const SettingsTab: React.FC = () => {
     currentAuthUser?.providerData?.some(p => p.providerId === 'google.com')
   );
 
-  // Get the real email the user registered/logged in with (prioritizes Firebase user email or Google provider email, filters system fallbacks)
+  // Get the real email the user registered/logged in with
   const getDisplayEmail = () => {
+    // 0. Custom edited profile email from architectProfile or profile
+    if (architectProfile?.email && !architectProfile.email.includes('master_escritorio')) {
+      return architectProfile.email;
+    }
+    if (profile?.email && !profile.email.includes('master_escritorio')) {
+      return profile.email;
+    }
+
     // 1. Google provider email if authenticated with Google
     const googleEmail = currentAuthUser?.providerData?.find(p => p.providerId === 'google.com')?.email;
     if (googleEmail) return googleEmail;
@@ -129,13 +139,56 @@ export const SettingsTab: React.FC = () => {
       }
     } catch {}
 
-    // 4. Firestore profile email if it is a real user email
-    if (profile?.email && !profile.email.includes('master_escritorio')) {
-      return profile.email;
+    // 4. Global owner default fallback
+    return 'lfquadrosdecorativos@gmail.com';
+  };
+
+  // Editable email states
+  const [userEmailInput, setUserEmailInput] = useState('');
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [emailSaveSuccess, setEmailSaveSuccess] = useState('');
+  const [emailSaveError, setEmailSaveError] = useState('');
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+
+  useEffect(() => {
+    if (!isEditingEmail) {
+      setUserEmailInput(getDisplayEmail());
+    }
+  }, [architectProfile?.email, profile?.email, currentAuthUser?.email]);
+
+  const handleSaveEmail = async () => {
+    setEmailSaveError('');
+    setEmailSaveSuccess('');
+    const cleanEmail = (userEmailInput || '').trim().toLowerCase();
+
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setEmailSaveError('Por favor, informe um e-mail válido.');
+      return;
     }
 
-    // 5. Global owner default fallback
-    return 'lfquadrosdecorativos@gmail.com';
+    setIsSavingEmail(true);
+    try {
+      await updateArchitectProfile({ email: cleanEmail });
+
+      if (user) {
+        await updateProfile({ email: cleanEmail });
+      }
+
+      try {
+        const saved = localStorage.getItem('office_local_session');
+        const local = saved ? JSON.parse(saved) : {};
+        localStorage.setItem('office_local_session', JSON.stringify({ ...local, email: cleanEmail }));
+      } catch {}
+
+      setEmailSaveSuccess('E-mail atualizado com sucesso!');
+      setIsEditingEmail(false);
+      setTimeout(() => setEmailSaveSuccess(''), 4000);
+    } catch (err: any) {
+      console.error(err);
+      setEmailSaveError('Erro ao salvar e-mail: ' + (err.message || 'Tente novamente.'));
+    } finally {
+      setIsSavingEmail(false);
+    }
   };
 
   // Get the appropriate display name for the profile tab
@@ -756,27 +809,109 @@ export const SettingsTab: React.FC = () => {
                     <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)]">
                       E-mail
                     </label>
-                    {isGoogleAccount ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-sky-400 font-medium">
-                        <svg className="w-3 h-3" viewBox="0 0 24 24">
-                          <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
-                        </svg>
-                        Conta Google
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-emerald-400 font-medium">
-                        E-mail de Cadastro
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isGoogleAccount ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-sky-400 font-medium">
+                          <svg className="w-3 h-3" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+                          </svg>
+                          Conta Google
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-emerald-400 font-medium">
+                          E-mail de Cadastro
+                        </span>
+                      )}
+
+                      {!isEditingEmail && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUserEmailInput(getDisplayEmail());
+                            setIsEditingEmail(true);
+                            setEmailSaveSuccess('');
+                            setEmailSaveError('');
+                          }}
+                          className="text-[10px] font-bold text-[var(--theme-primary)] hover:underline flex items-center gap-1 cursor-pointer ml-1"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          <span>Editar</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-medium flex items-center justify-between">
-                    <span className="truncate">{getDisplayEmail()}</span>
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border border-[var(--border-color)] shrink-0 ml-2 font-medium">
-                      {isGoogleAccount ? 'Google' : 'E-mail e Senha'}
-                    </span>
-                  </div>
+
+                  {isEditingEmail ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="email"
+                          value={userEmailInput}
+                          onChange={(e) => setUserEmailInput(e.target.value)}
+                          placeholder="seu.email@exemplo.com"
+                          className="flex-1 px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-medium focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSaveEmail}
+                          disabled={isSavingEmail}
+                          className="px-3.5 py-2.5 rounded-xl bg-[var(--theme-primary)] hover:brightness-110 text-black font-bold text-xs flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50 shrink-0 shadow-xs"
+                        >
+                          {isSavingEmail ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          )}
+                          <span>Salvar</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsEditingEmail(false);
+                            setEmailSaveError('');
+                          }}
+                          className="px-3 py-2.5 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-medium border border-[var(--border-color)] transition-all cursor-pointer shrink-0"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                      {emailSaveError && (
+                        <p className="text-[10px] font-bold text-rose-500">{emailSaveError}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-medium flex items-center justify-between">
+                      <span className="truncate">{getDisplayEmail()}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border border-[var(--border-color)] shrink-0 font-medium">
+                          {isGoogleAccount ? 'Google' : 'E-mail e Senha'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUserEmailInput(getDisplayEmail());
+                            setIsEditingEmail(true);
+                            setEmailSaveSuccess('');
+                            setEmailSaveError('');
+                          }}
+                          className="p-1 rounded-md hover:bg-[var(--bg-card-secondary)] text-[var(--text-muted)] hover:text-[var(--theme-primary)] transition-colors cursor-pointer"
+                          title="Editar e-mail do sistema"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {emailSaveSuccess && (
+                    <div className="mt-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold flex items-center gap-1.5 animate-in fade-in duration-200">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{emailSaveSuccess}</span>
+                    </div>
+                  )}
+
                   <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                    E-mail oficial cadastrado no sistema ({isGoogleAccount ? 'login vinculado à sua conta Google' : 'login via e-mail e senha'}).
+                    E-mail oficial cadastrado no sistema ({isGoogleAccount ? 'login vinculado à sua conta Google' : 'login via e-mail e senha'}). Você pode alterá-lo a qualquer momento clicando em **Editar**.
                   </p>
                 </div>
               </div>
