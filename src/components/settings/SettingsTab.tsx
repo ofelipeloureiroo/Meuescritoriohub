@@ -301,7 +301,7 @@ export const SettingsTab: React.FC = () => {
   const [photoUrl, setPhotoUrl] = useState(architectProfile.photoUrl || '');
   const [selectedNiche, setSelectedNiche] = useState<NicheType>(architectProfile.niche || 'arquitetura');
   const [selectedTheme, setSelectedTheme] = useState<ThemeColorId>(architectProfile.themeColor || 'gold');
-  const [selectedBgTheme, setSelectedBgTheme] = useState<BgThemeId>(architectProfile.bgTheme || 'dark_warm');
+  const [selectedBgTheme, setSelectedBgTheme] = useState<BgThemeId>(architectProfile.bgTheme || 'light_cream');
 
   // Keep local fields in sync with architectProfile (especially ownerName / Responsável pelo Escritório)
   useEffect(() => {
@@ -365,7 +365,7 @@ export const SettingsTab: React.FC = () => {
     setPhotoUrl(architectProfile.photoUrl || '');
     setSelectedNiche(architectProfile.niche || 'arquitetura');
     setSelectedTheme(architectProfile.themeColor || 'gold');
-    setSelectedBgTheme(architectProfile.bgTheme || 'dark_warm');
+    setSelectedBgTheme(architectProfile.bgTheme || 'light_cream');
   }, [architectProfile]);
 
   // Actions Matrix update helper

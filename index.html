@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,7 +9,32 @@
     <meta property="og:description" content="Gestão completa de escritório: controle de projetos, acompanhamento rigoroso de prazos, CRM de clientes, equipe e visão 360° do seu negócio." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#12100e" />
+    <meta name="theme-color" content="#faf9f6" />
+
+    <!-- Instant Theme Bootstrap (Prevents Theme Flash on Refresh) -->
+    <script>
+      (function() {
+        try {
+          var bg = localStorage.getItem('app_bg_theme');
+          if (!bg) {
+            for (var i = 0; i < localStorage.length; i++) {
+              var k = localStorage.key(i);
+              if (k && k.startsWith('office_v2_') && k.endsWith('_profile')) {
+                var p = JSON.parse(localStorage.getItem(k) || '{}');
+                if (p && p.bgTheme) { bg = p.bgTheme; break; }
+              }
+            }
+          }
+          if (!bg) { bg = 'light_cream'; }
+          var isDark = (bg === 'dark_warm' || bg === 'dark_oled' || bg === 'dark_slate');
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
 
     <!-- Favicon & Touch Icons -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -23,7 +48,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
-  <body class="bg-[#12100e] text-[#fcf8f5] antialiased selection:bg-[#c58a4b]/30 selection:text-[#f3cca0]">
+  <body class="bg-[var(--bg-body)] text-[var(--text-main)] antialiased selection:bg-[#c58a4b]/30">
     <div id="root"></div>
     <!-- Mercado Pago SDK v2 -->
     <script src="https://sdk.mercadopago.com/js/v2"></script>

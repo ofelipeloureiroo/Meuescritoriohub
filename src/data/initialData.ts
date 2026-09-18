@@ -152,6 +152,7 @@ export const INITIAL_ARCHITECT_PROFILE: ArchitectProfile = {
   bankInfo: '',
   niche: 'vendas',
   themeColor: 'gold',
+  bgTheme: 'light_cream',
   showPortfolio: true,
 };
 

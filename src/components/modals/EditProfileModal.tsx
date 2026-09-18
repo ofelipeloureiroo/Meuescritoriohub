@@ -447,7 +447,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {(Object.keys(BG_THEMES) as BgThemeId[]).map((bgKey) => {
                       const bgTh = BG_THEMES[bgKey];
-                      const isSelected = (formData.bgTheme || 'dark_warm') === bgKey;
+                      const isSelected = (formData.bgTheme || 'light_cream') === bgKey;
 
                       return (
                         <button

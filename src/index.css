@@ -14,23 +14,23 @@
   --theme-button-bg: #c58a4b;
   --theme-button-hover: #d49454;
 
-  --bg-body: #12100e;
-  --bg-card: #1c1815;
-  --bg-card-hover: #251e1a;
-  --bg-card-secondary: #14110f;
-  --bg-sidebar: #171311;
-  --bg-header: #14110f;
-  --bg-input: #0e0c0b;
-  --border-color: #3d342f;
-  --border-subtle: #2a231f;
-  --text-main: #fcf8f5;
-  --text-muted: #a89c93;
+  --bg-body: #faf9f6;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f5f4ef;
+  --bg-card-secondary: #f2f0e8;
+  --bg-sidebar: #f5f3eb;
+  --bg-header: #ffffff;
+  --bg-input: #ffffff;
+  --border-color: #e3dfd3;
+  --border-subtle: #efebe0;
+  --text-main: #1c1917;
+  --text-muted: #6b6158;
 }
 
 @layer base {
   body {
-    background-color: var(--bg-body, #12100e);
-    color: var(--text-main, #fcf8f5);
+    background-color: var(--bg-body, #faf9f6);
+    color: var(--text-main, #1c1917);
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

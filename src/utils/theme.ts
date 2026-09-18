@@ -780,12 +780,25 @@ export const BG_THEMES: Record<BgThemeId, BgThemeConfig> = {
 
 export const applyThemeToDocument = (
   themeId: ThemeColorId = 'gold',
-  bgThemeId: BgThemeId = 'dark_warm'
+  bgThemeId: BgThemeId = 'light_cream'
 ) => {
   const theme = THEMES[themeId] || THEMES.gold;
-  const bgTheme = BG_THEMES[bgThemeId] || BG_THEMES.dark_warm;
+  const bgTheme = BG_THEMES[bgThemeId] || BG_THEMES.light_cream;
   const root = document.documentElement;
   const body = document.body;
+
+  try {
+    localStorage.setItem('app_bg_theme', bgThemeId);
+    localStorage.setItem('app_theme_color', themeId);
+  } catch {}
+
+  if (root) {
+    if (bgTheme.isDark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }
 
   const setProps = (el: HTMLElement) => {
     // Primary Chromatic Palette

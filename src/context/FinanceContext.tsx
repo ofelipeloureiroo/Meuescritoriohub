@@ -438,6 +438,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const getCleanProfile = (): ArchitectProfile => {
     const rawName = user?.displayName || user?.email?.split('@')[0] || 'Meu Negócio';
     const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+    const savedBg = (localStorage.getItem('app_bg_theme') as BgThemeId) || 'light_cream';
+    const savedTheme = (localStorage.getItem('app_theme_color') as ThemeColorId) || 'amber';
     return {
       name: formattedName,
       ownerName: '',
@@ -452,12 +454,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       followersCount: '', // Followers count starts completely empty
       rating: 5.0,
       niche: 'arquitetura',
-      themeColor: 'amber',
+      themeColor: savedTheme,
+      bgTheme: savedBg,
       showPortfolio: true,
     };
   };
 
   const [architectProfile, setArchitectProfile] = useState<ArchitectProfile>(() => {
+    const savedBgTheme = (localStorage.getItem('app_bg_theme') as BgThemeId) || null;
+    const savedThemeColor = (localStorage.getItem('app_theme_color') as ThemeColorId) || null;
+
     // 1. Direct storage retrieval
     const direct =
       localStorage.getItem(getStorageKey('profile')) ||
@@ -466,7 +472,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       try {
         const parsed: ArchitectProfile = JSON.parse(direct);
         if (parsed && typeof parsed === 'object') {
-          return parsed;
+          return {
+            ...parsed,
+            bgTheme: savedBgTheme || parsed.bgTheme || 'light_cream',
+            themeColor: savedThemeColor || parsed.themeColor || 'amber',
+          };
         }
       } catch (e) {
         console.error(e);
@@ -482,7 +492,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (raw) {
             const parsed = JSON.parse(raw);
             if (parsed && (parsed.photoUrl || (parsed.name && parsed.name !== 'Meu Negócio'))) {
-              return parsed;
+              return {
+                ...parsed,
+                bgTheme: savedBgTheme || parsed.bgTheme || 'light_cream',
+                themeColor: savedThemeColor || parsed.themeColor || 'amber',
+              };
             }
           }
         }
@@ -507,7 +521,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         pixKey: 'lfquadrosdecorativos@gmail.com',
         pixKeyType: 'email',
         niche: 'arte_decoracao',
-        themeColor: 'amber',
+        themeColor: savedThemeColor || 'amber',
+        bgTheme: savedBgTheme || 'light_cream',
         showPortfolio: true,
       };
     }
@@ -703,10 +718,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Apply CSS color theme whenever themeColor or bgTheme changes
   useEffect(() => {
-    applyThemeToDocument(
-      architectProfile.themeColor || 'gold',
-      architectProfile.bgTheme || 'dark_warm'
-    );
+    const savedBg = (localStorage.getItem('app_bg_theme') as BgThemeId) || null;
+    const effectiveBg = architectProfile.bgTheme || savedBg || 'light_cream';
+    const effectiveTheme = architectProfile.themeColor || 'amber';
+    applyThemeToDocument(effectiveTheme, effectiveBg);
   }, [architectProfile.themeColor, architectProfile.bgTheme]);
 
   // Sync to user-scoped localStorage
@@ -988,17 +1003,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
           if (data.profile) {
             setArchitectProfile((prev) => {
-              const merged = { ...prev, ...data.profile };
+              const currentExplicitBg = (localStorage.getItem('app_bg_theme') as BgThemeId) || prev.bgTheme || 'light_cream';
+              const merged = { ...prev, ...data.profile, bgTheme: data.profile.bgTheme || currentExplicitBg };
               safeSetItem('profile', merged);
               window.dispatchEvent(new CustomEvent('office_profile_updated', { detail: merged }));
               return merged;
             });
-            if (data.profile.themeColor || data.profile.bgTheme) {
-              applyThemeToDocument(
-                data.profile.themeColor || 'amber',
-                data.profile.bgTheme || 'dark_warm'
-              );
-            }
+            const effectiveThemeColor = data.profile.themeColor || (localStorage.getItem('app_theme_color') as any) || 'amber';
+            const effectiveBgTheme = data.profile.bgTheme || (localStorage.getItem('app_bg_theme') as any) || 'light_cream';
+            applyThemeToDocument(effectiveThemeColor, effectiveBgTheme);
           }
           if (Array.isArray(data.transactions)) {
             setTransactions(data.transactions.filter((t: any) => !isDemoTransaction(t)));
@@ -1255,13 +1268,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const changeTheme = (theme: ThemeColorId) => {
     recordLocalMutation();
-    applyThemeToDocument(theme, architectProfile.bgTheme || 'dark_warm');
+    try {
+      localStorage.setItem('app_theme_color', theme);
+    } catch {}
+    applyThemeToDocument(theme, architectProfile.bgTheme || 'light_cream');
     setArchitectProfile((prev) => {
       const updated = {
         ...prev,
         themeColor: theme,
       };
       safeSetItem('profile', updated);
+      localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(updated));
       saveToFirestoreImmediate(updated);
       return updated;
     });
@@ -1269,13 +1286,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const changeBgTheme = (bgTheme: BgThemeId) => {
     recordLocalMutation();
-    applyThemeToDocument(architectProfile.themeColor || 'gold', bgTheme);
+    try {
+      localStorage.setItem('app_bg_theme', bgTheme);
+    } catch {}
+    applyThemeToDocument(architectProfile.themeColor || 'amber', bgTheme);
     setArchitectProfile((prev) => {
       const updated = {
         ...prev,
         bgTheme,
       };
       safeSetItem('profile', updated);
+      localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(updated));
       saveToFirestoreImmediate(updated);
       return updated;
     });
