@@ -114,7 +114,7 @@ const DashboardSubscriptions: React.FC<{ users: UserProfile[] }> = ({ users }) =
 
 const SUBSCRIBERS_STORAGE_KEY = 'meu_escritorio_assinantes_autorizados_v1';
 
-// Base studio team members & authorized accounts to ensure authorized subscribers are always loaded
+// Base authorized accounts to ensure master accounts are always loaded
 const DEFAULT_AUTHORIZED_SUBSCRIBERS: UserProfile[] = [
   {
     uid: 'sub_carlos_felipe',
@@ -134,37 +134,7 @@ const DEFAULT_AUTHORIZED_SUBSCRIBERS: UserProfile[] = [
     status: 'active',
     subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
     createdAt: '2024-01-15T10:00:00.000Z',
-    notes: 'Arquiteta Titular & Sócia',
-  },
-  {
-    uid: 'sub_maria_laura',
-    email: 'marialaura@lparquitetura.com.br',
-    name: 'Maria Laura',
-    role: 'user',
-    status: 'active',
-    subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
-    createdAt: '2024-08-10T10:00:00.000Z',
-    notes: 'Coordenadora de Projetos',
-  },
-  {
-    uid: 'sub_ana_projetista',
-    email: 'ana@escritorio.com',
-    name: 'Ana',
-    role: 'user',
-    status: 'active',
-    subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
-    createdAt: '2024-09-01T10:00:00.000Z',
-    notes: 'Projetista & Membro Colaborador',
-  },
-  {
-    uid: 'sub_roberto_silveira',
-    email: 'roberto.silveira@exemplo.com',
-    name: 'Roberto Silveira',
-    role: 'user',
-    status: 'active',
-    subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
-    createdAt: '2024-07-20T10:00:00.000Z',
-    notes: 'Cliente Portal / Assinante Ativo',
+    notes: 'Assinante da Plataforma',
   },
 ];
 
@@ -379,12 +349,9 @@ export const AdminUsers: React.FC = () => {
       }
     } catch {}
 
-    // 4. Concurrently fetch Firestore integrations with timeout (non-blocking)
+    // 4. Concurrently fetch Firestore system integrations with timeout (non-blocking)
     try {
-      const [sysSnap, portalsSnap] = await Promise.all([
-        fetchWithTimeout(getDoc(doc(db, 'system_integrations', 'authorized_subscribers')), 1500, null),
-        fetchWithTimeout(getDocs(collection(db, 'clientPortals')), 1500, null),
-      ]);
+      const sysSnap = await fetchWithTimeout(getDoc(doc(db, 'system_integrations', 'authorized_subscribers')), 1500, null);
 
       if (sysSnap && sysSnap.exists && sysSnap.exists()) {
         const sysData = sysSnap.data();
@@ -398,27 +365,8 @@ export const AdminUsers: React.FC = () => {
           });
         }
       }
-
-      if (portalsSnap && portalsSnap.docs) {
-        portalsSnap.docs.forEach((pDoc: any) => {
-          const p = pDoc.data();
-          const pEmail = (p.clientEmail || '').toLowerCase().trim();
-          if (pEmail && pEmail !== currentEmail && !blacklist.has(pEmail) && !usersMap.has(pEmail)) {
-            usersMap.set(pEmail, {
-              uid: `portal_${pDoc.id}`,
-              email: pEmail,
-              name: p.clientName || pEmail.split('@')[0],
-              role: 'user',
-              status: p.status === 'inactive' ? 'inactive' : 'active',
-              subscriptionDueDate: p.expiresAt || new Date(Date.now() + 365 * 86400000).toISOString(),
-              createdAt: p.createdAt || new Date().toISOString(),
-              notes: 'Portal do Cliente Autorizado',
-            });
-          }
-        });
-      }
     } catch (e) {
-      console.warn("Notice checking system_integrations/portals:", e);
+      console.warn("Notice checking system_integrations:", e);
     }
 
     // 5. Load from Firestore snapshot docs (collection 'users')
@@ -1139,17 +1087,13 @@ export const AdminUsers: React.FC = () => {
                               <span className="px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold">
                                 👑 Gestor / Dono
                               </span>
-                            ) : u.notes?.includes('Portal') ? (
-                              <span className="px-2 py-0.5 rounded-md bg-purple-50 border border-purple-200 text-purple-800 text-[10px] font-bold">
-                                🏢 Cliente Portal
-                              </span>
                             ) : u.joinedOwnerUid || profile?.collaborators?.some(c => c.email?.toLowerCase() === u.email?.toLowerCase()) || u.notes?.includes('Membro') || u.notes?.includes('Sócia') || u.notes?.includes('Coordenadora') ? (
                               <span className="px-2 py-0.5 rounded-md bg-sky-50 border border-sky-200 text-sky-800 text-[10px] font-bold">
                                 👥 Membro de Equipe
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold">
-                                🌱 Assinante Autorizado
+                                🌱 Assinante da Plataforma
                               </span>
                             )}
                             {u.notes && (
