@@ -73,6 +73,13 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
   const [newStageName, setNewStageName] = useState<string>('');
   const [isAddingStage, setIsAddingStage] = useState<boolean>(false);
 
+  // Editing stage inline (number/order & name)
+  const [editingStage, setEditingStage] = useState<{
+    stageId: string;
+    name: string;
+    number: number;
+  } | null>(null);
+
   // Quick inline task creation
   const [quickTaskName, setQuickTaskName] = useState<Record<string, string>>({});
 
@@ -166,9 +173,10 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
   const handleAddStage = () => {
     if (!newStageName.trim() || !selectedTpl || selectedTpl.isSystem) return;
     const currentStages = selectedTpl.stages as TemplateStage[];
+    const cleanInputName = newStageName.trim().replace(/^\d+\.\s*/, '');
     const newStage: TemplateStage = {
       id: 'stg-' + Date.now(),
-      name: `${currentStages.length + 1}. ${newStageName.trim()}`,
+      name: cleanInputName,
       items: []
     };
     const updatedStages = [...currentStages, newStage];
@@ -179,6 +187,46 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
     setNewStageName('');
     setIsAddingStage(false);
     setExpandedStageIds(prev => ({ ...prev, [newStage.id]: true }));
+  };
+
+  // Edit stage (number/order and name)
+  const handleStartEditStage = (stage: TemplateStage, sIdx: number) => {
+    if (selectedTpl.isSystem) {
+      setDuplicatingTemplate(selectedTpl);
+      return;
+    }
+    const cleanName = stage.name.replace(/^\d+\.\s*/, '');
+    setEditingStage({
+      stageId: stage.id,
+      name: cleanName,
+      number: sIdx + 1
+    });
+  };
+
+  const handleSaveEditStage = () => {
+    if (!editingStage || !selectedTpl || selectedTpl.isSystem) return;
+    const stages = [...(selectedTpl.stages as TemplateStage[])];
+    const currentIdx = stages.findIndex(s => s.id === editingStage.stageId);
+    if (currentIdx === -1) return;
+
+    const newName = editingStage.name.trim() || stages[currentIdx].name.replace(/^\d+\.\s*/, '');
+    const updatedStage: TemplateStage = {
+      ...stages[currentIdx],
+      name: newName
+    };
+
+    // Remove stage from current index
+    stages.splice(currentIdx, 1);
+
+    // Calculate target index (1-based number -> 0-based index)
+    const targetIdx = Math.max(0, Math.min(editingStage.number - 1, stages.length));
+    stages.splice(targetIdx, 0, updatedStage);
+
+    const updatedTemplates = projectTemplates.map(t => 
+      t.id === selectedTpl.id ? { ...t, stages } : t
+    );
+    saveTemplates(updatedTemplates);
+    setEditingStage(null);
   };
 
   // Move stage up/down
@@ -618,23 +666,90 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                           className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl overflow-hidden transition-all"
                         >
                           {/* Stage Header Bar */}
-                          <div className="flex items-center justify-between p-3 bg-[var(--bg-card-secondary)] border-b border-[var(--border-color)]/50 hover:bg-[var(--bg-card-hover)] transition-colors">
-                            <div 
-                              onClick={() => toggleStageExpand(stage.id)}
-                              className="flex items-center gap-3 cursor-pointer flex-1"
-                            >
-                              <span className="w-6 h-6 rounded-full bg-[var(--bg-card)] border border-[var(--border-color)] text-[11px] font-bold text-[var(--theme-primary)] flex items-center justify-center shrink-0">
-                                {sIdx + 1}
-                              </span>
-                              <span className="font-bold text-xs text-[var(--text-main)]">{stage.name}</span>
-                              <span className="text-[10px] text-[var(--text-muted)] bg-[var(--bg-card)] px-2 py-0.5 rounded-full border border-[var(--border-color)]">
-                                {items.length} {items.length === 1 ? 'item' : 'itens'}
-                              </span>
-                            </div>
+                          <div className="flex items-center justify-between p-3 bg-[var(--bg-card-secondary)] border-b border-[var(--border-color)]/50 hover:bg-[var(--bg-card-hover)] transition-colors gap-2">
+                            {editingStage?.stageId === stage.id ? (
+                              <div 
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex flex-wrap items-center gap-2 flex-1 min-w-0"
+                              >
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <span className="text-[10px] font-bold text-[var(--text-muted)]">Nº:</span>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={selectedTpl.stages.length}
+                                    value={editingStage.number}
+                                    onChange={(e) => setEditingStage({ ...editingStage, number: parseInt(e.target.value) || 1 })}
+                                    className="w-12 px-2 py-1 bg-[var(--bg-card)] border border-[var(--theme-primary)] text-xs font-bold text-[var(--theme-primary)] rounded-lg text-center focus:outline-none"
+                                    title="Número / Posição da etapa"
+                                  />
+                                </div>
 
-                            <div className="flex items-center gap-1.5">
-                              {!selectedTpl.isSystem && (
+                                <div className="flex-1 min-w-[140px]">
+                                  <input
+                                    type="text"
+                                    value={editingStage.name}
+                                    onChange={(e) => setEditingStage({ ...editingStage, name: e.target.value })}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleSaveEditStage();
+                                      if (e.key === 'Escape') setEditingStage(null);
+                                    }}
+                                    placeholder="Nome da etapa..."
+                                    className="w-full px-3 py-1 bg-[var(--bg-card)] border border-[var(--theme-primary)] text-xs font-bold text-[var(--text-main)] rounded-lg focus:outline-none"
+                                    autoFocus
+                                  />
+                                </div>
+
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={handleSaveEditStage}
+                                    className="px-2.5 py-1 bg-[var(--theme-primary)] text-black rounded-lg font-bold text-xs hover:opacity-90 flex items-center gap-1 cursor-pointer"
+                                    title="Salvar alterações da etapa"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>Salvar</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingStage(null)}
+                                    className="p-1 text-[var(--text-muted)] hover:bg-[var(--bg-card-secondary)] rounded-lg cursor-pointer"
+                                    title="Cancelar"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div 
+                                onClick={() => toggleStageExpand(stage.id)}
+                                className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+                              >
+                                <span className="w-6 h-6 rounded-full bg-[var(--bg-card)] border border-[var(--border-color)] text-[11px] font-bold text-[var(--theme-primary)] flex items-center justify-center shrink-0">
+                                  {sIdx + 1}
+                                </span>
+                                <span className="font-bold text-xs text-[var(--text-main)] truncate">
+                                  {stage.name.replace(/^\d+\.\s*/, '')}
+                                </span>
+                                <span className="text-[10px] text-[var(--text-muted)] bg-[var(--bg-card)] px-2 py-0.5 rounded-full border border-[var(--border-color)] shrink-0">
+                                  {items.length} {items.length === 1 ? 'item' : 'itens'}
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {!selectedTpl.isSystem ? (
                                 <>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleStartEditStage(stage, sIdx);
+                                    }}
+                                    className="p-1 text-[var(--text-muted)] hover:text-[var(--theme-primary)] rounded cursor-pointer"
+                                    title="Editar número e nome da etapa"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
                                   <button
                                     onClick={() => handleMoveStage(sIdx, 'up')}
                                     disabled={sIdx === 0}
@@ -662,6 +777,18 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 </>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDuplicatingTemplate(selectedTpl);
+                                  }}
+                                  className="px-2 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                                  title="Duplique este modelo para editar as etapas e números"
+                                >
+                                  <Edit3 className="w-3 h-3" />
+                                  <span>Duplicar para editar</span>
+                                </button>
                               )}
 
                               <button
