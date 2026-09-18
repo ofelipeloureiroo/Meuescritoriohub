@@ -365,7 +365,13 @@ export const AdminUsers: React.FC = () => {
     snapshotDocs.forEach((docSnap) => {
       const d = docSnap.data() as UserProfile;
       const em = (d.email || '').toLowerCase().trim();
-      if (em && !blacklist.has(em) && isPlatformSubscriber(d)) {
+      if (em && isPlatformSubscriber(d)) {
+        // If an active user document exists in Firestore, the user has registered a new account
+        // Clear any previous deletion blacklist entry so they appear cleanly
+        if (blacklist.has(em)) {
+          blacklist.delete(em);
+          removeEmailFromBlacklist(em);
+        }
         const existing = usersMap.get(em);
         usersMap.set(em, {
           ...existing,
@@ -642,6 +648,7 @@ export const AdminUsers: React.FC = () => {
 
     try {
       if (uid && !uid.startsWith('sub_') && !uid.startsWith('team_') && !uid.startsWith('portal_')) {
+        await deleteDoc(doc(db, 'users', uid, 'data', 'workspace')).catch(() => {});
         await deleteDoc(doc(db, 'users', uid));
       }
     } catch (e) {

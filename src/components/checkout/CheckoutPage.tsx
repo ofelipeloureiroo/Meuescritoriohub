@@ -244,6 +244,20 @@ export const CheckoutPage: React.FC = () => {
 
   // Helper to ensure profile exists in Firestore and set active
   const activateSubscriptionForUser = async (uid: string, userEmail: string, method: string) => {
+    const cleanEmail = (userEmail || '').toLowerCase().trim();
+    if (cleanEmail) {
+      try {
+        const rawBlacklist = localStorage.getItem('office_deleted_subscribers');
+        if (rawBlacklist) {
+          const list = JSON.parse(rawBlacklist);
+          if (Array.isArray(list)) {
+            const newList = list.filter((x: string) => x.toLowerCase().trim() !== cleanEmail);
+            localStorage.setItem('office_deleted_subscribers', JSON.stringify(newList));
+          }
+        }
+      } catch {}
+    }
+
     const docRef = doc(db, 'users', uid);
     const dueDate = new Date();
     if (isAnnualPlan) {

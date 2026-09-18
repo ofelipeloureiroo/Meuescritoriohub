@@ -118,7 +118,22 @@ export const Login: React.FC = () => {
   }, [navigate]);
 
   const createOrUpdateUserProfile = async (firebaseUser: any, overrideEmail?: string) => {
-    const email = (overrideEmail || firebaseUser.email || '').toLowerCase();
+    const email = (overrideEmail || firebaseUser.email || '').toLowerCase().trim();
+    
+    // Clear email from blacklisted/deleted subscribers so re-registration works cleanly
+    if (email) {
+      try {
+        const rawBlacklist = localStorage.getItem('office_deleted_subscribers');
+        if (rawBlacklist) {
+          const list = JSON.parse(rawBlacklist);
+          if (Array.isArray(list)) {
+            const newList = list.filter((x: string) => x.toLowerCase().trim() !== email);
+            localStorage.setItem('office_deleted_subscribers', JSON.stringify(newList));
+          }
+        }
+      } catch {}
+    }
+
     const isOwnerAccount = !email || email === 'lfquadrosdecorativos@gmail.com';
     const docRef = doc(db, 'users', firebaseUser.uid);
     

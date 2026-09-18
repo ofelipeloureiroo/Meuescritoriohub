@@ -180,6 +180,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Guarantee user record exists in Firestore users collection
         try {
           const userEmail = (firebaseUser.email || '').toLowerCase().trim();
+          if (userEmail) {
+            try {
+              const rawBlacklist = localStorage.getItem('office_deleted_subscribers');
+              if (rawBlacklist) {
+                const list = JSON.parse(rawBlacklist);
+                if (Array.isArray(list)) {
+                  const newList = list.filter((x: string) => x.toLowerCase().trim() !== userEmail);
+                  localStorage.setItem('office_deleted_subscribers', JSON.stringify(newList));
+                }
+              }
+            } catch {}
+          }
+
           const isMaster = userEmail === 'lfquadrosdecorativos@gmail.com';
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           
