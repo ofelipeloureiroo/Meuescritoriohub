@@ -161,18 +161,18 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#3d342f] bg-[#14110f]/80">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color)] bg-[var(--bg-card-hover)]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <div className="w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
               <MessageCircle className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-serif font-bold text-base text-[#fcf8f5]">
+              <h3 className="font-serif font-bold text-base text-[var(--text-main)]">
                 Avisar Cliente pelo WhatsApp
               </h3>
-              <p className="text-xs text-[#a89c93]">
+              <p className="text-xs text-[var(--text-muted)]">
                 {installment
                   ? `${installment.clientName} • ${installment.projectTitle}`
                   : milestone
@@ -183,7 +183,7 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-[#a89c93] hover:text-[#fcf8f5] p-1.5 rounded-lg hover:bg-[#241e1b] transition-colors cursor-pointer"
+            className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1.5 rounded-lg hover:bg-[var(--bg-card-secondary)] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -194,7 +194,7 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
           {/* Template Selection Pills */}
           {installment && (
             <div>
-              <label className="block text-xs font-semibold text-[#d49454] uppercase tracking-wider mb-2">
+              <label className="block text-xs font-semibold text-amber-700 dark:text-[#d49454] uppercase tracking-wider mb-2">
                 Tipo de Lembrete
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -203,8 +203,8 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
                   onClick={() => setTemplateType('boleto')}
                   className={`px-2.5 py-2 rounded-xl text-xs font-bold text-center transition-all cursor-pointer border flex items-center justify-center gap-1 ${
                     templateType === 'boleto'
-                      ? 'bg-[#c58a4b] text-black border-[#c58a4b] shadow'
-                      : 'bg-[#241e1b] text-amber-400 border-amber-500/30 hover:border-amber-500/60'
+                      ? 'bg-[#c58a4b] text-white border-[#c58a4b] shadow'
+                      : 'bg-[var(--bg-card-secondary)] text-amber-700 dark:text-amber-400 border-amber-500/30 hover:border-amber-500/60'
                   }`}
                 >
                   <Barcode className="w-3.5 h-3.5" />
@@ -215,8 +215,8 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
                   onClick={() => setTemplateType('due_soon')}
                   className={`px-3 py-2 rounded-xl text-xs font-medium text-center transition-all cursor-pointer border ${
                     templateType === 'due_soon'
-                      ? 'bg-[#c58a4b]/20 text-[#d49454] border-[#c58a4b]'
-                      : 'bg-[#241e1b] text-[#a89c93] border-[#3d342f] hover:border-[#a89c93]/40'
+                      ? 'bg-[#c58a4b]/20 text-[#c58a4b] border-[#c58a4b]'
+                      : 'bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border-[var(--border-color)] hover:border-[#a89c93]/40'
                   }`}
                 >
                   📅 A Vencer
@@ -226,8 +226,8 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
                   onClick={() => setTemplateType('due_today')}
                   className={`px-3 py-2 rounded-xl text-xs font-medium text-center transition-all cursor-pointer border ${
                     templateType === 'due_today'
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500'
-                      : 'bg-[#241e1b] text-[#a89c93] border-[#3d342f] hover:border-[#a89c93]/40'
+                      ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500'
+                      : 'bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border-[var(--border-color)] hover:border-[#a89c93]/40'
                   }`}
                 >
                   ⏰ Hoje
@@ -237,8 +237,8 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
                   onClick={() => setTemplateType('overdue')}
                   className={`px-3 py-2 rounded-xl text-xs font-medium text-center transition-all cursor-pointer border ${
                     templateType === 'overdue'
-                      ? 'bg-rose-500/20 text-rose-300 border-rose-500'
-                      : 'bg-[#241e1b] text-[#a89c93] border-[#3d342f] hover:border-[#a89c93]/40'
+                      ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500'
+                      : 'bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border-[var(--border-color)] hover:border-[#a89c93]/40'
                   }`}
                 >
                   ⚠️ Vencida
@@ -248,8 +248,8 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
                   onClick={() => setTemplateType('receipt')}
                   className={`px-3 py-2 rounded-xl text-xs font-medium text-center transition-all cursor-pointer border ${
                     templateType === 'receipt'
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500'
-                      : 'bg-[#241e1b] text-[#a89c93] border-[#3d342f] hover:border-[#a89c93]/40'
+                      ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500'
+                      : 'bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border-[var(--border-color)] hover:border-[#a89c93]/40'
                   }`}
                 >
                   ✅ Recibo
@@ -260,17 +260,17 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
 
           {/* Client Phone Input */}
           <div>
-            <label className="block text-xs font-medium text-[#a89c93] mb-1.5">
+            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">
               WhatsApp do Cliente (DDD + Número)
             </label>
             <div className="relative">
-              <Phone className="w-4 h-4 text-[#a89c93] absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Phone className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="(21) 99876-5432"
                 value={customPhone}
                 onChange={(e) => setCustomPhone(e.target.value)}
-                className="w-full bg-[#241e1b] border border-[#3d342f] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b] transition-colors"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[var(--text-main)] focus:outline-none focus:border-[#c58a4b] transition-colors"
               />
             </div>
           </div>
@@ -278,10 +278,10 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
           {/* Message Textarea */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-medium text-[#a89c93]">
+              <label className="text-xs font-medium text-[var(--text-muted)]">
                 Mensagem Personalizada
               </label>
-              <span className="text-[11px] text-[#a89c93]">
+              <span className="text-[11px] text-[var(--text-muted)]">
                 Você pode editar antes de enviar
               </span>
             </div>
@@ -289,35 +289,35 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
               rows={8}
               value={customMessage}
               onChange={(e) => setCustomMessage(e.target.value)}
-              className="w-full bg-[#14110f] border border-[#3d342f] rounded-xl p-3.5 text-sm text-[#fcf8f5] focus:outline-none focus:border-[#c58a4b] leading-relaxed resize-none font-sans"
+              className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl p-3.5 text-sm text-[var(--text-main)] focus:outline-none focus:border-[#c58a4b] leading-relaxed resize-none font-sans"
             />
           </div>
 
           {/* PIX Reminder Highlight */}
-          <div className="p-3 bg-[#241e1b] rounded-xl border border-[#3d342f] flex items-center justify-between text-xs">
+          <div className="p-3 bg-[var(--bg-card-secondary)] rounded-xl border border-[var(--border-color)] flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-[#a89c93]">Chave PIX configurada:</span>
-              <span className="font-bold text-[#fcf8f5]">{architectProfile?.pixKey || 'contato@lainepaula.arq.br'}</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-[var(--text-muted)]">Chave PIX configurada:</span>
+              <span className="font-bold text-[var(--text-main)]">{architectProfile?.pixKey || 'contato@lainepaula.arq.br'}</span>
             </div>
           </div>
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-[#3d342f] bg-[#14110f]/80">
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-[var(--border-color)] bg-[var(--bg-card-hover)]">
           <button
             type="button"
             onClick={handleCopyMessage}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-[#241e1b] hover:bg-[#322924] text-[#fcf8f5] rounded-xl text-xs font-semibold border border-[#3d342f] transition-colors cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card)] text-[var(--text-main)] rounded-xl text-xs font-semibold border border-[var(--border-color)] transition-colors cursor-pointer"
           >
             {copied ? (
               <>
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span className="text-emerald-400">Mensagem Copiada!</span>
+                <Check className="w-4 h-4 text-emerald-500" />
+                <span className="text-emerald-500">Mensagem Copiada!</span>
               </>
             ) : (
               <>
-                <Copy className="w-4 h-4 text-[#a89c93]" />
+                <Copy className="w-4 h-4 text-[var(--text-muted)]" />
                 <span>Copiar Mensagem</span>
               </>
             )}
@@ -327,14 +327,14 @@ export const NotifyClientModal: React.FC<NotifyClientModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-1/2 sm:w-auto px-4 py-2.5 bg-[#241e1b] hover:bg-[#322924] text-[#a89c93] hover:text-[#fcf8f5] rounded-xl text-xs font-semibold border border-[#3d342f] transition-colors cursor-pointer"
+              className="w-1/2 sm:w-auto px-4 py-2.5 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-xl text-xs font-semibold border border-[var(--border-color)] transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="button"
               onClick={handleSendWhatsApp}
-              className="w-1/2 sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-900/30 transition-all cursor-pointer active:scale-95"
+              className="w-1/2 sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg transition-all cursor-pointer active:scale-95"
             >
               <Send className="w-4 h-4" />
               <span>Abrir WhatsApp</span>

@@ -362,6 +362,7 @@ export interface ProjectLinkedClient {
 export interface ArchitectureProject {
   id: string;
   title: string;
+  clientId?: string;
   clientName: string;
   clientPhone?: string;
   clientEmail?: string;

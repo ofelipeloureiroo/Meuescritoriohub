@@ -740,57 +740,57 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-[#1a1614] border border-[#3d342f] rounded-2xl shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh]">
+      <div className="relative w-full max-w-4xl bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-[#3d342f] bg-gradient-to-r from-[#241e1b] to-[#1a1614] flex items-center justify-between shrink-0">
+        <div className="p-4 sm:p-5 border-b border-[var(--border-color)] bg-[var(--bg-card-hover)] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#c58a4b]">
               <DollarSign className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-serif font-bold text-[#fcf8f5]">
+                <h3 className="text-base sm:text-lg font-serif font-bold text-[var(--text-main)]">
                   Cobrança da Parcela {activeInstallment.installmentNumber || 1}/{activeInstallment.totalInstallments || 1}
                 </h3>
                 {isPaid ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
                     <CheckCircle2 className="w-3 h-3" /> Paga
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                     <Clock className="w-3 h-3" /> Pendente
                   </span>
                 )}
               </div>
-              <p className="text-xs text-[#a89c93]">
+              <p className="text-xs text-[var(--text-muted)]">
                 {activeInstallment.projectTitle || matchedProject?.name || 'Projeto'} • Cliente:{' '}
-                <strong className="text-[#fcf8f5]">{payerName || activeInstallment.clientName || 'Cliente'}</strong>
+                <strong className="text-[var(--text-main)]">{payerName || activeInstallment.clientName || 'Cliente'}</strong>
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 text-[#a89c93] hover:text-[#fcf8f5] hover:bg-[#2e2621] rounded-xl transition-colors cursor-pointer"
+            className="p-2 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)] rounded-xl transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Simplified Two-Option Tabs Navigation */}
-        <div className="px-4 sm:px-6 pt-3 border-b border-[#3d342f] bg-[#1f1a17] flex items-center gap-3 shrink-0">
+        <div className="px-4 sm:px-6 pt-3 border-b border-[var(--border-color)] bg-[var(--bg-card-secondary)] flex items-center gap-3 shrink-0">
           <button
             onClick={() => setActiveTab('mercadopago')}
             className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === 'mercadopago'
                 ? 'border-[#c58a4b] text-[#c58a4b]'
-                : 'border-transparent text-[#a89c93] hover:text-[#fcf8f5]'
+                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
-            <Zap className="w-4 h-4 text-amber-400" />
+            <Zap className="w-4 h-4 text-amber-500" />
             <span>Boleto Mercado Pago (Registrado)</span>
             {hasGeneratedBoleto && (
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
             )}
           </button>
 
@@ -798,13 +798,13 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
             onClick={() => setActiveTab('pix')}
             className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === 'pix'
-                ? 'border-emerald-500 text-emerald-400'
-                : 'border-transparent text-[#a89c93] hover:text-[#fcf8f5]'
+                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
-            <QrCode className="w-4 h-4 text-emerald-400" />
+            <QrCode className="w-4 h-4 text-emerald-500" />
             <span>Pagamento via PIX (Contas Bancárias)</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-mono">
               Instantâneo
             </span>
           </button>
@@ -857,11 +857,11 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
               {/* SECTION A: SE JÁ TEM BOLETO GERADO */}
               {hasGeneratedBoleto && (
-                <div className="p-4 sm:p-5 rounded-2xl bg-[#241e1b] border border-amber-500/30 space-y-4 shadow-lg">
+                <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-card-secondary)] border border-amber-500/30 space-y-4 shadow-lg">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                       <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-                      <span className="text-sm font-bold text-[#fcf8f5]">
+                      <span className="text-sm font-bold text-[var(--text-main)]">
                         Boleto Oficial Emitido e Registrado
                       </span>
                     </div>
@@ -870,7 +870,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                       <button
                         onClick={handleCheckPaymentStatus}
                         disabled={isCheckingStatus}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#322924] hover:bg-[#3d342f] text-[#fcf8f5] border border-[#4d423b] transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)] transition-colors cursor-pointer"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 text-[#c58a4b] ${isCheckingStatus ? 'animate-spin' : ''}`} />
                         {isCheckingStatus ? 'Consultando...' : 'Verificar se Cliente Pagou'}
@@ -880,9 +880,9 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
                   {/* Linha Digitável */}
                   {(activeInstallment.mercadoPagoDigitableLine || activeInstallment.digitableLine) && (
-                    <div className="p-3.5 rounded-xl bg-[#14110f] border border-[#3d342f] space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] text-[#a89c93]">
-                        <span className="font-semibold text-amber-200">Linha Digitável (Código de Barras Oficial):</span>
+                    <div className="p-3.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+                        <span className="font-semibold text-amber-700 dark:text-amber-200">Linha Digitável (Código de Barras Oficial):</span>
                         <button
                           type="button"
                           onClick={() =>
@@ -891,11 +891,11 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                               'linha'
                             )
                           }
-                          className="text-[#c58a4b] hover:text-[#fcf8f5] flex items-center gap-1 font-bold cursor-pointer"
+                          className="text-[#c58a4b] hover:text-[var(--text-main)] flex items-center gap-1 font-bold cursor-pointer"
                         >
                           {copiedField === 'linha' ? (
                             <>
-                              <Check className="w-3.5 h-3.5 text-emerald-400" /> Copiado!
+                              <Check className="w-3.5 h-3.5 text-emerald-500" /> Copiado!
                             </>
                           ) : (
                             <>
@@ -904,7 +904,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                           )}
                         </button>
                       </div>
-                      <div className="font-mono text-xs sm:text-sm text-[#fcf8f5] break-all select-all font-semibold tracking-wide">
+                      <div className="font-mono text-xs sm:text-sm text-[var(--text-main)] break-all select-all font-semibold tracking-wide">
                         {activeInstallment.mercadoPagoDigitableLine || activeInstallment.digitableLine}
                       </div>
                     </div>
@@ -918,7 +918,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                         href={activeInstallment.mercadoPagoTicketUrl || activeInstallment.boletoPdfUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-[#c58a4b] to-[#a36e3b] text-[#14110f] font-bold text-xs hover:brightness-110 shadow-md transition-all text-center"
+                        className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-[#c58a4b] to-[#a36e3b] text-white font-bold text-xs hover:brightness-110 shadow-md transition-all text-center"
                       >
                         <ExternalLink className="w-4 h-4" />
                         <span>Abrir / Imprimir Boleto PDF</span>
@@ -927,7 +927,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                       <button
                         onClick={handleGenerateMercadoPagoBoleto}
                         disabled={isGeneratingMP}
-                        className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#c58a4b] text-[#14110f] font-bold text-xs hover:brightness-110"
+                        className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#c58a4b] text-white font-bold text-xs hover:brightness-110"
                       >
                         <RefreshCw className="w-4 h-4" />
                         <span>Gerar Link do Boleto</span>
@@ -949,7 +949,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                       type="button"
                       onClick={() => handleSendEmail('boleto')}
                       disabled={isSendingEmail}
-                      className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#322924] hover:bg-[#3d342f] text-[#fcf8f5] border border-[#4d423b] font-bold text-xs transition-all cursor-pointer"
+                      className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)] font-bold text-xs transition-all cursor-pointer"
                     >
                       {isSendingEmail ? (
                         <Loader2 className="w-4 h-4 animate-spin text-[#c58a4b]" />
@@ -963,15 +963,15 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
               )}
 
               {/* SECTION B: FORMULÁRIO DE EMISSÃO OU REEMISSÃO */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-[#241e1b] border border-[#3d342f] space-y-4">
+              <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)] space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <Zap className="w-4 h-4 text-[#c58a4b]" />
-                    <h4 className="text-sm font-bold text-[#fcf8f5]">
+                    <h4 className="text-sm font-bold text-[var(--text-main)]">
                       {hasGeneratedBoleto ? 'Reemitir ou Atualizar Dados do Boleto' : 'Dados do Cliente para Emissão do Boleto'}
                     </h4>
                   </div>
-                  <span className="text-[10px] text-[#a89c93]">
+                  <span className="text-[10px] text-[var(--text-muted)]">
                     Preenchimento automático do cadastro do cliente
                   </span>
                 </div>
@@ -980,7 +980,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                   {/* Valores e Vencimento */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-[#d49454] mb-1">
+                      <label className="block text-xs font-semibold text-amber-700 dark:text-[#d49454] mb-1">
                         Valor da Cobrança (R$) *
                       </label>
                       <input
@@ -990,15 +990,15 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                         required
                         value={boletoAmount}
                         onChange={(e) => setBoletoAmount(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs font-mono rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
+                        className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-mono rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
                       />
-                      <span className="text-[10px] text-[#a89c93] block mt-1">
+                      <span className="text-[10px] text-[var(--text-muted)] block mt-1">
                         Mínimo R$ 5,00 para boleto
                       </span>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-[#d49454] mb-1">
+                      <label className="block text-xs font-semibold text-amber-700 dark:text-[#d49454] mb-1">
                         Data de Vencimento *
                       </label>
                       <input
@@ -1006,12 +1006,12 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                         required
                         value={boletoDueDate}
                         onChange={(e) => setBoletoDueDate(e.target.value)}
-                        className="w-full bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs font-mono rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
+                        className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-mono rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-[#c4b5a5] mb-1">
+                      <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                         Descrição / Referência
                       </label>
                       <input
@@ -1019,7 +1019,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                         value={boletoDescription}
                         onChange={(e) => setBoletoDescription(e.target.value)}
                         placeholder="ex: Parcela 1/3 - Projeto"
-                        className="w-full bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
+                        className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
                       />
                     </div>
                   </div>
@@ -1027,7 +1027,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                   {/* Dados do Sacado: Nome, Email, Documento, Telefone */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="block text-xs font-semibold text-[#c4b5a5] mb-1">
+                      <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                         Nome Completo do Cliente *
                       </label>
                       <input
@@ -1036,12 +1036,12 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                         value={payerName}
                         onChange={(e) => setPayerName(e.target.value)}
                         placeholder="Nome do Cliente ou Razão Social"
-                        className="w-full bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
+                        className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-[#c4b5a5] mb-1">
+                      <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                         E-mail do Cliente (Obrigatório para Boleto) *
                       </label>
                       <input
@@ -1050,14 +1050,14 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                         value={payerEmail}
                         onChange={(e) => setPayerEmail(e.target.value)}
                         placeholder="cliente@email.com"
-                        className="w-full bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
+                        className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-[#c4b5a5] mb-1">
+                      <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                         CPF ou CNPJ do Cliente *
                       </label>
                       <input
@@ -1066,12 +1066,12 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                         value={payerDoc}
                         onChange={(e) => setPayerDoc(formatCpfCnpj(e.target.value))}
                         placeholder="000.000.000-00 ou 00.000.000/0001-00"
-                        className="w-full bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] font-mono text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
+                        className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] font-mono text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-[#c4b5a5] mb-1">
+                      <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                         Celular / WhatsApp (Com DDD)
                       </label>
                       <input
@@ -1079,15 +1079,15 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                         value={payerPhone}
                         onChange={(e) => setPayerPhone(e.target.value)}
                         placeholder="(21) 99999-9999"
-                        className="w-full bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
+                        className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#c58a4b]"
                       />
                     </div>
                   </div>
 
                   {/* Endereço Completo do Cliente */}
-                  <div className="p-3.5 rounded-xl bg-[#14110f] border border-[#3d342f] space-y-3">
+                  <div className="p-3.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#c4b5a5] flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-[#c58a4b]" />
                         Endereço do Pagador (Obrigatório pela FEBRABAN)
                       </span>
@@ -1095,7 +1095,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                       <div>
-                        <label className="block text-[11px] font-medium text-[#a89c93] mb-1">
+                        <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1">
                           CEP
                         </label>
                         <div className="flex gap-1">
@@ -1105,14 +1105,14 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                             onChange={(e) => setPayerZip(e.target.value)}
                             onBlur={handleSearchCep}
                             placeholder="00000-000"
-                            className="w-full bg-[#1f1a17] border border-[#3d342f] text-[#fcf8f5] font-mono text-xs rounded-lg p-2 focus:outline-none focus:border-[#c58a4b]"
+                            className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] font-mono text-xs rounded-lg p-2 focus:outline-none focus:border-[#c58a4b]"
                           />
                           <button
                             type="button"
                             onClick={handleSearchCep}
                             disabled={isSearchingCep}
                             title="Buscar endereço pelo CEP"
-                            className="px-2.5 py-1.5 bg-[#322924] hover:bg-[#3d342f] text-[#c58a4b] rounded-lg border border-[#4d423b] text-xs font-semibold cursor-pointer"
+                            className="px-2.5 py-1.5 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[#c58a4b] rounded-lg border border-[var(--border-color)] text-xs font-semibold cursor-pointer"
                           >
                             {isSearchingCep ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Buscar'}
                           </button>
@@ -1120,7 +1120,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                       </div>
 
                       <div className="sm:col-span-2">
-                        <label className="block text-[11px] font-medium text-[#a89c93] mb-1">
+                        <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1">
                           Logradouro / Rua
                         </label>
                         <input
@@ -1128,12 +1128,12 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                           value={payerStreet}
                           onChange={(e) => setPayerStreet(e.target.value)}
                           placeholder="ex: Av. Paulista"
-                          className="w-full bg-[#1f1a17] border border-[#3d342f] text-[#fcf8f5] text-xs rounded-lg p-2 focus:outline-none focus:border-[#c58a4b]"
+                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] text-xs rounded-lg p-2 focus:outline-none focus:border-[#c58a4b]"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-medium text-[#a89c93] mb-1">
+                        <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1">
                           Número
                         </label>
                         <input
@@ -1141,14 +1141,14 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                           value={payerNumber}
                           onChange={(e) => setPayerNumber(e.target.value)}
                           placeholder="ex: 100 ou S/N"
-                          className="w-full bg-[#1f1a17] border border-[#3d342f] text-[#fcf8f5] text-xs rounded-lg p-2 focus:outline-none focus:border-[#c58a4b]"
+                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] text-xs rounded-lg p-2 focus:outline-none focus:border-[#c58a4b]"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-[11px] font-medium text-[#a89c93] mb-1">
+                        <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1">
                           Bairro
                         </label>
                         <input
@@ -1156,12 +1156,12 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                           value={payerNeighborhood}
                           onChange={(e) => setPayerNeighborhood(e.target.value)}
                           placeholder="ex: Centro"
-                          className="w-full bg-[#1f1a17] border border-[#3d342f] text-[#fcf8f5] text-xs rounded-lg p-2 focus:outline-none focus:border-[#c58a4b]"
+                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] text-xs rounded-lg p-2 focus:outline-none focus:border-[#c58a4b]"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-medium text-[#a89c93] mb-1">
+                        <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1">
                           Cidade
                         </label>
                         <input
@@ -1169,12 +1169,12 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                           value={payerCity}
                           onChange={(e) => setPayerCity(e.target.value)}
                           placeholder="ex: Rio de Janeiro"
-                          className="w-full bg-[#1f1a17] border border-[#3d342f] text-[#fcf8f5] text-xs rounded-lg p-2 focus:outline-none focus:border-[#c58a4b]"
+                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] text-xs rounded-lg p-2 focus:outline-none focus:border-[#c58a4b]"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-medium text-[#a89c93] mb-1">
+                        <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1">
                           Estado (UF)
                         </label>
                         <input
@@ -1183,7 +1183,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                           value={payerState}
                           onChange={(e) => setPayerState(e.target.value.toUpperCase())}
                           placeholder="RJ, SP, MG..."
-                          className="w-full bg-[#1f1a17] border border-[#3d342f] text-[#fcf8f5] text-xs uppercase font-mono rounded-lg p-2 focus:outline-none focus:border-[#c58a4b]"
+                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] text-xs uppercase font-mono rounded-lg p-2 focus:outline-none focus:border-[#c58a4b]"
                         />
                       </div>
                     </div>
@@ -1194,7 +1194,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                     <button
                       type="submit"
                       disabled={isGeneratingMP}
-                      className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#c58a4b] to-[#a36e3b] text-[#14110f] font-bold text-sm hover:brightness-110 flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                      className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#c58a4b] to-[#a36e3b] text-white font-bold text-sm hover:brightness-110 flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer disabled:opacity-50"
                     >
                       {isGeneratingMP ? (
                         <>
@@ -1232,11 +1232,11 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
               )}
 
               {/* Bank Account Selection for PIX */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-[#241e1b] border border-emerald-500/30 space-y-4">
+              <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-card-secondary)] border border-emerald-500/30 space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-emerald-400" />
-                    <h4 className="text-sm font-bold text-[#fcf8f5]">
+                    <Building2 className="w-4 h-4 text-emerald-500" />
+                    <h4 className="text-sm font-bold text-[var(--text-main)]">
                       Conta Bancária de Recebimento do PIX
                     </h4>
                   </div>
@@ -1244,7 +1244,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsManageAccountsOpen(true)}
-                    className="text-xs text-emerald-400 hover:text-emerald-300 font-bold underline flex items-center gap-1 cursor-pointer"
+                    className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
                   >
                     <span>⚙️ Gerenciar / Cadastrar Chaves PIX</span>
                   </button>
@@ -1252,13 +1252,13 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-emerald-200 mb-1.5">
+                    <label className="block text-xs font-semibold text-emerald-700 dark:text-emerald-200 mb-1.5">
                       Selecione a Conta Bancária do Escritório
                     </label>
                     <select
                       value={selectedPixAccountId}
                       onChange={(e) => setSelectedPixAccountId(e.target.value)}
-                      className="w-full bg-[#14110f] border border-[#3d342f] text-[#fcf8f5] text-xs font-medium rounded-xl p-2.5 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-medium rounded-xl p-2.5 focus:outline-none focus:border-emerald-500"
                     >
                       {bankAccounts.map((acc) => (
                         <option key={acc.id} value={acc.id}>
@@ -1269,16 +1269,16 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                   </div>
 
                   {/* Summary of Selected Account */}
-                  <div className="p-3 rounded-xl bg-[#14110f] border border-[#3d342f] text-xs space-y-1">
-                    <div className="text-[#a89c93] flex justify-between">
+                  <div className="p-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs space-y-1">
+                    <div className="text-[var(--text-muted)] flex justify-between">
                       <span>Titular:</span>
-                      <strong className="text-[#fcf8f5]">
+                      <strong className="text-[var(--text-main)]">
                         {selectedPixAccount?.beneficiaryName || architectProfile?.name || profile?.companyName || 'Escritório'}
                       </strong>
                     </div>
-                    <div className="text-[#a89c93] flex justify-between">
+                    <div className="text-[var(--text-muted)] flex justify-between">
                       <span>Chave PIX:</span>
-                      <strong className="text-emerald-300 font-mono">
+                      <strong className="text-emerald-600 dark:text-emerald-300 font-mono">
                         {selectedPixAccount?.pixKey || architectProfile?.pixKey || 'Não cadastrada'}
                       </strong>
                     </div>
@@ -1286,12 +1286,12 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                 </div>
 
                 {!selectedPixAccount?.pixKey && !architectProfile?.pixKey && (
-                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center justify-between">
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-200 text-xs flex items-center justify-between">
                     <span>Esta conta ainda não possui chave PIX cadastrada.</span>
                     <button
                       type="button"
                       onClick={() => setIsManageAccountsOpen(true)}
-                      className="px-2.5 py-1 bg-amber-500/20 text-amber-300 rounded-lg font-bold hover:bg-amber-500/30"
+                      className="px-2.5 py-1 bg-amber-500/20 text-amber-700 dark:text-amber-300 rounded-lg font-bold hover:bg-amber-500/30"
                     >
                       Cadastrar Chave Agora
                     </button>
@@ -1300,10 +1300,10 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
               </div>
 
               {/* PIX QR Code & Copia e Cola Card */}
-              <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-[#241e1b] to-[#1a1614] border border-[#3d342f] space-y-5 shadow-xl">
+              <div className="p-4 sm:p-6 rounded-2xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)] space-y-5 shadow-xl">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                   {/* Left: QR Code */}
-                  <div className="md:col-span-5 flex flex-col items-center justify-center p-4 bg-[#14110f] rounded-2xl border border-[#3d342f]">
+                  <div className="md:col-span-5 flex flex-col items-center justify-center p-4 bg-[var(--bg-input)] rounded-2xl border border-[var(--border-color)]">
                     <div className="p-3 bg-white rounded-xl shadow-md">
                       {isGeneratingPix ? (
                         <div className="w-48 h-48 flex items-center justify-center text-zinc-400">
@@ -1321,7 +1321,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                         </div>
                       )}
                     </div>
-                    <span className="text-[11px] text-emerald-300 mt-2 font-mono flex items-center gap-1 font-semibold">
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-300 mt-2 font-mono flex items-center gap-1 font-semibold">
                       <QrCode className="w-3.5 h-3.5" /> Escanear no app do banco
                     </span>
                   </div>
@@ -1329,19 +1329,19 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                   {/* Right: Dados de Pagamento e Botões Rápidos */}
                   <div className="md:col-span-7 space-y-4">
                     <div className="space-y-1">
-                      <span className="text-xs text-[#a89c93]">Valor da Parcela:</span>
-                      <div className="text-2xl sm:text-3xl font-bold font-mono text-emerald-400">
+                      <span className="text-xs text-[var(--text-muted)]">Valor da Parcela:</span>
+                      <div className="text-2xl sm:text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
                         {formatCurrency(boletoAmount || activeInstallment.amount)}
                       </div>
-                      <div className="text-xs text-[#a89c93]">
-                        Vencimento: <strong className="text-[#fcf8f5]">{formatDate(boletoDueDate || activeInstallment.dueDate)}</strong>
+                      <div className="text-xs text-[var(--text-muted)]">
+                        Vencimento: <strong className="text-[var(--text-main)]">{formatDate(boletoDueDate || activeInstallment.dueDate)}</strong>
                       </div>
                     </div>
 
                     {/* Copiar Chave Direta */}
                     {(selectedPixAccount?.pixKey || architectProfile?.pixKey) && (
-                      <div className="p-3 rounded-xl bg-[#14110f] border border-[#3d342f] space-y-1">
-                        <div className="flex items-center justify-between text-[11px] text-[#a89c93]">
+                      <div className="p-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] space-y-1">
+                        <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
                           <span>Chave PIX Direta:</span>
                           <button
                             type="button"
@@ -1351,11 +1351,11 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                                 'pixKey'
                               )
                             }
-                            className="text-emerald-400 hover:text-emerald-200 flex items-center gap-1 font-bold cursor-pointer"
+                            className="text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-bold cursor-pointer"
                           >
                             {copiedField === 'pixKey' ? (
                               <>
-                                <Check className="w-3.5 h-3.5 text-emerald-400" /> Copiado!
+                                <Check className="w-3.5 h-3.5 text-emerald-500" /> Copiado!
                               </>
                             ) : (
                               <>
@@ -1364,7 +1364,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                             )}
                           </button>
                         </div>
-                        <div className="font-mono text-xs text-[#fcf8f5] break-all font-semibold">
+                        <div className="font-mono text-xs text-[var(--text-main)] break-all font-semibold">
                           {selectedPixAccount?.pixKey || architectProfile?.pixKey}
                         </div>
                       </div>
@@ -1372,17 +1372,17 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
 
                     {/* PIX Copia e Cola */}
                     {pixCopiaECola && (
-                      <div className="p-3 rounded-xl bg-[#14110f] border border-emerald-500/30 space-y-1">
-                        <div className="flex items-center justify-between text-[11px] text-[#a89c93]">
-                          <span className="text-emerald-300 font-semibold">PIX Copia e Cola (EMV Oficial):</span>
+                      <div className="p-3 rounded-xl bg-[var(--bg-input)] border border-emerald-500/30 space-y-1">
+                        <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+                          <span className="text-emerald-600 dark:text-emerald-300 font-semibold">PIX Copia e Cola (EMV Oficial):</span>
                           <button
                             type="button"
                             onClick={() => copyToClipboard(pixCopiaECola, 'copiaECola')}
-                            className="text-emerald-400 hover:text-emerald-200 flex items-center gap-1 font-bold cursor-pointer"
+                            className="text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-bold cursor-pointer"
                           >
                             {copiedField === 'copiaECola' ? (
                               <>
-                                <Check className="w-3.5 h-3.5 text-emerald-400" /> Código Copiado!
+                                <Check className="w-3.5 h-3.5 text-emerald-500" /> Código Copiado!
                               </>
                             ) : (
                               <>
@@ -1391,7 +1391,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                             )}
                           </button>
                         </div>
-                        <div className="font-mono text-[11px] text-[#fcf8f5] break-all select-all max-h-16 overflow-y-auto bg-[#1a1614] p-2 rounded-lg border border-[#3d342f]">
+                        <div className="font-mono text-[11px] text-[var(--text-main)] break-all select-all max-h-16 overflow-y-auto bg-[var(--bg-card)] p-2 rounded-lg border border-[var(--border-color)]">
                           {pixCopiaECola}
                         </div>
                       </div>
@@ -1400,7 +1400,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                 </div>
 
                 {/* PIX Action Buttons */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-2 border-t border-[#3d342f]">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-2 border-t border-[var(--border-color)]">
                   {/* WhatsApp */}
                   <button
                     type="button"
@@ -1416,12 +1416,12 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                     type="button"
                     onClick={() => handleSendEmail('pix')}
                     disabled={isSendingEmail}
-                    className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl bg-[#322924] hover:bg-[#3d342f] text-[#fcf8f5] border border-[#4d423b] font-bold text-xs transition-all cursor-pointer"
+                    className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)] font-bold text-xs transition-all cursor-pointer"
                   >
                     {isSendingEmail ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
                     ) : (
-                      <Mail className="w-4 h-4 text-emerald-400" />
+                      <Mail className="w-4 h-4 text-emerald-500" />
                     )}
                     <span>{isSendingEmail ? 'Enviando...' : 'Enviar por E-mail'}</span>
                   </button>
@@ -1430,7 +1430,7 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
                   <button
                     type="button"
                     onClick={handlePrintPix}
-                    className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl bg-[#322924] hover:bg-[#3d342f] text-[#fcf8f5] border border-[#4d423b] font-bold text-xs transition-all cursor-pointer"
+                    className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)] font-bold text-xs transition-all cursor-pointer"
                   >
                     <Printer className="w-4 h-4 text-[#c58a4b]" />
                     <span>Imprimir Guia PIX</span>
@@ -1452,15 +1452,15 @@ export const BoletoModal: React.FC<BoletoModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[#3d342f] bg-[#1a1614] flex items-center justify-between shrink-0">
-          <div className="text-xs text-[#a89c93] flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+        <div className="p-4 border-t border-[var(--border-color)] bg-[var(--bg-card-hover)] flex items-center justify-between shrink-0">
+          <div className="text-xs text-[var(--text-muted)] flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-500" />
             <span>Sistema Financeiro Integrado • Notificação e Baixa em Tempo Real</span>
           </div>
 
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-[#322924] hover:bg-[#3d342f] text-[#fcf8f5] text-xs font-semibold border border-[#4d423b] transition-colors cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card)] text-[var(--text-main)] text-xs font-semibold border border-[var(--border-color)] transition-colors cursor-pointer"
           >
             Fechar
           </button>

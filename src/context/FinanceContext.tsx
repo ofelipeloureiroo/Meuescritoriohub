@@ -273,39 +273,25 @@ const INITIAL_OFFICE_SETTINGS: OfficeSettings = {
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
-// Helpers to strictly remove any sample/demo data
+// Helpers to strictly remove legacy sample/demo data without affecting real user items
 const isDemoClient = (c: any): boolean => {
   if (!c) return false;
   const id = c.id || '';
-  const name = (c.name || '').toLowerCase();
   return (
     id === 'cli-silveira-1' ||
-    id.startsWith('cli-int-') ||
     id === 'client_demo_connected' ||
     id === 'client-1' ||
     id === 'cli-1' ||
     id === 'cli-2' ||
     id === 'cli-3' ||
     id === 'cli-4' ||
-    id === 'cli-5' ||
-    name.includes('roberto & camila') ||
-    name.includes('villa chiado') ||
-    name.includes('miami prime') ||
-    name.includes('carlos eduardo') ||
-    name.includes('mariana & lucas') ||
-    name.includes('construtora horizonte') ||
-    name.includes('dr. fernando prado') ||
-    name.includes('juliana mendes') ||
-    name.includes('restaurante sabor') ||
-    name.includes('larissa oliveira')
+    id === 'cli-5'
   );
 };
 
 const isDemoProject = (p: any): boolean => {
   if (!p) return false;
   const id = p.id || '';
-  const title = (p.title || '').toLowerCase();
-  const clientName = (p.clientName || '').toLowerCase();
   return (
     id === 'proj-alphaville-01' ||
     id === 'proj-gourmet-02' ||
@@ -314,21 +300,7 @@ const isDemoProject = (p: any): boolean => {
     id === 'proj-2' ||
     id === 'proj-3' ||
     id === 'proj-4' ||
-    id.startsWith('proj_demo_') ||
-    id.startsWith('proj-arch-') ||
-    id.startsWith('proj-freela-') ||
-    id.startsWith('proj-int-') ||
-    title.includes('residência alphaville') ||
-    title.includes('residencia alphaville') ||
-    title.includes('espaço gourmet') ||
-    title.includes('espaco gourmet') ||
-    title.includes('casa solar') ||
-    title.includes('edifício horizon') ||
-    title.includes('loft contemporâneo') ||
-    title.includes('clínica odontológica') ||
-    clientName.includes('roberto & camila') ||
-    clientName.includes('brícia papa') ||
-    clientName.includes('bricia papa')
+    id.startsWith('proj_demo_')
   );
 };
 
@@ -336,8 +308,6 @@ const isDemoInstallment = (i: any): boolean => {
   if (!i) return false;
   const id = i.id || '';
   const projId = i.projectId || '';
-  const clientName = (i.clientName || '').toLowerCase();
-  const projectTitle = (i.projectTitle || '').toLowerCase();
   return (
     id.startsWith('inst-alpha') ||
     id.startsWith('inst-gourmet') ||
@@ -348,12 +318,7 @@ const isDemoInstallment = (i: any): boolean => {
     id === 'inst-4' ||
     id === 'inst-5' ||
     projId === 'proj-alphaville-01' ||
-    projId === 'proj-gourmet-02' ||
-    projId.startsWith('proj-arch-') ||
-    clientName.includes('roberto & camila') ||
-    clientName.includes('mariana & rodrigo') ||
-    projectTitle.includes('alphaville') ||
-    projectTitle.includes('casa solar')
+    projId === 'proj-gourmet-02'
   );
 };
 
@@ -369,43 +334,30 @@ const isDemoMilestone = (m: any): boolean => {
     id === 'ms-2' ||
     id === 'ms-3' ||
     projId === 'proj-alphaville-01' ||
-    projId === 'proj-gourmet-02' ||
-    projId.startsWith('proj-arch-')
+    projId === 'proj-gourmet-02'
   );
 };
 
 const isDemoContract = (c: any): boolean => {
   if (!c) return false;
   const id = c.id || '';
-  const title = (c.title || '').toLowerCase();
-  const client = (c.clientName || '').toLowerCase();
   return (
     id === 'contract-alphaville-01' ||
     id.startsWith('contract_demo_') ||
     id === 'contract-1' ||
-    id === 'contract-2' ||
-    title.includes('alphaville') ||
-    client.includes('roberto & camila') ||
-    client.includes('miami prime')
+    id === 'contract-2'
   );
 };
 
 const isDemoTransaction = (t: any): boolean => {
   if (!t) return false;
   const id = t.id || '';
-  const desc = (t.description || '').toLowerCase();
-  const client = (t.clientName || '').toLowerCase();
   return (
     id === 'tx-rec-jjc' ||
     id === 'tx-rec-bfe' ||
     id === 'tx-1' ||
     id === 'tx-2' ||
-    id === 'tx-3' ||
-    id.startsWith('tx-freela') ||
-    desc.includes('projeto jjc') ||
-    desc.includes('projeto bfe') ||
-    client === 'jjc' ||
-    client === 'bfe'
+    id === 'tx-3'
   );
 };
 
@@ -1882,7 +1834,28 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       id: `proj-arch-${Date.now()}`,
       createdAt: new Date().toISOString().split('T')[0],
     };
-    setArchitectureProjects((prev) => [newProj, ...prev]);
+    const updatedArch = [newProj, ...architectureProjects];
+    setArchitectureProjects(updatedArch);
+    safeSetItem('architecture_projects', updatedArch);
+
+    // Update clients project count
+    if (projectData.clientId || projectData.clientName) {
+      const updatedClients = clients.map((c) => {
+        if (
+          (projectData.clientId && c.id === projectData.clientId) ||
+          (projectData.clientName && c.name.trim().toLowerCase() === projectData.clientName.trim().toLowerCase())
+        ) {
+          return {
+            ...c,
+            projectsCount: (c.projectsCount || 0) + 1,
+            status: 'active' as const,
+          };
+        }
+        return c;
+      });
+      setClients(updatedClients);
+      safeSetItem('clients', updatedClients);
+    }
   };
 
   const updateArchitectureProject = (id: string, updatedFields: Partial<ArchitectureProject>) => {
