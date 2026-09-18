@@ -32,11 +32,16 @@
     background-color: var(--bg-body, #12100e);
     color: var(--text-main, #fcf8f5);
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    transition: background-color 0.25s ease, color 0.25s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   h1, h2, h3, .font-serif {
     font-family: 'Cormorant Garamond', Georgia, serif;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
   }
 }
 
