@@ -72,6 +72,20 @@ const PRESET_AVATARS = [
   },
 ];
 
+const STAGE_COLOR_PRESETS = [
+  { label: 'Azul', value: '#3b82f6' },
+  { label: 'Ciano', value: '#06b6d4' },
+  { label: 'Esmeralda', value: '#10b981' },
+  { label: 'Verde', value: '#22c55e' },
+  { label: 'Âmbar', value: '#f59e0b' },
+  { label: 'Laranja', value: '#f97316' },
+  { label: 'Vermelho', value: '#ef4444' },
+  { label: 'Rosa', value: '#ec4899' },
+  { label: 'Roxo', value: '#8b5cf6' },
+  { label: 'Dourado', value: '#b5986e' },
+  { label: 'Cinza', value: '#6b7280' },
+];
+
 export const SettingsTab: React.FC = () => {
   const {
     architectProfile,
@@ -141,6 +155,46 @@ export const SettingsTab: React.FC = () => {
 
     // 4. Global owner default fallback
     return 'lfquadrosdecorativos@gmail.com';
+  };
+
+  // Lead stage editing state
+  const [editingStageId, setEditingStageId] = useState<string | null>(null);
+  const [editingStageName, setEditingStageName] = useState('');
+  const [editingStageColor, setEditingStageColor] = useState('#3b82f6');
+  const [editingStageStatusGroup, setEditingStageStatusGroup] = useState<'Ativo' | 'Ganho' | 'Perdido'>('Ativo');
+  const [editingSubstatuses, setEditingSubstatuses] = useState<string[]>([]);
+  const [newSubstatusInput, setNewSubstatusInput] = useState('');
+  const [expandedSubstatusesStageId, setExpandedSubstatusesStageId] = useState<string | null>(null);
+
+  const startEditingStage = (stg: any) => {
+    setEditingStageId(stg.id);
+    setEditingStageName(stg.name || stg.label || '');
+    setEditingStageColor(stg.color || (stg.status === 'Ganho' ? '#10b981' : stg.status === 'Perdido' ? '#ef4444' : '#3b82f6'));
+    setEditingStageStatusGroup(stg.status || 'Ativo');
+    setEditingSubstatuses(Array.isArray(stg.substatuses) && stg.substatuses.length > 0 ? [...stg.substatuses] : ['Primeiro Contato', 'Qualificação', 'Aguardando Retorno']);
+    setNewSubstatusInput('');
+  };
+
+  const handleUpdateLeadStage = (id: string, updates: Partial<{
+    name: string;
+    color: string;
+    status: 'Ativo' | 'Ganho' | 'Perdido';
+    substatuses: string[];
+    enabled: boolean;
+  }>) => {
+    const list = officeSettings.leadStages.map(st => {
+      if (st.id === id) {
+        const nextSubs = updates.substatuses !== undefined ? updates.substatuses : (st.substatuses || []);
+        return {
+          ...st,
+          ...updates,
+          label: updates.name || st.name,
+          subsCount: nextSubs.length || st.subsCount || 6
+        };
+      }
+      return st;
+    });
+    updateOfficeSettings({ leadStages: list });
   };
 
   // Editable email states
@@ -1609,100 +1663,385 @@ export const SettingsTab: React.FC = () => {
               <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-5 space-y-4">
                 <div>
                   <h3 className="font-serif font-bold text-[var(--text-main)] text-sm">Status e Substatuses do Lead</h3>
-                  <p className="text-[11px] text-[var(--text-muted)]">Configure as etapas do pipeline e os substatuses disponíveis em cada etapa</p>
+                  <p className="text-[11px] text-[var(--text-muted)]">Configure as etapas do pipeline, renomeie os status, altere a cor de destaque e gerencie os substatuses de cada etapa.</p>
                 </div>
 
-                <div className="space-y-2">
-                  {officeSettings.leadStages.map((stg, idx) => (
-                    <div
-                      key={stg.id}
-                      className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
-                        stg.enabled 
-                          ? 'bg-[var(--bg-input)] border-[var(--border-color)]' 
-                          : 'bg-[var(--bg-input)]/30 border-[var(--border-color)]/30 opacity-60'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {/* Up/down reorder */}
-                        <div className="flex flex-col text-zinc-600">
-                          <button onClick={() => reorderLeadStage(idx, 'up')} disabled={idx === 0} className="hover:text-[var(--text-main)] disabled:opacity-30 cursor-pointer">
-                            <ChevronUp className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => reorderLeadStage(idx, 'down')} disabled={idx === officeSettings.leadStages.length - 1} className="hover:text-[var(--text-main)] disabled:opacity-30 cursor-pointer">
-                            <ChevronDown className="w-3.5 h-3.5 animate-in" />
-                          </button>
-                        </div>
+                <div className="space-y-2.5">
+                  {officeSettings.leadStages.map((stg, idx) => {
+                    const isEditingThis = editingStageId === stg.id;
+                    const isExpandedSubs = expandedSubstatusesStageId === stg.id;
+                    const stageColor = stg.color || (stg.status === 'Ganho' ? '#10b981' : stg.status === 'Perdido' ? '#ef4444' : '#3b82f6');
+                    const subsList = Array.isArray(stg.substatuses) && stg.substatuses.length > 0 
+                      ? stg.substatuses 
+                      : ['Primeiro Contato', 'Qualificação', 'Proposta Elaborada', 'Aguardando Aprovação'];
 
-                        {/* Dot indicator based on status group */}
-                        <span
-                          className={`w-2.5 h-2.5 rounded-full`}
-                          style={{
-                            backgroundColor: stg.status === 'Ganho' ? '#10b981' : stg.status === 'Perdido' ? '#ef4444' : '#3b82f6'
-                          }}
-                        />
+                    return (
+                      <div
+                        key={stg.id}
+                        className={`rounded-2xl border transition-all ${
+                          isEditingThis
+                            ? 'bg-[var(--bg-input)] border-[var(--theme-primary)] ring-2 ring-[var(--theme-primary)]/30 p-4'
+                            : stg.enabled 
+                              ? 'bg-[var(--bg-input)] border-[var(--border-color)] p-3 hover:border-[var(--theme-primary)]/60' 
+                              : 'bg-[var(--bg-input)]/30 border-[var(--border-color)]/30 opacity-60 p-3'
+                        }`}
+                      >
+                        {isEditingThis ? (
+                          /* Expanded Full Editor for Name, Color, Status Group & Substatuses */
+                          <div className="space-y-4 animate-in fade-in duration-200">
+                            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-2.5">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
+                                  style={{ backgroundColor: editingStageColor }}
+                                />
+                                <h4 className="text-xs font-bold text-[var(--text-main)]">
+                                  Editar Status: <span className="text-[var(--theme-primary)]">{stg.name}</span>
+                                </h4>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setEditingStageId(null)}
+                                className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 rounded-lg hover:bg-[var(--bg-card)] transition-colors cursor-pointer"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
 
-                        {/* Label name */}
-                        <span className="font-bold text-[var(--text-main)] text-xs">{stg.name}</span>
-                        
-                        {/* Status group badge */}
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wider uppercase ${
-                          stg.status === 'Ganho' 
-                            ? 'bg-emerald-500/10 text-emerald-400' 
-                            : stg.status === 'Perdido' 
-                              ? 'bg-rose-500/10 text-rose-400' 
-                              : 'bg-[var(--bg-card-secondary)] text-[var(--text-muted)]'
-                        }`}>
-                          {stg.status === 'Ganho' ? 'Ganho' : stg.status === 'Perdido' ? 'Perdido' : 'Ativo'}
-                        </span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {/* Stage Name */}
+                              <div>
+                                <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)] mb-1">
+                                  Nome da Etapa / Status
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editingStageName}
+                                  onChange={(e) => setEditingStageName(e.target.value)}
+                                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-bold focus:outline-none focus:border-[var(--theme-primary)]"
+                                  placeholder="Ex: Reunião de Apresentação"
+                                />
+                              </div>
 
-                        <span className="text-[10px] text-[var(--text-muted)]">
-                          {stg.subsCount || 6} subs
-                        </span>
+                              {/* Status Group Category */}
+                              <div>
+                                <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)] mb-1">
+                                  Grupo / Tipo de Resultado
+                                </label>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingStageStatusGroup('Ativo')}
+                                    className={`py-2 px-2 rounded-xl text-[10px] font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                                      editingStageStatusGroup === 'Ativo'
+                                        ? 'bg-sky-500/20 border-sky-400 text-sky-300 shadow-2xs'
+                                        : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)]'
+                                    }`}
+                                  >
+                                    <span>🔵 Ativo</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingStageStatusGroup('Ganho')}
+                                    className={`py-2 px-2 rounded-xl text-[10px] font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                                      editingStageStatusGroup === 'Ganho'
+                                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-2xs'
+                                        : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)]'
+                                    }`}
+                                  >
+                                    <span>🟢 Ganho</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingStageStatusGroup('Perdido')}
+                                    className={`py-2 px-2 rounded-xl text-[10px] font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                                      editingStageStatusGroup === 'Perdido'
+                                        ? 'bg-rose-500/20 border-rose-400 text-rose-300 shadow-2xs'
+                                        : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)]'
+                                    }`}
+                                  >
+                                    <span>🔴 Perdido</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Color Picker */}
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)] mb-1.5">
+                                Cor do Indicador / Card
+                              </label>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {STAGE_COLOR_PRESETS.map((cp) => (
+                                  <button
+                                    key={cp.value}
+                                    type="button"
+                                    onClick={() => setEditingStageColor(cp.value)}
+                                    className={`w-7 h-7 rounded-full border-2 transition-all cursor-pointer flex items-center justify-center ${
+                                      editingStageColor === cp.value
+                                        ? 'scale-110 border-white ring-2 ring-[var(--theme-primary)]'
+                                        : 'border-transparent opacity-80 hover:opacity-100 hover:scale-105'
+                                    }`}
+                                    style={{ backgroundColor: cp.value }}
+                                    title={cp.label}
+                                  >
+                                    {editingStageColor === cp.value && (
+                                      <Check className="w-3.5 h-3.5 text-white drop-shadow-xs" />
+                                    )}
+                                  </button>
+                                ))}
+
+                                <div className="flex items-center gap-1.5 ml-2 border-l border-[var(--border-color)] pl-2">
+                                  <input
+                                    type="color"
+                                    value={editingStageColor || '#3b82f6'}
+                                    onChange={(e) => setEditingStageColor(e.target.value)}
+                                    className="w-7 h-7 rounded-lg border-0 cursor-pointer bg-transparent"
+                                    title="Escolher cor personalizada"
+                                  />
+                                  <span className="text-[10px] font-mono text-[var(--text-muted)] font-bold uppercase">
+                                    {editingStageColor}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Substatuses Editor */}
+                            <div className="pt-2 border-t border-[var(--border-color)] space-y-2">
+                              <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)]">
+                                Substatuses desta Etapa ({editingSubstatuses.length})
+                              </label>
+
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={newSubstatusInput}
+                                  onChange={(e) => setNewSubstatusInput(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      if (newSubstatusInput.trim()) {
+                                        setEditingSubstatuses([...editingSubstatuses, newSubstatusInput.trim()]);
+                                        setNewSubstatusInput('');
+                                      }
+                                    }
+                                  }}
+                                  placeholder="Digite um novo substatus (Ex: Reunião Marcada)"
+                                  className="flex-1 px-3 py-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--theme-primary)]"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (newSubstatusInput.trim()) {
+                                      setEditingSubstatuses([...editingSubstatuses, newSubstatusInput.trim()]);
+                                      setNewSubstatusInput('');
+                                    }
+                                  }}
+                                  className="px-3.5 py-2 bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card)] text-[var(--text-main)] font-bold text-xs rounded-xl border border-[var(--border-color)] cursor-pointer"
+                                >
+                                  + Adicionar
+                                </button>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                                {editingSubstatuses.length === 0 ? (
+                                  <span className="text-[10px] text-[var(--text-muted)] italic">Nenhum substatus definido</span>
+                                ) : (
+                                  editingSubstatuses.map((sub, sIdx) => (
+                                    <span
+                                      key={sIdx}
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-card-secondary)] text-[var(--text-main)] text-xs font-medium border border-[var(--border-color)] shadow-2xs"
+                                    >
+                                      <span>{sub}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingSubstatuses(editingSubstatuses.filter((_, i) => i !== sIdx));
+                                        }}
+                                        className="hover:text-rose-400 text-[var(--text-muted)] cursor-pointer"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </span>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Buttons */}
+                            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-color)]">
+                              <button
+                                type="button"
+                                onClick={() => setEditingStageId(null)}
+                                className="px-3.5 py-2 rounded-xl bg-[var(--bg-card-secondary)] text-[var(--text-muted)] text-xs font-bold hover:text-[var(--text-main)] cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!editingStageName.trim()) return;
+                                  handleUpdateLeadStage(stg.id, {
+                                    name: editingStageName.trim(),
+                                    color: editingStageColor,
+                                    status: editingStageStatusGroup,
+                                    substatuses: editingSubstatuses,
+                                  });
+                                  setEditingStageId(null);
+                                }}
+                                className="px-4 py-2 rounded-xl bg-[var(--theme-primary)] hover:brightness-110 text-black text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                              >
+                                <Check className="w-4 h-4" />
+                                <span>Salvar Alterações</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Standard Item View */
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                {/* Up/down reorder */}
+                                <div className="flex flex-col text-zinc-600">
+                                  <button onClick={() => reorderLeadStage(idx, 'up')} disabled={idx === 0} className="hover:text-[var(--text-main)] disabled:opacity-30 cursor-pointer">
+                                    <ChevronUp className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => reorderLeadStage(idx, 'down')} disabled={idx === officeSettings.leadStages.length - 1} className="hover:text-[var(--text-main)] disabled:opacity-30 cursor-pointer">
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+
+                                {/* Color Indicator Dot */}
+                                <button
+                                  type="button"
+                                  onClick={() => startEditingStage(stg)}
+                                  className="w-3.5 h-3.5 rounded-full shrink-0 cursor-pointer hover:scale-125 transition-transform shadow-xs"
+                                  style={{ backgroundColor: stageColor }}
+                                  title="Clique para mudar cor e nome"
+                                />
+
+                                {/* Label name - Clickable to Edit */}
+                                <button
+                                  type="button"
+                                  onClick={() => startEditingStage(stg)}
+                                  className="font-bold text-[var(--text-main)] text-xs hover:text-[var(--theme-primary)] transition-colors cursor-pointer text-left flex items-center gap-1.5 group"
+                                >
+                                  <span>{stg.name}</span>
+                                  <Edit2 className="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--theme-primary)] transition-colors opacity-0 group-hover:opacity-100" />
+                                </button>
+                                
+                                {/* Status group badge */}
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wider uppercase ${
+                                  stg.status === 'Ganho' 
+                                    ? 'bg-emerald-500/10 text-emerald-400' 
+                                    : stg.status === 'Perdido' 
+                                      ? 'bg-rose-500/10 text-rose-400' 
+                                      : 'bg-[var(--bg-card-secondary)] text-[var(--text-muted)]'
+                                }`}>
+                                  {stg.status === 'Ganho' ? 'Ganho' : stg.status === 'Perdido' ? 'Perdido' : 'Ativo'}
+                                </span>
+
+                                <span className="text-[10px] text-[var(--text-muted)] font-medium">
+                                  {subsList.length} substatuses
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                {/* Edit button */}
+                                <button
+                                  type="button"
+                                  onClick={() => startEditingStage(stg)}
+                                  className="px-2.5 py-1 rounded-lg bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card)] border border-[var(--border-color)] text-[11px] font-bold text-[var(--theme-primary)] flex items-center gap-1 transition-colors cursor-pointer"
+                                  title="Editar nome, cor e grupo deste status"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                  <span>Editar</span>
+                                </button>
+
+                                {/* Substatuses toggle */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setExpandedSubstatusesStageId(isExpandedSubs ? null : stg.id);
+                                  }}
+                                  className="text-[11px] font-bold text-[var(--text-muted)] hover:text-[var(--theme-primary)] flex items-center gap-0.5 cursor-pointer"
+                                >
+                                  <span>Substatuses</span>
+                                  <ChevronRight className={`w-3 h-3 transition-transform ${isExpandedSubs ? 'rotate-90 text-[var(--theme-primary)]' : ''}`} />
+                                </button>
+
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={stg.enabled}
+                                    onChange={() => toggleLeadStage(stg.id)}
+                                    className="sr-only peer"
+                                  />
+                                  <div className="w-9 h-5 bg-zinc-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-zinc-400 after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--theme-primary)] peer-checked:after:bg-black peer-checked:after:border-transparent"></div>
+                                </label>
+                                
+                                <button
+                                  onClick={() => {
+                                    const list = officeSettings.leadStages.filter(s => s.id !== stg.id);
+                                    updateOfficeSettings({ leadStages: list });
+                                  }}
+                                  className="p-1 rounded text-[var(--text-muted)] hover:text-rose-400 transition-colors cursor-pointer"
+                                  title="Excluir este status"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Expandable Substatuses Viewer/Quick-Add Panel */}
+                            {isExpandedSubs && (
+                              <div className="mt-2 pt-2 border-t border-[var(--border-color)]/50 space-y-2 animate-in fade-in duration-200">
+                                <div className="flex items-center justify-between text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                                  <span>Substatuses disponíveis em "{stg.name}":</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditingStage(stg)}
+                                    className="text-[var(--theme-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <Edit2 className="w-2.5 h-2.5" />
+                                    <span>Gerenciar tudo</span>
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {subsList.map((subItem, sbIdx) => (
+                                    <span
+                                      key={sbIdx}
+                                      className="px-2.5 py-1 rounded-lg bg-[var(--bg-card-secondary)] text-[var(--text-main)] text-[11px] font-medium border border-[var(--border-color)]"
+                                    >
+                                      {subItem}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-
-                      <div className="flex items-center gap-3">
-                        <button className="text-[11px] font-bold text-[var(--theme-primary)] hover:underline flex items-center gap-0.5 cursor-pointer">
-                           <span>Substatuses</span>
-                           <ChevronRight className="w-3 h-3" />
-                        </button>
-
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={stg.enabled}
-                            onChange={() => toggleLeadStage(stg.id)}
-                            className="sr-only peer"
-                          />
-                          <div className="w-9 h-5 bg-zinc-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-zinc-400 after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--theme-primary)] peer-checked:after:bg-black peer-checked:after:border-transparent"></div>
-                        </label>
-                        
-                        <button
-                          onClick={() => {
-                            const list = officeSettings.leadStages.filter(s => s.id !== stg.id);
-                            updateOfficeSettings({ leadStages: list });
-                          }}
-                          className="p-1 rounded text-[var(--text-muted)] hover:text-rose-400 transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   <button
                     onClick={() => {
-                      const nameInput = prompt('Digite o nome da nova etapa do funil:');
-                      if (!nameInput) return;
-                      const list = [...officeSettings.leadStages];
-                      list.push({
-                        id: 'stg-' + Date.now(),
-                        label: nameInput.trim(),
-                        name: nameInput.trim(),
-                        status: 'Ativo',
-                        subsCount: 6,
+                      const newId = 'stg-' + Date.now();
+                      const newStageItem = {
+                        id: newId,
+                        label: 'Novo Status',
+                        name: 'Novo Status',
+                        color: '#3b82f6',
+                        status: 'Ativo' as const,
+                        substatuses: ['Primeiro Contato', 'Qualificação', 'Aguardando Resposta'],
+                        subsCount: 3,
                         enabled: true
-                      });
+                      };
+                      const list = [...officeSettings.leadStages, newStageItem];
                       updateOfficeSettings({ leadStages: list });
+                      startEditingStage(newStageItem);
                     }}
                     className="flex items-center gap-1.5 text-xs text-[var(--theme-primary)] hover:text-[var(--theme-primary-hover)] font-bold cursor-pointer pt-2"
                   >
@@ -1711,7 +2050,9 @@ export const SettingsTab: React.FC = () => {
                   </button>
                 </div>
 
-                <p className="text-[10px] text-[var(--text-muted)] pt-2 border-t border-[var(--border-color)]/30">Use as setas para reordenar as etapas do funil. Clique no nome para renomear. Ativo (em andamento), Ganho (contrato fechado) ou Perdido (negociação encerrada).</p>
+                <p className="text-[10px] text-[var(--text-muted)] pt-2 border-t border-[var(--border-color)]/30">
+                  Clique no **Nome**, no **Círculo de Cor** ou no botão **Editar** de qualquer status para alterar a cor, nome, grupo de resultado (Ativo, Ganho ou Perdido) e gerenciar os substatuses. Use as setas para reordenar.
+                </p>
               </div>
 
               {/* CARD 2: Motivos de Perda */}

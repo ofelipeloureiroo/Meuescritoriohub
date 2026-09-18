@@ -1085,7 +1085,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           {officeSettings.leadStages.map(stg => (
                             <div key={stg.id} className="flex items-center justify-between p-2 bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)]/55 text-[11px]">
                               <div className="flex items-center gap-2">
-                                <span className={`w-2.5 h-2.5 rounded-full ${stg.status === 'Ganho' ? 'bg-emerald-400' : stg.status === 'Perdido' ? 'bg-rose-400' : 'bg-amber-400'}`} />
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: stg.color || (stg.status === 'Ganho' ? '#10b981' : stg.status === 'Perdido' ? '#ef4444' : '#3b82f6') }}
+                                />
                                 <span className="font-bold text-[var(--text-main)]">{stg.name}</span>
                                 <span className="text-[9px] text-[var(--text-muted)] italic">({stg.status})</span>
                               </div>
