@@ -66,6 +66,8 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
   const {
     clients,
     workContracts,
+    architectureProjects,
+    freelanceProjects,
     addClient,
     updateClient,
     deleteClient,
@@ -75,6 +77,47 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
     markContractAwaitingPayment,
     confirmContractPayment,
   } = useFinance();
+
+  // Helper to accurately calculate how many projects are linked to a client
+  const getClientProjectsCount = (client: Client): number => {
+    const normName = client.name?.trim().toLowerCase();
+
+    const uniqueProjectKeys = new Set<string>();
+
+    (architectureProjects || []).forEach((p) => {
+      if (p.clientId === client.id || (normName && p.clientName && p.clientName.trim().toLowerCase() === normName)) {
+        uniqueProjectKeys.add(p.id || `title:${p.title.trim().toLowerCase()}`);
+      }
+    });
+
+    (freelanceProjects || []).forEach((p) => {
+      if (p.clientId === client.id || (normName && p.clientName && p.clientName.trim().toLowerCase() === normName)) {
+        uniqueProjectKeys.add(p.id || `title:${p.title.trim().toLowerCase()}`);
+      }
+    });
+
+    (workContracts || []).forEach((wc) => {
+      if (wc.clientId === client.id || (normName && wc.clientName && wc.clientName.trim().toLowerCase() === normName)) {
+        if (wc.projectId) {
+          uniqueProjectKeys.add(wc.projectId);
+        } else if (wc.projectTitle) {
+          uniqueProjectKeys.add(`title:${wc.projectTitle.trim().toLowerCase()}`);
+        } else {
+          uniqueProjectKeys.add(wc.id);
+        }
+      }
+    });
+
+    if (uniqueProjectKeys.size > 0) {
+      return uniqueProjectKeys.size;
+    }
+
+    if (typeof client.projectsCount === 'number' && client.projectsCount > 0) {
+      return client.projectsCount;
+    }
+
+    return 0;
+  };
 
   // Navigation sub-tabs: Clientes OR Contratos & Assinaturas
   const [activeSubTab, setActiveSubTab] = useState<'clients' | 'contracts'>('clients');
@@ -550,7 +593,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                 <div className="flex items-center gap-2">
                   <Briefcase className="w-4 h-4 text-zinc-400" />
                   <h3 className="font-bold text-zinc-900 text-sm sm:text-base">
-                    Projetos <span className="text-zinc-400 font-normal">{clientContracts.length}</span>
+                    Projetos <span className="text-zinc-400 font-normal">{activeViewingClient ? getClientProjectsCount(activeViewingClient) : 0}</span>
                   </h3>
                 </div>
 
@@ -592,7 +635,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
               {/* Projects List */}
               <div className="space-y-3 pt-2">
                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
-                  PROJETOS DO CLIENTE ({clientContracts.length})
+                  PROJETOS DO CLIENTE ({activeViewingClient ? getClientProjectsCount(activeViewingClient) : 0})
                 </span>
 
                 {clientContracts.length === 0 ? (
@@ -1361,6 +1404,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                 const initial = client.name ? client.name.charAt(0).toUpperCase() : 'C';
                 const profileBadge = client.clientProfile || 'Médio';
                 const clientContracts = workContracts.filter((wc) => wc.clientId === client.id);
+                const realProjectsCount = getClientProjectsCount(client);
 
                 return (
                   <div
@@ -1410,8 +1454,8 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                       <div className="text-right hidden sm:block">
                         <span className="text-xs text-zinc-400 block">sem ações</span>
                         <div className="text-xs text-zinc-900 font-medium mt-0.5">
-                          <strong className="font-bold">{clientContracts.length || 1}</strong>{' '}
-                          {clientContracts.length === 1 ? 'projeto' : 'projetos'}
+                          <strong className="font-bold">{realProjectsCount}</strong>{' '}
+                          {realProjectsCount === 1 ? 'projeto' : 'projetos'}
                         </div>
                       </div>
 

@@ -775,6 +775,139 @@ export async function loginClient(
 }
 
 /**
+ * Authenticates a client by email only (e.g. after Google OAuth Sign-In)
+ */
+export async function loginClientByEmailOnly(
+  email: string
+): Promise<{ success: boolean; portal?: ClientPortalAccess; error?: string }> {
+  try {
+    const rawEmail = (email || '').trim().toLowerCase();
+    const cleanEmail = normalizeClientEmail(rawEmail);
+    const safeEmailDocId = cleanEmail.replace(/[^a-z0-9]/g, '_');
+
+    if (!rawEmail) {
+      return { 
+        success: false, 
+        error: 'Por favor, informe seu e-mail cadastrado.' 
+      };
+    }
+
+    // 1. Check local portals cache
+    const localPortals = getLocalPortals();
+    for (const p of localPortals) {
+      if (p && normalizeClientEmail(p.clientEmail) === cleanEmail) {
+        sessionStorage.setItem('client_portal_session', JSON.stringify(p));
+        try { localStorage.setItem('client_portal_session', JSON.stringify(p)); } catch {}
+        return { success: true, portal: p };
+      }
+    }
+
+    // 2. Parallel cloud lookup
+    let foundPortal: ClientPortalAccess | null = null;
+    try {
+      const parallelQueries = [
+        safeEmailDocId ? getDoc(doc(db, 'clientPortalsByEmail', safeEmailDocId)).catch(() => null) : Promise.resolve(null),
+        cleanEmail ? getDoc(doc(db, 'clientPortalsByEmail', cleanEmail)).catch(() => null) : Promise.resolve(null),
+        getDoc(doc(db, 'publicPortals', 'directory')).catch(() => null),
+        cleanEmail ? getDocs(query(collection(db, 'clientPortals'), where('clientEmail', '==', cleanEmail))).catch(() => null) : Promise.resolve(null),
+      ];
+
+      const results = await Promise.all(parallelQueries);
+
+      for (const res of results) {
+        if (!res) continue;
+
+        // Check single DocumentSnapshot
+        if ('exists' in res && typeof res.exists === 'function' && res.exists()) {
+          const d = res.data() as any;
+          if (!d) continue;
+
+          if (d[safeEmailDocId] || d[`email_${safeEmailDocId}`]) {
+            const p = (d[safeEmailDocId] || d[`email_${safeEmailDocId}`]) as ClientPortalAccess;
+            if (p) {
+              foundPortal = p;
+              break;
+            }
+          }
+
+          if (d.clientEmail || d.clientName) {
+            foundPortal = d as ClientPortalAccess;
+            break;
+          }
+        }
+
+        // Check QuerySnapshot
+        if ('docs' in res && Array.isArray(res.docs)) {
+          for (const d of res.docs) {
+            const p = d.data() as ClientPortalAccess;
+            if (p) {
+              foundPortal = p;
+              break;
+            }
+          }
+          if (foundPortal) break;
+        }
+      }
+    } catch (e) {
+      console.warn('Error in loginClientByEmailOnly parallel lookup:', e);
+    }
+
+    // 3. Fallback scan all portals
+    if (!foundPortal) {
+      try {
+        const allSnap = await getDocs(collection(db, 'clientPortals'));
+        for (const d of allSnap.docs) {
+          const p = d.data() as ClientPortalAccess;
+          if (p && normalizeClientEmail(p.clientEmail) === cleanEmail) {
+            foundPortal = p;
+            break;
+          }
+        }
+      } catch (err) {
+        console.warn('Fallback scan all in loginClientByEmailOnly:', err);
+      }
+    }
+
+    // 4. Sample demo portal fallback
+    if (!foundPortal) {
+      if (rawEmail === SAMPLE_CLIENT_PORTAL.clientEmail.toLowerCase() || cleanEmail === normalizeClientEmail(SAMPLE_CLIENT_PORTAL.clientEmail)) {
+        foundPortal = SAMPLE_CLIENT_PORTAL;
+      }
+    }
+
+    if (!foundPortal) {
+      return { 
+        success: false, 
+        error: 'Nenhum cadastro de cliente localizado para este e-mail. Verifique o e-mail cadastrado pelo escritório ou solicite acesso.' 
+      };
+    }
+
+    if (foundPortal.status === 'inactive') {
+      return { 
+        success: false, 
+        error: 'Seu acesso ao portal foi suspenso ou desativado pelo escritório.' 
+      };
+    }
+
+    // Update last login timestamp
+    try {
+      foundPortal.lastLoginAt = new Date().toISOString();
+      savePortalLocally(foundPortal);
+      saveClientPortalAccess(foundPortal).catch(() => {});
+      sessionStorage.setItem('client_portal_session', JSON.stringify(foundPortal));
+      try { localStorage.setItem('client_portal_session', JSON.stringify(foundPortal)); } catch {}
+      const portalRef = doc(db, 'clientPortals', foundPortal.id);
+      updateDoc(portalRef, { lastLoginAt: foundPortal.lastLoginAt }).catch(() => {});
+    } catch {}
+
+    return { success: true, portal: foundPortal };
+  } catch (error: any) {
+    console.error('Error logging in client by email:', error);
+    return { success: false, error: 'Ocorreu um erro ao validar seu acesso com o Google.' };
+  }
+}
+
+/**
  * Password recovery request: checks if email exists and returns recovery details or updates temporary code.
  */
 export async function recoverClientPassword(email: string): Promise<{ success: boolean; message: string; codePreview?: string }> {

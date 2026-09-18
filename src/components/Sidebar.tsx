@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Banknote,
   Briefcase,
@@ -289,50 +289,100 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
   ];
 
-  const CATEGORIES = [
-    {
-      id: 'home',
-      label: 'Início',
-      icon: Home,
-      defaultTab: 'dashboard',
-      tabs: ['dashboard', 'today', 'actions'],
-    },
-    {
-      id: 'projects',
-      label: 'Operação',
-      icon: FolderOpen,
-      defaultTab: 'projects',
-      tabs: ['projects', 'consultoria_expressa', 'suppliers', 'team'],
-    },
-    {
-      id: 'comercial',
-      label: 'Comercial',
-      icon: Users,
-      defaultTab: 'leads',
-      tabs: ['leads', 'whatsapp_center', 'freelance', 'portal_cliente'],
-    },
-    {
-      id: 'financial',
-      label: 'Financeiro',
-      icon: DollarSign,
-      defaultTab: 'banks',
-      tabs: ['banks', 'financeiro', 'deadlines', 'recebimentos', 'listas', 'goals', 'budget'],
-    },
-    {
-      id: 'marketing',
-      label: 'Marketing',
-      icon: Sparkles,
-      defaultTab: 'instagram',
-      tabs: ['instagram', 'home'],
-    },
-    {
-      id: 'settings',
-      label: 'Configurações',
-      icon: Settings,
-      defaultTab: 'settings',
-      tabs: ['settings'],
-    },
-  ];
+  // Dynamic tracking of most used tabs for the sidebar
+  const [tabUsage, setTabUsage] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem('meu_escritorio_tab_usage_v1');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      projects: 30,
+      leads: 26,
+      freelance: 22,
+      banks: 18,
+      today: 15,
+      actions: 12,
+      whatsapp_center: 10,
+      consultoria_expressa: 8,
+      deadlines: 6,
+    };
+  });
+
+  // Track tab visits to update usage
+  useEffect(() => {
+    if (!activeTab || activeTab === 'dashboard' || activeTab === 'settings') return;
+    setTabUsage((prev) => {
+      const current = prev[activeTab] || 0;
+      const updated = { ...prev, [activeTab]: current + 1 };
+      try {
+        localStorage.setItem('meu_escritorio_tab_usage_v1', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  }, [activeTab]);
+
+  // All candidate functional tabs for the "most used" ranking
+  const ALL_APP_TABS = useMemo(() => [
+    { id: 'projects', label: 'Gestão de Projetos', icon: FolderOpen },
+    { id: 'leads', label: 'Leads & Comercial', icon: Users },
+    { id: 'freelance', label: 'Clientes & Contratos', icon: Briefcase },
+    { id: 'banks', label: 'Financeiro & Bancos', icon: DollarSign },
+    { id: 'today', label: 'Meu Dia & Agenda', icon: Calendar },
+    { id: 'actions', label: 'Central de Ações', icon: Clock },
+    { id: 'whatsapp_center', label: 'Atendimento WhatsApp', icon: MessageCircle },
+    { id: 'consultoria_expressa', label: 'Consultoria Expressa', icon: Sparkles },
+    { id: 'portal_cliente', label: 'Site do Cliente', icon: KeyRound },
+    { id: 'deadlines', label: 'Prazos & Cobranças', icon: Clock },
+    { id: 'suppliers', label: 'Fornecedores', icon: Package },
+    { id: 'team', label: 'Equipe & Membros', icon: Users },
+    { id: 'instagram', label: 'Instagram', icon: Instagram },
+    { id: 'home', label: 'Portfólio', icon: ImageIcon },
+    { id: 'listas', label: 'Listas & Tarefas', icon: ListChecks },
+    { id: 'goals', label: 'Metas & Objetivos', icon: Target },
+    { id: 'budget', label: 'Orçamento', icon: PieChart },
+  ], []);
+
+  // Compute most used tabs excluding 'dashboard' and 'settings'
+  const mostUsedTabs = useMemo(() => {
+    const allowed = ALL_APP_TABS.filter((tab) => {
+      if (isCollaborator && permissions) {
+        if (tab.id === 'today' && permissions.today === false) return false;
+        if (tab.id === 'actions' && permissions.actions === false) return false;
+        if (tab.id === 'leads' && permissions.leads === false) return false;
+        if (tab.id === 'projects' && permissions.projects === false) return false;
+        if (tab.id === 'freelance' && permissions.clients === false) return false;
+        if (tab.id === 'banks' && permissions.finance === false) return false;
+        if (tab.id === 'deadlines' && permissions.deadlines === false) return false;
+        if (tab.id === 'team' && permissions.team === false) return false;
+        if (tab.id === 'suppliers' && permissions.suppliers === false) return false;
+      }
+      return true;
+    });
+
+    const sorted = [...allowed].sort((a, b) => {
+      const countA = tabUsage[a.id] || 0;
+      const countB = tabUsage[b.id] || 0;
+      return countB - countA;
+    });
+
+    // Top 8 most used tabs
+    const topItems = sorted.slice(0, 8);
+
+    // If current active tab is not in top 8 (and not dashboard or settings), show it as active item
+    if (
+      activeTab &&
+      activeTab !== 'dashboard' &&
+      activeTab !== 'settings' &&
+      !topItems.some((t) => t.id === activeTab || (t.id === 'banks' && ['financeiro', 'recebimentos', 'listas'].includes(activeTab)))
+    ) {
+      const currentTabDef = allowed.find((t) => t.id === activeTab);
+      if (currentTabDef) {
+        topItems.push(currentTabDef);
+      }
+    }
+
+    return topItems;
+  }, [ALL_APP_TABS, tabUsage, isCollaborator, permissions, activeTab]);
 
   const handleNavClick = (tabId: string) => {
     setActiveTab(tabId);
@@ -347,8 +397,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const desktopSidebarContent = (
     <div className="flex flex-col h-full bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] text-[var(--text-main)] select-none transition-all duration-300 items-center py-6 justify-between">
-      {/* Top Brand / Photo */}
-      <div className="flex flex-col items-center gap-6 w-full px-2">
+      {/* Top Brand / Photo + Início Fixo + Mais Usados */}
+      <div className="flex flex-col items-center gap-5 w-full px-2">
         <button
           onClick={() => handleNavClick('dashboard')}
           className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center shadow-md bg-[var(--theme-primary)] text-black shrink-0 hover:opacity-90 transition-all border border-[var(--theme-primary)]/40 relative group cursor-pointer"
@@ -371,39 +421,63 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Divider */}
         <div className="w-8 h-px bg-[var(--border-color)]" />
 
-        {/* Categories Stack */}
-        <div className="flex flex-col gap-3 w-full items-center">
-          {CATEGORIES.map((category) => {
-            const Icon = category.icon;
-            // Check if active
-            const isCategoryActive = category.tabs.includes(activeTab) ||
-              (category.id === 'financial' && ['financeiro', 'recebimentos', 'listas'].includes(activeTab));
+        {/* Navigation Stack: Início (Fixo) + Mais Usados */}
+        <div className="flex flex-col gap-1.5 w-full items-center overflow-y-auto overflow-x-hidden max-h-[calc(100vh-230px)] py-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {/* 1. Início (Fixo no topo) */}
+          <button
+            onClick={() => handleNavClick('dashboard')}
+            className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-150 cursor-pointer relative group border shrink-0 ${
+              activeTab === 'dashboard'
+                ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)] shadow-xs'
+                : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
+            }`}
+            title="Início"
+          >
+            <Home
+              className="w-5 h-5 shrink-0 transition-colors"
+              style={{
+                color: activeTab === 'dashboard' ? 'var(--theme-primary)' : 'var(--text-muted)',
+              }}
+            />
+            
+            {/* Tooltip on hover */}
+            <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-950 text-white text-[11px] font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap shadow-md z-50 pointer-events-none">
+              Início
+            </div>
+          </button>
 
-            // Check if any sub-item has alerts
+          {/* Divider separating Início from Most Used */}
+          <div className="w-6 h-px bg-[var(--border-color)]/70 my-0.5 shrink-0" />
+
+          {/* 2. O restante dos ícones: Mais Usados */}
+          {mostUsedTabs.map((item) => {
+            const Icon = item.icon;
+            const isActive =
+              activeTab === item.id ||
+              (item.id === 'banks' && ['financeiro', 'recebimentos', 'listas'].includes(activeTab)) ||
+              (item.id === 'projects' && ['projects', 'consultoria_expressa'].includes(activeTab));
+
             let hasAlert = false;
-            if (category.id === 'financial' && totalDeadlinesAlerts > 0) hasAlert = true;
-            if (category.id === 'projects' && ongoingArchitectureProjects.length > 0) hasAlert = true;
+            if (item.id === 'banks' && totalDeadlinesAlerts > 0) hasAlert = true;
+            if (item.id === 'deadlines' && totalDeadlinesAlerts > 0) hasAlert = true;
+            if (item.id === 'projects' && ongoingArchitectureProjects.length > 0) hasAlert = true;
+            if (item.id === 'actions' && (dueSoonMilestones.length > 0 || overdueMilestones.length > 0)) hasAlert = true;
 
             return (
               <button
-                key={category.id}
-                onClick={() => {
-                  // Navigate to the current active tab of this category if already inside it, otherwise the defaultTab
-                  const isCurrent = category.tabs.includes(activeTab) || (category.id === 'financial' && ['financeiro', 'recebimentos', 'listas'].includes(activeTab));
-                  if (!isCurrent) {
-                    handleNavClick(category.defaultTab);
-                  }
-                }}
-                className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-150 cursor-pointer relative group border ${
-                  isCategoryActive
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-150 cursor-pointer relative group border shrink-0 ${
+                  isActive
                     ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)] shadow-xs'
                     : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
                 }`}
+                title={item.label}
               >
                 <Icon
                   className="w-5 h-5 shrink-0 transition-colors"
                   style={{
-                    color: isCategoryActive ? 'var(--theme-primary)' : 'var(--text-muted)',
+                    color: isActive ? 'var(--theme-primary)' : 'var(--text-muted)',
                   }}
                 />
                 
@@ -414,7 +488,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {/* Tooltip on hover */}
                 <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-950 text-white text-[11px] font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap shadow-md z-50 pointer-events-none">
-                  {category.label}
+                  {item.label}
                 </div>
               </button>
             );

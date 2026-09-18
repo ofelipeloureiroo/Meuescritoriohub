@@ -196,6 +196,28 @@ export const LeadsTab: React.FC = () => {
     }
   };
 
+  // Reliable calculation of days stopped without fake fallbacks
+  const getLeadStoppedDays = (lead: Client): number => {
+    if (lead.stoppedDays === 0) {
+      return 0;
+    }
+    const refDateStr = lead.lastContactDate || lead.lastInteractionDate || lead.updatedAt || lead.entryDate || lead.createdAt;
+    if (refDateStr) {
+      const refDate = new Date(refDateStr);
+      if (!isNaN(refDate.getTime())) {
+        const today = new Date();
+        const refTime = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate()).getTime();
+        const todayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+        const diffDays = Math.max(0, Math.floor((todayTime - refTime) / (1000 * 60 * 60 * 24)));
+        return diffDays;
+      }
+    }
+    if (typeof lead.stoppedDays === 'number' && !isNaN(lead.stoppedDays)) {
+      return lead.stoppedDays;
+    }
+    return 0;
+  };
+
   // Strategic Priorities for the bottom section
   const strategicPriorities = useMemo(() => {
     const activeLeads = leadsList.filter(
@@ -206,8 +228,8 @@ export const LeadsTab: React.FC = () => {
       .sort((a, b) => {
         if (a.isHighPriority && !b.isHighPriority) return -1;
         if (!a.isHighPriority && b.isHighPriority) return 1;
-        const daysA = a.stoppedDays ?? 58;
-        const daysB = b.stoppedDays ?? 58;
+        const daysA = getLeadStoppedDays(a);
+        const daysB = getLeadStoppedDays(b);
         if (daysB !== daysA) return daysB - daysA;
         return (b.leadScore ?? 50) - (a.leadScore ?? 50);
       })
@@ -662,7 +684,12 @@ export const LeadsTab: React.FC = () => {
 
   // Move lead stage
   const handleMoveStage = (leadId: string, newStage: Client['pipelineStage']) => {
-    updateClient(leadId, { pipelineStage: newStage });
+    updateClient(leadId, {
+      pipelineStage: newStage,
+      stoppedDays: 0,
+      updatedAt: new Date().toISOString().split('T')[0],
+      lastContactDate: new Date().toISOString().split('T')[0],
+    });
   };
 
   // Handle submit form
@@ -729,7 +756,11 @@ export const LeadsTab: React.FC = () => {
     };
 
     if (editingLead) {
-      updateClient(editingLead.id, updatedData);
+      updateClient(editingLead.id, {
+        ...updatedData,
+        updatedAt: new Date().toISOString().split('T')[0],
+        stoppedDays: 0,
+      });
     } else {
       addClient({
         ...updatedData,
@@ -1188,10 +1219,25 @@ export const LeadsTab: React.FC = () => {
                                 )}
 
                                 {/* Days stopped indicator */}
-                                <div className="text-[10px] font-semibold text-rose-500/90 flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  <span>Parado há {lead.stoppedDays || 58} dias</span>
-                                </div>
+                                {(() => {
+                                  const days = getLeadStoppedDays(lead);
+                                  if (days === 0) {
+                                    return (
+                                      <div className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1">
+                                        <Clock className="w-3 h-3 text-emerald-500" />
+                                        <span>Criado hoje / Em dia</span>
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div className={`text-[10px] font-semibold flex items-center gap-1 ${
+                                      days >= 15 ? 'text-rose-500/90' : days >= 7 ? 'text-amber-600' : 'text-zinc-500'
+                                    }`}>
+                                      <Clock className="w-3 h-3" />
+                                      <span>Parado há {days} {days === 1 ? 'dia' : 'dias'}</span>
+                                    </div>
+                                  );
+                                })()}
 
                                 {/* Extra Badge Button */}
                                 {lead.badgeText && (
@@ -1334,7 +1380,7 @@ export const LeadsTab: React.FC = () => {
             ) : (
               <div className="flex items-stretch gap-3 overflow-x-auto pb-1.5 pt-0.5">
                 {strategicPriorities.map((lead) => {
-                  const daysStopped = lead.stoppedDays ?? 58;
+                  const daysStopped = getLeadStoppedDays(lead);
                   return (
                     <div
                       key={lead.id}
@@ -1346,8 +1392,14 @@ export const LeadsTab: React.FC = () => {
                           {lead.name}
                         </h5>
                         <div className="mt-1.5">
-                          <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80">
-                            {daysStopped}d parado
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            daysStopped === 0
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
+                              : daysStopped >= 15
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200/80'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200/80'
+                          }`}>
+                            {daysStopped === 0 ? 'Criado hoje' : `${daysStopped}d parado`}
                           </span>
                         </div>
                       </div>

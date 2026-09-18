@@ -210,6 +210,8 @@ export interface Client {
   proposalsText?: string;
   subStatus?: string;
   lastInteractionDate?: string;
+  lastContactDate?: string;
+  updatedAt?: string;
   stoppedDays?: number;
   badgeText?: string;
   originChannel?: string;
