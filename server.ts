@@ -3003,7 +3003,77 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     const q = (query || "").toLowerCase();
     const cat = (category || "").toLowerCase();
 
-    if (q.includes("cadeira") || q.includes("poltrona") || q.includes("banqueta") || cat.includes("mobiliário") || cat.includes("mobilia")) {
+    // -- STAGE 1: Specific Product Keyword Matches (Highest Priority) --
+    
+    // 1. Showers / Duchas
+    if (q.includes("chuveiro") || q.includes("ducha")) {
+      return [
+        {
+          title: "Chuveiro Deca Acqua Plus Cromado com Tubo de Parede",
+          description: "Design quadrado moderno, jato dinâmico autolimpante e vazão de água constante sob qualquer pressão. Tecnologia Deca de alto padrão.",
+          price: "R$ 499,00",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/busca?q=chuveiro+deca+acqua+plus"
+        },
+        {
+          title: "Ducha Lorenzetti Acqua Ultra Preta com Cromado Eletrônica",
+          description: "Design ultrafino moderno com resistência Loren Ultra de altíssima performance, regulagem eletrônica gradual de temperatura.",
+          price: "R$ 389,00",
+          store: "Mercado Livre",
+          url: "https://www.mercadolivre.com.br/busca/ducha-lorenzetti-acqua-ultra-preto"
+        },
+        {
+          title: "Chuveiro de Teto Redondo Cromado Deca",
+          description: "Design contemporâneo minimalista de teto, vazão abundante e jato relaxante, ideal para banheiros residenciais contemporâneos de luxo.",
+          price: "R$ 750,00",
+          store: "Telhanorte",
+          url: "https://www.telhanorte.com.br/busca?q=chuveiro+teto+deca"
+        }
+      ];
+    }
+
+    // 2. Bathtubs / Banheiras
+    if (q.includes("banheira") || q.includes("imersão") || q.includes("ofurô") || q.includes("spa")) {
+      return [
+        {
+          title: "Banheira de Imersão Branca em Acrílico Sanitário Barcelona",
+          description: "Banheira freestanding estilo moderno, material acrílico premium com alta retenção de calor e brilho duradouro. Não requer instalação em alvenaria.",
+          price: "R$ 5.890,00",
+          store: "MadeiraMadeira",
+          url: "https://www.madeiramadeira.com.br/busca?q=banheira+imersao+freestanding"
+        },
+        {
+          title: "Banheira de Hidromassagem Acrílica Confort Individual 1.50m",
+          description: "Equipada com 4 jatos direcionáveis de hidromassagem, motobomba silenciosa blindada, acionamento pneumático e controle de vazão de ar.",
+          price: "R$ 2.450,00",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/busca?q=banheira+hidromassagem"
+        }
+      ];
+    }
+
+    // 3. Toilets / Vasos Sanitários
+    if (q.includes("vaso") || q.includes("sanitário") || q.includes("bacia")) {
+      return [
+        {
+          title: "Vaso Sanitário Monobloco com Caixa Acoplada Inteligente Dual Flush",
+          description: "Bacia monobloco com descarga ecológica de duplo acionamento 3/6L, assento soft close anti-impacto e sifão esmaltado de alta performance.",
+          price: "R$ 1.150,00",
+          store: "Mercado Livre",
+          url: "https://www.mercadolivre.com.br/busca/vaso-sanitario-monobloco-dual-flush"
+        },
+        {
+          title: "Bacia com Caixa Acoplada Carrara Deca Branco",
+          description: "Design moderno e elegante com tecnologia Dual Flush de economia d'água. Ideal para banheiros e lavabos de alto padrão.",
+          price: "R$ 890,00",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/busca?q=bacia+caixa+acoplada+carrara+deca"
+        }
+      ];
+    }
+
+    // 4. Furniture / Chairs
+    if (q.includes("cadeira") || q.includes("poltrona") || q.includes("banqueta") || q.includes("sofá")) {
       return [
         {
           title: "Cadeira de Escritório Ergonômica Presidente Mesh com Apoio Lombar",
@@ -3029,7 +3099,8 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       ];
     }
 
-    if (q.includes("cuba") || q.includes("pia") || cat.includes("cozinha") || cat.includes("banheiro")) {
+    // 5. Basins / Cubas / Sinks
+    if (q.includes("cuba") || q.includes("pia")) {
       return [
         {
           title: "Cuba de Apoio Slim Redonda 40cm Preto Fosco Deca",
@@ -3055,6 +3126,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       ];
     }
 
+    // 6. Taps / Torneiras
     if (q.includes("torneira") || q.includes("monocomando") || q.includes("misturador")) {
       return [
         {
@@ -3081,7 +3153,8 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       ];
     }
 
-    if (q.includes("pendente") || q.includes("lustre") || q.includes("led") || q.includes("ilumina") || cat.includes("iluminação")) {
+    // 7. Lighting
+    if (q.includes("pendente") || q.includes("lustre") || q.includes("led") || q.includes("ilumina") || q.includes("plafon")) {
       return [
         {
           title: "Pendente Tubular Cone Minimalista Dourado Escovado / Preto",
@@ -3107,7 +3180,8 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       ];
     }
 
-    if (q.includes("porcelanato") || q.includes("revestimento") || q.includes("piso") || cat.includes("revestimento")) {
+    // 8. Floors / Porcelanato / Revestimentos
+    if (q.includes("porcelanato") || q.includes("revestimento") || q.includes("piso") || q.includes("laminado") || q.includes("vinílico")) {
       return [
         {
           title: "Porcelanato Acetinado Retificado Calacata 84x84cm Portobello",
@@ -3133,6 +3207,83 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       ];
     }
 
+    // -- STAGE 2: Category Fallbacks (Only if no specific product keyword matched above) --
+    
+    if (cat.includes("mobiliário") || cat.includes("mobilia") || cat.includes("móvel") || cat.includes("móveis")) {
+      return [
+        {
+          title: "Cadeira de Escritório Ergonômica Presidente Mesh com Apoio Lombar",
+          description: "Encosto em tela mesh respirável, apoio de cabeça ajustável, braços reguláveis e mecanismo relax com trava de inclinação.",
+          price: "R$ 689,90",
+          store: "Mercado Livre / Oficial",
+          url: "https://www.mercadolivre.com.br/busca/cadeira-escritorio-ergonomica-mesh"
+        }
+      ];
+    }
+
+    if (cat.includes("cozinha") || cat.includes("gourmet")) {
+      return [
+        {
+          title: "Cuba Gourmet Inox 304 com Acessórios e Dispenser 60x42cm",
+          description: "Aço inoxidável 304 com manta emborrachada anti-ruído, cesto escorredor aramado, tábua em madeira teca e dosador de detergente embutido.",
+          price: "R$ 890,00",
+          store: "Mercado Livre",
+          url: "https://www.mercadolivre.com.br/busca/cuba-gourmet-inox-304"
+        },
+        {
+          title: "Misturador Monocomando Cozinha Bica Móvel Gourmet Preto Fosco",
+          description: "Cartucho cerâmico de alta durabilidade (500.000 ciclos), bica móvel rotativa de bocal duplo.",
+          price: "R$ 579,00",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/busca?q=monocomando+gourmet+preto"
+        }
+      ];
+    }
+
+    if (cat.includes("banheiro") || cat.includes("lavabo")) {
+      return [
+        {
+          title: "Cuba de Apoio Slim Redonda 40cm Preto Fosco Deca",
+          description: "Cerâmica esmaltada de alta densidade com bordas finas Slim, acabamento acetinado de luxo.",
+          price: "R$ 649,00",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/busca?q=cuba+apoio+slim+deca"
+        },
+        {
+          title: "Chuveiro Deca Acqua Plus Cromado com Tubo de Parede",
+          description: "Design quadrado moderno, jato dinâmico autolimpante e vazão abundante de água constante.",
+          price: "R$ 499,00",
+          store: "Telhanorte",
+          url: "https://www.telhanorte.com.br/busca?q=chuveiro+deca+acqua+plus"
+        }
+      ];
+    }
+
+    if (cat.includes("iluminação") || cat.includes("iluminacao") || cat.includes("elétrica")) {
+      return [
+        {
+          title: "Pendente Tubular Cone Minimalista Dourado Escovado / Preto",
+          description: "Estrutura em alumínio usinado, cabo regulável de até 1,80m, soquete GU10 de excelente acabamento.",
+          price: "R$ 189,00",
+          store: "Mobly",
+          url: "https://www.mobly.com.br/busca?q=pendente+tubular+cone"
+        }
+      ];
+    }
+
+    if (cat.includes("revestimento") || cat.includes("piso") || cat.includes("pintura")) {
+      return [
+        {
+          title: "Porcelanato Acetinado Retificado Calacata 84x84cm Portobello",
+          description: "Borda retificada com junta mínima de 1,5mm, acabamento acetinado luxuoso com veios suaves marmorizados.",
+          price: "R$ 94,90 / m²",
+          store: "Portobello Shop / Telhanorte",
+          url: "https://www.telhanorte.com.br/busca?q=porcelanato+retificado+marmorizado"
+        }
+      ];
+    }
+
+    // -- STAGE 3: Absolute Dynamic Fallback (Generates based on whatever query/term was input) --
     const term = (query || "").trim() || (category ? `Item para ${category}` : "Produto Arquitetônico");
     const capitalizedTerm = term.charAt(0).toUpperCase() + term.slice(1);
     return [
@@ -3166,6 +3317,21 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     let results: any[] = [];
     let source = "google_grounding";
     let extractedQuery = (query || "").trim();
+    let quotaExhausted = false;
+
+    // Detect if an error is a 429 rate limit or quota exhaustion
+    const checkQuotaError = (err: any) => {
+      const errMsg = String(err?.message || err || "").toLowerCase();
+      if (
+        err?.status === 429 ||
+        errMsg.includes("quota") ||
+        errMsg.includes("rate limit") ||
+        errMsg.includes("resource_exhausted") ||
+        errMsg.includes("exceeded your current quota")
+      ) {
+        quotaExhausted = true;
+      }
+    };
 
     try {
       const ai = getGeminiClient();
@@ -3209,6 +3375,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
             }
           }
         } catch (visionErr: any) {
+          checkQuotaError(visionErr);
           console.warn("[Gemini Search] Image analysis failed, using fallback query extraction.", visionErr?.message || visionErr);
         }
       }
@@ -3254,6 +3421,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
             source = "google_grounding";
           }
         } catch (groundingErr: any) {
+          checkQuotaError(groundingErr);
           console.warn("[Gemini Search] Grounding attempt unavailable. Trying direct generation with gemini-3.8-flash...", groundingErr?.message || groundingErr);
           
           // Tier 2: Fallback to direct model generation
@@ -3285,11 +3453,13 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
               source = "ai_generation";
             }
           } catch (liteErr: any) {
+            checkQuotaError(liteErr);
             console.warn("[Gemini Search] Gemini direct model also unavailable. Activating smart architectural catalog...", liteErr?.message || liteErr);
           }
         }
       }
     } catch (generalErr: any) {
+      checkQuotaError(generalErr);
       console.warn("[Gemini Search] General catch error:", generalErr?.message || generalErr);
     }
 
@@ -3300,12 +3470,19 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       source = "catalog_backup";
     }
 
+    let noticeText = undefined;
+    if (source === "catalog_backup") {
+      if (quotaExhausted) {
+        noticeText = "Sua chave de API gratuita atingiu o limite de cota de pesquisas do Google. Exibindo sugestões premium do Catálogo de Arquitetura integrado para preenchimento imediato!";
+      } else {
+        noticeText = "Sugestões obtidas via Catálogo Inteligente de Arquitetura integrado (servidores Google com alta demanda momentânea).";
+      }
+    }
+
     return res.json({
       results,
       source,
-      notice: source === "catalog_backup"
-        ? "Sugestões obtidas via Catálogo Inteligente de Arquitetura (servidores Google com alta demanda momentânea)."
-        : undefined
+      notice: noticeText
     });
   });
 
