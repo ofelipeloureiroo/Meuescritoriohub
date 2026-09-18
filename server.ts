@@ -3165,18 +3165,14 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     const { query, imageBase64, category } = req.body;
     let results: any[] = [];
     let source = "google_grounding";
+    let extractedQuery = (query || "").trim();
 
     try {
       const ai = getGeminiClient();
 
-      if (ai && (query || imageBase64)) {
-        const parts: any[] = [];
-        let prompt = "Você é um assistente especialista em especificações técnicas de arquitetura, design de interiores e construção civil no Brasil. " +
-          "Sua tarefa é encontrar ofertas reais na internet do produto solicitado usando a ferramenta de busca do Google (Google Search). " +
-          "Retorne obrigatoriamente um array JSON válido contendo até 5 opções de produtos reais para compra com preços em R$ e links reais. " +
-          "Siga exatamente o formato JSON especificado.";
-
-        if (imageBase64) {
+      // Step 1: If we have an image and no text query, first analyze the image using Gemini to extract a highly descriptive text term
+      if (ai && imageBase64 && !extractedQuery) {
+        try {
           const matches = imageBase64.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
           let mimeType = "image/jpeg";
           let data = imageBase64;
@@ -3184,26 +3180,55 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
             mimeType = matches[1];
             data = matches[2];
           }
-          parts.push({
-            inlineData: {
-              mimeType,
-              data
-            }
-          });
-          prompt += "\n\nIdentifique o produto nesta imagem e pesquise no Google por ofertas de compra em lojas no Brasil. " +
-            "Se o usuário enviou algum texto ou busca, use-o como auxílio de busca: " + (query || "");
-        } else if (query) {
-          prompt += `\n\nPesquise no Google por ofertas de compra do seguinte produto: "${query}" em lojas no Brasil.`;
-        }
 
-        parts.push({ text: prompt });
+          console.log("[Gemini Search] Analyzing image to extract a descriptive search term...");
+          const visionResponse = await ai.models.generateContent({
+            model: "gemini-3.8-flash",
+            contents: [
+              {
+                inlineData: {
+                  mimeType,
+                  data
+                }
+              },
+              {
+                text: "Analise o produto de arquitetura, interiores, decoração ou construção civil presente nesta imagem. " +
+                  "Qual é o nome descritivo mais exato, marca, ou tipo de produto para buscarmos ofertas reais no Google? " +
+                  "Retorne APENAS o termo de busca ideal, curto e limpo (no máximo 6 palavras). " +
+                  "Não inclua nenhuma outra palavra, pontuação ou introdução na resposta. " +
+                  "Exemplo de retorno esperado: 'Banheira de imersão branca' ou 'Cuba de apoio redonda deca' ou 'Pendente Jabuticaba dourado'."
+              }
+            ]
+          });
+
+          if (visionResponse?.text) {
+            const cleanText = visionResponse.text.trim().replace(/^['"´`]+|['"´`]+$/g, "");
+            if (cleanText) {
+              console.log("[Gemini Search] Image analysis returned search query:", cleanText);
+              extractedQuery = cleanText;
+            }
+          }
+        } catch (visionErr: any) {
+          console.warn("[Gemini Search] Image analysis failed, using fallback query extraction.", visionErr?.message || visionErr);
+        }
+      }
+
+      // Step 2: Now do the Grounded Google Search. We do it using text-only query because Gemini Google Search Grounding does not support multimodal inputs directly.
+      const finalSearchTerm = extractedQuery || (category ? `Item para ${category}` : "Produto Arquitetônico");
+
+      if (ai && finalSearchTerm) {
+        const prompt = "Você é um assistente especialista em especificações técnicas de arquitetura, design de interiores e construção civil no Brasil. " +
+          "Sua tarefa é encontrar ofertas reais na internet do produto solicitado usando a ferramenta de busca do Google (Google Search). " +
+          `Pesquise no Google por ofertas de compra do seguinte produto: "${finalSearchTerm}" em lojas no Brasil. ` +
+          "Retorne obrigatoriamente um array JSON válido contendo até 5 opções de produtos reais para compra com preços em R$ e links reais. " +
+          "Siga exatamente o formato JSON especificado.";
 
         // Tier 1: Try Gemini with Google Grounding
         try {
-          console.log("[Gemini Search] Attempting Google Search Grounding with gemini-3.8-flash...");
+          console.log(`[Gemini Search] Attempting Google Search Grounding with gemini-3.8-flash for: "${finalSearchTerm}"...`);
           const response = await ai.models.generateContent({
             model: "gemini-3.8-flash",
-            contents: parts,
+            contents: [{ text: prompt }],
             config: {
               tools: [{ googleSearch: {} }],
               responseMimeType: "application/json",
@@ -3229,13 +3254,13 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
             source = "google_grounding";
           }
         } catch (groundingErr: any) {
-          console.warn("[Gemini Search] Grounding attempt unavailable. Trying direct generation with gemini-3.1-flash-lite...", groundingErr?.message || groundingErr);
+          console.warn("[Gemini Search] Grounding attempt unavailable. Trying direct generation with gemini-3.8-flash...", groundingErr?.message || groundingErr);
           
-          // Tier 2: Fallback to lightweight model without search tool
+          // Tier 2: Fallback to direct model generation
           try {
             const liteResponse = await ai.models.generateContent({
-              model: "gemini-3.1-flash-lite",
-              contents: parts,
+              model: "gemini-3.8-flash",
+              contents: [{ text: prompt }],
               config: {
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -3260,7 +3285,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
               source = "ai_generation";
             }
           } catch (liteErr: any) {
-            console.warn("[Gemini Search] Gemini direct model also in high demand/unavailable. Activating smart architectural catalog...", liteErr?.message || liteErr);
+            console.warn("[Gemini Search] Gemini direct model also unavailable. Activating smart architectural catalog...", liteErr?.message || liteErr);
           }
         }
       }
@@ -3270,7 +3295,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
     // Tier 3: Guarantees user NEVER receives a blocking error
     if (!results || results.length === 0) {
-      const searchTerm = query || (imageBase64 ? "Cadeira de Escritório" : "");
+      const searchTerm = extractedQuery || query || (category ? `Item de ${category}` : "Produto de Luxo");
       results = generateArchitecturalCatalogFallback(searchTerm, category);
       source = "catalog_backup";
     }
