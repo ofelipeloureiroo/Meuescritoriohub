@@ -33,7 +33,8 @@ import {
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
-import { NICHES } from '../utils/theme';
+import { BG_THEMES, NICHES } from '../utils/theme';
+import { BgThemeId } from '../types';
 
 interface NavItem {
   id: string;
@@ -393,7 +394,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const instagramUrl = 'https://www.instagram.com/meuescritorio.online';
 
-  const isLight = architectProfile?.bgTheme === 'light_cream' || architectProfile?.bgTheme === 'light_pure';
+  const currentBgKey = (architectProfile?.bgTheme || (localStorage.getItem('app_bg_theme') as BgThemeId) || 'light_cream');
+  const isLight = !BG_THEMES[currentBgKey]?.isDark;
 
   const desktopSidebarContent = (
     <div className="flex flex-col h-full bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] text-[var(--text-main)] select-none transition-all duration-300 items-center py-6 justify-between">

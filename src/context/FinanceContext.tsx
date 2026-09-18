@@ -992,13 +992,35 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (data.profile) {
             setArchitectProfile((prev) => {
               const currentExplicitBg = (localStorage.getItem('app_bg_theme') as BgThemeId) || prev.bgTheme || 'light_cream';
-              const merged = { ...prev, ...data.profile, bgTheme: data.profile.bgTheme || currentExplicitBg };
-              safeSetItem('profile', merged);
+              const currentExplicitTheme = (localStorage.getItem('app_theme_color') as ThemeColorId) || prev.themeColor || 'amber';
+
+              // Load any customized local profile fields so cloud doesn't roll them back
+              const localRaw =
+                localStorage.getItem('office_active_profile') ||
+                localStorage.getItem('office_persistent_profile') ||
+                localStorage.getItem(getStorageKey('profile'));
+              let localParsed: Partial<ArchitectProfile> = {};
+              if (localRaw) {
+                try {
+                  const p = JSON.parse(localRaw);
+                  if (p && typeof p === 'object') localParsed = p;
+                } catch {}
+              }
+
+              const merged: ArchitectProfile = {
+                ...data.profile,
+                ...prev,
+                ...localParsed,
+                bgTheme: currentExplicitBg,
+                themeColor: currentExplicitTheme,
+              };
+
+              persistProfileLocally(merged);
               window.dispatchEvent(new CustomEvent('office_profile_updated', { detail: merged }));
               return merged;
             });
-            const effectiveThemeColor = data.profile.themeColor || (localStorage.getItem('app_theme_color') as any) || 'amber';
-            const effectiveBgTheme = data.profile.bgTheme || (localStorage.getItem('app_bg_theme') as any) || 'light_cream';
+            const effectiveThemeColor = (localStorage.getItem('app_theme_color') as any) || data.profile.themeColor || 'amber';
+            const effectiveBgTheme = (localStorage.getItem('app_bg_theme') as any) || data.profile.bgTheme || 'light_cream';
             applyThemeToDocument(effectiveThemeColor, effectiveBgTheme);
           }
           if (Array.isArray(data.transactions)) {

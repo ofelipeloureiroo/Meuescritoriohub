@@ -17,6 +17,15 @@
         try {
           var bg = localStorage.getItem('app_bg_theme');
           if (!bg) {
+            var rawProf = localStorage.getItem('office_active_profile') || localStorage.getItem('office_persistent_profile');
+            if (rawProf) {
+              try {
+                var p = JSON.parse(rawProf);
+                if (p && p.bgTheme) bg = p.bgTheme;
+              } catch (e) {}
+            }
+          }
+          if (!bg) {
             for (var i = 0; i < localStorage.length; i++) {
               var k = localStorage.key(i);
               if (k && k.startsWith('office_v2_') && k.endsWith('_profile')) {
@@ -26,7 +35,7 @@
             }
           }
           if (!bg) { bg = 'light_cream'; }
-          var isDark = (bg === 'dark_warm' || bg === 'dark_oled' || bg === 'dark_slate');
+          var isDark = (bg.indexOf('dark') !== -1);
           if (isDark) {
             document.documentElement.classList.add('dark');
           } else {
