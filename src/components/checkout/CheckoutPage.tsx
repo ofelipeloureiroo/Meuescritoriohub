@@ -248,13 +248,18 @@ export const CheckoutPage: React.FC = () => {
     if (cleanEmail) {
       try {
         const rawBlacklist = localStorage.getItem('office_deleted_subscribers');
+        let list: string[] = [];
         if (rawBlacklist) {
-          const list = JSON.parse(rawBlacklist);
-          if (Array.isArray(list)) {
-            const newList = list.filter((x: string) => x.toLowerCase().trim() !== cleanEmail);
-            localStorage.setItem('office_deleted_subscribers', JSON.stringify(newList));
+          const parsed = JSON.parse(rawBlacklist);
+          if (Array.isArray(parsed)) {
+            list = parsed.filter((x: string) => x.toLowerCase().trim() !== cleanEmail);
+            localStorage.setItem('office_deleted_subscribers', JSON.stringify(list));
           }
         }
+        await setDoc(doc(db, 'system_integrations', 'deleted_subscribers'), {
+          emails: list,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(() => {});
       } catch {}
     }
 

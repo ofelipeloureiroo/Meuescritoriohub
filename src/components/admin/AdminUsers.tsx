@@ -141,19 +141,8 @@ export const isPlatformSubscriber = (u: UserProfile): boolean => {
   return true;
 };
 
-// Base authorized accounts to ensure master accounts are always loaded
-const DEFAULT_AUTHORIZED_SUBSCRIBERS: UserProfile[] = [
-  {
-    uid: 'sub_carlos_felipe',
-    email: 'carlos.felipe.123@hotmail.com',
-    name: 'Carlos Felipe',
-    role: 'user',
-    status: 'active',
-    subscriptionDueDate: new Date(Date.now() + 365 * 86400000).toISOString(),
-    createdAt: new Date().toISOString(),
-    notes: 'Assinante da Plataforma',
-  },
-];
+// Base authorized accounts (empty default so deleted users are never resurrected by hardcoded mock data)
+const DEFAULT_AUTHORIZED_SUBSCRIBERS: UserProfile[] = [];
 
 export const AdminUsers: React.FC = () => {
   const { user: currentUserProfile, profile } = useAuth();
@@ -258,19 +247,33 @@ export const AdminUsers: React.FC = () => {
     return new Set();
   };
 
-  const addEmailToBlacklist = (email: string) => {
+  const addEmailToBlacklist = async (email: string) => {
+    const clean = email.toLowerCase().trim();
+    if (!clean) return;
     try {
       const set = getBlacklistedEmails();
-      set.add(email.toLowerCase().trim());
-      localStorage.setItem('office_deleted_subscribers', JSON.stringify(Array.from(set)));
+      set.add(clean);
+      const arr = Array.from(set);
+      localStorage.setItem('office_deleted_subscribers', JSON.stringify(arr));
+      await setDoc(doc(db, 'system_integrations', 'deleted_subscribers'), {
+        emails: arr,
+        updatedAt: new Date().toISOString()
+      }, { merge: true }).catch(() => {});
     } catch {}
   };
 
-  const removeEmailFromBlacklist = (email: string) => {
+  const removeEmailFromBlacklist = async (email: string) => {
+    const clean = email.toLowerCase().trim();
+    if (!clean) return;
     try {
       const set = getBlacklistedEmails();
-      set.delete(email.toLowerCase().trim());
-      localStorage.setItem('office_deleted_subscribers', JSON.stringify(Array.from(set)));
+      set.delete(clean);
+      const arr = Array.from(set);
+      localStorage.setItem('office_deleted_subscribers', JSON.stringify(arr));
+      await setDoc(doc(db, 'system_integrations', 'deleted_subscribers'), {
+        emails: arr,
+        updatedAt: new Date().toISOString()
+      }, { merge: true }).catch(() => {});
     } catch {}
   };
 
@@ -307,6 +310,20 @@ export const AdminUsers: React.FC = () => {
   const aggregateAllSubscribers = async (snapshotDocs: any[] = []): Promise<UserProfile[]> => {
     const usersMap = new Map<string, UserProfile>();
     const blacklist = getBlacklistedEmails();
+
+    // Fetch Firestore remote blacklist to sync across devices/refreshes
+    try {
+      const delSnap = await fetchWithTimeout(getDoc(doc(db, 'system_integrations', 'deleted_subscribers')), 1500, null);
+      if (delSnap && delSnap.exists && delSnap.exists()) {
+        const delData = delSnap.data();
+        if (Array.isArray(delData?.emails)) {
+          delData.emails.forEach((e: string) => blacklist.add(e.toLowerCase().trim()));
+          localStorage.setItem('office_deleted_subscribers', JSON.stringify(Array.from(blacklist)));
+        }
+      }
+    } catch (e) {
+      console.warn("Notice checking deleted_subscribers integration:", e);
+    }
 
     // 1. Current user (owner / admin)
     const currentUid = auth.currentUser?.uid || profile?.uid || 'admin_owner';
@@ -365,13 +382,7 @@ export const AdminUsers: React.FC = () => {
     snapshotDocs.forEach((docSnap) => {
       const d = docSnap.data() as UserProfile;
       const em = (d.email || '').toLowerCase().trim();
-      if (em && isPlatformSubscriber(d)) {
-        // If an active user document exists in Firestore, the user has registered a new account
-        // Clear any previous deletion blacklist entry so they appear cleanly
-        if (blacklist.has(em)) {
-          blacklist.delete(em);
-          removeEmailFromBlacklist(em);
-        }
+      if (em && isPlatformSubscriber(d) && !blacklist.has(em)) {
         const existing = usersMap.get(em);
         usersMap.set(em, {
           ...existing,
@@ -379,23 +390,6 @@ export const AdminUsers: React.FC = () => {
           uid: docSnap.id,
           email: em,
         });
-      }
-    });
-
-    // 5. Ensure DEFAULT_AUTHORIZED_SUBSCRIBERS are included
-    DEFAULT_AUTHORIZED_SUBSCRIBERS.forEach((defSub) => {
-      const em = defSub.email.toLowerCase().trim();
-      if (!blacklist.has(em)) {
-        if (!usersMap.has(em)) {
-          usersMap.set(em, defSub);
-        } else {
-          const existing = usersMap.get(em)!;
-          usersMap.set(em, {
-            ...defSub,
-            ...existing,
-            email: em,
-          });
-        }
       }
     });
 
@@ -679,19 +673,27 @@ export const AdminUsers: React.FC = () => {
     const uid = userToDelete.uid;
     const email = (userToDelete.email || '').toLowerCase().trim();
 
-    addEmailToBlacklist(email);
+    await addEmailToBlacklist(email);
 
     const updatedList = users.filter(u => u.uid !== uid && (u.email || '').toLowerCase().trim() !== email);
     setUsers(updatedList);
-    persistSubscribersAcrossAllLayers(updatedList);
+    await persistSubscribersAcrossAllLayers(updatedList);
     setUserToDelete(null);
     setRefreshSuccessMessage(`Usuário ${email} foi removido com sucesso.`);
     setTimeout(() => setRefreshSuccessMessage(null), 5000);
 
     try {
-      if (uid && !uid.startsWith('sub_') && !uid.startsWith('team_') && !uid.startsWith('portal_')) {
+      if (uid) {
         await deleteDoc(doc(db, 'users', uid, 'data', 'workspace')).catch(() => {});
-        await deleteDoc(doc(db, 'users', uid));
+        await deleteDoc(doc(db, 'users', uid)).catch(() => {});
+      }
+      if (email) {
+        const qSnap = await getDocs(query(collection(db, 'users'), where('email', '==', email))).catch(() => null);
+        if (qSnap && !qSnap.empty) {
+          for (const d of qSnap.docs) {
+            await deleteDoc(doc(db, 'users', d.id)).catch(() => {});
+          }
+        }
       }
     } catch (e) {
       console.warn("Notice deleting user from Firestore:", e);
