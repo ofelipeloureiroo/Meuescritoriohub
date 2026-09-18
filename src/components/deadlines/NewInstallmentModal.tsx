@@ -7,8 +7,10 @@ import {
   Plus,
   User,
   X,
+  Pencil,
   Building2,
   Sparkles,
+  Layers,
 } from 'lucide-react';
 import { ProjectInstallment } from '../../types';
 import { useFinance } from '../../context/FinanceContext';
@@ -17,18 +19,21 @@ interface NewInstallmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultProjectId?: string;
+  installmentToEdit?: ProjectInstallment | null;
 }
 
 export const NewInstallmentModal: React.FC<NewInstallmentModalProps> = ({
   isOpen,
   onClose,
   defaultProjectId,
+  installmentToEdit,
 }) => {
   const {
     architectureProjects = [],
     clients = [],
     freelanceProjects = [],
     addProjectInstallment,
+    updateProjectInstallment,
   } = useFinance();
 
   // Consolidate project sources
@@ -86,37 +91,75 @@ export const NewInstallmentModal: React.FC<NewInstallmentModalProps> = ({
   const [customClientName, setCustomClientName] = useState<string>('');
   const [customClientPhone, setCustomClientPhone] = useState<string>('');
 
-  const [installmentNumber, setInstallmentNumber] = useState(1);
-  const [totalInstallments, setTotalInstallments] = useState(3);
+  // String state for inputs so erasing all digits leaves clean empty string
+  const [installmentNumberStr, setInstallmentNumberStr] = useState<string>('1');
+  const [totalInstallmentsStr, setTotalInstallmentsStr] = useState<string>('3');
   const [description, setDescription] = useState('Sinal / Início do Projeto');
-  const [amount, setAmount] = useState<number>(3500);
+  const [amountStr, setAmountStr] = useState<string>('3500');
   const [dueDate, setDueDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 15);
     return d.toISOString().split('T')[0];
   });
   const [notes, setNotes] = useState('');
+  const [autoGenerateAll, setAutoGenerateAll] = useState<boolean>(true);
 
   // Set initial selected ID whenever options or modal open changes
   useEffect(() => {
     if (isOpen) {
-      if (defaultProjectId && combinedOptions.some((o) => o.id === defaultProjectId)) {
-        setSelectedId(defaultProjectId);
+      if (installmentToEdit) {
+        // Pre-fill fields for editing
+        setSelectedId(installmentToEdit.projectId);
         setIsCustomMode(false);
-      } else if (combinedOptions.length > 0) {
-        setSelectedId(combinedOptions[0].id);
-        setIsCustomMode(false);
+        setCustomProjectTitle(installmentToEdit.projectTitle);
+        setCustomClientName(installmentToEdit.clientName);
+        setCustomClientPhone(installmentToEdit.clientPhone || '');
+        setInstallmentNumberStr(String(installmentToEdit.installmentNumber || 1));
+        setTotalInstallmentsStr(String(installmentToEdit.totalInstallments || 1));
+        setDescription(installmentToEdit.description || '');
+        setAmountStr(String(installmentToEdit.amount ?? ''));
+        setDueDate(installmentToEdit.dueDate || new Date().toISOString().split('T')[0]);
+        setNotes(installmentToEdit.notes || '');
+        setAutoGenerateAll(false);
       } else {
-        setIsCustomMode(true);
+        // Reset for new creation
+        setInstallmentNumberStr('1');
+        setTotalInstallmentsStr('3');
+        setDescription('Sinal / Início do Projeto');
+        setAmountStr('3500');
+        const d = new Date();
+        d.setDate(d.getDate() + 15);
+        setDueDate(d.toISOString().split('T')[0]);
+        setNotes('');
+        setAutoGenerateAll(true);
+
+        if (defaultProjectId && combinedOptions.some((o) => o.id === defaultProjectId)) {
+          setSelectedId(defaultProjectId);
+          setIsCustomMode(false);
+        } else if (combinedOptions.length > 0) {
+          setSelectedId(combinedOptions[0].id);
+          setIsCustomMode(false);
+        } else {
+          setIsCustomMode(true);
+        }
       }
     }
-  }, [isOpen, defaultProjectId, combinedOptions]);
+  }, [isOpen, defaultProjectId, installmentToEdit, combinedOptions]);
 
   if (!isOpen) return null;
 
+  const parsedTotal = parseInt(totalInstallmentsStr, 10) || 1;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (amount <= 0 || !dueDate) return;
+    const parsedAmount = parseFloat(amountStr.replace(',', '.')) || 0;
+    const parsedInstallmentNum = parseInt(installmentNumberStr, 10) || 1;
+    const parsedTotalInstallments = parseInt(totalInstallmentsStr, 10) || 1;
+
+    if (!dueDate) {
+      alert('Por favor, informe a data de vencimento.');
+      return;
+    }
 
     let finalProjectId = '';
     let finalProjectTitle = '';
@@ -144,19 +187,68 @@ export const NewInstallmentModal: React.FC<NewInstallmentModalProps> = ({
       finalClientPhone = selected.clientPhone || '';
     }
 
-    addProjectInstallment({
-      projectId: finalProjectId,
-      projectTitle: finalProjectTitle,
-      clientName: finalClientName,
-      clientPhone: finalClientPhone,
-      installmentNumber,
-      totalInstallments,
-      description,
-      amount,
-      dueDate,
-      status: 'pending',
-      notes,
-    });
+    if (installmentToEdit) {
+      // Edit existing installment
+      updateProjectInstallment(installmentToEdit.id, {
+        projectId: finalProjectId,
+        projectTitle: finalProjectTitle,
+        clientName: finalClientName,
+        clientPhone: finalClientPhone,
+        installmentNumber: parsedInstallmentNum,
+        totalInstallments: parsedTotalInstallments,
+        description,
+        amount: parsedAmount,
+        dueDate,
+        notes,
+      });
+    } else {
+      // Create new installment(s)
+      if (autoGenerateAll && parsedTotalInstallments > 1) {
+        // Auto-generate all N installments with monthly due dates
+        const initialDate = new Date(dueDate + 'T00:00:00');
+        for (let i = 1; i <= parsedTotalInstallments; i++) {
+          const itemDueDate = new Date(initialDate);
+          itemDueDate.setMonth(initialDate.getMonth() + (i - 1));
+          const dateStr = itemDueDate.toISOString().split('T')[0];
+
+          let desc = description;
+          if (desc === 'Sinal / Início do Projeto') {
+            desc = `Parcela ${i}/${parsedTotalInstallments} do Projeto`;
+          } else if (!desc.includes(`${i}/`)) {
+            desc = `${description} (${i}/${parsedTotalInstallments})`;
+          }
+
+          addProjectInstallment({
+            projectId: finalProjectId,
+            projectTitle: finalProjectTitle,
+            clientName: finalClientName,
+            clientPhone: finalClientPhone,
+            installmentNumber: i,
+            totalInstallments: parsedTotalInstallments,
+            description: desc,
+            amount: parsedAmount,
+            dueDate: dateStr,
+            status: 'pending',
+            notes,
+          });
+        }
+      } else {
+        // Create single installment record
+        addProjectInstallment({
+          projectId: finalProjectId,
+          projectTitle: finalProjectTitle,
+          clientName: finalClientName,
+          clientPhone: finalClientPhone,
+          installmentNumber: parsedInstallmentNum,
+          totalInstallments: parsedTotalInstallments,
+          description,
+          amount: parsedAmount,
+          dueDate,
+          status: 'pending',
+          notes,
+        });
+      }
+    }
 
     onClose();
   };
@@ -168,14 +260,14 @@ export const NewInstallmentModal: React.FC<NewInstallmentModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color)] bg-[var(--bg-card-hover)]">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-[var(--theme-primary)]/15 border border-[var(--theme-primary)]/30 flex items-center justify-center text-[var(--theme-primary)]">
-              <CreditCard className="w-4 h-4" />
+              {installmentToEdit ? <Pencil className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
             </div>
             <div>
               <h3 className="font-serif font-bold text-base text-[var(--text-main)]">
-                Nova Parcela de Honorários
+                {installmentToEdit ? 'Editar Parcela de Honorários' : 'Nova Parcela de Honorários'}
               </h3>
               <p className="text-xs text-[var(--text-muted)]">
-                Cadastrar cobrança ou etapa de pagamento do projeto
+                {installmentToEdit ? 'Atualizar valores, datas e detalhes da parcela' : 'Cadastrar cobrança ou etapa de pagamento do projeto'}
               </p>
             </div>
           </div>
@@ -276,11 +368,14 @@ export const NewInstallmentModal: React.FC<NewInstallmentModalProps> = ({
                 Número da Parcela
               </label>
               <input
-                type="number"
-                min="1"
+                type="text"
+                inputMode="numeric"
                 required
-                value={installmentNumber}
-                onChange={(e) => setInstallmentNumber(parseInt(e.target.value, 10) || 1)}
+                value={installmentNumberStr}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setInstallmentNumberStr(val);
+                }}
                 className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
               />
             </div>
@@ -289,15 +384,34 @@ export const NewInstallmentModal: React.FC<NewInstallmentModalProps> = ({
                 Total de Parcelas
               </label>
               <input
-                type="number"
-                min="1"
+                type="text"
+                inputMode="numeric"
                 required
-                value={totalInstallments}
-                onChange={(e) => setTotalInstallments(parseInt(e.target.value, 10) || 1)}
+                value={totalInstallmentsStr}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setTotalInstallmentsStr(val);
+                }}
                 className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
               />
             </div>
           </div>
+
+          {/* Auto-generate Checkbox for Multi-Installments */}
+          {!installmentToEdit && parsedTotal > 1 && (
+            <div className="p-3 bg-[var(--bg-input)]/70 rounded-xl border border-[var(--theme-primary)]/30 flex items-start gap-2.5">
+              <input
+                type="checkbox"
+                id="autoGenerateAll"
+                checked={autoGenerateAll}
+                onChange={(e) => setAutoGenerateAll(e.target.checked)}
+                className="w-4 h-4 mt-0.5 rounded text-[var(--theme-primary)] border-[var(--border-color)] focus:ring-0 cursor-pointer"
+              />
+              <label htmlFor="autoGenerateAll" className="text-xs text-[var(--text-main)] cursor-pointer select-none leading-relaxed">
+                <strong>Gerar todas as {parsedTotal} parcelas automaticamente:</strong> Cria sequencialmente do n.º 1 até ao {parsedTotal} (ex: 1/{parsedTotal}, 2/{parsedTotal}, 3/{parsedTotal}) com vencimentos mensais a partir de {dueDate ? new Date(dueDate + 'T00:00:00').toLocaleDateString('pt-BR') : 'hoje'}.
+              </label>
+            </div>
+          )}
 
           {/* Description */}
           <div>
@@ -323,12 +437,15 @@ export const NewInstallmentModal: React.FC<NewInstallmentModalProps> = ({
               <div className="relative">
                 <DollarSign className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   required
-                  value={amount}
-                  onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                  placeholder="0,00"
+                  value={amountStr}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.,]/g, '');
+                    setAmountStr(val);
+                  }}
                   className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl pl-10 pr-4 py-2.5 text-sm font-semibold text-emerald-600 dark:text-emerald-400 focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
                 />
               </div>
@@ -374,8 +491,8 @@ export const NewInstallmentModal: React.FC<NewInstallmentModalProps> = ({
               type="submit"
               className="flex items-center gap-2 px-5 py-2.5 bg-[var(--theme-primary)] hover:opacity-90 text-white dark:text-black font-bold rounded-xl text-xs shadow-lg transition-all cursor-pointer active:scale-95"
             >
-              <Plus className="w-4 h-4" />
-              <span>Salvar Parcela</span>
+              {installmentToEdit ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              <span>{installmentToEdit ? 'Salvar Alterações' : 'Salvar Parcela'}</span>
             </button>
           </div>
         </form>

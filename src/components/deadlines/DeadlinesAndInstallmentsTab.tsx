@@ -17,6 +17,7 @@ import {
   Filter,
   Layers,
   MessageCircle,
+  Pencil,
   Phone,
   Plus,
   Search,
@@ -83,6 +84,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
   const [selectedBoletoInstallment, setSelectedBoletoInstallment] = useState<ProjectInstallment | null>(null);
 
   const [newInstallmentModalOpen, setNewInstallmentModalOpen] = useState(false);
+  const [installmentToEdit, setInstallmentToEdit] = useState<ProjectInstallment | null>(null);
   const [newMilestoneModalOpen, setNewMilestoneModalOpen] = useState(false);
   const [newReportModalOpen, setNewReportModalOpen] = useState(false);
   const [selectedProjectForReport, setSelectedProjectForReport] = useState<ArchitectureProject | null>(null);
@@ -846,6 +848,13 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                                   </div>
 
                                   <div className="flex items-center gap-1.5">
+                                    <button
+                                      onClick={() => setInstallmentToEdit(inst)}
+                                      className="p-1.5 text-[var(--text-muted)] hover:text-[var(--theme-primary)] hover:bg-[var(--bg-card)] rounded-lg transition-colors cursor-pointer"
+                                      title="Editar Parcela"
+                                    >
+                                      <Pencil className="w-3.5 h-3.5" />
+                                    </button>
                                     {!isPaid && (
                                       <button
                                         onClick={() => handleOpenReceiveModal(inst)}
@@ -1046,6 +1055,15 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                         </div>
 
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setInstallmentToEdit(inst)}
+                            title="Editar detalhes da parcela"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-card)] hover:bg-[var(--bg-card-secondary)] text-[var(--text-main)] hover:text-[var(--theme-primary)] rounded-xl text-xs font-semibold border border-[var(--border-color)] transition-colors cursor-pointer"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Editar</span>
+                          </button>
+
                           {!isPaid ? (
                             <button
                               onClick={() => handleOpenReceiveModal(inst)}
@@ -1383,9 +1401,13 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
       />
 
       <NewInstallmentModal
-        isOpen={newInstallmentModalOpen}
-        onClose={() => setNewInstallmentModalOpen(false)}
+        isOpen={newInstallmentModalOpen || !!installmentToEdit}
+        onClose={() => {
+          setNewInstallmentModalOpen(false);
+          setInstallmentToEdit(null);
+        }}
         defaultProjectId={modalDefaultProjectId}
+        installmentToEdit={installmentToEdit}
       />
 
       <NewMilestoneModal
