@@ -296,9 +296,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  const whatsappUrl = `https://wa.me/5521998213069?text=${encodeURIComponent(
-    'Olá! Preciso de suporte no Meu Escritório Online.'
-  )}`;
   const instagramUrl = 'https://www.instagram.com/meuescritorio.online';
 
   const isLight = architectProfile?.bgTheme === 'light_cream' || architectProfile?.bgTheme === 'light_pure';

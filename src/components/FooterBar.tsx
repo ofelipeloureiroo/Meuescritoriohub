@@ -12,6 +12,7 @@ import {
   Check,
   Phone,
   HelpCircle,
+  Mail,
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
@@ -25,11 +26,6 @@ export const FooterBar: React.FC = () => {
   // Show admin shortcut ONLY for the owner account (lfquadrosdecorativos@gmail.com)
   const isSuperAdmin = isOwner || (isAdmin && user?.email?.toLowerCase() === 'lfquadrosdecorativos@gmail.com');
 
-  // Default support configuration
-  const whatsappNumber = '5521998213069'; // (21) 99821-3069
-  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-    'Olá! Preciso de suporte no Meu Escritório Online.'
-  )}`;
   const instagramUrl = 'https://www.instagram.com/meuescritorio.online';
   const instagramHandle = '@meuescritorio.online';
 
@@ -75,20 +71,18 @@ export const FooterBar: React.FC = () => {
 
           {/* Action Links: WhatsApp & Instagram (Styled in App Palette) */}
           <div className="flex items-center gap-2.5 flex-wrap justify-center">
-            {/* WhatsApp Suporte */}
+            {/* Email Suporte */}
             <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+              href="mailto:suporte@meuescritorio.online"
               className="group flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-[var(--theme-primary)]/60 text-[var(--text-main)] text-xs font-semibold transition-all shadow-xs cursor-pointer"
-              title="Falar com o Suporte via WhatsApp"
+              title="Falar com o Suporte via E-mail"
             >
               <div className="w-5 h-5 rounded-lg bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-[var(--theme-primary)] group-hover:scale-110 transition-transform">
-                <MessageCircle className="w-3 h-3" />
+                <Mail className="w-3 h-3" />
               </div>
               <div className="flex flex-col text-left leading-tight">
-                <span className="text-xs">Suporte WhatsApp</span>
-                <span className="text-[9px] text-[var(--text-muted)] font-normal">(21) 99821-3069</span>
+                <span className="text-xs">Suporte E-mail</span>
+                <span className="text-[9px] text-[var(--text-muted)] font-normal">suporte@meuescritorio.online</span>
               </div>
               <ExternalLink className="w-3 h-3 text-[var(--text-muted)] opacity-60 group-hover:opacity-100 group-hover:text-[var(--theme-primary)]" />
             </a>
@@ -164,22 +158,20 @@ export const FooterBar: React.FC = () => {
 
             {/* Channels List */}
             <div className="space-y-3">
-              {/* WhatsApp Card */}
+              {/* Email Card */}
               <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+                href="mailto:suporte@meuescritorio.online"
                 className="flex items-center justify-between p-3.5 rounded-2xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-[var(--theme-primary)]/60 transition-all group"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-[var(--theme-primary)] group-hover:scale-105 transition-transform">
-                    <MessageCircle className="w-4 h-4" />
+                    <Mail className="w-4 h-4" />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-[var(--text-main)] flex items-center gap-1.5">
-                      Suporte via WhatsApp
-                      <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)]">
-                        (21) 99821-3069
+                      Suporte via E-mail
+                      <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)] animate-none">
+                        suporte@meuescritorio.online
                       </span>
                     </h4>
                     <p className="text-[11px] text-[var(--text-muted)]">

@@ -106,8 +106,9 @@ export const ClientPortalDashboard: React.FC = () => {
 
   // All client portal options available for office preview
   const allOfficeClientPortals = useMemo(() => {
-    if (clients && clients.length > 0) {
-      return clients.map((c) => {
+    const activeClients = (clients || []).filter((c) => c.status !== 'lead');
+    if (activeClients.length > 0) {
+      return activeClients.map((c) => {
         const match = officePortals.find(
           (p) =>
             p.clientId === c.id ||
@@ -117,7 +118,7 @@ export const ClientPortalDashboard: React.FC = () => {
         return buildClientPortalAccess(c, architectureProjects, architectProfile, match);
       });
     }
-    return officePortals.length > 0 ? officePortals : [SAMPLE_CLIENT_PORTAL];
+    return officePortals.length > 0 ? officePortals.filter(p => p.id !== SAMPLE_CLIENT_PORTAL.id) : [];
   }, [clients, officePortals, architectureProjects, architectProfile]);
 
   // Load office portals if admin/office user is logged in
@@ -419,7 +420,7 @@ export const ClientPortalDashboard: React.FC = () => {
                   value={effectivePortal.clientId || effectivePortal.id}
                   onChange={(e) => {
                     const selectedId = e.target.value;
-                    const pool = [...allOfficeClientPortals, SAMPLE_CLIENT_PORTAL];
+                    const pool = allOfficeClientPortals;
                     const found = pool.find((p) => p.id === selectedId || p.clientId === selectedId);
                     if (found) {
                       const synced = syncPortalWithOfficeRegistry(found, clients, architectureProjects, architectProfile);
@@ -437,11 +438,6 @@ export const ClientPortalDashboard: React.FC = () => {
                       {p.clientName} ({p.projects?.length || 0} {p.projects?.length === 1 ? 'projeto' : 'projetos'})
                     </option>
                   ))}
-                  {!allOfficeClientPortals.some((p) => p.id === SAMPLE_CLIENT_PORTAL.id) && (
-                    <option value={SAMPLE_CLIENT_PORTAL.id}>
-                      {SAMPLE_CLIENT_PORTAL.clientName} (Modelo Demonstração)
-                    </option>
-                  )}
                 </select>
               </div>
             </div>

@@ -944,14 +944,6 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
               >
                 + Cadastrar {currentNiche.formConfig.itemLabel}
               </button>
-              {architectureProjects.length === 0 && (
-                <button
-                  onClick={() => loadDemoData()}
-                  className="px-4 py-2.5 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] font-semibold text-xs border border-[var(--border-color)] transition-all cursor-pointer"
-                >
-                  Carregar Demonstração
-                </button>
-              )}
             </div>
           </div>
         ) : (

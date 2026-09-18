@@ -23,8 +23,8 @@ export const SupportChatWidget: React.FC = () => {
     {
       id: 'welcome_1',
       sender: 'admin',
-      senderName: 'Carlos Felipe (Suporte Admin)',
-      senderEmail: 'lfquadrosdecorativos@gmail.com',
+      senderName: 'Atendimento (Suporte)',
+      senderEmail: 'suporte@meuescritorio.online',
       text: `Olá, ${userName}! Seja muito bem-vindo(a) ao Suporte Dedicado do Meu Escritório Online. Como podemos te ajudar hoje?`,
       time: new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }),
       date: new Date().toISOString().split('T')[0],

@@ -1701,7 +1701,7 @@ export const CheckoutPage: React.FC = () => {
             <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-5 text-xs text-[#a89c93] flex items-center justify-between">
               <div>
                 <p className="font-bold text-[#fcf8f5]">Dúvidas sobre a assinatura?</p>
-                <p className="mt-0.5">Fale com nosso suporte: lfquadrosdecorativos@gmail.com</p>
+                <p className="mt-0.5">Fale com nosso suporte: suporte@meuescritorio.online</p>
               </div>
             </div>
 
