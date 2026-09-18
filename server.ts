@@ -3358,11 +3358,12 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
                 }
               },
               {
-                text: "Analise o produto de arquitetura, interiores, decoração ou construção civil presente nesta imagem. " +
-                  "Qual é o nome descritivo mais exato, marca, ou tipo de produto para buscarmos ofertas reais no Google? " +
-                  "Retorne APENAS o termo de busca ideal, curto e limpo (no máximo 6 palavras). " +
-                  "Não inclua nenhuma outra palavra, pontuação ou introdução na resposta. " +
-                  "Exemplo de retorno esperado: 'Banheira de imersão branca' ou 'Cuba de apoio redonda deca' ou 'Pendente Jabuticaba dourado'."
+                text: "Analise detalhadamente o produto de arquitetura, interiores, decoração ou construção civil presente nesta imagem. " +
+                  "Identifique suas características visuais fundamentais, como formato, cor, acabamento (ex: dourado escovado, preto fosco, cromado) e estilo. " +
+                  "Qual é o termo de busca mais exato e descritivo para encontrarmos ofertas de produtos esteticamente parecidos ou idênticos no Google no Brasil? " +
+                  "Retorne APENAS esse termo de busca ideal, focado no estilo visual do produto (máximo 6 palavras). " +
+                  "Não adicione nenhuma outra palavra, pontuação, introdução ou explicação. " +
+                  "Exemplo de retorno esperado: 'Ducha retangular preta parede' ou 'Chuveiro quadrado cromado deca' ou 'Pendente jabuticaba dourado escovado'."
               }
             ]
           });
