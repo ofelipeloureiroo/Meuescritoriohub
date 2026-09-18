@@ -376,10 +376,23 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs truncate text-[var(--text-main)]">{t.name}</span>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
-                            Empresa
-                          </span>
+                          <span className="font-bold text-xs truncate text-[var(--text-main)] flex-1 pr-2">{t.name}</span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDuplicatingTemplate(t);
+                              }}
+                              className="p-1 rounded hover:bg-[var(--theme-primary)]/20 text-[var(--text-muted)] hover:text-[var(--theme-primary)] transition-colors cursor-pointer"
+                              title="Duplicar template da empresa"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+                              Empresa
+                            </span>
+                          </div>
                         </div>
                         <div className="flex items-center justify-between text-[10px] opacity-70 pt-0.5">
                           <span>{stageCount} etapas • {itemTotal} tarefas</span>
@@ -529,6 +542,14 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
 
                   {!selectedTpl.isSystem && (
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setDuplicatingTemplate(selectedTpl)}
+                        className="px-2.5 py-1.5 rounded-lg border border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/20 transition-all text-xs font-semibold cursor-pointer flex items-center gap-1.5"
+                        title="Duplicar template da empresa"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        Duplicar
+                      </button>
                       <button
                         onClick={() => handleDeleteTemplate(selectedTpl.id)}
                         className="px-2.5 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all text-xs font-semibold cursor-pointer flex items-center gap-1.5"
@@ -847,21 +868,31 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
         </div>
       )}
 
-      {/* MODAL 2: DUPLICAR E PERSONALIZAR (Image 3) */}
+      {/* MODAL 2: DUPLICAR E PERSONALIZAR */}
       {duplicatingTemplate && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[var(--bg-card)] border border-amber-500/30 rounded-2xl p-6 max-w-lg w-full space-y-5 shadow-2xl">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 max-w-lg w-full space-y-5 shadow-2xl">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
-                  <ShieldAlert className="w-5 h-5 text-amber-400" />
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${
+                  duplicatingTemplate.isSystem 
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
+                    : 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)]/30 text-[var(--theme-primary)]'
+                }`}>
+                  {duplicatingTemplate.isSystem ? (
+                    <ShieldAlert className="w-5 h-5 text-amber-400" />
+                  ) : (
+                    <Copy className="w-5 h-5 text-[var(--theme-primary)]" />
+                  )}
                 </div>
                 <div>
                   <h3 className="font-serif font-bold text-[var(--text-main)] text-base">
-                    Template padrão do sistema
+                    {duplicatingTemplate.isSystem ? 'Template padrão do sistema' : 'Duplicar template da empresa'}
                   </h3>
-                  <p className="text-xs text-amber-400/80 mt-0.5">
-                    Este template não pode ser editado diretamente
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    {duplicatingTemplate.isSystem 
+                      ? 'Este template não pode ser editado diretamente' 
+                      : 'Crie uma nova cópia deste modelo para personalizar'}
                   </p>
                 </div>
               </div>
@@ -881,7 +912,9 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
             </div>
 
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-              Para personalizar este template, o sistema criará uma cópia exclusiva para o seu escritório. O template original permanecerá intacto.
+              {duplicatingTemplate.isSystem 
+                ? 'Para personalizar este template, o sistema criará uma cópia exclusiva para o seu escritório. O template original permanecerá intacto.'
+                : 'O sistema criará uma nova cópia duplicada com todas as etapas e tarefas atuais, permitindo alterar nome, etapas e prazos sem modificar o original.'}
             </p>
 
             <div className="flex items-center justify-end gap-3 pt-2 border-t border-[var(--border-color)]">
@@ -893,10 +926,14 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
               </button>
               <button
                 onClick={handleConfirmDuplicate}
-                className="px-4 py-2 rounded-xl bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 transition-all cursor-pointer flex items-center gap-2"
+                className={`px-4 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-2 ${
+                  duplicatingTemplate.isSystem
+                    ? 'bg-amber-500 text-black hover:bg-amber-400'
+                    : 'bg-[var(--theme-primary)] text-black hover:opacity-90'
+                }`}
               >
                 <Copy className="w-4 h-4" />
-                Duplicar e personalizar
+                {duplicatingTemplate.isSystem ? 'Duplicar e personalizar' : 'Confirmar duplicação'}
               </button>
             </div>
           </div>
