@@ -104,15 +104,20 @@ export const SettingsTab: React.FC = () => {
   // Top level horizontal tabs
   const [activeSubTab, setActiveSubTab] = useState<'minha-conta' | 'sistema' | 'operacao' | 'financeiro' | 'inteligencia'>('minha-conta');
 
+  const currentAuthUser = auth.currentUser || user;
+  const isGoogleAccount = !!(
+    currentAuthUser?.providerData?.some(p => p.providerId === 'google.com')
+  );
+
   // Get the real email the user registered/logged in with (prioritizes Firebase user email or Google provider email, filters system fallbacks)
   const getDisplayEmail = () => {
     // 1. Google provider email if authenticated with Google
-    const googleEmail = user?.providerData?.find(p => p.providerId === 'google.com')?.email;
+    const googleEmail = currentAuthUser?.providerData?.find(p => p.providerId === 'google.com')?.email;
     if (googleEmail) return googleEmail;
 
     // 2. Auth user email if it is a real user email
-    if (user?.email && !user.email.includes('master_escritorio')) {
-      return user.email;
+    if (currentAuthUser?.email && !currentAuthUser.email.includes('master_escritorio')) {
+      return currentAuthUser.email;
     }
 
     // 3. Local session fallback email
@@ -135,7 +140,7 @@ export const SettingsTab: React.FC = () => {
 
   // Get the appropriate display name for the profile tab
   const getDisplayName = () => {
-    // 1. Prioritize owner name from architectProfile (e.g. 'Laine Paula')
+    // 1. Prioritize owner name from architectProfile (Responsável pelo Escritório)
     if (architectProfile?.ownerName?.trim()) {
       return architectProfile.ownerName.trim();
     }
@@ -159,7 +164,7 @@ export const SettingsTab: React.FC = () => {
     }
 
     // 6. Generic Fallback
-    return 'Laine Paula';
+    return 'Carlos Felipe';
   };
 
   // Password change states
@@ -297,6 +302,19 @@ export const SettingsTab: React.FC = () => {
   const [selectedNiche, setSelectedNiche] = useState<NicheType>(architectProfile.niche || 'arquitetura');
   const [selectedTheme, setSelectedTheme] = useState<ThemeColorId>(architectProfile.themeColor || 'gold');
   const [selectedBgTheme, setSelectedBgTheme] = useState<BgThemeId>(architectProfile.bgTheme || 'dark_warm');
+
+  // Keep local fields in sync with architectProfile (especially ownerName / Responsável pelo Escritório)
+  useEffect(() => {
+    if (architectProfile.ownerName !== undefined) {
+      setOwnerName(architectProfile.ownerName);
+    }
+    if (architectProfile.name !== undefined) {
+      setName(architectProfile.name);
+    }
+    if (architectProfile.title !== undefined) {
+      setTitleText(architectProfile.title);
+    }
+  }, [architectProfile.ownerName, architectProfile.name, architectProfile.title]);
 
   // Collaboration state
   const [inviteCodeInput, setInviteCodeInput] = useState('');
@@ -692,18 +710,65 @@ export const SettingsTab: React.FC = () => {
                 <Users className="w-4 h-4 text-[var(--theme-primary)]" />
                 <h3 className="font-serif font-bold text-[var(--text-main)] text-sm uppercase tracking-wider">Perfil</h3>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)] mb-1">Nome</label>
-                  <div className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-medium">
-                    {getDisplayName()}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)]">
+                      Nome
+                    </label>
+                    <span className="text-[10px] text-[var(--theme-primary)] font-medium flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      Responsável pelo Escritório
+                    </span>
                   </div>
+                  <input
+                    type="text"
+                    value={ownerName}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setOwnerName(val);
+                      updateArchitectProfile({ ownerName: val });
+                    }}
+                    onBlur={() => {
+                      if (ownerName.trim()) {
+                        updateArchitectProfile({ ownerName: ownerName.trim() });
+                      }
+                    }}
+                    placeholder="Ex: Carlos Felipe"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-medium focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                  />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                    Este nome é o mesmo do responsável pelo escritório e sincroniza automaticamente em propostas, relatórios e cabeçalhos.
+                  </p>
                 </div>
+
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)] mb-1">E-mail</label>
-                  <div className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-medium">
-                    {getDisplayEmail()}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[10px] uppercase font-bold text-[var(--text-muted)]">
+                      E-mail
+                    </label>
+                    {isGoogleAccount ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-sky-400 font-medium">
+                        <svg className="w-3 h-3" viewBox="0 0 24 24">
+                          <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+                        </svg>
+                        Conta Google
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-emerald-400 font-medium">
+                        E-mail de Cadastro
+                      </span>
+                    )}
                   </div>
+                  <div className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-medium flex items-center justify-between">
+                    <span className="truncate">{getDisplayEmail()}</span>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border border-[var(--border-color)] shrink-0 ml-2 font-medium">
+                      {isGoogleAccount ? 'Google' : 'E-mail e Senha'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                    E-mail oficial cadastrado no sistema ({isGoogleAccount ? 'login vinculado à sua conta Google' : 'login via e-mail e senha'}).
+                  </p>
                 </div>
               </div>
             </div>

@@ -77,6 +77,7 @@ export const TodayTab: React.FC = () => {
   const { teamMembers } = useTeamMembers();
 
   const greetingName =
+    architectProfile?.ownerName?.trim() ||
     architectProfile?.name?.trim() ||
     profile?.companyName?.trim() ||
     user?.displayName?.trim() ||
