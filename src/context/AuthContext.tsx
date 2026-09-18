@@ -116,18 +116,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
 
       // Listen to canonical owner doc if owner account
-      const canonicalRef = doc(db, 'users', 'lfquadrosdecorativos');
-      unsubscribeCanonical = onSnapshot(canonicalRef, (canSnap) => {
-        if (canSnap.exists()) {
-          const canData = canSnap.data() as UserProfile;
-          setProfile((prev) => ({
-            ...prev,
-            ...canData,
-            role: 'admin',
-            status: 'active',
-          }));
-        }
-      }, () => {});
+      if (isOwnerAccount) {
+        const canonicalRef = doc(db, 'users', 'lfquadrosdecorativos');
+        unsubscribeCanonical = onSnapshot(canonicalRef, (canSnap) => {
+          if (canSnap.exists()) {
+            const canData = canSnap.data() as UserProfile;
+            setProfile((prev) => ({
+              ...prev,
+              ...canData,
+              role: 'admin',
+              status: 'active',
+            }));
+          }
+        }, () => {});
+      }
 
       if (activeUid !== 'lfquadrosdecorativos') {
         const docRef = doc(db, 'users', activeUid);

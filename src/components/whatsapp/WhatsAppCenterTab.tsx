@@ -138,113 +138,7 @@ export const getTagColorClasses = (tagName: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-const DEFAULT_CHATS: WhatsAppChat[] = [
-  {
-    id: 'chat-maria-laura',
-    clientName: 'Maria Laura',
-    clientEmail: 'marialaura@lparquitetura.com.br',
-    clientPhone: '+55 (21) 98765-4321',
-    clientAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
-    projectName: 'Residência Alphaville - Interiores',
-    assignedMember: 'João Silva (Arquiteto)',
-    status: 'in_progress',
-    unreadCount: 1,
-    lastMessage: 'Amei a proposta do revestimento da cozinha! Quando podemos agendar a apresentação 3D?',
-    lastMessageTime: '10:42',
-    tags: ['VIP', 'Em Andamento'],
-    createdAt: new Date().toISOString(),
-    messages: [
-      {
-        id: 'msg-1',
-        sender: 'team',
-        senderName: 'João Silva (Arquiteto)',
-        text: 'Olá Maria Laura, bom dia! Enviamos o detalhamento de marcenaria da suíte master no seu e-mail.',
-        timestamp: '09:15',
-        date: new Date().toISOString().split('T')[0],
-        status: 'read'
-      },
-      {
-        id: 'msg-2',
-        sender: 'team',
-        senderName: 'João Silva (Arquiteto)',
-        text: 'Nota Interna: Cliente solicitou alteração na iluminação do closet. Verificar fornecedor da fita LED.',
-        timestamp: '09:18',
-        date: new Date().toISOString().split('T')[0],
-        status: 'read',
-        isInternalNote: true
-      },
-      {
-        id: 'msg-3',
-        sender: 'client',
-        senderName: 'Maria Laura',
-        text: 'Amei a proposta do revestimento da cozinha! Quando podemos agendar a apresentação 3D?',
-        timestamp: '10:42',
-        date: new Date().toISOString().split('T')[0],
-        status: 'read'
-      }
-    ]
-  },
-  {
-    id: 'chat-laine-loureiro',
-    clientName: 'Laine Paula Loureiro',
-    clientEmail: 'laine@lparquitetura.com.br',
-    clientPhone: '+55 (11) 97123-8899',
-    clientAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
-    projectName: 'Reforma Comercial Loft LP',
-    assignedMember: 'Maria Paula (Designer)',
-    status: 'open',
-    unreadCount: 0,
-    lastMessage: 'Recebi o orçamento de iluminação do fornecedor parceiro. Segue o comprovante de aprovação.',
-    lastMessageTime: 'Ontem',
-    tags: ['Comercial'],
-    createdAt: new Date().toISOString(),
-    messages: [
-      {
-        id: 'msg-10',
-        sender: 'client',
-        senderName: 'Laine Paula Loureiro',
-        text: 'Recebi o orçamento de iluminação do fornecedor parceiro. Segue o comprovante de aprovação.',
-        timestamp: '16:30',
-        date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-        status: 'read'
-      },
-      {
-        id: 'msg-11',
-        sender: 'team',
-        senderName: 'Maria Paula (Designer)',
-        text: 'Excelente Laine! Já dei entrada no pedido de compras com a loja parceira.',
-        timestamp: '16:45',
-        date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-        status: 'read'
-      }
-    ]
-  },
-  {
-    id: 'chat-carlos-eduardo',
-    clientName: 'Carlos Eduardo',
-    clientEmail: 'carlos.eduardo@empresa.com.br',
-    clientPhone: '+55 (21) 99112-4455',
-    projectName: 'Cobertura Duplex Barra',
-    assignedMember: 'Equipe Geral',
-    status: 'waiting_client',
-    unreadCount: 0,
-    lastMessage: 'Enviamos o contrato assinado e a primeira parcela via PIX. Por favor confirmem o recebimento.',
-    lastMessageTime: '14/09',
-    tags: ['Novos Leads'],
-    createdAt: new Date().toISOString(),
-    messages: [
-      {
-        id: 'msg-20',
-        sender: 'client',
-        senderName: 'Carlos Eduardo',
-        text: 'Enviamos o contrato assinado e a primeira parcela via PIX. Por favor confirmem o recebimento.',
-        timestamp: '14:10',
-        date: '2026-09-14',
-        status: 'read'
-      }
-    ]
-  }
-];
+const DEFAULT_CHATS: WhatsAppChat[] = [];
 
 const PRESET_TEMPLATES = [
   { label: 'Apresentação 3D Pronta', text: 'Olá! A apresentação 3D do seu projeto já está pronta. Podemos agendar uma reunião online para apresentar?' },
@@ -299,22 +193,12 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
   const [autoSimulateReply, setAutoSimulateReply] = useState(true);
 
   // Connection settings state - BLANK FOR OTHER USERS
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>(() => {
-    return isMainOwner ? 'connected' : 'disconnected';
-  });
-  const [instanceName, setInstanceName] = useState(() => {
-    return isMainOwner ? 'Escritório Principal' : '';
-  });
-  const [instancePhone, setInstancePhone] = useState(() => {
-    return isMainOwner ? '+55 (21) 99821-3069' : '';
-  });
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('disconnected');
+  const [instanceName, setInstanceName] = useState('');
+  const [instancePhone, setInstancePhone] = useState('');
   const [providerApi, setProviderApi] = useState<'zapi' | 'evolution' | 'twilio' | 'dev'>('zapi');
-  const [zapiInstanceId, setZapiInstanceId] = useState(() => {
-    return isMainOwner ? '3F93F58A2B108198830236EE76B60FCD' : '';
-  });
-  const [zapiInstanceToken, setZapiInstanceToken] = useState(() => {
-    return isMainOwner ? 'B47651661E706A718A173D03' : '';
-  });
+  const [zapiInstanceId, setZapiInstanceId] = useState('');
+  const [zapiInstanceToken, setZapiInstanceToken] = useState('');
   const [zapiClientToken, setZapiClientToken] = useState('');
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [isTestingZapi, setIsTestingZapi] = useState(false);
