@@ -27,6 +27,8 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider 
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
@@ -119,6 +121,7 @@ export const CheckoutPage: React.FC = () => {
 
   // UI state
   const [loading, setLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [pixCopied, setPixCopied] = useState(false);
@@ -209,6 +212,23 @@ export const CheckoutPage: React.FC = () => {
     }
   }, [searchParams, user]);
 
+  // Check for Google redirect result on mount
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setEmail(result.user.email || '');
+          setName(result.user.displayName || '');
+          if (!password) {
+            setPassword('GoogleAuth@' + (result.user.uid.slice(0, 6) || '2026'));
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('[Checkout] Redirect result check error:', err);
+      });
+  }, []);
+
   const handleCopyPix = () => {
     navigator.clipboard.writeText(pixKey);
     setPixCopied(true);
@@ -263,8 +283,9 @@ export const CheckoutPage: React.FC = () => {
 
   // Handle account creation or verification if not logged in
   const ensureAuthenticatedUser = async (): Promise<{ uid: string; email: string } | null> => {
-    if (user) {
-      return { uid: user.uid, email: user.email || email };
+    const activeAuthUser = user || auth.currentUser;
+    if (activeAuthUser) {
+      return { uid: activeAuthUser.uid, email: activeAuthUser.email || email };
     }
 
     const cleanEmail = email.trim().toLowerCase();
@@ -713,21 +734,81 @@ export const CheckoutPage: React.FC = () => {
     }
   };
 
-  // Google Login Quick Action
+  // Google Login Quick Action with resilient fallback
   const handleGoogleQuickAuth = async () => {
     setError('');
-    setLoading(true);
+    setIsGoogleLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      if (result.user) {
-        setEmail(result.user.email || '');
-        setName(result.user.displayName || '');
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      try {
+        const result = await signInWithPopup(auth, provider);
+        if (result?.user) {
+          setEmail(result.user.email || '');
+          setName(result.user.displayName || '');
+          if (!password) {
+            setPassword('GoogleAuth@' + (result.user.uid.slice(0, 6) || '2026'));
+          }
+          return;
+        }
+      } catch (popupErr: any) {
+        console.warn('[Checkout Google Auth] Popup attempt:', popupErr.code, popupErr.message);
+
+        // 1. User dismissed or closed the popup voluntarily
+        if (
+          popupErr.code === 'auth/popup-closed-by-user' ||
+          popupErr.code === 'auth/cancelled-popup-request'
+        ) {
+          return;
+        }
+
+        // 2. Popup blocked by browser (mobile Safari, in-app WebView, Chrome mobile)
+        if (popupErr.code === 'auth/popup-blocked') {
+          try {
+            await signInWithRedirect(auth, provider);
+            return;
+          } catch (redirectErr) {
+            setError(
+              'O navegador bloqueou a janela pop-up do Google. Você pode preencher seus dados diretamente no formulário abaixo para continuar.'
+            );
+            return;
+          }
+        }
+
+        // 3. Domain not authorized in Firebase Console
+        if (popupErr.code === 'auth/unauthorized-domain') {
+          setError(
+            'O acesso rápido com Google requer autorização deste domínio no Firebase. Preencha seus dados de acesso diretamente no formulário abaixo para continuar com seu pagamento.'
+          );
+          return;
+        }
+
+        // 4. Provider disabled in Firebase Console
+        if (popupErr.code === 'auth/operation-not-allowed') {
+          setError(
+            'Login com Google desativado no momento. Preencha seu e-mail e senha abaixo para prosseguir com a assinatura.'
+          );
+          return;
+        }
+
+        // 5. Try redirect as last attempt
+        try {
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redirectErr) {
+          setError(
+            'Não foi possível conectar com o Google no momento. Por favor, preencha seus dados de acesso abaixo para assinar.'
+          );
+        }
       }
     } catch (err: any) {
-      setError('Não foi possível conectar com Google.');
+      console.error('[Checkout Google Auth Error]:', err);
+      setError(
+        'Não foi possível conectar com o Google no momento. Preencha seu nome, e-mail e senha no formulário abaixo para continuar.'
+      );
     } finally {
-      setLoading(false);
+      setIsGoogleLoading(false);
     }
   };
 
@@ -909,16 +990,26 @@ export const CheckoutPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleGoogleQuickAuth}
-                      className="w-full py-2 px-3 rounded-xl bg-[#241e1a] hover:bg-[#2e2621] border border-[#3d342f] text-xs font-semibold text-[#fcf8f5] flex items-center justify-center gap-2 transition-colors"
+                      disabled={isGoogleLoading}
+                      className="w-full py-2.5 px-3 rounded-xl bg-[#241e1a] hover:bg-[#2e2621] border border-[#3d342f] text-xs font-semibold text-[#fcf8f5] flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-60"
                     >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24">
-                        <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 8.9 5 12 5z"/>
-                        <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
-                        <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.1s.7 5.4 1.9 7.8l3.7-2.9z"/>
-                        <path fill="#34A853" d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.5-2.3-6.4-5.2L1.9 16.5C3.7 20.2 7.5 23.5 12 23.5z"/>
-                      </svg>
-                      Ou entrar rapidamente com o Google
+                      {isGoogleLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-[#c58a4b]" />
+                      ) : (
+                        <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                          <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 8.9 5 12 5z"/>
+                          <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+                          <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.1s.7 5.4 1.9 7.8l3.7-2.9z"/>
+                          <path fill="#34A853" d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.5-2.3-6.4-5.2L1.9 16.5C3.7 20.2 7.5 23.5 12 23.5z"/>
+                        </svg>
+                      )}
+                      <span>
+                        {isGoogleLoading ? 'Conectando ao Google...' : 'Ou entrar rapidamente com o Google'}
+                      </span>
                     </button>
+                    <p className="text-[11px] text-[#a89c93]/80 text-center mt-1.5">
+                      Você também pode preencher os campos acima diretamente com seu e-mail e senha.
+                    </p>
                   </div>
                 </div>
               )}

@@ -14,7 +14,7 @@ import {
   MessageSquare,
   FileCheck
 } from 'lucide-react';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { loginClient, loginClientByEmailOnly, recoverClientPassword } from '../../services/clientPortalService';
 import { ClientPortalAccess } from '../../types';
@@ -44,8 +44,54 @@ export const ClientLogin: React.FC = () => {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       
-      const result = await signInWithPopup(auth, provider);
-      const googleEmail = result.user?.email;
+      let resultUser: any = null;
+
+      try {
+        const result = await signInWithPopup(auth, provider);
+        resultUser = result.user;
+      } catch (popupErr: any) {
+        console.warn('[ClientPortal Google Auth] Popup notice:', popupErr.code, popupErr.message);
+
+        // 1. User simply closed the popup
+        if (
+          popupErr.code === 'auth/popup-closed-by-user' ||
+          popupErr.code === 'auth/cancelled-popup-request'
+        ) {
+          setGoogleLoading(false);
+          return;
+        }
+
+        // 2. Popup blocked by browser (mobile Safari, Chrome mobile, in-app browser) -> try redirect
+        if (popupErr.code === 'auth/popup-blocked') {
+          try {
+            await signInWithRedirect(auth, provider);
+            return;
+          } catch (redirectErr) {
+            setErrorMessage('O navegador bloqueou a janela pop-up do Google. Você pode acessar digitando seu e-mail e código de acesso abaixo.');
+            setGoogleLoading(false);
+            return;
+          }
+        }
+
+        // 3. Domain not authorized in Firebase Console
+        if (popupErr.code === 'auth/unauthorized-domain') {
+          setErrorMessage('Login com Google requer autorização deste domínio no Firebase. Por favor, acesse usando seu e-mail e código de acesso abaixo.');
+          setGoogleLoading(false);
+          return;
+        }
+
+        // 4. Try redirect as last attempt
+        try {
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redirectErr) {
+          setErrorMessage('Erro ao autenticar com o Google. Tente novamente ou use seu e-mail e código de acesso.');
+          setGoogleLoading(false);
+          return;
+        }
+      }
+
+      const googleEmail = resultUser?.email;
 
       if (!googleEmail) {
         setErrorMessage('Não foi possível obter o e-mail da sua conta Google.');
@@ -65,15 +111,35 @@ export const ClientLogin: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Google client portal auth error:', err);
-      if (err.code === 'auth/popup-closed-by-user') {
-        setErrorMessage('A janela de login do Google foi fechada antes de concluir o acesso.');
-      } else {
-        setErrorMessage('Erro ao autenticar com o Google. Tente novamente ou use o código de acesso.');
-      }
+      setErrorMessage('Erro ao autenticar com o Google. Tente novamente ou use o código de acesso.');
     } finally {
       setGoogleLoading(false);
     }
   };
+
+  // Check redirect result on mount
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result?.user?.email) {
+          setGoogleLoading(true);
+          const res = await loginClientByEmailOnly(result.user.email);
+          if (res.success && res.portal) {
+            sessionStorage.setItem('client_portal_session', JSON.stringify(res.portal));
+            try {
+              localStorage.setItem('client_portal_session', JSON.stringify(res.portal));
+            } catch {}
+            navigate(`/cliente/dashboard?portalId=${encodeURIComponent(res.portal.id)}&clientId=${encodeURIComponent(res.portal.clientId)}&clientView=true`);
+          } else {
+            setErrorMessage(res.error || 'Nenhum cadastro de cliente com este e-mail do Google foi localizado.');
+          }
+          setGoogleLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('[ClientPortal] Redirect result check error:', err);
+      });
+  }, []);
 
   // Auto-login if code/token is present in URL
   useEffect(() => {
