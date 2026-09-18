@@ -778,8 +778,9 @@ export const CheckoutPage: React.FC = () => {
 
         // 3. Domain not authorized in Firebase Console
         if (popupErr.code === 'auth/unauthorized-domain') {
+          const currentHost = window.location.hostname;
           setError(
-            'O acesso rápido com Google requer autorização deste domínio no Firebase. Preencha seus dados de acesso diretamente no formulário abaixo para continuar com seu pagamento.'
+            `O domínio atual (${currentHost}) não está na lista de Domínios Autorizados do seu Firebase. Adicione "${currentHost}" no Firebase Console (Authentication > Settings > Authorized domains). Enquanto isso, você pode preencher seus dados de acesso diretamente no formulário abaixo para continuar.`
           );
           return;
         }

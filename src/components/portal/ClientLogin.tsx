@@ -75,7 +75,8 @@ export const ClientLogin: React.FC = () => {
 
         // 3. Domain not authorized in Firebase Console
         if (popupErr.code === 'auth/unauthorized-domain') {
-          setErrorMessage('Login com Google requer autorização deste domínio no Firebase. Por favor, acesse usando seu e-mail e código de acesso abaixo.');
+          const currentHost = window.location.hostname;
+          setErrorMessage(`O domínio atual (${currentHost}) não está na lista de Domínios Autorizados do Firebase. Acesse usando seu e-mail e código de acesso abaixo.`);
           setGoogleLoading(false);
           return;
         }
