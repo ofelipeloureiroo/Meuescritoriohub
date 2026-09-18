@@ -185,13 +185,13 @@ export const authenticateGoogleCalendar = async (): Promise<{ token: string; ema
     provider.addScope('https://www.googleapis.com/auth/userinfo.email');
     provider.setCustomParameters({ 
       prompt: 'consent',
-      login_hint: 'lfquadrosdecorativos@gmail.com'
+      login_hint: auth.currentUser?.email || undefined
     });
 
     const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     const token = credential?.accessToken;
-    const email = result.user?.email || 'lfquadrosdecorativos@gmail.com';
+    const email = result.user?.email || auth.currentUser?.email || '';
 
     if (token) {
       cachedGCalToken = token;
@@ -253,7 +253,7 @@ export const authenticateGoogleCalendar = async (): Promise<{ token: string; ema
       cleanup();
 
       cachedGCalToken = token;
-      cachedGCalEmail = email || 'lfquadrosdecorativos@gmail.com';
+      cachedGCalEmail = email || auth.currentUser?.email || '';
       try {
         sessionStorage.setItem('office_gcal_token', token);
         localStorage.setItem('office_gcal_token', token);

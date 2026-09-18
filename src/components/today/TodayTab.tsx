@@ -929,7 +929,7 @@ export const TodayTab: React.FC = () => {
                 </div>
                 <p className="text-xs text-[var(--text-muted)] mt-0.5">
                   {isGoogleSynced
-                    ? `Conectado como ${googleEmail || 'lfquadrosdecorativos@gmail.com'}. ${googleEvents.length} compromissos e ${googleTasks.length} tarefas sincronizados automaticamente em segundo plano.`
+                    ? `Conectado como ${googleEmail || user?.email || ''}. ${googleEvents.length} compromissos e ${googleTasks.length} tarefas sincronizados automaticamente em segundo plano.`
                     : 'Conecte sua conta Google para sincronizar automaticamente reuniões, compromissos e tarefas (Google Tasks & Agenda).'}
                 </p>
                 {syncMessage && (

@@ -8,9 +8,18 @@ import { applyThemeToDocument } from '../../utils/theme';
 export const OAuthProxy: React.FC = () => {
   const [status, setStatus] = useState<'checking' | 'idle' | 'authorizing' | 'success' | 'error'>('checking');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string>('lfquadrosdecorativos@gmail.com');
+  const [userEmail, setUserEmail] = useState<string>(auth.currentUser?.email || '');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLight, setIsLight] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user?.email) {
+        setUserEmail(user.email);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     try {
@@ -145,7 +154,7 @@ export const OAuthProxy: React.FC = () => {
               return;
             }
             if (response.access_token) {
-              const email = 'lfquadrosdecorativos@gmail.com';
+              const email = auth.currentUser?.email || userEmail || 'user@example.com';
               await handleSuccess(response.access_token, email, sid);
             } else {
               fallbackFirebasePopup(sid);
@@ -170,14 +179,16 @@ export const OAuthProxy: React.FC = () => {
       provider.addScope('https://www.googleapis.com/auth/calendar.events');
       provider.addScope('https://www.googleapis.com/auth/tasks');
       provider.addScope('https://www.googleapis.com/auth/userinfo.email');
-      provider.setCustomParameters({ 
-        login_hint: 'lfquadrosdecorativos@gmail.com'
-      });
+      if (auth.currentUser?.email || userEmail) {
+        provider.setCustomParameters({ 
+          login_hint: auth.currentUser?.email || userEmail
+        });
+      }
 
       const result = await signInWithPopup(auth, provider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const token = credential?.accessToken;
-      const email = result.user?.email || 'lfquadrosdecorativos@gmail.com';
+      const email = result.user?.email || auth.currentUser?.email || userEmail || '';
 
       if (token) {
         await handleSuccess(token, email, sid);
@@ -230,7 +241,7 @@ export const OAuthProxy: React.FC = () => {
         if (result && result.user) {
           const credential = GoogleAuthProvider.credentialFromResult(result);
           const token = credential?.accessToken;
-          const email = result.user.email || 'lfquadrosdecorativos@gmail.com';
+          const email = result.user.email || auth.currentUser?.email || userEmail || '';
 
           if (token && isMounted) {
             await handleSuccess(token, email, sid);
