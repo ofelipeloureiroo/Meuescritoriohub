@@ -18,11 +18,6 @@ import {
   INITIAL_SAVINGS_GOALS,
   INITIAL_TRANSACTIONS,
   INITIAL_WORK_CONTRACTS,
-  CONNECTED_PORTAL_CLIENT,
-  CONNECTED_PORTAL_PROJECT_1,
-  CONNECTED_PORTAL_PROJECT_2,
-  CONNECTED_PORTAL_CONTRACT_1,
-  CONNECTED_PORTAL_INSTALLMENTS,
 } from '../data/initialData';
 import {
   ArchitectProfile,
@@ -278,6 +273,142 @@ const INITIAL_OFFICE_SETTINGS: OfficeSettings = {
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
+// Helpers to strictly remove any sample/demo data
+const isDemoClient = (c: any): boolean => {
+  if (!c) return false;
+  const id = c.id || '';
+  const name = (c.name || '').toLowerCase();
+  return (
+    id === 'cli-silveira-1' ||
+    id.startsWith('cli-int-') ||
+    id === 'client_demo_connected' ||
+    id === 'client-1' ||
+    id === 'cli-1' ||
+    id === 'cli-2' ||
+    id === 'cli-3' ||
+    id === 'cli-4' ||
+    id === 'cli-5' ||
+    name.includes('roberto & camila') ||
+    name.includes('villa chiado') ||
+    name.includes('miami prime') ||
+    name.includes('carlos eduardo') ||
+    name.includes('mariana & lucas') ||
+    name.includes('construtora horizonte') ||
+    name.includes('dr. fernando prado') ||
+    name.includes('juliana mendes') ||
+    name.includes('restaurante sabor') ||
+    name.includes('larissa oliveira')
+  );
+};
+
+const isDemoProject = (p: any): boolean => {
+  if (!p) return false;
+  const id = p.id || '';
+  const title = (p.title || '').toLowerCase();
+  const clientName = (p.clientName || '').toLowerCase();
+  return (
+    id === 'proj-alphaville-01' ||
+    id === 'proj-gourmet-02' ||
+    id === 'proj-bfe' ||
+    id === 'proj-1' ||
+    id === 'proj-2' ||
+    id === 'proj-3' ||
+    id === 'proj-4' ||
+    id.startsWith('proj_demo_') ||
+    id.startsWith('proj-arch-') ||
+    id.startsWith('proj-freela-') ||
+    id.startsWith('proj-int-') ||
+    title.includes('residência alphaville') ||
+    title.includes('residencia alphaville') ||
+    title.includes('espaço gourmet') ||
+    title.includes('espaco gourmet') ||
+    title.includes('casa solar') ||
+    title.includes('edifício horizon') ||
+    title.includes('loft contemporâneo') ||
+    title.includes('clínica odontológica') ||
+    clientName.includes('roberto & camila') ||
+    clientName.includes('brícia papa') ||
+    clientName.includes('bricia papa')
+  );
+};
+
+const isDemoInstallment = (i: any): boolean => {
+  if (!i) return false;
+  const id = i.id || '';
+  const projId = i.projectId || '';
+  const clientName = (i.clientName || '').toLowerCase();
+  const projectTitle = (i.projectTitle || '').toLowerCase();
+  return (
+    id.startsWith('inst-alpha') ||
+    id.startsWith('inst-gourmet') ||
+    id.startsWith('inst_demo_') ||
+    id === 'inst-1' ||
+    id === 'inst-2' ||
+    id === 'inst-3' ||
+    id === 'inst-4' ||
+    id === 'inst-5' ||
+    projId === 'proj-alphaville-01' ||
+    projId === 'proj-gourmet-02' ||
+    projId.startsWith('proj-arch-') ||
+    clientName.includes('roberto & camila') ||
+    clientName.includes('mariana & rodrigo') ||
+    projectTitle.includes('alphaville') ||
+    projectTitle.includes('casa solar')
+  );
+};
+
+const isDemoMilestone = (m: any): boolean => {
+  if (!m) return false;
+  const id = m.id || '';
+  const projId = m.projectId || '';
+  return (
+    id.startsWith('mile-alpha') ||
+    id.startsWith('mile-gourmet') ||
+    id.startsWith('mile-demo') ||
+    id === 'ms-1' ||
+    id === 'ms-2' ||
+    id === 'ms-3' ||
+    projId === 'proj-alphaville-01' ||
+    projId === 'proj-gourmet-02' ||
+    projId.startsWith('proj-arch-')
+  );
+};
+
+const isDemoContract = (c: any): boolean => {
+  if (!c) return false;
+  const id = c.id || '';
+  const title = (c.title || '').toLowerCase();
+  const client = (c.clientName || '').toLowerCase();
+  return (
+    id === 'contract-alphaville-01' ||
+    id.startsWith('contract_demo_') ||
+    id === 'contract-1' ||
+    id === 'contract-2' ||
+    title.includes('alphaville') ||
+    client.includes('roberto & camila') ||
+    client.includes('miami prime')
+  );
+};
+
+const isDemoTransaction = (t: any): boolean => {
+  if (!t) return false;
+  const id = t.id || '';
+  const desc = (t.description || '').toLowerCase();
+  const client = (t.clientName || '').toLowerCase();
+  return (
+    id === 'tx-rec-jjc' ||
+    id === 'tx-rec-bfe' ||
+    id === 'tx-1' ||
+    id === 'tx-2' ||
+    id === 'tx-3' ||
+    id.startsWith('tx-freela') ||
+    desc.includes('projeto jjc') ||
+    desc.includes('projeto bfe') ||
+    client === 'jjc' ||
+    client === 'bfe'
+  );
+};
+
 export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, profile } = useAuth();
   const isCloudLoadedRef = useRef(false);
@@ -395,8 +526,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && !parsed.some((t: any) => t.id === 'tx-1' || t.id === 'tx-freela-1' || t.id === 'tx-rec-jjc')) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((t: any) => !isDemoTransaction(t));
         }
       } catch {}
     }
@@ -434,8 +565,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && !parsed.some((d: any) => d.id === 'debt-1' || d.id === 'debt-2')) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((d: any) => d.id !== 'debt-1' && d.id !== 'debt-2' && d.id !== 'debt-car' && d.id !== 'debt-card-notebook');
         }
       } catch {}
     }
@@ -447,8 +578,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && !parsed.some((c: any) => c.id === 'client_demo_connected' || c.id === 'client-1')) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((c: any) => !isDemoClient(c));
         }
       } catch {}
     }
@@ -460,8 +591,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && !parsed.some((p: any) => p.id === 'proj-freela-1')) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((p: any) => !isDemoProject(p));
         }
       } catch {}
     }
@@ -474,7 +605,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter((p: any) => p.id !== 'proj-bfe' && p.id !== 'proj-1' && p.id !== 'proj_demo_connected_1' && p.id !== 'proj_demo_connected_2');
+          return parsed.filter((p: any) => !isDemoProject(p));
         }
       } catch {}
     }
@@ -486,8 +617,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && !parsed.some((i: any) => i.id?.startsWith('inst_demo_') || i.id === 'inst-1')) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((i: any) => !isDemoInstallment(i));
         }
       } catch {}
     }
@@ -499,8 +630,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && !parsed.some((m: any) => m.id?.startsWith('mile-demo-') || m.id === 'ms-1')) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((m: any) => !isDemoMilestone(m));
         }
       } catch {}
     }
@@ -512,8 +643,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && !parsed.some((c: any) => c.id === 'contract_demo_connected_1' || c.id === 'contract-1')) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((c: any) => !isDemoContract(c));
         }
       } catch {}
     }
@@ -525,10 +656,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.some((g: any) => g.id?.startsWith('goal-'))) {
-          return [];
+        if (Array.isArray(parsed)) {
+          return parsed.filter((g: any) => !g.id?.startsWith('goal-'));
         }
-        return parsed;
       } catch {}
     }
     return [];
@@ -870,23 +1000,45 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
               );
             }
           }
-          if (Array.isArray(data.transactions)) setTransactions(data.transactions);
-          if (Array.isArray(data.bankAccounts)) setBankAccounts(data.bankAccounts);
-          if (data.houseMortgage) setHouseMortgage(data.houseMortgage);
-          if (Array.isArray(data.debts)) setDebts(data.debts);
-          if (Array.isArray(data.clients)) setClients(data.clients);
-          if (Array.isArray(data.freelanceProjects)) setFreelanceProjects(data.freelanceProjects);
-          if (Array.isArray(data.architectureProjects)) {
-            const filteredProjects = data.architectureProjects.filter((p: any) => p.id !== 'proj-bfe' && p.id !== 'proj-1' && p.id !== 'proj_demo_connected_1' && p.id !== 'proj_demo_connected_2');
-            setArchitectureProjects(filteredProjects);
+          if (Array.isArray(data.transactions)) {
+            setTransactions(data.transactions.filter((t: any) => !isDemoTransaction(t)));
           }
-          if (Array.isArray(data.projectInstallments)) setProjectInstallments(data.projectInstallments);
-          if (Array.isArray(data.projectMilestones)) setProjectMilestones(data.projectMilestones);
-          if (Array.isArray(data.workContracts)) setWorkContracts(data.workContracts);
-          if (Array.isArray(data.savingsGoals)) setSavingsGoals(data.savingsGoals);
+          if (Array.isArray(data.bankAccounts)) {
+            const cleanBanks = data.bankAccounts.filter((a: any) => a.id !== 'bank-nubank');
+            setBankAccounts(cleanBanks.length > 0 ? cleanBanks : EMPTY_BANK_ACCOUNTS);
+          }
+          if (data.houseMortgage) {
+            setHouseMortgage(data.houseMortgage.currentDebt === 218400 ? EMPTY_HOUSE_MORTGAGE : data.houseMortgage);
+          }
+          if (Array.isArray(data.debts)) {
+            setDebts(data.debts.filter((d: any) => d.id !== 'debt-1' && d.id !== 'debt-2' && d.id !== 'debt-car' && d.id !== 'debt-card-notebook'));
+          }
+          if (Array.isArray(data.clients)) {
+            setClients(data.clients.filter((c: any) => !isDemoClient(c)));
+          }
+          if (Array.isArray(data.freelanceProjects)) {
+            setFreelanceProjects(data.freelanceProjects.filter((p: any) => !isDemoProject(p)));
+          }
+          if (Array.isArray(data.architectureProjects)) {
+            setArchitectureProjects(data.architectureProjects.filter((p: any) => !isDemoProject(p)));
+          }
+          if (Array.isArray(data.projectInstallments)) {
+            setProjectInstallments(data.projectInstallments.filter((i: any) => !isDemoInstallment(i)));
+          }
+          if (Array.isArray(data.projectMilestones)) {
+            setProjectMilestones(data.projectMilestones.filter((m: any) => !isDemoMilestone(m)));
+          }
+          if (Array.isArray(data.workContracts)) {
+            setWorkContracts(data.workContracts.filter((c: any) => !isDemoContract(c)));
+          }
+          if (Array.isArray(data.savingsGoals)) {
+            setSavingsGoals(data.savingsGoals.filter((g: any) => !g.id?.startsWith('goal-')));
+          }
           if (Array.isArray(data.categoryBudgets)) setCategoryBudgets(data.categoryBudgets);
           if (data.officeSettings) setOfficeSettings(data.officeSettings);
-          if (Array.isArray(data.actions)) setActions(data.actions);
+          if (Array.isArray(data.actions)) {
+            setActions(data.actions.filter((a: any) => !a.id?.startsWith('act-demo-')));
+          }
 
           isCloudLoadedRef.current = true;
           setTimeout(() => {

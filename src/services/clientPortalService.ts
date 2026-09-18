@@ -727,14 +727,7 @@ export async function loginClient(
       }
     }
 
-    // 4. Sample demo portal fallback
-    if (!matchingPortal && !foundEmailPortal) {
-      if ((rawEmail === SAMPLE_CLIENT_PORTAL.clientEmail.toLowerCase() || cleanEmail === normalizeClientEmail(SAMPLE_CLIENT_PORTAL.clientEmail)) &&
-          (cleanCode === SAMPLE_CLIENT_PORTAL.accessCode.toUpperCase() || cleanCode === SAMPLE_CLIENT_PORTAL.id)) {
-        return { success: true, portal: SAMPLE_CLIENT_PORTAL };
-      }
-    }
-
+    // 4. Verification result
     if (!matchingPortal) {
       if (foundEmailPortal) {
         return { 
@@ -865,13 +858,6 @@ export async function loginClientByEmailOnly(
         }
       } catch (err) {
         console.warn('Fallback scan all in loginClientByEmailOnly:', err);
-      }
-    }
-
-    // 4. Sample demo portal fallback
-    if (!foundPortal) {
-      if (rawEmail === SAMPLE_CLIENT_PORTAL.clientEmail.toLowerCase() || cleanEmail === normalizeClientEmail(SAMPLE_CLIENT_PORTAL.clientEmail)) {
-        foundPortal = SAMPLE_CLIENT_PORTAL;
       }
     }
 
