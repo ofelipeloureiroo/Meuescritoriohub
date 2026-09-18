@@ -173,9 +173,13 @@ export const LeadsTab: React.FC = () => {
     formProposalsList,
   ]);
 
-  // Extract all leads from clients list (status === 'lead')
+  // Extract all leads from clients list (case-insensitive status check, pipelineStage presence or isLead)
   const leadsList = useMemo(() => {
-    return clients.filter((c) => c.status === 'lead');
+    return clients.filter((c) => {
+      if (!c) return false;
+      const st = (c.status || '').toString().toLowerCase();
+      return st === 'lead' || (c as any).isLead === true || !!c.pipelineStage;
+    });
   }, [clients]);
 
   // Today reference string
@@ -501,21 +505,24 @@ export const LeadsTab: React.FC = () => {
   }, [leadsList, selectedPeriod, todayStr]);
 
   // Stage columns definition
-  const STAGES: Array<{ id: string; label: string; color?: string }> = useMemo(() => {
+  const STAGES: Array<{ id: string; name: string; label: string; color?: string }> = useMemo(() => {
     if (officeSettings?.leadStages && Array.isArray(officeSettings.leadStages) && officeSettings.leadStages.length > 0) {
-      return officeSettings.leadStages.map(stg => ({
-        id: stg?.id || 'novo',
-        label: (stg?.label || stg?.name || stg?.id || 'Novo').toUpperCase(),
-        color: stg?.color,
-      }));
+      return officeSettings.leadStages
+        .filter(stg => stg && stg.enabled !== false)
+        .map(stg => ({
+          id: stg?.id || 'novo',
+          name: stg?.name || stg?.label || stg?.id || 'Novo',
+          label: (stg?.label || stg?.name || stg?.id || 'Novo').toUpperCase(),
+          color: stg?.color,
+        }));
     }
     return [
-      { id: 'novo', label: 'NOVO' },
-      { id: 'diagnostico', label: 'DIAGNÓSTICO' },
-      { id: 'proposta', label: 'PROPOSTA' },
-      { id: 'negociacao', label: 'NEGOCIAÇÃO' },
-      { id: 'contratado', label: 'CONTRATADO' },
-      { id: 'perdido', label: 'PERDIDO' },
+      { id: 'novo', name: 'Novo', label: 'NOVO' },
+      { id: 'diagnostico', name: 'Diagnóstico', label: 'DIAGNÓSTICO' },
+      { id: 'proposta', name: 'Proposta', label: 'PROPOSTA' },
+      { id: 'negociacao', name: 'Negociação', label: 'NEGOCIAÇÃO' },
+      { id: 'contratado', name: 'Contratado', label: 'CONTRATADO' },
+      { id: 'perdido', name: 'Perdido', label: 'PERDIDO' },
     ];
   }, [officeSettings]);
 
@@ -1038,10 +1045,30 @@ export const LeadsTab: React.FC = () => {
               onMouseMove={handleMouseMove}
               className="flex gap-3 overflow-x-auto pb-6 pt-2 items-start w-full no-scrollbar cursor-grab active:cursor-grabbing select-none"
             >
-              {STAGES.map((stage) => {
-                const columnLeads = filteredLeads.filter(
-                  (l) => (l.pipelineStage || 'novo') === stage.id
-                );
+              {STAGES.map((stage, sIdx) => {
+                const columnLeads = filteredLeads.filter((l) => {
+                  const pStage = (l.pipelineStage || 'novo').trim().toLowerCase();
+                  const sId = stage.id.toLowerCase();
+                  const sName = stage.name.toLowerCase();
+                  const sLabel = stage.label.toLowerCase();
+
+                  if (pStage === sId || pStage === sName || pStage === sLabel) {
+                    return true;
+                  }
+
+                  const matchesAnyActiveStage = STAGES.some(s => {
+                    const idL = s.id.toLowerCase();
+                    const nameL = s.name.toLowerCase();
+                    const labelL = s.label.toLowerCase();
+                    return pStage === idL || pStage === nameL || pStage === labelL;
+                  });
+
+                  if (!matchesAnyActiveStage && sIdx === 0) {
+                    return true;
+                  }
+
+                  return false;
+                });
                 const isOver = dragOverStageId === stage.id;
 
                 return (

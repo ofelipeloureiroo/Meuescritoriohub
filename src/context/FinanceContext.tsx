@@ -276,16 +276,19 @@ const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 // Helpers to strictly remove legacy sample/demo data without affecting real user items
 const isDemoClient = (c: any): boolean => {
   if (!c) return false;
+  // Preserve real user data even if ID matches old demo conventions
+  if (c.email && c.email.includes('@') && !c.email.includes('exemplo.com')) {
+    return false;
+  }
+  if (c.name && !c.name.toLowerCase().includes('demo') && !c.name.toLowerCase().includes('exemplo')) {
+    if (c.createdAt || c.pipelineStage || c.whatsapp || c.phone || c.email) {
+      return false;
+    }
+  }
   const id = c.id || '';
   return (
     id === 'cli-silveira-1' ||
-    id === 'client_demo_connected' ||
-    id === 'client-1' ||
-    id === 'cli-1' ||
-    id === 'cli-2' ||
-    id === 'cli-3' ||
-    id === 'cli-4' ||
-    id === 'cli-5'
+    id === 'client_demo_connected'
   );
 };
 
@@ -526,16 +529,42 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   const [clients, setClients] = useState<Client[]>(() => {
-    const saved = localStorage.getItem(getStorageKey('clients'));
+    const primaryKey = getStorageKey('clients');
+    const saved = localStorage.getItem(primaryKey);
+    let primaryList: Client[] = [];
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter((c: any) => !isDemoClient(c));
+          primaryList = parsed.filter((c: any) => !isDemoClient(c));
         }
       } catch {}
     }
-    return [];
+
+    // Comprehensive multi-key scan to recover any clients or leads saved across different session/user keys
+    const fallbackList: Client[] = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('office_') && key.endsWith('_clients')) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((item: any) => {
+                if (item && item.id && !primaryList.some((p) => p.id === item.id) && !fallbackList.some((f) => f.id === item.id)) {
+                  if (!isDemoClient(item)) {
+                    fallbackList.push(item);
+                  }
+                }
+              });
+            }
+          }
+        }
+      }
+    } catch {}
+
+    return [...primaryList, ...fallbackList];
   });
 
   const [freelanceProjects, setFreelanceProjects] = useState<FreelanceProject[]>(() => {
