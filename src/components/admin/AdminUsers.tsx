@@ -455,6 +455,11 @@ export const AdminUsers: React.FC = () => {
     const newDueDateISO = dueDate.toISOString();
 
     try {
+      const targetUser = users.find(u => u.uid === uid);
+      if (targetUser?.email) {
+        removeEmailFromBlacklist(targetUser.email);
+      }
+
       await updateDoc(doc(db, 'users', uid), {
         status: 'active',
         subscriptionDueDate: newDueDateISO,
@@ -469,7 +474,6 @@ export const AdminUsers: React.FC = () => {
       setUsers(updatedList);
       persistSubscribersAcrossAllLayers(updatedList);
 
-      const targetUser = users.find(u => u.uid === uid);
       if (targetUser?.email) {
         const amount = durationType === '1year' ? 990.00 : 97.00;
         const newDocId = `pay_${Date.now()}`;
@@ -501,7 +505,8 @@ export const AdminUsers: React.FC = () => {
     if (!cleanEmail) return;
 
     try {
-      const existing = users.find(u => u.email?.toLowerCase() === cleanEmail);
+      removeEmailFromBlacklist(cleanEmail);
+
       let dueDate = new Date();
       if (manualDuration === '1month') {
         dueDate.setDate(dueDate.getDate() + 30);
@@ -510,14 +515,51 @@ export const AdminUsers: React.FC = () => {
       }
       const dueDateISO = dueDate.toISOString();
 
+      // Look for existing user in local state or Firestore users collection
+      let targetUid: string | null = null;
+      const existingInState = users.find(u => u.email?.toLowerCase().trim() === cleanEmail);
+
+      if (existingInState) {
+        targetUid = existingInState.uid;
+      } else {
+        try {
+          const qSnap = await getDocs(query(collection(db, 'users'), where('email', '==', cleanEmail)));
+          if (!qSnap.empty) {
+            targetUid = qSnap.docs[0].id;
+          }
+        } catch (qErr) {
+          console.warn("Notice querying user by email in Firestore:", qErr);
+        }
+      }
+
       let updatedList: UserProfile[];
 
-      if (existing) {
-        await updateDoc(doc(db, 'users', existing.uid), {
+      if (targetUid) {
+        await setDoc(doc(db, 'users', targetUid), {
           status: 'active',
           subscriptionDueDate: dueDateISO,
-        });
-        updatedList = users.map(u => u.uid === existing.uid ? { ...u, status: 'active' as const, subscriptionDueDate: dueDateISO } : u);
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+
+        if (existingInState) {
+          updatedList = users.map(u => u.uid === targetUid ? {
+            ...u,
+            status: 'active' as const,
+            subscriptionDueDate: dueDateISO
+          } : u);
+        } else {
+          const updatedProfile: UserProfile = {
+            uid: targetUid,
+            email: cleanEmail,
+            name: cleanEmail.split('@')[0],
+            role: 'user',
+            status: 'active',
+            subscriptionDueDate: dueDateISO,
+            createdAt: new Date().toISOString(),
+            notes: 'Assinante Liberado Manualmente'
+          };
+          updatedList = [...users, updatedProfile];
+        }
       } else {
         const newRef = doc(collection(db, 'users'));
         const newProfile: UserProfile = {

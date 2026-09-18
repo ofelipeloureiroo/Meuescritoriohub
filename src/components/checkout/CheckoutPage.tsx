@@ -266,16 +266,40 @@ export const CheckoutPage: React.FC = () => {
       dueDate.setMonth(dueDate.getMonth() + 1); // 1 month access
     }
 
-    await setDoc(docRef, {
+    const userData = {
       uid,
       email: userEmail,
+      name: name || user?.displayName || userEmail.split('@')[0],
       status: 'active',
       role: userEmail.toLowerCase() === 'lfquadrosdecorativos@gmail.com' ? 'admin' : 'user',
       subscriptionDueDate: dueDate.toISOString(),
       lastPaymentMethod: method,
       lastPaymentDate: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    }, { merge: true });
+    };
+
+    await setDoc(docRef, userData, { merge: true });
+
+    // Sync to authorized_subscribers cache and system_integrations doc
+    try {
+      const stored = localStorage.getItem('meu_escritorio_assinantes_autorizados_v1');
+      let currentList: any[] = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(currentList)) currentList = [];
+      const idx = currentList.findIndex((u: any) => (u.email || '').toLowerCase().trim() === cleanEmail || u.uid === uid);
+      if (idx >= 0) {
+        currentList[idx] = { ...currentList[idx], ...userData };
+      } else {
+        currentList.push(userData);
+      }
+      localStorage.setItem('meu_escritorio_assinantes_autorizados_v1', JSON.stringify(currentList));
+
+      await setDoc(doc(db, 'system_integrations', 'authorized_subscribers'), {
+        subscribers: currentList,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (syncErr) {
+      console.warn('Notice syncing subscriber during activation:', syncErr);
+    }
 
     // Notify Administrator by email about the new subscription
     try {
