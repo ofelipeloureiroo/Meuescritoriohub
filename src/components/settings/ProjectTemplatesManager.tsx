@@ -860,58 +860,116 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
 
                           {/* Stage Items List */}
                           {isExpanded && (
-                            <div className="p-3 space-y-2 bg-[var(--bg-input)]">
+                            <div 
+                              className="p-3 space-y-2 bg-[var(--bg-input)]"
+                              onDragOver={(e) => {
+                                if (!selectedTpl.isSystem && items.length === 0) {
+                                  e.preventDefault();
+                                }
+                              }}
+                              onDrop={(e) => {
+                                if (!selectedTpl.isSystem && items.length === 0) {
+                                  e.preventDefault();
+                                  handleTaskDrop(stage.id, 0);
+                                }
+                              }}
+                            >
                               {items.length === 0 ? (
                                 <p className="text-[11px] text-[var(--text-muted)] italic py-1 px-2">
                                   Nenhum item/tarefa nesta etapa ainda.
                                 </p>
                               ) : (
                                 <div className="space-y-1.5">
-                                  {items.map((task) => (
-                                    <div
-                                      key={task.id}
-                                      onClick={() => {
-                                        setEditingTask({
-                                          templateId: selectedTpl.id,
-                                          stageId: stage.id,
-                                          task: { ...task },
-                                          isReadOnly: selectedTpl.isSystem
-                                        });
-                                      }}
-                                      className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--theme-primary)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer group"
-                                    >
-                                      <div className="flex items-center gap-2.5 min-w-0">
-                                        <span className="w-2 h-2 rounded-full bg-[var(--theme-primary)] shrink-0" />
-                                        <span className="text-xs font-semibold text-[var(--text-main)] truncate">
-                                          {task.name}
-                                        </span>
-                                      </div>
+                                  {items.map((task, tIdx) => {
+                                    const isBeingDragged = draggedTask?.stageId === stage.id && draggedTask?.index === tIdx;
+                                    const isDragOver = dragOverTask?.stageId === stage.id && dragOverTask?.index === tIdx;
 
-                                      <div className="flex items-center gap-2 text-[10px] shrink-0">
-                                        {task.estimatedDays ? (
-                                          <span className="px-1.5 py-0.5 rounded bg-[var(--bg-card-secondary)] text-[var(--text-muted)] font-medium flex items-center gap-1">
-                                            <Clock className="w-3 h-3 text-amber-400" />
-                                            {task.estimatedDays} {task.dayType === 'calendar' ? 'dias corr.' : 'dias úteis'}
+                                    return (
+                                      <div
+                                        key={task.id}
+                                        draggable={!selectedTpl.isSystem}
+                                        onDragStart={(e) => {
+                                          if (!selectedTpl.isSystem) {
+                                            setDraggedTask({ stageId: stage.id, index: tIdx });
+                                            e.dataTransfer.effectAllowed = 'move';
+                                          }
+                                        }}
+                                        onDragOver={(e) => {
+                                          if (!selectedTpl.isSystem) {
+                                            e.preventDefault();
+                                            if (dragOverTask?.stageId !== stage.id || dragOverTask?.index !== tIdx) {
+                                              setDragOverTask({ stageId: stage.id, index: tIdx });
+                                            }
+                                          }
+                                        }}
+                                        onDragLeave={() => {
+                                          setDragOverTask(null);
+                                        }}
+                                        onDrop={(e) => {
+                                          if (!selectedTpl.isSystem) {
+                                            e.preventDefault();
+                                            handleTaskDrop(stage.id, tIdx);
+                                          }
+                                        }}
+                                        onDragEnd={() => {
+                                          setDraggedTask(null);
+                                          setDragOverTask(null);
+                                        }}
+                                        onClick={() => {
+                                          setEditingTask({
+                                            templateId: selectedTpl.id,
+                                            stageId: stage.id,
+                                            task: { ...task },
+                                            isReadOnly: selectedTpl.isSystem
+                                          });
+                                        }}
+                                        className={`flex items-center justify-between p-2.5 rounded-lg bg-[var(--bg-card)] border transition-all cursor-grab group select-none ${
+                                          isBeingDragged ? 'opacity-40 border-dashed border-[var(--border-color)] bg-[var(--bg-card-secondary)]' :
+                                          isDragOver ? 'border-[var(--theme-primary)] bg-[var(--bg-card-hover)] shadow-sm scale-[1.01]' :
+                                          'border-[var(--border-color)] hover:border-[var(--theme-primary)] hover:bg-[var(--bg-card-hover)]'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                                          {!selectedTpl.isSystem && (
+                                            <div 
+                                              className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-grab"
+                                              title="Arraste para reordenar"
+                                            >
+                                              <GripVertical className="w-3.5 h-3.5" />
+                                            </div>
+                                          )}
+                                          <span className="w-2 h-2 rounded-full bg-[var(--theme-primary)] shrink-0" />
+                                          <span className="text-xs font-semibold text-[var(--text-main)] truncate">
+                                            {task.name}
                                           </span>
-                                        ) : (
-                                          <span className="text-[var(--text-muted)]">0d</span>
-                                        )}
+                                        </div>
 
-                                        {!selectedTpl.isSystem && (
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleDeleteTask(stage.id, task.id);
-                                            }}
-                                            className="opacity-0 group-hover:opacity-100 p-1 text-rose-400 hover:bg-rose-500/10 rounded transition-all cursor-pointer"
-                                            title="Remover tarefa"
-                                          >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                          </button>
-                                        )}
+                                        <div className="flex items-center gap-2 text-[10px] shrink-0">
+                                          {task.estimatedDays ? (
+                                            <span className="px-1.5 py-0.5 rounded bg-[var(--bg-card-secondary)] text-[var(--text-muted)] font-medium flex items-center gap-1">
+                                              <Clock className="w-3 h-3 text-amber-400" />
+                                              {task.estimatedDays} {task.dayType === 'calendar' ? 'dias corr.' : 'dias úteis'}
+                                            </span>
+                                          ) : (
+                                            <span className="text-[var(--text-muted)]">0d</span>
+                                          )}
+
+                                          {!selectedTpl.isSystem && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteTask(stage.id, task.id);
+                                              }}
+                                              className="p-1 text-rose-400 hover:bg-rose-500/10 rounded transition-all cursor-pointer"
+                                              title="Remover tarefa"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          )}
+                                        </div>
                                       </div>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               )}
 
