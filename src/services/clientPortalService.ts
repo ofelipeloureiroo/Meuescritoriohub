@@ -512,6 +512,7 @@ export async function loginClient(
 
                 for (const cli of parsedClients) {
                   if (!cli || !cli.name) continue;
+                  if (cli.status === 'lead') continue;
                   const cliEmail = (cli.email || '').trim().toLowerCase();
                   const sanitizedName = (cli.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
                   const cliGeneratedEmail = `${sanitizedName}@cliente.com`;
@@ -633,6 +634,7 @@ export async function loginClient(
 
             for (const cli of officeClients) {
               if (!cli || !cli.name) continue;
+              if (cli.status === 'lead') continue;
               const cliEmail = (cli.email || '').trim().toLowerCase();
               const sanitizedName = (cli.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
               const cliGeneratedEmail = `${sanitizedName}@cliente.com`;

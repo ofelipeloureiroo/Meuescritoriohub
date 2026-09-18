@@ -562,10 +562,10 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                       setIsPortalModalOpen(true);
                     }}
                     className="px-3.5 py-2 rounded-xl bg-[#faf6f0] border border-[#e5dcd0] text-[#a38253] hover:bg-[#f0eae1] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                    title="Gerenciar Radar do Cliente"
+                    title="Gerenciar Site do Cliente"
                   >
                     <KeyRound className="w-3.5 h-3.5" />
-                    <span>Radar do Cliente</span>
+                    <span>Site do Cliente</span>
                   </button>
                   <button
                     type="button"
@@ -1423,7 +1423,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                             setIsPortalModalOpen(true);
                           }}
                           className="p-1.5 rounded-lg text-[#c8a97e] hover:bg-[#faf6f0] border border-transparent hover:border-[#e5dcd0] transition-colors cursor-pointer"
-                          title="Gerenciar Radar do Cliente"
+                          title="Gerenciar Site do Cliente"
                         >
                           <KeyRound className="w-4 h-4" />
                         </button>

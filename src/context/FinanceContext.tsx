@@ -1176,7 +1176,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!clients || clients.length === 0) return;
     const timer = setTimeout(() => {
       try {
-        clients.forEach((cli) => {
+        clients.filter(cli => cli.status !== 'lead').forEach((cli) => {
           const portal = buildClientPortalAccess(cli, architectureProjects, architectProfile, null, projectMilestones);
           saveClientPortalAccess(portal).catch(() => {});
         });

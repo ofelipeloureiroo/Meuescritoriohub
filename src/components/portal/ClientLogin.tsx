@@ -114,7 +114,7 @@ export const ClientLogin: React.FC = () => {
             </div>
             <div>
               <span className="font-serif font-bold text-lg text-[#fcf8f5] tracking-wide block leading-none">
-                Radar do Cliente
+                Site do Cliente
               </span>
               <span className="text-[10px] text-[#a89c93] tracking-wider uppercase font-semibold">
                 Meu Escritório Online
@@ -230,7 +230,7 @@ export const ClientLogin: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <span>Entrar no Radar do Cliente</span>
+                  <span>Entrar no Site do Cliente</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

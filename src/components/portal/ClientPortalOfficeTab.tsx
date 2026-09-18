@@ -142,12 +142,12 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
 
   // Combine real office clients with real-time projects and any cloud saved portals
   const displayPortals = useMemo(() => {
-    // Se não há clientes cadastrados no escritório, o Radar da Cliente deve estar estritamente vazio
-    if (!clients || clients.length === 0) {
+    const nonLeads = (clients || []).filter((c) => c.status !== 'lead');
+    if (nonLeads.length === 0) {
       return [];
     }
 
-    return clients.map((client) => {
+    return nonLeads.map((client) => {
       const cloudMatch = portals.find(
         (p) =>
           p.clientId === client.id ||
@@ -183,7 +183,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
     saveClientPortalAccess(p).catch(() => {});
     const origin = window.location.origin;
     const directUrl = `${origin}/cliente/login?email=${encodeURIComponent(p.clientEmail)}&code=${encodeURIComponent(p.accessCode)}`;
-    const text = `*Radar do Cliente - ${p.officeName || 'Meu Escritório'}*\n\nOlá, ${p.clientName}!\nVocê pode acompanhar todas as etapas, prazos, arquivos e falar com a equipe pelo seu portal exclusivo:\n\n🔗 *Acesso Direto:* ${directUrl}\n📧 *E-mail:* ${p.clientEmail}\n🔑 *Senha/Código de Acesso:* ${p.accessCode}\n\nQualquer dúvida, estamos à disposição!`;
+    const text = `*Site do Cliente - ${p.officeName || 'Meu Escritório'}*\n\nOlá, ${p.clientName}!\nVocê pode acompanhar todas as etapas, prazos, arquivos e falar com a equipe pelo seu portal exclusivo:\n\n🔗 *Acesso Direto:* ${directUrl}\n📧 *E-mail:* ${p.clientEmail}\n🔑 *Senha/Código de Acesso:* ${p.accessCode}\n\nQualquer dúvida, estamos à disposição!`;
     navigator.clipboard.writeText(text);
     setCopiedId(p.id + '-text');
     setTimeout(() => setCopiedId(null), 2500);
@@ -193,7 +193,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
     saveClientPortalAccess(p).catch(() => {});
     const origin = window.location.origin;
     const directUrl = `${origin}/cliente/login?email=${encodeURIComponent(p.clientEmail)}&code=${encodeURIComponent(p.accessCode)}`;
-    const text = `Olá, ${p.clientName}! Aqui está o seu link de acesso ao Radar do Cliente para acompanhar o projeto em tempo real:\n\n${directUrl}\n\nE-mail: ${p.clientEmail}\nCódigo de Acesso: ${p.accessCode}`;
+    const text = `Olá, ${p.clientName}! Aqui está o seu link de acesso ao Site do Cliente para acompanhar o projeto em tempo real:\n\n${directUrl}\n\nE-mail: ${p.clientEmail}\nCódigo de Acesso: ${p.accessCode}`;
     const rawPhone = (p.clientPhone || '').replace(/\D/g, '');
     const phoneWithDDI = rawPhone.length <= 11 ? `55${rawPhone}` : rawPhone;
     window.open(`https://wa.me/${phoneWithDDI}?text=${encodeURIComponent(text)}`, '_blank');
@@ -290,7 +290,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
               <span>Painel de Gestão do Escritório</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[var(--text-main)] tracking-tight">
-              Radar do Cliente & Transparência
+              Site do Cliente & Transparência
             </h1>
             <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">
               Crie acessos exclusivos para os clientes acompanharem as etapas dos projetos, baixarem plantas e documentos aprovados, e trocarem mensagens com sua equipe de forma centralizada.
@@ -435,11 +435,11 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
               <h3 className="text-base sm:text-lg font-bold text-[var(--text-main)]">
                 {clients.length === 0
                   ? 'Nenhum cliente cadastrado no escritório'
-                  : 'Nenhum radar encontrado para esta busca'}
+                  : 'Nenhum site do cliente encontrado para esta busca'}
               </h3>
               <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">
                 {clients.length === 0
-                  ? 'O Radar do Cliente exibe e sincroniza os acessos dos clientes cadastrados no seu escritório. Cadastre seus clientes e vincule projetos para liberar o acompanhamento exclusivo em tempo real.'
+                  ? 'O Site do Cliente exibe e sincroniza os acessos dos clientes cadastrados no seu escritório. Cadastre seus clientes e vincule projetos para liberar o acompanhamento exclusivo em tempo real.'
                   : 'Tente alterar os termos da busca ou os filtros de status acima.'}
               </p>
             </div>
@@ -761,7 +761,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
       <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 space-y-4">
         <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-main)]">
           <Sparkles className="w-4 h-4 text-[var(--theme-primary)]" />
-          <span>Como funciona a segurança e o isolamento do Radar do Cliente?</span>
+          <span>Como funciona a segurança e o isolamento do Site do Cliente?</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-[var(--text-muted)]">
           <div className="space-y-1.5 p-3.5 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)]">
@@ -773,7 +773,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
           <div className="space-y-1.5 p-3.5 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)]">
             <strong className="text-[var(--text-main)] block">2. Controle em Tempo Real</strong>
             <p className="leading-relaxed">
-              Tudo o que você atualizar na tela de gestão (avançar de fase, adicionar prancha em PDF ou enviar mensagem) é refletido instantaneamente no radar da cliente.
+              Tudo o que você atualizar na tela de gestão (avançar de fase, adicionar prancha em PDF ou enviar mensagem) é refletido instantaneamente no site do cliente.
             </p>
           </div>
           <div className="space-y-1.5 p-3.5 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)]">
@@ -882,7 +882,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                   <MessageSquare className="w-10 h-10 text-[var(--text-muted)] opacity-50" />
                   <p className="font-bold text-sm text-[var(--text-main)]">Nenhuma mensagem trocada ainda</p>
                   <p className="max-w-xs text-[11px]">
-                    Envie uma mensagem abaixo para iniciar o atendimento deste cliente no radar.
+                    Envie uma mensagem abaixo para iniciar o atendimento deste cliente no site.
                   </p>
                 </div>
               )}

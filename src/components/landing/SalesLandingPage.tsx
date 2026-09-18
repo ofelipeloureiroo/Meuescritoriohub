@@ -156,9 +156,9 @@ export const SalesLandingPage: React.FC = () => {
           </div>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#a89c93]">
-            <a href="#radar-cliente" className="text-[#fcf8f5] hover:text-[var(--theme-primary)] transition-colors flex items-center gap-1.5 font-semibold">
+            <a href="#site-cliente" className="text-[#fcf8f5] hover:text-[var(--theme-primary)] transition-colors flex items-center gap-1.5 font-semibold">
               <Radio className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              <span>Radar do Cliente</span>
+              <span>Site do Cliente</span>
             </a>
             <a href="#diferencial" className="hover:text-[#fcf8f5] transition-colors">Por Que Nós</a>
             <a href="#nichos" className="hover:text-[#fcf8f5] transition-colors">Seu Nicho</a>
@@ -262,7 +262,7 @@ export const SalesLandingPage: React.FC = () => {
               </div>
               <div>
                 <div className="text-xs font-bold text-[#fcf8f5] flex items-center gap-1">
-                  Radar do Cliente
+                  Site do Cliente
                 </div>
                 <div className="text-[11px] text-amber-400/90 font-medium">Acesso exclusivo do cliente</div>
               </div>
@@ -341,7 +341,7 @@ export const SalesLandingPage: React.FC = () => {
               }`}
             >
               <Radio className="w-4 h-4 text-amber-400" />
-              <span>★ Radar do Cliente (Portal VIP)</span>
+              <span>★ Site do Cliente (Portal VIP)</span>
             </button>
 
             <button
@@ -399,7 +399,7 @@ export const SalesLandingPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Content for TAB: Radar do Cliente */}
+            {/* Content for TAB: Site do Cliente */}
             {previewTab === 'radar_cliente' && (
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-amber-500/10 via-[#1e1916] to-transparent p-4 rounded-2xl border border-amber-500/30">
@@ -407,7 +407,7 @@ export const SalesLandingPage: React.FC = () => {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wider flex items-center gap-1">
                         <Radio className="w-3 h-3 text-amber-400" />
-                        Radar do Cliente em Tempo Real
+                        Site do Cliente em Tempo Real
                       </span>
                     </div>
                     <h3 className="text-lg font-serif font-bold text-[#fcf8f5]">Acesso Exclusivo & Transparente para seu Cliente</h3>
@@ -1119,8 +1119,8 @@ export const SalesLandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Dedicated Highlight Section: Radar do Cliente (Acesso Exclusivo do Cliente) */}
-      <section id="radar-cliente" className="py-20 md:py-28 bg-[#130f0d] border-b border-[#3d342f] relative overflow-hidden">
+      {/* Dedicated Highlight Section: Site do Cliente (Acesso Exclusivo do Cliente) */}
+      <section id="site-cliente" className="py-20 md:py-28 bg-[#130f0d] border-b border-[#3d342f] relative overflow-hidden">
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[var(--theme-primary)]/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -1135,15 +1135,15 @@ export const SalesLandingPage: React.FC = () => {
               </div>
 
               <h2 className="text-3xl sm:text-5xl font-serif font-bold text-[#fcf8f5] leading-tight">
-                Radar do Cliente: <br />
+                Site do Cliente: <br />
                 <span style={{ color: 'var(--theme-primary)' }}>Acesso exclusivo</span> para encantar seus clientes
               </h2>
 
               <p className="text-[#a89c93] text-base sm:text-lg leading-relaxed">
-                Diga adeus a mensagens diárias no WhatsApp perguntando <em>"Como está meu processo/projeto?"</em>. O <strong>Radar do Cliente</strong> é um portal VIP e seguro onde seu cliente acompanha cada avanço em tempo real.
+                Diga adeus a mensagens diárias no WhatsApp perguntando <em>"Como está meu processo/projeto?"</em>. O <strong>Site do Cliente</strong> é um portal VIP e seguro onde seu cliente acompanha cada avanço em tempo real.
               </p>
 
-              {/* 3 Core Pillars of Client Radar */}
+              {/* 3 Core Pillars of Client Site */}
               <div className="space-y-4 pt-2">
                 <div className="bg-[#1a1614] border border-[#3d342f] p-4 rounded-2xl flex items-start gap-3.5 hover:border-amber-500/40 transition-colors">
                   <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 shrink-0 mt-0.5">
@@ -1426,7 +1426,7 @@ export const SalesLandingPage: React.FC = () => {
               <div className="space-y-4 mb-8 pt-6 border-t border-[#3d342f]">
                 <div className="flex items-start gap-3">
                   <Check className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--theme-primary)' }} />
-                  <span className="text-sm text-[#fcf8f5]"><strong>Radar do Cliente:</strong> Portal exclusivo com login para seu cliente</span>
+                  <span className="text-sm text-[#fcf8f5]"><strong>Site do Cliente:</strong> Portal exclusivo com login para seu cliente</span>
                 </div>
                 <div className="flex items-start gap-3">
                   <Check className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--theme-primary)' }} />
@@ -1552,8 +1552,8 @@ export const SalesLandingPage: React.FC = () => {
           <div className="space-y-4">
             {[
               {
-                q: "O que é o Radar do Cliente e como meu cliente acessa?",
-                a: "O Radar do Cliente é um portal exclusivo e seguro onde seus clientes podem acompanhar o andamento dos projetos e demandas em tempo real, baixar documentos e contratos e conversar diretamente com o escritório. Seu cliente acessa com CPF/CNPJ ou link exclusivo sem precisar criar senhas complexas, economizando horas de atendimento e transmitindo profissionalismo impecável."
+                q: "O que é o Site do Cliente e como meu cliente acessa?",
+                a: "O Site do Cliente é um portal exclusivo e seguro onde seus clientes podem acompanhar o andamento dos projetos e demandas em tempo real, baixar documentos e contratos e conversar diretamente com o escritório. Seu cliente acessa com CPF/CNPJ ou link exclusivo sem precisar criar senhas complexas, economizando horas de atendimento e transmitindo profissionalismo impecável."
               },
               {
                 q: "O Meu Escritório Online é só para controle financeiro?",
