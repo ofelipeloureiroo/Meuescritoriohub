@@ -464,34 +464,42 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const savedBgTheme = (localStorage.getItem('app_bg_theme') as BgThemeId) || null;
     const savedThemeColor = (localStorage.getItem('app_theme_color') as ThemeColorId) || null;
 
-    // 1. Direct storage retrieval
-    const direct =
-      localStorage.getItem(getStorageKey('profile')) ||
-      localStorage.getItem('office_v2_lfquadrosdecorativos_profile');
-    if (direct) {
-      try {
-        const parsed: ArchitectProfile = JSON.parse(direct);
-        if (parsed && typeof parsed === 'object') {
-          return {
-            ...parsed,
-            bgTheme: savedBgTheme || parsed.bgTheme || 'light_cream',
-            themeColor: savedThemeColor || parsed.themeColor || 'amber',
-          };
+    // 1. Direct storage retrieval from prioritized persisted profile keys
+    const persistedKeys = [
+      'office_active_profile',
+      'office_persistent_profile',
+      'office_v2_lfquadrosdecorativos_profile',
+      getStorageKey('profile'),
+      'office_v2_guest_profile',
+    ];
+
+    for (const key of persistedKeys) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          const parsed: ArchitectProfile = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object' && (parsed.name || parsed.ownerName || parsed.photoUrl)) {
+            return {
+              ...parsed,
+              bgTheme: savedBgTheme || parsed.bgTheme || 'light_cream',
+              themeColor: savedThemeColor || parsed.themeColor || 'amber',
+            };
+          }
+        } catch (e) {
+          console.error(e);
         }
-      } catch (e) {
-        console.error(e);
       }
     }
 
-    // 2. Scan all localStorage keys for any saved office profile with custom photo or customizations
+    // 2. Scan all localStorage keys for any saved office profile
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && k.startsWith('office_v2_') && k.endsWith('_profile')) {
+        if (k && k.startsWith('office_') && k.endsWith('_profile')) {
           const raw = localStorage.getItem(k);
           if (raw) {
             const parsed = JSON.parse(raw);
-            if (parsed && (parsed.photoUrl || (parsed.name && parsed.name !== 'Meu Negócio'))) {
+            if (parsed && typeof parsed === 'object' && (parsed.name || parsed.ownerName)) {
               return {
                 ...parsed,
                 bgTheme: savedBgTheme || parsed.bgTheme || 'light_cream',
@@ -503,30 +511,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     } catch {}
 
-    // 3. If owner without saved profile, start with personalized multi-segment profile
-    if (isOwner) {
-      return {
-        name: 'LF Quadros & Decoração',
-        ownerName: 'Carlos Felipe',
-        title: 'Arte, Decoração & Vendas',
-        photoUrl: '',
-        location: 'Brasil • Atendimento Nacional',
-        specialty: 'Quadros sob medida, telas canvas e composições de parede',
-        tagline: 'Arte que transforma ambientes com estilo e sofisticação.',
-        description: 'Vendas de quadros sob medida, impressões fine art, telas canvas e soluções decorativas.',
-        instagramHandle: '@lfquadrosdecorativos',
-        instagramUrl: 'https://instagram.com/lfquadrosdecorativos',
-        followersCount: '15 mil seguidores',
-        rating: 5.0,
-        pixKey: 'lfquadrosdecorativos@gmail.com',
-        pixKeyType: 'email',
-        niche: 'arte_decoracao',
-        themeColor: savedThemeColor || 'amber',
-        bgTheme: savedBgTheme || 'light_cream',
-        showPortfolio: true,
-      };
-    }
-    return getCleanProfile();
+    return INITIAL_ARCHITECT_PROFILE;
   });
 
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
@@ -716,6 +701,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }));
   };
 
+  // Automatically sync login photo (Google / Auth / Profile) to architectProfile if not set or if user photo updated
+  useEffect(() => {
+    const authPhoto = user?.photoURL || profile?.photoUrl;
+    if (authPhoto) {
+      setArchitectProfile((prev) => {
+        if (!prev.photoUrl || prev.photoUrl.includes('unsplash.com')) {
+          const updated = { ...prev, photoUrl: authPhoto };
+          safeSetItem('profile', updated);
+          localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(updated));
+          window.dispatchEvent(new CustomEvent('office_profile_updated', { detail: updated }));
+          return updated;
+        }
+        return prev;
+      });
+    }
+  }, [user?.photoURL, profile?.photoUrl]);
+
   // Apply CSS color theme whenever themeColor or bgTheme changes
   useEffect(() => {
     const savedBg = (localStorage.getItem('app_bg_theme') as BgThemeId) || null;
@@ -809,35 +811,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     isCloudLoadedRef.current = false;
 
     // Load Profile
-    const savedProfile = localStorage.getItem(getStorageKey('profile'));
+    const savedProfile =
+      localStorage.getItem(getStorageKey('profile')) ||
+      localStorage.getItem('office_active_profile') ||
+      localStorage.getItem('office_persistent_profile') ||
+      localStorage.getItem('office_v2_lfquadrosdecorativos_profile');
     if (savedProfile) {
       try {
         const parsed = JSON.parse(savedProfile);
-        setArchitectProfile(parsed);
+        if (parsed && typeof parsed === 'object') {
+          setArchitectProfile((prev) => ({
+            ...prev,
+            ...parsed,
+          }));
+        }
       } catch {}
-    } else {
-      if (isOwner) {
-        setArchitectProfile({
-          name: 'LF Quadros & Decoração',
-          title: 'Arte, Decoração & Vendas',
-          photoUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=400&q=80',
-          location: 'Brasil • Atendimento Nacional',
-          specialty: 'Quadros sob medida, telas canvas e composições de parede',
-          tagline: 'Arte que transforma ambientes com estilo e sofisticação.',
-          description: 'Vendas de quadros sob medida, impressões fine art, telas canvas e soluções decorativas.',
-          instagramHandle: '@lfquadrosdecorativos',
-          instagramUrl: 'https://instagram.com/lfquadrosdecorativos',
-          followersCount: '15 mil seguidores',
-          rating: 5.0,
-          pixKey: 'lfquadrosdecorativos@gmail.com',
-          pixKeyType: 'email',
-          niche: 'arte_decoracao',
-          themeColor: 'amber',
-          showPortfolio: true,
-        });
-      } else {
-        setArchitectProfile(getCleanProfile());
-      }
     }
 
     // Load Transactions
@@ -1235,6 +1223,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => clearTimeout(timer);
   }, [clients, architectureProjects, architectProfile, projectMilestones]);
 
+  // Local Storage Multi-Key Persistence Helper
+  const persistProfileLocally = (updated: ArchitectProfile) => {
+    try {
+      safeSetItem('profile', updated);
+      localStorage.setItem('office_active_profile', JSON.stringify(updated));
+      localStorage.setItem('office_persistent_profile', JSON.stringify(updated));
+      localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(updated));
+      localStorage.setItem('office_v2_guest_profile', JSON.stringify(updated));
+      if (targetUid) {
+        localStorage.setItem(`office_v2_${targetUid}_profile`, JSON.stringify(updated));
+      }
+    } catch (e) {
+      console.warn('Profile local persist warning:', e);
+    }
+  };
+
   // Actions - Profile & Customization
   const updateArchitectProfile = (updatedFields: Partial<ArchitectProfile>) => {
     recordLocalMutation();
@@ -1243,8 +1247,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ...prev,
         ...updatedFields,
       };
-      safeSetItem('profile', updated);
-      localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(updated));
+      persistProfileLocally(updated);
       window.dispatchEvent(new CustomEvent('office_profile_updated', { detail: updated }));
       saveToFirestoreImmediate(updated);
       return updated;
@@ -1258,8 +1261,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ...prev,
         photoUrl,
       };
-      safeSetItem('profile', updated);
-      localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(updated));
+      persistProfileLocally(updated);
       window.dispatchEvent(new CustomEvent('office_profile_updated', { detail: updated }));
       saveToFirestoreImmediate(updated);
       return updated;
@@ -1277,8 +1279,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ...prev,
         themeColor: theme,
       };
-      safeSetItem('profile', updated);
-      localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(updated));
+      persistProfileLocally(updated);
       saveToFirestoreImmediate(updated);
       return updated;
     });
@@ -1295,8 +1296,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ...prev,
         bgTheme,
       };
-      safeSetItem('profile', updated);
-      localStorage.setItem('office_v2_lfquadrosdecorativos_profile', JSON.stringify(updated));
+      persistProfileLocally(updated);
       saveToFirestoreImmediate(updated);
       return updated;
     });
@@ -1317,7 +1317,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         tagline: nicheConf.description,
         description: `Atendimento profissional especializado em ${nicheConf.label.toLowerCase()}. Soluções personalizadas, foco em qualidade e excelência para cada cliente.`,
       };
-      safeSetItem('profile', updated);
+      persistProfileLocally(updated);
       saveToFirestoreImmediate(updated);
       return updated;
     });

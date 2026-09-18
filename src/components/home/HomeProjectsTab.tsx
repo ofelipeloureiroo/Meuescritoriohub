@@ -205,6 +205,12 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
     );
   }
 
+  const effectivePhoto =
+    architectProfile?.photoUrl ||
+    profile?.photoUrl ||
+    user?.photoURL ||
+    '';
+
   return (
     <div className="space-y-8 pb-16">
       {/* 1. Hero / Bio Presentation Card */}
@@ -235,14 +241,18 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                   title="Clique para trocar a foto de perfil"
                 >
                   <div className="w-full h-full rounded-full overflow-hidden bg-[var(--bg-card)] border-2 border-[var(--bg-body)] relative">
-                    <img
-                      src={
-                        architectProfile.photoUrl ||
-                        'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80'
-                      }
-                      alt={`${architectProfile.name} - ${architectProfile.title}`}
-                      className="w-full h-full object-cover object-top group-hover:brightness-75 transition-all"
-                    />
+                    {effectivePhoto ? (
+                      <img
+                        src={effectivePhoto}
+                        alt={`${architectProfile.name || 'Perfil'} - ${architectProfile.title || 'Foto'}`}
+                        className="w-full h-full object-cover object-top group-hover:brightness-75 transition-all"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-[var(--bg-card-secondary)] text-[var(--theme-primary)] font-bold text-3xl">
+                        {architectProfile?.ownerName?.charAt(0) || architectProfile?.name?.charAt(0) || user?.displayName?.charAt(0) || 'C'}
+                      </div>
+                    )}
                     {/* Hover Overlay with Camera */}
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-200">
                       <Camera className="w-6 h-6 mb-1 drop-shadow" style={{ color: 'var(--theme-primary)' }} />
@@ -260,14 +270,18 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                   }}
                 >
                   <div className="w-full h-full rounded-full overflow-hidden bg-[var(--bg-card)] border-2 border-[var(--bg-body)]">
-                    <img
-                      src={
-                        architectProfile.photoUrl ||
-                        'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80'
-                      }
-                      alt={`${architectProfile.name} - ${architectProfile.title}`}
-                      className="w-full h-full object-cover object-top"
-                    />
+                    {effectivePhoto ? (
+                      <img
+                        src={effectivePhoto}
+                        alt={`${architectProfile.name || 'Perfil'} - ${architectProfile.title || 'Foto'}`}
+                        className="w-full h-full object-cover object-top"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-[var(--bg-card-secondary)] text-[var(--theme-primary)] font-bold text-3xl">
+                        {architectProfile?.ownerName?.charAt(0) || architectProfile?.name?.charAt(0) || user?.displayName?.charAt(0) || 'C'}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

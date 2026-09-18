@@ -576,6 +576,15 @@ export const SettingsTab: React.FC = () => {
     changeTheme(selectedTheme);
     changeBgTheme(selectedBgTheme);
     changeNiche(selectedNiche);
+    try {
+      updateProfile({
+        name: ownerName || name,
+        companyName: name,
+        photoUrl,
+      });
+    } catch (e) {
+      console.warn('Could not sync auth profile:', e);
+    }
     setResetStatus('Dados de perfil e estilo atualizados com sucesso!');
     setTimeout(() => setResetStatus(null), 3000);
   };

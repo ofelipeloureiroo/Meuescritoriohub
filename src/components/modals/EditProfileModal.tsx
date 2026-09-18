@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
+import { useAuth } from '../../context/AuthContext';
 import { ArchitectProfile, BgThemeId, NicheType, ThemeColorId } from '../../types';
 import { BG_THEMES, NICHES, THEMES } from '../../utils/theme';
 import { cleanInstagramHandle, buildInstagramUrl, formatFollowersCount } from '../../utils/instagram';
@@ -61,13 +62,18 @@ const PRESET_AVATARS = [
 ];
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) => {
+  const { user, profile } = useAuth();
   const { architectProfile, updateArchitectProfile, updateProfilePhoto, changeTheme, changeBgTheme, changeNiche } = useFinance();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const initialPhoto = architectProfile.photoUrl || profile?.photoUrl || user?.photoURL || '';
   const [activeTab, setActiveTab] = useState<'theme_niche' | 'photo' | 'info'>('theme_niche');
-  const [formData, setFormData] = useState<ArchitectProfile>({ ...architectProfile });
+  const [formData, setFormData] = useState<ArchitectProfile>({
+    ...architectProfile,
+    photoUrl: initialPhoto,
+  });
   const [urlInput, setUrlInput] = useState('');
-  const [previewPhoto, setPreviewPhoto] = useState(architectProfile.photoUrl);
+  const [previewPhoto, setPreviewPhoto] = useState(initialPhoto);
   const [isDragOver, setIsDragOver] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -526,16 +532,15 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                     <button
                       type="button"
                       onClick={() => {
-                        const defaultUrl =
-                          'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80';
+                        const defaultUrl = user?.photoURL || profile?.photoUrl || '';
                         setPreviewPhoto(defaultUrl);
                         setFormData((prev) => ({ ...prev, photoUrl: defaultUrl }));
                       }}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#2c241f] hover:bg-[#382f29] text-[#cfc2b8] text-xs transition-colors"
-                      title="Restaurar foto padrão"
+                      title="Restaurar foto do login"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
-                      Restaurar Padrão
+                      Usar Foto do Login
                     </button>
                   </div>
 
