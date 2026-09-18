@@ -425,16 +425,80 @@ export const CheckoutPage: React.FC = () => {
         return;
       }
 
-      await activateSubscriptionForUser(authUser.uid, authUser.email, 'pix');
+      const cleanEmail = authUser.email.toLowerCase().trim();
+
+      // Un-blacklist email if previously deleted
+      try {
+        const rawBlacklist = localStorage.getItem('office_deleted_subscribers');
+        let list: string[] = [];
+        if (rawBlacklist) {
+          const parsed = JSON.parse(rawBlacklist);
+          if (Array.isArray(parsed)) {
+            list = parsed.filter((x: string) => x.toLowerCase().trim() !== cleanEmail);
+            localStorage.setItem('office_deleted_subscribers', JSON.stringify(list));
+          }
+        }
+        await setDoc(doc(db, 'system_integrations', 'deleted_subscribers'), {
+          emails: list,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(() => {});
+      } catch {}
+
+      // Register pending payment request for Admin approval
+      const docRef = doc(db, 'users', authUser.uid);
+      const dueDate = new Date();
+      if (isAnnualPlan) {
+        dueDate.setFullYear(dueDate.getFullYear() + 1);
+      } else {
+        dueDate.setMonth(dueDate.getMonth() + 1);
+      }
+
+      const userData = {
+        uid: authUser.uid,
+        email: cleanEmail,
+        name: name || user?.displayName || cleanEmail.split('@')[0],
+        status: 'pending',
+        role: cleanEmail === 'lfquadrosdecorativos@gmail.com' ? 'admin' : 'user',
+        subscriptionDueDate: dueDate.toISOString(),
+        lastPaymentMethod: 'pix',
+        lastPaymentDate: new Date().toISOString(),
+        notes: 'Solicitação de Liberação de Acesso via PIX',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      await setDoc(docRef, userData, { merge: true });
+
+      // Sync to authorized_subscribers collection
+      try {
+        const stored = localStorage.getItem('meu_escritorio_assinantes_autorizados_v1');
+        let currentList: any[] = stored ? JSON.parse(stored) : [];
+        if (!Array.isArray(currentList)) currentList = [];
+        const idx = currentList.findIndex((u: any) => (u.email || '').toLowerCase().trim() === cleanEmail || u.uid === authUser.uid);
+        if (idx >= 0) {
+          currentList[idx] = { ...currentList[idx], ...userData };
+        } else {
+          currentList.push(userData);
+        }
+        localStorage.setItem('meu_escritorio_assinantes_autorizados_v1', JSON.stringify(currentList));
+
+        await setDoc(doc(db, 'system_integrations', 'authorized_subscribers'), {
+          subscribers: currentList,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (syncErr) {
+        console.warn('Notice syncing subscriber on PIX request:', syncErr);
+      }
+
+      // Dispatch real-time events for admin alert
+      window.dispatchEvent(new Event('subscribers_updated'));
+      window.dispatchEvent(new Event('storage'));
+
       setPixConfirmed(true);
-      setSuccessMessage('Pagamento Pix registrado com sucesso! Seu acesso ao Escritório Online foi liberado.');
-      
-      setTimeout(() => {
-        navigate('/app');
-      }, 2500);
+      setSuccessMessage('Solicitação enviada ao administrador com sucesso! Seu acesso será liberado em instantes no painel.');
     } catch (err: any) {
       console.error(err);
-      setError('Erro ao confirmar pagamento. Verifique seus dados ou tente novamente.');
+      setError('Erro ao enviar solicitação de pagamento. Verifique seus dados e tente novamente.');
     } finally {
       setLoading(false);
     }

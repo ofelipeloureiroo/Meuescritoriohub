@@ -433,7 +433,29 @@ export const AdminUsers: React.FC = () => {
       }
     });
 
-    return () => unsubscribe();
+    const handleLocalSync = async () => {
+      try {
+        const snap = await getDocs(usersRef);
+        await handleUsersData(snap.docs);
+      } catch (e) {}
+    };
+
+    window.addEventListener('subscribers_updated', handleLocalSync);
+    window.addEventListener('storage', handleLocalSync);
+
+    const unsubSys = onSnapshot(doc(db, 'system_integrations', 'authorized_subscribers'), async () => {
+      try {
+        const snap = await getDocs(usersRef);
+        await handleUsersData(snap.docs);
+      } catch (e) {}
+    }, () => {});
+
+    return () => {
+      unsubscribe();
+      unsubSys();
+      window.removeEventListener('subscribers_updated', handleLocalSync);
+      window.removeEventListener('storage', handleLocalSync);
+    };
   }, [profile?.email, profile?.uid]);
 
   const approveWithDuration = async (uid: string, durationType: '1month' | '1year' | 'custom', customDateVal?: string) => {
@@ -798,7 +820,7 @@ export const AdminUsers: React.FC = () => {
   }
 
   // Filter pending users for high-visibility approval section
-  const pendingRequests = users.filter(u => u.status === 'pending' && u.role !== 'admin');
+  const pendingRequests = users.filter(u => (u.status === 'pending' || u.status === 'pending_payment') && u.role !== 'admin');
 
   return (
     <div className="space-y-6">
