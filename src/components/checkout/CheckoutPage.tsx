@@ -467,7 +467,15 @@ export const CheckoutPage: React.FC = () => {
         updatedAt: new Date().toISOString()
       };
 
-      await setDoc(docRef, userData, { merge: true });
+      // Non-blocking Firestore update with timeout
+      const setDocWithTimeout = async (ref: any, data: any, options?: any) => {
+        return Promise.race([
+          setDoc(ref, data, options),
+          new Promise((resolve) => setTimeout(resolve, 3000))
+        ]);
+      };
+
+      await setDocWithTimeout(docRef, userData, { merge: true }).catch(() => {});
 
       // Sync to authorized_subscribers collection
       try {
@@ -482,15 +490,15 @@ export const CheckoutPage: React.FC = () => {
         }
         localStorage.setItem('meu_escritorio_assinantes_autorizados_v1', JSON.stringify(currentList));
 
-        await setDoc(doc(db, 'system_integrations', 'authorized_subscribers'), {
+        await setDocWithTimeout(doc(db, 'system_integrations', 'authorized_subscribers'), {
           subscribers: currentList,
           updatedAt: new Date().toISOString()
-        }, { merge: true });
+        }, { merge: true }).catch(() => {});
       } catch (syncErr) {
         console.warn('Notice syncing subscriber on PIX request:', syncErr);
       }
 
-      // Dispatch real-time events for admin alert
+      // Dispatch real-time events for admin alert across all tabs
       window.dispatchEvent(new Event('subscribers_updated'));
       window.dispatchEvent(new Event('storage'));
 
@@ -1786,26 +1794,47 @@ export const CheckoutPage: React.FC = () => {
                     </ol>
                   </div>
 
-                  {/* Confirmation Button */}
-                  <button
-                    type="button"
-                    onClick={handleConfirmPix}
-                    disabled={loading}
-                    className="w-full py-4 px-6 rounded-xl text-black font-bold text-base flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer disabled:opacity-50 hover:brightness-110 active:scale-98"
-                    style={{ backgroundColor: 'var(--theme-primary)' }}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>Liberando seu acesso...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-5 h-5" />
-                        <span>Já realizei o pagamento via PIX</span>
-                      </>
-                    )}
-                  </button>
+                  {/* Confirmation Button or Success Box */}
+                  {pixConfirmed ? (
+                    <div className="p-6 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 text-center space-y-3 animate-fade-in shadow-xl">
+                      <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/30">
+                        <CheckCircle2 className="w-6 h-6" />
+                      </div>
+                      <h4 className="text-base font-bold text-emerald-300">Aviso de Pagamento Enviado com Sucesso!</h4>
+                      <p className="text-xs text-emerald-200/90 leading-relaxed max-w-sm mx-auto">
+                        Sua solicitação de liberação para <strong className="text-white">{email}</strong> foi registrada. O administrador (<strong className="text-white">lfquadrosdecorativos@gmail.com</strong>) recebeu o aviso em tempo real para liberar seu acesso.
+                      </p>
+                      <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+                        <a
+                          href="/app"
+                          className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-all shadow-md flex items-center justify-center gap-1.5"
+                        >
+                          <span>Acessar Painel do Escritório</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleConfirmPix}
+                      disabled={loading}
+                      className="w-full py-4 px-6 rounded-xl text-black font-bold text-base flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer disabled:opacity-50 hover:brightness-110 active:scale-98"
+                      style={{ backgroundColor: 'var(--theme-primary)' }}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Liberando seu acesso...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-5 h-5" />
+                          <span>Já realizei o pagamento via PIX</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

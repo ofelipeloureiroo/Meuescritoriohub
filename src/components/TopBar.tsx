@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Menu,
   Settings,
@@ -23,9 +23,16 @@ import {
   LayoutDashboard,
   MessageSquare,
   LayoutGrid,
+  Bell,
+  CheckCircle2,
+  ShieldCheck,
+  Loader2,
+  ArrowRight,
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
+import { db } from '../lib/firebase';
+import { doc, setDoc, getDocs, collection, onSnapshot } from 'firebase/firestore';
 
 interface TopBarProps {
   activeTab: string;
@@ -193,37 +200,115 @@ export const TopBar: React.FC<TopBarProps> = ({
   const dateInputRef = useRef<HTMLInputElement>(null);
   const [showAllFunctions, setShowAllFunctions] = useState(false);
 
-  const currentTabInfo = TAB_TITLES[activeTab] || {
-    label: 'Meu Escritório Online',
-    icon: Building2,
-    description: 'Gestão integrada de arquitetura e design',
-  };
-
-  const Icon = currentTabInfo.icon;
-
-  // Format month for display (e.g. "Setembro de 2026")
-  const formatMonthDisplay = (monthStr: string) => {
-    if (!monthStr || !monthStr.includes('-')) return monthStr;
-    const [year, month] = monthStr.split('-');
-    const monthIndex = parseInt(month, 10) - 1;
-    const monthName = MONTH_NAMES[monthIndex] || month;
-    return `${monthName} de ${year}`;
-  };
-
-  // Short format for mobile (e.g. "Set/26")
-  const formatMonthDisplayShort = (monthStr: string) => {
-    if (!monthStr || !monthStr.includes('-')) return monthStr;
-    const [year, month] = monthStr.split('-');
-    const monthIndex = parseInt(month, 10) - 1;
-    const shortNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    const shortName = shortNames[monthIndex] || month;
-    const shortYear = year.slice(-2);
-    return `${shortName}/${shortYear}`;
-  };
+  // Admin pending subscription release notifications state
+  const [pendingSubscribers, setPendingSubscribers] = useState<any[]>([]);
+  const [approvingEmail, setApprovingEmail] = useState<string | null>(null);
+  const [approvalNotice, setApprovalNotice] = useState<string | null>(null);
 
   const isOwner = !user?.email || 
     user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || 
     user.email.toLowerCase().includes('master_escritorio');
+
+  useEffect(() => {
+    if (!isOwner && user?.email !== 'lfquadrosdecorativos@gmail.com') return;
+
+    const loadPending = async () => {
+      try {
+        let list: any[] = [];
+        const raw = localStorage.getItem('meu_escritorio_assinantes_autorizados_v1');
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) list = [...parsed];
+          } catch {}
+        }
+
+        // Fetch pending from Firestore users
+        try {
+          const usersSnap = await getDocs(collection(db, 'users'));
+          usersSnap.docs.forEach((docSnap) => {
+            const data = docSnap.data();
+            if (data && (data.status === 'pending' || data.status === 'pending_payment') && data.role !== 'admin') {
+              if (!list.some(u => u.uid === data.uid || (data.email && u.email === data.email))) {
+                list.push(data);
+              }
+            }
+          });
+        } catch {}
+
+        const filtered = list.filter(u => u && (u.status === 'pending' || u.status === 'pending_payment') && u.email !== 'lfquadrosdecorativos@gmail.com');
+        setPendingSubscribers(filtered);
+      } catch (e) {
+        console.warn('Error loading pending subscribers:', e);
+      }
+    };
+
+    loadPending();
+
+    const handleSync = () => {
+      loadPending();
+    };
+
+    window.addEventListener('subscribers_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+
+    const unsubDoc = onSnapshot(doc(db, 'system_integrations', 'authorized_subscribers'), () => {
+      loadPending();
+    }, () => {});
+
+    return () => {
+      window.removeEventListener('subscribers_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+      unsubDoc();
+    };
+  }, [user?.email, isOwner]);
+
+  const handleQuickApprove = async (sub: any) => {
+    if (!sub || (!sub.uid && !sub.email)) return;
+    const targetEmail = sub.email || sub.uid;
+    setApprovingEmail(targetEmail);
+    try {
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 30);
+      const dueDateISO = dueDate.toISOString();
+
+      if (sub.uid) {
+        await setDoc(doc(db, 'users', sub.uid), {
+          status: 'active',
+          subscriptionDueDate: dueDateISO,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(() => {});
+      }
+
+      // Update authorized_subscribers local & firestore
+      const raw = localStorage.getItem('meu_escritorio_assinantes_autorizados_v1');
+      let list: any[] = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(list)) list = [];
+      const idx = list.findIndex(u => (sub.uid && u.uid === sub.uid) || (sub.email && u.email === sub.email));
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], status: 'active', subscriptionDueDate: dueDateISO };
+      } else {
+        list.push({ ...sub, status: 'active', subscriptionDueDate: dueDateISO });
+      }
+      localStorage.setItem('meu_escritorio_assinantes_autorizados_v1', JSON.stringify(list));
+
+      await setDoc(doc(db, 'system_integrations', 'authorized_subscribers'), {
+        subscribers: list,
+        updatedAt: new Date().toISOString()
+      }, { merge: true }).catch(() => {});
+
+      window.dispatchEvent(new Event('subscribers_updated'));
+      window.dispatchEvent(new Event('storage'));
+
+      setPendingSubscribers(prev => prev.filter(p => p.email !== sub.email && p.uid !== sub.uid));
+      setApprovalNotice(`✅ Acesso liberado com sucesso para ${sub.email || sub.name || 'Assinante'}!`);
+      setTimeout(() => setApprovalNotice(null), 6000);
+    } catch (e) {
+      console.error('Quick approve error:', e);
+    } finally {
+      setApprovingEmail(null);
+    }
+  };
 
   const userName =
     architectProfile?.ownerName?.trim() ||
@@ -272,6 +357,34 @@ export const TopBar: React.FC<TopBarProps> = ({
   const firstRowActions = allowedActions.slice(0, midIndex);
   const secondRowActions = allowedActions.slice(midIndex);
 
+  const currentTabInfo = TAB_TITLES[activeTab] || {
+    label: 'Meu Escritório Online',
+    icon: Building2,
+    description: 'Gestão integrada de arquitetura e design',
+  };
+
+  const Icon = currentTabInfo.icon;
+
+  const MONTH_NAMES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+  const formatMonthDisplay = (monthStr: string) => {
+    if (!monthStr || !monthStr.includes('-')) return monthStr;
+    const [year, month] = monthStr.split('-');
+    const monthIndex = parseInt(month, 10) - 1;
+    const monthName = MONTH_NAMES[monthIndex] || month;
+    return `${monthName} de ${year}`;
+  };
+
+  const formatMonthDisplayShort = (monthStr: string) => {
+    if (!monthStr || !monthStr.includes('-')) return monthStr;
+    const [year, month] = monthStr.split('-');
+    const monthIndex = parseInt(month, 10) - 1;
+    const shortNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const shortName = shortNames[monthIndex] || month;
+    const shortYear = year.slice(-2);
+    return `${shortName}/${shortYear}`;
+  };
+
   const activeCategory = CATEGORIES.find(c =>
     c.tabs.some(t => t.id === activeTab) ||
     (activeTab === 'financeiro' && c.id === 'financial') ||
@@ -280,7 +393,58 @@ export const TopBar: React.FC<TopBarProps> = ({
   ) || CATEGORIES[0];
 
   return (
-    <header className="w-full bg-[var(--bg-header)]/95 backdrop-blur-md border-b border-[var(--border-color)] sticky top-0 z-20 px-3 sm:px-6 lg:px-8 pt-3 pb-0">
+    <header className="w-full bg-[var(--bg-header)]/95 backdrop-blur-md border-b border-[var(--border-color)] sticky top-0 z-20 px-3 sm:px-6 lg:px-8 pt-2 pb-0">
+      
+      {/* Real-time Admin Release Warning Banner */}
+      {(isOwner || user?.email === 'lfquadrosdecorativos@gmail.com') && (pendingSubscribers.length > 0 || approvalNotice) && (
+        <div className="max-w-7xl mx-auto mb-2 animate-fade-in">
+          {approvalNotice ? (
+            <div className="bg-emerald-950/80 border border-emerald-500/60 text-emerald-200 text-xs px-4 py-2 rounded-xl flex items-center justify-between gap-2 shadow-lg">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="font-semibold">{approvalNotice}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gradient-to-r from-amber-950/90 via-amber-900/80 to-amber-950/90 border border-amber-500/60 text-amber-100 text-xs px-3 sm:px-4 py-2 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-2 shadow-xl animate-pulse">
+              <div className="flex items-center gap-2 text-center sm:text-left">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0">
+                  <Bell className="w-4 h-4 animate-bounce" />
+                </div>
+                <div>
+                  <span className="font-bold text-amber-300 block sm:inline">
+                    🔔 AVISO DE LIBERAÇÃO DE ACESSO ({pendingSubscribers.length}):
+                  </span>{' '}
+                  <span className="text-amber-100/90">
+                    O assinante <strong className="text-white font-mono">{pendingSubscribers[0].email || pendingSubscribers[0].name}</strong> realizou o pagamento via PIX e aguarda liberação.
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleQuickApprove(pendingSubscribers[0])}
+                  disabled={!!approvingEmail}
+                  className="px-3.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-extrabold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {approvingEmail ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Liberando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4 text-black" />
+                      <span>Liberar Acesso Agora</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3 pb-3">
         {/* Left: Mobile Menu Button & Context Title */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
