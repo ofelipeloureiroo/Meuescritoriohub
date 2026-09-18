@@ -33,6 +33,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../../lib/firebase';
+import firebaseConfigData from '../../../firebase-applet-config.json';
 import {
   initMercadoPago,
   getMercadoPagoPublicKey,
@@ -779,8 +780,9 @@ export const CheckoutPage: React.FC = () => {
         // 3. Domain not authorized in Firebase Console
         if (popupErr.code === 'auth/unauthorized-domain') {
           const currentHost = window.location.hostname;
+          const activeProjectId = (firebaseConfigData as any)?.projectId || 'plucky-haven-393011';
           setError(
-            `O domínio atual (${currentHost}) não está na lista de Domínios Autorizados do seu Firebase. Adicione "${currentHost}" no Firebase Console (Authentication > Settings > Authorized domains). Enquanto isso, você pode preencher seus dados de acesso diretamente no formulário abaixo para continuar.`
+            `Aviso do Firebase: O domínio "${currentHost}" precisa estar autorizado no projeto Firebase "${activeProjectId}". Verifique se no Firebase Console você está com o projeto "${activeProjectId}" selecionado no topo, ou preencha seus dados de acesso diretamente no formulário abaixo.`
           );
           return;
         }

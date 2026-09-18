@@ -1,11 +1,11 @@
 {
-  "projectId": "plucky-haven-393011",
-  "appId": "1:720818316004:web:ce21e797b1b19ca91142f1",
-  "apiKey": "AIzaSyB0j3r9IP_ikIyQ6EIWW-jl9SJo1Qu3j0A",
-  "authDomain": "plucky-haven-393011.firebaseapp.com",
-  "storageBucket": "plucky-haven-393011.firebasestorage.app",
-  "messagingSenderId": "720818316004",
-  "measurementId": "",
-  "oAuthClientId": "720818316004-uhuvk0752n3nrqff0j96ja8cbgf8eqre.apps.googleusercontent.com",
+  "projectId": "meuescritoriohub",
+  "appId": "1:96842951839:web:1e0d0545efb55819b5c6aa",
+  "apiKey": "AIzaSyD_JGWKeSgjB0mf3SHUcIGp46wwR1fdbJY",
+  "authDomain": "meuescritoriohub.firebaseapp.com",
+  "storageBucket": "meuescritoriohub.firebasestorage.app",
+  "messagingSenderId": "96842951839",
+  "measurementId": "G-JVJ1F8C714",
+  "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }
