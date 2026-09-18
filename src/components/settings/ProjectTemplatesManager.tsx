@@ -15,7 +15,8 @@ import {
   ShieldAlert,
   ArrowUp,
   ArrowDown,
-  Info
+  Info,
+  GripVertical
 } from 'lucide-react';
 import { OfficeSettings, ProjectTemplate, TemplateStage, TemplateTask } from '../../types';
 import { DEFAULT_PROJECT_TEMPLATES, normalizeTemplateStages, countTemplateItems } from '../../data/defaultProjectTemplates';
@@ -82,6 +83,10 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
 
   // Quick inline task creation
   const [quickTaskName, setQuickTaskName] = useState<Record<string, string>>({});
+
+  // Drag and drop task state
+  const [draggedTask, setDraggedTask] = useState<{ stageId: string; index: number } | null>(null);
+  const [dragOverTask, setDragOverTask] = useState<{ stageId: string; index: number } | null>(null);
 
   // Editing template header inline
   const [isEditingHeader, setIsEditingHeader] = useState<boolean>(false);
@@ -244,6 +249,59 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
       t.id === selectedTpl.id ? { ...t, stages } : t
     );
     saveTemplates(updatedTemplates);
+  };
+
+  // Move task up/down within stage
+  const handleMoveTask = (stageId: string, taskIdx: number, direction: 'up' | 'down') => {
+    if (!selectedTpl || selectedTpl.isSystem) return;
+    const stages = [...(selectedTpl.stages as TemplateStage[])];
+    const stageIdx = stages.findIndex(s => s.id === stageId);
+    if (stageIdx === -1) return;
+
+    const items = [...stages[stageIdx].items];
+    const targetIdx = direction === 'up' ? taskIdx - 1 : taskIdx + 1;
+    if (targetIdx < 0 || targetIdx >= items.length) return;
+
+    const temp = items[taskIdx];
+    items[taskIdx] = items[targetIdx];
+    items[targetIdx] = temp;
+
+    stages[stageIdx] = { ...stages[stageIdx], items };
+
+    const updatedTemplates = projectTemplates.map(t => 
+      t.id === selectedTpl.id ? { ...t, stages } : t
+    );
+    saveTemplates(updatedTemplates);
+  };
+
+  // Drag and drop task handler
+  const handleTaskDrop = (targetStageId: string, targetTaskIndex: number) => {
+    if (!draggedTask || !selectedTpl || selectedTpl.isSystem) return;
+    const stages = [...(selectedTpl.stages as TemplateStage[])];
+    const sourceStageIdx = stages.findIndex(s => s.id === draggedTask.stageId);
+    const targetStageIdx = stages.findIndex(s => s.id === targetStageId);
+    if (sourceStageIdx === -1 || targetStageIdx === -1) return;
+
+    const sourceItems = [...stages[sourceStageIdx].items];
+    const [movedTask] = sourceItems.splice(draggedTask.index, 1);
+    if (!movedTask) return;
+
+    if (sourceStageIdx === targetStageIdx) {
+      sourceItems.splice(targetTaskIndex, 0, movedTask);
+      stages[sourceStageIdx] = { ...stages[sourceStageIdx], items: sourceItems };
+    } else {
+      const targetItems = [...stages[targetStageIdx].items];
+      targetItems.splice(targetTaskIndex, 0, movedTask);
+      stages[sourceStageIdx] = { ...stages[sourceStageIdx], items: sourceItems };
+      stages[targetStageIdx] = { ...stages[targetStageIdx], items: targetItems };
+    }
+
+    const updatedTemplates = projectTemplates.map(t => 
+      t.id === selectedTpl.id ? { ...t, stages } : t
+    );
+    saveTemplates(updatedTemplates);
+    setDraggedTask(null);
+    setDragOverTask(null);
   };
 
   // Delete stage

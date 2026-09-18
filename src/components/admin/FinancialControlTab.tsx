@@ -121,7 +121,7 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
               // Only seed if user has not explicitly cleared history or deleted seed items
               const userClearedAll = localStorage.getItem('user_cleared_all_payments') === 'true';
               if (!userClearedAll && freshDeleted.length === 0) {
-                const activeSubscribers = users.filter(u => u.role !== 'admin' && u.status === 'active');
+                const activeSubscribers = users.filter(u => u.email?.toLowerCase().trim() !== 'lfquadrosdecorativos@gmail.com' && u.status === 'active');
                 if (activeSubscribers.length > 0) {
                   const seeded: PlatformPayment[] = activeSubscribers.map((u, idx) => ({
                     id: `seed-${u.uid}-${idx}`,
@@ -309,7 +309,7 @@ export const FinancialControlTab: React.FC<FinancialControlTabProps> = ({ users 
   const totalRevenue = payments.reduce((acc, p) => acc + p.amount, 0);
 
   // Active platform subscribers count
-  const activeSubscribersList = users.filter(u => u.role !== 'admin' && u.status === 'active');
+  const activeSubscribersList = users.filter(u => u.email?.toLowerCase().trim() !== 'lfquadrosdecorativos@gmail.com' && u.status === 'active');
   const activeSubscribersCount = activeSubscribersList.length;
 
   // Estimated MRR (Monthly Recurring Revenue): Active Subscribers * R$ 97,00 (or actual monthly values)

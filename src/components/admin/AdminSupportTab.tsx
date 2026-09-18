@@ -744,7 +744,7 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
                   className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-xs font-semibold text-zinc-900 bg-zinc-50 focus:bg-white focus:outline-none focus:border-[#b5986e]"
                 >
                   <option value="">Selecione um usuário...</option>
-                  {users.filter(u => u.role !== 'admin').map((u) => (
+                  {users.filter(u => u.email?.toLowerCase().trim() !== 'lfquadrosdecorativos@gmail.com').map((u) => (
                     <option key={u.uid} value={u.uid}>
                       {u.name ? `${u.name} (${u.email})` : u.email}
                     </option>

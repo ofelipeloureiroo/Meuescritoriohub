@@ -4,6 +4,9 @@ import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../../lib/firebase';
 import { Calendar, CheckCircle2, AlertCircle, Loader2, ArrowRight, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { applyThemeToDocument } from '../../utils/theme';
+import firebaseConfig from '../../../firebase-applet-config.json';
+
+const GOOGLE_CLIENT_ID = (firebaseConfig as any).oAuthClientId || '720818316004-uhuvk0752n3nrqff0j96ja8cbgf8eqre.apps.googleusercontent.com';
 
 export const OAuthProxy: React.FC = () => {
   const [status, setStatus] = useState<'checking' | 'idle' | 'authorizing' | 'success' | 'error'>('checking');
@@ -143,7 +146,7 @@ export const OAuthProxy: React.FC = () => {
     if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2) {
       try {
         const client = (window as any).google.accounts.oauth2.initTokenClient({
-          client_id: '720818316004-uhuvk0752n3nrqff0j96ja8cbgf8eqre.apps.googleusercontent.com',
+          client_id: GOOGLE_CLIENT_ID,
           scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/userinfo.email',
           prompt: '',
           callback: async (response: any) => {

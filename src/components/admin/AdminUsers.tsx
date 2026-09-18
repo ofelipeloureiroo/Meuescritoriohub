@@ -34,7 +34,7 @@ import { AdminSupportTab } from './AdminSupportTab';
 
 
 const DashboardSubscriptions: React.FC<{ users: UserProfile[] }> = ({ users }) => {
-  const subscribers = users.filter(u => u.role !== 'admin');
+  const subscribers = users.filter(u => u.email?.toLowerCase().trim() !== 'lfquadrosdecorativos@gmail.com');
   const totalSubscribers = subscribers.length;
   
   const activeCount = subscribers.filter(u => u.status === 'active' && (!u.subscriptionDueDate || new Date(u.subscriptionDueDate) >= new Date())).length;
@@ -799,7 +799,7 @@ export const AdminUsers: React.FC = () => {
       const snap = await getDocs(collection(db, 'users'));
       const aggregated = await aggregateAllSubscribers(snap.docs);
       setUsers(aggregated);
-      setRefreshSuccessMessage(`Todos os ${aggregated.filter(u => u.role !== 'admin').length} assinantes autorizados foram sincronizados com sucesso!`);
+      setRefreshSuccessMessage(`Todos os ${aggregated.filter(u => u.email?.toLowerCase().trim() !== 'lfquadrosdecorativos@gmail.com').length} assinantes autorizados foram sincronizados com sucesso!`);
       setTimeout(() => setRefreshSuccessMessage(null), 5000);
     } catch (e) {
       console.warn("Manual refresh notice:", e);
@@ -820,7 +820,7 @@ export const AdminUsers: React.FC = () => {
   }
 
   // Filter pending users for high-visibility approval section
-  const pendingRequests = users.filter(u => (u.status === 'pending' || u.status === 'pending_payment') && u.role !== 'admin');
+  const pendingRequests = users.filter(u => (u.status === 'pending' || u.status === 'pending_payment') && u.email?.toLowerCase().trim() !== 'lfquadrosdecorativos@gmail.com');
 
   return (
     <div className="space-y-6">
@@ -845,7 +845,7 @@ export const AdminUsers: React.FC = () => {
             }`}
           >
             <UserCheck className="w-3.5 h-3.5" />
-            <span>Assinantes ({users.filter(u => u.role !== 'admin').length})</span>
+            <span>Assinantes ({users.filter(u => u.email?.toLowerCase().trim() !== 'lfquadrosdecorativos@gmail.com').length})</span>
           </button>
 
           <button
@@ -1163,8 +1163,8 @@ export const AdminUsers: React.FC = () => {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4">
-                      {u.role === 'admin' ? (
+                     <td className="px-6 py-4">
+                      {u.email?.toLowerCase().trim() === 'lfquadrosdecorativos@gmail.com' ? (
                         <span className="text-xs text-amber-800 font-bold">Acesso Vitalício</span>
                       ) : (
                         <div>
@@ -1182,7 +1182,7 @@ export const AdminUsers: React.FC = () => {
 
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                        {u.role !== 'admin' && (
+                        {u.email?.toLowerCase().trim() !== 'lfquadrosdecorativos@gmail.com' && (
                           <>
                             {/* Open Support Chat with Subscriber */}
                             <button
