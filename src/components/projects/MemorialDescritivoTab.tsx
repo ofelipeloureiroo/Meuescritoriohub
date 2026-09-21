@@ -468,7 +468,8 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
         body: JSON.stringify({
           query: searchQueryIA,
           imageBase64: imageUploadIA,
-          category: formCategory
+          category: formCategory,
+          formProductName: formTitle
         })
       });
 

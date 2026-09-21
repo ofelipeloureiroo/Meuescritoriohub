@@ -3313,7 +3313,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
   // Search product with Google Grounded Search with graceful multi-tier fallback
   app.post('/api/gemini/search-product', express.json({ limit: '10mb' }), async (req, res) => {
-    const { query, imageBase64, category } = req.body;
+    const { query, imageBase64, category, formProductName } = req.body;
     let results: any[] = [];
     let source = "google_grounding";
     let extractedQuery = (query || "").trim();
@@ -3321,13 +3321,20 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
     // Detect if an error is a 429 rate limit or quota exhaustion
     const checkQuotaError = (err: any) => {
-      const errMsg = String(err?.message || err || "").toLowerCase();
+      const status = err?.status || err?.statusCode || err?.error?.code || err?.code;
+      const errMsg = (
+        String(err?.message || "") + " " +
+        String(err?.error?.message || "") + " " +
+        String(err || "")
+      ).toLowerCase();
       if (
-        err?.status === 429 ||
+        status === 429 ||
+        errMsg.includes("429") ||
         errMsg.includes("quota") ||
         errMsg.includes("rate limit") ||
         errMsg.includes("resource_exhausted") ||
-        errMsg.includes("exceeded your current quota")
+        errMsg.includes("exceeded your current quota") ||
+        errMsg.includes("exhausted")
       ) {
         quotaExhausted = true;
       }
@@ -3381,14 +3388,15 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         }
       }
 
-      // Step 2: Now do the Grounded Google Search. We do it using text-only query because Gemini Google Search Grounding does not support multimodal inputs directly.
-      const finalSearchTerm = extractedQuery || (category ? `Item para ${category}` : "Produto Arquitetônico");
+      // Step 2: Now do the Grounded Google Search. We do it using text-only query.
+      // We prioritize: manual search input -> image analysis result -> name filled on the right form -> generic category term
+      const finalSearchTerm = extractedQuery || (formProductName || "").trim() || (category ? `Item para ${category}` : "Produto Arquitetônico");
 
       if (ai && finalSearchTerm) {
         const prompt = "Você é um assistente especialista em especificações técnicas de arquitetura, design de interiores e construção civil no Brasil. " +
-          "Sua tarefa é encontrar ofertas reais na internet do produto solicitado usando a ferramenta de busca do Google (Google Search). " +
-          `Pesquise no Google por ofertas de compra do seguinte produto: "${finalSearchTerm}" em lojas no Brasil. ` +
-          "Retorne obrigatoriamente um array JSON válido contendo até 5 opções de produtos reais para compra com preços em R$ e links reais. " +
+          "Sua tarefa é encontrar ofertas reais de compra do produto solicitado usando prioritariamente o Google Shopping Brasil e resultados de lojas virtuais brasileiras. " +
+          `Pesquise no Google Shopping por ofertas de compra direta do seguinte produto: "${finalSearchTerm}" em lojas no Brasil. ` +
+          "Retorne obrigatoriamente um array JSON válido contendo até 5 opções de produtos reais para compra com preços atualizados em R$ e links reais de lojas brasileiras. " +
           "Siga exatamente o formato JSON especificado.";
 
         // Tier 1: Try Gemini with Google Grounding
@@ -3466,7 +3474,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
     // Tier 3: Guarantees user NEVER receives a blocking error
     if (!results || results.length === 0) {
-      const searchTerm = extractedQuery || query || (category ? `Item de ${category}` : "Produto de Luxo");
+      const searchTerm = extractedQuery || (formProductName || "").trim() || query || (category ? `Item de ${category}` : "Produto de Luxo");
       results = generateArchitecturalCatalogFallback(searchTerm, category);
       source = "catalog_backup";
     }
@@ -3474,7 +3482,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     let noticeText = undefined;
     if (source === "catalog_backup") {
       if (quotaExhausted) {
-        noticeText = "Sua chave de API gratuita atingiu o limite de cota de pesquisas do Google. Exibindo sugestões premium do Catálogo de Arquitetura integrado para preenchimento imediato!";
+        noticeText = "A cota gratuita da API do Gemini foi atingida. Para sugestões exatas do produto, por favor, digite o nome do produto no campo 'NOME / TERMO DE BUSCA ADICIONAL' à esquerda!";
       } else {
         noticeText = "Sugestões obtidas via Catálogo Inteligente de Arquitetura integrado (servidores Google com alta demanda momentânea).";
       }
