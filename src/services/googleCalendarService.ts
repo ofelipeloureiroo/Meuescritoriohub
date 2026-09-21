@@ -5,7 +5,15 @@ import { doc, onSnapshot, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const GOOGLE_CLIENT_ID = (firebaseConfig as any).oAuthClientId || '720818316004-uhuvk0752n3nrqff0j96ja8cbgf8eqre.apps.googleusercontent.com';
+export const getEffectiveGoogleClientId = (): string => {
+  try {
+    const custom = localStorage.getItem('custom_google_client_id');
+    if (custom && custom.trim()) return custom.trim();
+  } catch {}
+  return (firebaseConfig as any).oAuthClientId || '720818316004-uhuvk0752n3nrqff0j96ja8cbgf8eqre.apps.googleusercontent.com';
+};
+
+export const GOOGLE_CLIENT_ID = getEffectiveGoogleClientId();
 const GOOGLE_CALENDAR_SCOPES = [
   'https://www.googleapis.com/auth/calendar.events',
   'https://www.googleapis.com/auth/tasks',
@@ -199,7 +207,7 @@ export const requestGoogleTokenViaGSI = async (preferredEmail?: string): Promise
         }
 
         const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
-          client_id: GOOGLE_CLIENT_ID,
+          client_id: getEffectiveGoogleClientId(),
           scope: GOOGLE_CALENDAR_SCOPES,
           hint: preferredEmail || auth.currentUser?.email || undefined,
           prompt: '',

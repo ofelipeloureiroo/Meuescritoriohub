@@ -33,6 +33,7 @@ import {
   ShieldCheck,
   Lock,
   ArrowRight,
+  ExternalLink,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -134,6 +135,8 @@ export const TodayTab: React.FC = () => {
   const [isSyncingCalendar, setIsSyncingCalendar] = useState<boolean>(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [showGoogleConnectModal, setShowGoogleConnectModal] = useState<boolean>(false);
+  const [showOriginMismatchHelp, setShowOriginMismatchHelp] = useState<boolean>(false);
+  const [copiedOrigin, setCopiedOrigin] = useState<boolean>(false);
 
   const handleConnectGoogleCalendar = async () => {
     setIsSyncingCalendar(true);
@@ -2158,6 +2161,66 @@ export const TodayTab: React.FC = () => {
                   Marque as caixas de <strong>Eventos</strong> e <strong>Tarefas</strong> e confirme.
                 </li>
               </ol>
+            </div>
+
+            {/* Troubleshooting Erro 400 origin_mismatch */}
+            <div className="p-3 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-xs space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowOriginMismatchHelp(!showOriginMismatchHelp)}
+                className="w-full flex items-center justify-between text-left font-medium text-[var(--text-main)] hover:text-[var(--theme-primary)] transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span className="font-semibold text-[11px]">Apareceu "Erro 400: origin_mismatch" no Google?</span>
+                </div>
+                <span className="text-[10px] text-[var(--text-muted)] underline">
+                  {showOriginMismatchHelp ? 'Ocultar instruções' : 'Ver como liberar'}
+                </span>
+              </button>
+
+              {showOriginMismatchHelp && (
+                <div className="pt-2 border-t border-[var(--border-color)] space-y-2 text-[11px] text-[var(--text-muted)] leading-relaxed animate-fadeIn">
+                  <p>
+                    O Google exige que a URL do seu domínio esteja autorizada no Google Cloud Console:
+                  </p>
+                  <div className="p-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border-color)] flex items-center justify-between gap-2">
+                    <span className="font-mono text-[11px] text-[var(--text-main)] truncate select-all">
+                      {typeof window !== 'undefined' ? window.location.origin : 'https://meuescritoriohub.com.br'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://meuescritoriohub.com.br';
+                        navigator.clipboard.writeText(origin);
+                        setCopiedOrigin(true);
+                        setTimeout(() => setCopiedOrigin(false), 2500);
+                      }}
+                      className="px-2 py-1 rounded bg-[var(--theme-primary)]/10 hover:bg-[var(--theme-primary)]/20 text-[var(--theme-primary)] font-bold text-[10px] shrink-0 flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      {copiedOrigin ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedOrigin ? 'Copiado!' : 'Copiar'}</span>
+                    </button>
+                  </div>
+                  <ol className="list-decimal pl-4 space-y-1 text-[10.5px]">
+                    <li>
+                      Acesse o <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="text-[var(--theme-primary)] underline inline-flex items-center gap-0.5 font-medium">Google Cloud Console <ExternalLink className="w-2.5 h-2.5 inline" /></a>.
+                    </li>
+                    <li>
+                      Em <strong>IDs do cliente OAuth 2.0</strong>, clique no seu cliente Web.
+                    </li>
+                    <li>
+                      No campo <strong>Origens JavaScript autorizadas</strong>, clique em <strong>+ Adicionar URI</strong> e cole a URL copiada acima (sem barra no final).
+                    </li>
+                    <li>
+                      Em <strong>URIs de redirecionamento autorizados</strong>, adicione também <code className="text-[10px] bg-[var(--bg-card)] px-1 rounded">{typeof window !== 'undefined' ? `${window.location.origin}/oauth-proxy` : 'https://meuescritoriohub.com.br/oauth-proxy'}</code>.
+                    </li>
+                    <li>
+                      Clique em <strong>Salvar</strong> e aguarde 2 a 5 minutos para o Google sincronizar.
+                    </li>
+                  </ol>
+                </div>
+              )}
             </div>
 
             {/* Modal Actions */}
