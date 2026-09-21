@@ -147,7 +147,7 @@ export const OAuthProxy: React.FC = () => {
       try {
         const client = (window as any).google.accounts.oauth2.initTokenClient({
           client_id: GOOGLE_CLIENT_ID,
-          scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/userinfo.email',
+          scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/userinfo.email',
           prompt: '',
           callback: async (response: any) => {
             if (response.error) {
@@ -178,7 +178,6 @@ export const OAuthProxy: React.FC = () => {
   const fallbackFirebasePopup = async (sid: string | null) => {
     try {
       const provider = new GoogleAuthProvider();
-      provider.addScope('https://www.googleapis.com/auth/calendar');
       provider.addScope('https://www.googleapis.com/auth/calendar.events');
       provider.addScope('https://www.googleapis.com/auth/tasks');
       provider.addScope('https://www.googleapis.com/auth/userinfo.email');
@@ -196,10 +195,8 @@ export const OAuthProxy: React.FC = () => {
       if (token) {
         await handleSuccess(token, email, sid);
       } else {
-        // If token wasn't in credential, try getIdToken or ask user
         const idToken = await result.user?.getIdToken();
         if (idToken) {
-          // In some cases idToken works or we trigger redirect as last resort
           await handleSuccess(idToken, email, sid);
         } else {
           handleError('Não foi possível obter o token de acesso do Google. Tente novamente.', sid);
@@ -207,7 +204,6 @@ export const OAuthProxy: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Erro ao conectar via popup:', err);
-      // If popup was blocked or failed, give clear option
       if (err.code === 'auth/popup-blocked') {
         handleError('O navegador bloqueou a janela de autorização. Clique no botão abaixo para tentar com redirecionamento direto.', sid);
       } else {
@@ -220,7 +216,6 @@ export const OAuthProxy: React.FC = () => {
     try {
       setStatus('authorizing');
       const provider = new GoogleAuthProvider();
-      provider.addScope('https://www.googleapis.com/auth/calendar');
       provider.addScope('https://www.googleapis.com/auth/calendar.events');
       provider.addScope('https://www.googleapis.com/auth/tasks');
       provider.addScope('https://www.googleapis.com/auth/userinfo.email');
@@ -292,34 +287,45 @@ export const OAuthProxy: React.FC = () => {
         {status === 'idle' && (
           <div className="space-y-5 text-left">
             <div className="text-center space-y-1">
-              <h2 className="text-xl font-serif font-bold text-[var(--text-main)]">Conectar Google Agenda</h2>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--theme-primary)]">Meu Escritório Online</span>
+              <h2 className="text-xl font-serif font-bold text-[var(--text-main)]">Conexão Oficial com o Google</h2>
               <p className="text-xs text-[var(--text-muted)]">
-                Sincronize reuniões, audiências e prazos diretamente no seu painel.
+                Sincronize reuniões, audiências e tarefas com total privacidade.
               </p>
             </div>
 
-            {/* Explanation of Google's Security Screen (Image 1 fix) */}
-            <div className={`p-3.5 border rounded-xl space-y-2 ${isLight ? 'bg-amber-500/10 border-amber-500/30 text-amber-900' : 'bg-amber-950/25 border-amber-500/30 text-amber-200/90'}`}>
+            {/* Privacy & Safe Scopes Assurance */}
+            <div className={`p-4 border rounded-xl space-y-3 ${isLight ? 'bg-amber-500/10 border-amber-500/30 text-amber-900' : 'bg-amber-950/25 border-amber-500/30 text-amber-200/90'}`}>
               <div className="flex items-start gap-2.5">
                 <ShieldCheck className={`w-5 h-5 shrink-0 mt-0.5 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
-                <div className="text-xs leading-relaxed">
-                  <span className={`font-semibold block mb-0.5 ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>Aviso de Segurança do Google:</span>
-                  Como este é o sistema privativo do seu escritório, o Google exibirá a tela <em className={`${isLight ? 'text-amber-950' : 'text-amber-100'} font-medium`}>"O Google não verificou este app"</em>.
-                  Basta clicar em <strong className={`px-1 py-0.5 rounded ${isLight ? 'text-amber-900 bg-amber-500/20' : 'text-white bg-amber-500/20'}`}>Continuar</strong> para autorizar o acesso à sua agenda com segurança.
+                <div className="text-xs leading-relaxed space-y-1">
+                  <div className={`font-bold ${isLight ? 'text-amber-900' : 'text-amber-300'}`}>Privacidade e Segurança Garantidas</div>
+                  <div>
+                    Solicitamos <strong>apenas</strong> acesso aos seus eventos e tarefas para sincronizar o painel. Seus e-mails pessoais, contatos e arquivos do Drive não são acessados.
+                  </div>
                 </div>
+              </div>
+
+              <div className={`pt-2 border-t text-[11px] leading-relaxed ${isLight ? 'border-amber-500/20 text-amber-800' : 'border-amber-500/20 text-amber-300/80'}`}>
+                <strong className="block mb-1">Passo a passo no Google:</strong>
+                <ol className="list-decimal pl-4 space-y-0.5">
+                  <li>Escolha sua conta: <strong className="underline">{userEmail}</strong></li>
+                  <li>Na tela de verificação, clique em <strong>Avançado</strong> ➔ <strong>Acessar / Continuar</strong></li>
+                  <li>Marque as caixas de <strong>Eventos</strong> e <strong>Tarefas</strong> e clique em Continuar.</li>
+                </ol>
               </div>
             </div>
 
             <div className="text-xs text-[var(--text-muted)] flex items-center gap-1.5 px-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
-              <span>Conta recomendada: <strong className="text-[var(--text-main)]">{userEmail}</strong></span>
+              <span>Conta conectada: <strong className="text-[var(--text-main)]">{userEmail}</strong></span>
             </div>
 
             <button
               onClick={handleAuthorize}
               className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-sm rounded-xl flex items-center justify-center gap-2 shadow-lg hover:shadow-amber-500/20 transition-all cursor-pointer transform active:scale-98"
             >
-              <span>Autorizar Acesso ao Google</span>
+              <span>Conectar com o Google</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

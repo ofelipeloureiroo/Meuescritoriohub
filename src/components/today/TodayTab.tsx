@@ -30,6 +30,9 @@ import {
   RefreshCw,
   CheckSquare,
   ListTodo,
+  ShieldCheck,
+  Lock,
+  ArrowRight,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -130,6 +133,7 @@ export const TodayTab: React.FC = () => {
   const [tokenExpired, setTokenExpired] = useState<boolean>(false);
   const [isSyncingCalendar, setIsSyncingCalendar] = useState<boolean>(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [showGoogleConnectModal, setShowGoogleConnectModal] = useState<boolean>(false);
 
   const handleConnectGoogleCalendar = async () => {
     setIsSyncingCalendar(true);
@@ -139,7 +143,8 @@ export const TodayTab: React.FC = () => {
       setIsGoogleSynced(true);
       setGoogleEmail(res.email);
       setTokenExpired(false);
-      setSyncMessage(`Conectado à conta: ${res.email}`);
+      setShowGoogleConnectModal(false);
+      setSyncMessage(`Conectado com sucesso à conta: ${res.email}`);
       
       try {
         const [events, tasks] = await Promise.all([
@@ -953,7 +958,7 @@ export const TodayTab: React.FC = () => {
 
               {!isGoogleSynced && (
                 <button
-                  onClick={handleConnectGoogleCalendar}
+                  onClick={() => setShowGoogleConnectModal(true)}
                   disabled={isSyncingCalendar}
                   className="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer bg-[var(--theme-primary)] hover:brightness-110 text-black shadow-md"
                 >
@@ -2063,6 +2068,130 @@ export const TodayTab: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Google Calendar & Tasks Professional Connect Modal */}
+      {showGoogleConnectModal && (
+        <div
+          id="google-connect-modal-backdrop"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn"
+          onClick={() => !isSyncingCalendar && setShowGoogleConnectModal(false)}
+        >
+          <div
+            id="google-connect-modal-dialog"
+            className="w-full max-w-lg bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-2xl p-6 sm:p-7 space-y-6 relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Subtle luxury glow */}
+            <div className="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 bg-[var(--theme-primary)]/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center justify-center shrink-0 shadow-inner">
+                  <CalendarDays className="w-6 h-6" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--theme-primary)]">
+                    Integração Oficial
+                  </span>
+                  <h3 className="text-lg font-serif font-bold text-[var(--text-main)]">
+                    Google Agenda & Tarefas
+                  </h3>
+                </div>
+              </div>
+              <button
+                id="google-connect-close-btn"
+                onClick={() => !isSyncingCalendar && setShowGoogleConnectModal(false)}
+                disabled={isSyncingCalendar}
+                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)] transition-all cursor-pointer"
+                title="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Privacy & Permissions Card */}
+            <div className="p-4 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)] space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-main)]">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <span>Privacidade e Segurança do Seu Escritório</span>
+              </div>
+              <ul className="text-xs text-[var(--text-muted)] space-y-2 leading-relaxed">
+                <li className="flex items-start gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Sincronização Segura:</strong> Exibe e sincroniza seus eventos, reuniões e afazeres diretamente no painel.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Acesso Mínimo:</strong> Seus e-mails pessoais, contatos e arquivos do Google Drive não são acessados.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Sem Exclusão de Agendas:</strong> O sistema apenas adiciona ou edita os compromissos autorizados por você.
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Quick 3-Step Guidance */}
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200/90 text-xs space-y-2">
+              <div className="font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>O que você verá na janela do Google:</span>
+              </div>
+              <ol className="list-decimal pl-4 space-y-1 text-[11px] leading-relaxed">
+                <li>
+                  Selecione sua conta do Google ({user?.email || 'seu e-mail'}).
+                </li>
+                <li>
+                  Caso surja o aviso <em>"O Google não verificou este app"</em> (padrão para sistemas exclusivos do escritório), clique em <strong>Avançado</strong> ➔ <strong>Acessar / Continuar</strong>.
+                </li>
+                <li>
+                  Marque as caixas de <strong>Eventos</strong> e <strong>Tarefas</strong> e confirme.
+                </li>
+              </ol>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                id="google-connect-cancel-btn"
+                type="button"
+                onClick={() => setShowGoogleConnectModal(false)}
+                disabled={isSyncingCalendar}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)] transition-all cursor-pointer border border-transparent hover:border-[var(--border-color)]"
+              >
+                Cancelar
+              </button>
+              <button
+                id="google-connect-confirm-btn"
+                type="button"
+                onClick={handleConnectGoogleCalendar}
+                disabled={isSyncingCalendar}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-black bg-[var(--theme-primary)] hover:brightness-110 shadow-lg shadow-[var(--theme-primary)]/20 transition-all cursor-pointer flex items-center gap-2"
+              >
+                {isSyncingCalendar ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Conectando...</span>
+                  </>
+                ) : (
+                  <>
+                    <CalendarDays className="w-4 h-4" />
+                    <span>Conectar com o Google</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
