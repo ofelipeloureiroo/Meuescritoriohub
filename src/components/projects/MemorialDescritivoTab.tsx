@@ -372,6 +372,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
   // Gemini Search States
   const [searchQueryIA, setSearchQueryIA] = useState<string>('');
   const [imageUploadIA, setImageUploadIA] = useState<string>('');
+  const [imageFileNameIA, setImageFileNameIA] = useState<string>('');
   const [isSearchingIA, setIsSearchingIA] = useState(false);
   const [searchResultsIA, setSearchResultsIA] = useState<any[]>([]);
   const [searchErrorIA, setSearchErrorIA] = useState<string>('');
@@ -421,6 +422,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
+      setImageFileNameIA(file.name || '');
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') {
@@ -436,6 +438,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setImageFileNameIA(file.name || '');
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') {
@@ -468,6 +471,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
         body: JSON.stringify({
           query: searchQueryIA,
           imageBase64: imageUploadIA,
+          imageFileName: imageFileNameIA,
           category: formCategory,
           formProductName: formTitle
         })
@@ -518,6 +522,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     setFormImageBase64('');
     setSearchQueryIA('');
     setImageUploadIA('');
+    setImageFileNameIA('');
     setSearchResultsIA([]);
     setSearchErrorIA('');
     setSearchNoticeIA('');
@@ -1139,7 +1144,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                     type="text"
                     value={searchQueryIA}
                     onChange={(e) => setSearchQueryIA(e.target.value)}
-                    placeholder="Ex: Cuba Deca L.730 preta fosca"
+                    placeholder="Ex: Geladeira Inox, Chuveiro Deca, Cuba, Cooktop..."
                     className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden focus:border-zinc-400"
                   />
                 </div>
