@@ -223,6 +223,18 @@ export const TopBar: React.FC<TopBarProps> = ({
           } catch {}
         }
 
+        // Fetch from /api/subscribers
+        try {
+          const res = await fetch('/api/subscribers').then(r => r.json());
+          if (res && Array.isArray(res.subscribers)) {
+            res.subscribers.forEach((s: any) => {
+              if (s && !list.some(u => (s.uid && u.uid === s.uid) || (s.email && u.email === s.email))) {
+                list.push(s);
+              }
+            });
+          }
+        } catch {}
+
         // Fetch pending from Firestore users
         try {
           const usersSnap = await getDocs(collection(db, 'users'));
@@ -291,6 +303,11 @@ export const TopBar: React.FC<TopBarProps> = ({
         list.push({ ...sub, status: 'active', subscriptionDueDate: dueDateISO });
       }
       localStorage.setItem('meu_escritorio_assinantes_autorizados_v1', JSON.stringify(list));
+      fetch('/api/subscribers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscribers: list })
+      }).catch(() => {});
 
       await setDoc(doc(db, 'system_integrations', 'authorized_subscribers'), {
         subscribers: list,

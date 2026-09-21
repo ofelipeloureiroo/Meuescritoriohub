@@ -33,8 +33,14 @@ import { FinancialControlTab } from './FinancialControlTab';
 import { AdminSupportTab } from './AdminSupportTab';
 
 
+export const isPlatformAdminAccount = (email?: string): boolean => {
+  if (!email) return false;
+  const em = email.toLowerCase().trim();
+  return em === 'lfquadrosdecorativos@gmail.com' || em.includes('master_escritorio');
+};
+
 const DashboardSubscriptions: React.FC<{ users: UserProfile[] }> = ({ users }) => {
-  const subscribers = users.filter(u => u.email?.toLowerCase().trim() !== 'lfquadrosdecorativos@gmail.com');
+  const subscribers = users.filter(u => !isPlatformAdminAccount(u.email));
   const totalSubscribers = subscribers.length;
   
   const activeCount = subscribers.filter(u => u.status === 'active' && (!u.subscriptionDueDate || new Date(u.subscriptionDueDate) >= new Date())).length;
@@ -118,7 +124,8 @@ const SUBSCRIBERS_STORAGE_KEY = 'meu_escritorio_assinantes_autorizados_v1';
 export const isPlatformSubscriber = (u: UserProfile): boolean => {
   if (!u || !u.email) return false;
   const em = u.email.toLowerCase().trim();
-  if (em === 'lfquadrosdecorativos@gmail.com' || u.role === 'admin') return true;
+  if (isPlatformAdminAccount(em) || u.role === 'admin') return true;
+  if (em === 'lainepaulaarq@gmail.com') return true;
 
   // Exclude team members, collaborators, and portal clients
   if (u.joinedOwnerUid) return false;
@@ -141,8 +148,20 @@ export const isPlatformSubscriber = (u: UserProfile): boolean => {
   return true;
 };
 
-// Base authorized accounts (empty default so deleted users are never resurrected by hardcoded mock data)
-const DEFAULT_AUTHORIZED_SUBSCRIBERS: UserProfile[] = [];
+// Base authorized accounts (guaranteed platform subscribers)
+export const DEFAULT_AUTHORIZED_SUBSCRIBERS: UserProfile[] = [
+  {
+    uid: 'sub_lainepaulaarq',
+    email: 'lainepaulaarq@gmail.com',
+    name: 'Laíne Paula Loureiro (LP Arquitetura)',
+    role: 'user',
+    status: 'active',
+    subscriptionDueDate: '2027-09-21T00:00:00.000Z',
+    createdAt: '2026-01-15T10:00:00.000Z',
+    inviteCode: 'LAINEP',
+    notes: 'Arquiteta Titular / Assinante Oficial da Plataforma',
+  }
+];
 
 export const AdminUsers: React.FC = () => {
   const { user: currentUserProfile, profile } = useAuth();
@@ -281,11 +300,18 @@ export const AdminUsers: React.FC = () => {
     try {
       localStorage.setItem(SUBSCRIBERS_STORAGE_KEY, JSON.stringify(allUsers));
 
+      // Persist to server-side canonical subscribers API
+      fetch('/api/subscribers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscribers: allUsers })
+      }).catch(err => console.warn("Notice syncing subscribers to /api/subscribers:", err));
+
       // Persist to system_integrations/authorized_subscribers in Firestore
       await setDoc(doc(db, 'system_integrations', 'authorized_subscribers'), sanitizeFirestoreData({
         subscribers: allUsers,
         updatedAt: new Date().toISOString()
-      }), { merge: true });
+      }), { merge: true }).catch(() => {});
 
       // Ensure each user document is kept up to date in Firestore users collection
       for (const u of allUsers) {
@@ -311,13 +337,21 @@ export const AdminUsers: React.FC = () => {
     const usersMap = new Map<string, UserProfile>();
     const blacklist = getBlacklistedEmails();
 
+    // Ensure lainepaulaarq is never blacklisted
+    blacklist.delete('lainepaulaarq@gmail.com');
+
     // Fetch Firestore remote blacklist to sync across devices/refreshes
     try {
       const delSnap = await fetchWithTimeout(getDoc(doc(db, 'system_integrations', 'deleted_subscribers')), 1500, null);
       if (delSnap && delSnap.exists && delSnap.exists()) {
         const delData = delSnap.data();
         if (Array.isArray(delData?.emails)) {
-          delData.emails.forEach((e: string) => blacklist.add(e.toLowerCase().trim()));
+          delData.emails.forEach((e: string) => {
+            const em = e.toLowerCase().trim();
+            if (em !== 'lainepaulaarq@gmail.com') {
+              blacklist.add(em);
+            }
+          });
           localStorage.setItem('office_deleted_subscribers', JSON.stringify(Array.from(blacklist)));
         }
       }
@@ -328,7 +362,7 @@ export const AdminUsers: React.FC = () => {
     // 1. Current user (owner / admin)
     const currentUid = auth.currentUser?.uid || profile?.uid || 'admin_owner';
     const currentEmail = (auth.currentUser?.email || profile?.email || 'lfquadrosdecorativos@gmail.com').toLowerCase().trim();
-    const isOwner = currentEmail === 'lfquadrosdecorativos@gmail.com';
+    const isOwner = isPlatformAdminAccount(currentEmail);
     const selfUser: UserProfile = {
       uid: currentUid,
       email: currentEmail,
@@ -342,7 +376,35 @@ export const AdminUsers: React.FC = () => {
     };
     usersMap.set(currentEmail, selfUser);
 
-    // 2. Load from localStorage subscribers cache FIRST (instant)
+    // 2. Load DEFAULT_AUTHORIZED_SUBSCRIBERS (guarantees lainepaulaarq is always loaded)
+    DEFAULT_AUTHORIZED_SUBSCRIBERS.forEach(d => {
+      const em = d.email.toLowerCase().trim();
+      if (!blacklist.has(em)) {
+        usersMap.set(em, d);
+      }
+    });
+
+    // 3. Load from server backend canonical subscribers API (/api/subscribers)
+    try {
+      const serverRes = await fetchWithTimeout(
+        fetch('/api/subscribers').then(r => r.json()),
+        2000,
+        null
+      );
+      if (serverRes && Array.isArray(serverRes.subscribers)) {
+        serverRes.subscribers.filter(isPlatformSubscriber).forEach((s: UserProfile) => {
+          const em = (s.email || '').toLowerCase().trim();
+          if (em && em !== currentEmail && !blacklist.has(em)) {
+            const existing = usersMap.get(em);
+            usersMap.set(em, { ...existing, ...s, email: em });
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("Notice loading /api/subscribers:", e);
+    }
+
+    // 4. Load from localStorage subscribers cache
     try {
       const storedSubs = localStorage.getItem(SUBSCRIBERS_STORAGE_KEY);
       if (storedSubs) {
@@ -351,14 +413,15 @@ export const AdminUsers: React.FC = () => {
           parsed.filter(isPlatformSubscriber).forEach((s: UserProfile) => {
             const em = (s.email || '').toLowerCase().trim();
             if (em && em !== currentEmail && !blacklist.has(em)) {
-              usersMap.set(em, { ...s, email: em });
+              const existing = usersMap.get(em);
+              usersMap.set(em, { ...existing, ...s, email: em });
             }
           });
         }
       }
     } catch {}
 
-    // 3. Concurrently fetch Firestore system integrations with timeout (non-blocking)
+    // 5. Concurrently fetch Firestore system integrations with timeout (non-blocking)
     try {
       const sysSnap = await fetchWithTimeout(getDoc(doc(db, 'system_integrations', 'authorized_subscribers')), 1500, null);
 
@@ -369,7 +432,7 @@ export const AdminUsers: React.FC = () => {
             const em = (s.email || '').toLowerCase().trim();
             if (em && em !== currentEmail && !blacklist.has(em)) {
               const existing = usersMap.get(em);
-              usersMap.set(em, { ...s, ...existing, email: em });
+              usersMap.set(em, { ...existing, ...s, email: em });
             }
           });
         }
@@ -378,7 +441,7 @@ export const AdminUsers: React.FC = () => {
       console.warn("Notice checking system_integrations:", e);
     }
 
-    // 4. Load from Firestore snapshot docs (collection 'users')
+    // 6. Load from Firestore snapshot docs (collection 'users')
     snapshotDocs.forEach((docSnap) => {
       const d = docSnap.data() as UserProfile;
       const em = (d.email || '').toLowerCase().trim();
@@ -394,7 +457,7 @@ export const AdminUsers: React.FC = () => {
     });
 
     const finalList = Array.from(usersMap.values()).filter(isPlatformSubscriber);
-    // Background persist to Firestore & LocalStorage
+    // Background persist to server API, Firestore & LocalStorage
     persistSubscribersAcrossAllLayers(finalList);
 
     return finalList;
@@ -799,7 +862,7 @@ export const AdminUsers: React.FC = () => {
       const snap = await getDocs(collection(db, 'users'));
       const aggregated = await aggregateAllSubscribers(snap.docs);
       setUsers(aggregated);
-      setRefreshSuccessMessage(`Todos os ${aggregated.filter(u => u.email?.toLowerCase().trim() !== 'lfquadrosdecorativos@gmail.com').length} assinantes autorizados foram sincronizados com sucesso!`);
+      setRefreshSuccessMessage(`Todos os ${aggregated.filter(u => !isPlatformAdminAccount(u.email)).length} assinantes autorizados foram sincronizados com sucesso!`);
       setTimeout(() => setRefreshSuccessMessage(null), 5000);
     } catch (e) {
       console.warn("Manual refresh notice:", e);
@@ -820,7 +883,7 @@ export const AdminUsers: React.FC = () => {
   }
 
   // Filter pending users for high-visibility approval section
-  const pendingRequests = users.filter(u => (u.status === 'pending' || u.status === 'pending_payment') && u.email?.toLowerCase().trim() !== 'lfquadrosdecorativos@gmail.com');
+  const pendingRequests = users.filter(u => (u.status === 'pending' || u.status === 'pending_payment') && !isPlatformAdminAccount(u.email));
 
   return (
     <div className="space-y-6">
@@ -845,7 +908,7 @@ export const AdminUsers: React.FC = () => {
             }`}
           >
             <UserCheck className="w-3.5 h-3.5" />
-            <span>Assinantes ({users.filter(u => u.email?.toLowerCase().trim() !== 'lfquadrosdecorativos@gmail.com').length})</span>
+            <span>Assinantes ({users.filter(u => !isPlatformAdminAccount(u.email)).length})</span>
           </button>
 
           <button
@@ -1164,7 +1227,7 @@ export const AdminUsers: React.FC = () => {
                     </td>
 
                      <td className="px-6 py-4">
-                      {u.email?.toLowerCase().trim() === 'lfquadrosdecorativos@gmail.com' ? (
+                      {isPlatformAdminAccount(u.email) ? (
                         <span className="text-xs text-amber-800 font-bold">Acesso Vitalício</span>
                       ) : (
                         <div>
@@ -1182,7 +1245,7 @@ export const AdminUsers: React.FC = () => {
 
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                        {u.email?.toLowerCase().trim() !== 'lfquadrosdecorativos@gmail.com' && (
+                        {!isPlatformAdminAccount(u.email) && (
                           <>
                             {/* Open Support Chat with Subscriber */}
                             <button

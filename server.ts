@@ -1387,6 +1387,130 @@ Retorne uma resposta JSON com o formato estrito:
     }
   });
 
+  // --- Canonical Persistent Subscribers API ---
+  const SUBSCRIBERS_FILE = path.join(process.cwd(), 'data', 'subscribers.json');
+
+  const getInitialSubscribers = () => [
+    {
+      uid: 'sub_lainepaulaarq',
+      email: 'lainepaulaarq@gmail.com',
+      name: 'Laíne Paula Loureiro (LP Arquitetura)',
+      role: 'user',
+      status: 'active',
+      subscriptionDueDate: '2027-09-21T00:00:00.000Z',
+      createdAt: '2026-01-15T10:00:00.000Z',
+      inviteCode: 'LAINEP',
+      notes: 'Arquiteta Titular / Assinante Oficial da Plataforma',
+    }
+  ];
+
+  const saveSubscribersToFile = (subscribers: any[]) => {
+    try {
+      const dataDir = path.join(process.cwd(), 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      fs.writeFileSync(SUBSCRIBERS_FILE, JSON.stringify(subscribers, null, 2), 'utf-8');
+    } catch (e) {
+      console.error("Error saving subscribers file:", e);
+    }
+  };
+
+  const loadSubscribersFromFile = (): any[] => {
+    try {
+      if (fs.existsSync(SUBSCRIBERS_FILE)) {
+        const raw = fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8');
+        const list = JSON.parse(raw);
+        if (Array.isArray(list) && list.length > 0) {
+          const hasLaine = list.some(u => u.email?.toLowerCase().trim() === 'lainepaulaarq@gmail.com');
+          if (!hasLaine) {
+            list.unshift({
+              uid: 'sub_lainepaulaarq',
+              email: 'lainepaulaarq@gmail.com',
+              name: 'Laíne Paula Loureiro (LP Arquitetura)',
+              role: 'user',
+              status: 'active',
+              subscriptionDueDate: '2027-09-21T00:00:00.000Z',
+              createdAt: '2026-01-15T10:00:00.000Z',
+              inviteCode: 'LAINEP',
+              notes: 'Arquiteta Titular / Assinante Oficial da Plataforma',
+            });
+            saveSubscribersToFile(list);
+          }
+          return list;
+        }
+      }
+    } catch (e) {
+      console.warn("Error reading subscribers file:", e);
+    }
+    const defaults = getInitialSubscribers();
+    saveSubscribersToFile(defaults);
+    return defaults;
+  };
+
+  // Endpoint to get all subscribers
+  app.get('/api/subscribers', (req, res) => {
+    const list = loadSubscribersFromFile();
+    return res.json({ subscribers: list });
+  });
+
+  // Endpoint to save or update subscriber(s)
+  app.post('/api/subscribers', express.json(), (req, res) => {
+    try {
+      const { subscriber, subscribers } = req.body;
+      let currentList = loadSubscribersFromFile();
+
+      if (Array.isArray(subscribers)) {
+        const map = new Map<string, any>();
+        subscribers.forEach(u => {
+          if (u?.email) map.set(u.email.toLowerCase().trim(), u);
+        });
+        if (!map.has('lainepaulaarq@gmail.com')) {
+          map.set('lainepaulaarq@gmail.com', {
+            uid: 'sub_lainepaulaarq',
+            email: 'lainepaulaarq@gmail.com',
+            name: 'Laíne Paula Loureiro (LP Arquitetura)',
+            role: 'user',
+            status: 'active',
+            subscriptionDueDate: '2027-09-21T00:00:00.000Z',
+            createdAt: '2026-01-15T10:00:00.000Z',
+            inviteCode: 'LAINEP',
+            notes: 'Arquiteta Titular / Assinante Oficial da Plataforma',
+          });
+        }
+        currentList = Array.from(map.values());
+      } else if (subscriber && subscriber.email) {
+        const cleanEmail = subscriber.email.toLowerCase().trim();
+        const idx = currentList.findIndex(u => u.email?.toLowerCase().trim() === cleanEmail);
+        if (idx >= 0) {
+          currentList[idx] = { ...currentList[idx], ...subscriber };
+        } else {
+          currentList.push(subscriber);
+        }
+      }
+
+      saveSubscribersToFile(currentList);
+      return res.json({ success: true, subscribers: currentList });
+    } catch (e: any) {
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Endpoint to delete a subscriber
+  app.post('/api/subscribers/delete', express.json(), (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ error: "E-mail is required" });
+      const cleanEmail = email.toLowerCase().trim();
+      let currentList = loadSubscribersFromFile();
+      currentList = currentList.filter(u => u.email?.toLowerCase().trim() !== cleanEmail);
+      saveSubscribersToFile(currentList);
+      return res.json({ success: true, subscribers: currentList });
+    } catch (e: any) {
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
   // Endpoint to send boleto details directly to client via Email
   app.post('/api/send-boleto-email', async (req, res) => {
     try {
