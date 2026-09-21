@@ -3318,6 +3318,30 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     let source = "google_grounding";
     let extractedQuery = (query || "").trim();
     let quotaExhausted = false;
+    let imageBase64Data = imageBase64;
+
+    // Detect if the query is actually an image URL pasted by the user
+    if (extractedQuery && (extractedQuery.startsWith("http://") || extractedQuery.startsWith("https://"))) {
+      try {
+        console.log("[Gemini Search] User pasted an image URL. Attempting to fetch it directly:", extractedQuery);
+        const imageResponse = await fetch(extractedQuery, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+          }
+        });
+        if (imageResponse.ok) {
+          const arrayBuffer = await imageResponse.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const mimeType = imageResponse.headers.get("content-type") || "image/jpeg";
+          imageBase64Data = `data:${mimeType};base64,${buffer.toString("base64")}`;
+          // Reset extractedQuery so that the vision model analyzes this image in Step 1!
+          extractedQuery = "";
+          console.log("[Gemini Search] Successfully fetched image from URL and converted to Base64. Triggering visual analysis.");
+        }
+      } catch (fetchErr: any) {
+        console.warn("[Gemini Search] Failed to fetch pasted image URL, falling back to treating it as search text.", fetchErr?.message || fetchErr);
+      }
+    }
 
     // Detect if an error is a 429 rate limit or quota exhaustion
     const checkQuotaError = (err: any) => {
@@ -3344,11 +3368,11 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       const ai = getGeminiClient();
 
       // Step 1: If we have an image and no text query, first analyze the image using Gemini to extract a highly descriptive text term
-      if (ai && imageBase64 && !extractedQuery) {
+      if (ai && imageBase64Data && !extractedQuery) {
         try {
-          const matches = imageBase64.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
+          const matches = imageBase64Data.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
           let mimeType = "image/jpeg";
-          let data = imageBase64;
+          let data = imageBase64Data;
           if (matches && matches.length === 3) {
             mimeType = matches[1];
             data = matches[2];
