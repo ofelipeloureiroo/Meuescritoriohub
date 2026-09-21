@@ -30,6 +30,7 @@ import {
   Zap,
   BarChart3,
   ListChecks,
+  ChevronRight,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { ArchitectureProject, ProjectInstallment, ProjectMilestone } from '../../types';
@@ -40,6 +41,7 @@ import { AddProjectModal } from '../modals/AddProjectModal';
 import { NewContractModal } from '../contracts/NewContractModal';
 import { ProjectDetailModal } from '../modals/ProjectDetailModal';
 import { ProjectWorkspaceView } from '../projects/ProjectWorkspaceView';
+import { ProjectTasksTab } from '../projects/ProjectTasksTab';
 import { OfficeClientPortalManagerModal } from '../portal/OfficeClientPortalManagerModal';
 
 interface ProjectsManagementTabProps {
@@ -52,6 +54,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
   const {
     architectProfile,
     architectureProjects,
+    updateArchitectureProject,
     projectInstallments,
     projectMilestones,
     actions,
@@ -64,7 +67,8 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
     bankAccounts,
   } = useFinance();
 
-  const [activeSubTab, setActiveSubTab] = useState<'visao_geral' | 'central_atrasos'>('visao_geral');
+  const [activeSubTab, setActiveSubTab] = useState<'visao_geral' | 'central_atrasos' | 'tarefas_escritorio'>('visao_geral');
+  const [selectedTaskProjectId, setSelectedTaskProjectId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -417,6 +421,18 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
               {projectsWithDelaysCount}
             </span>
           )}
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('tarefas_escritorio')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            activeSubTab === 'tarefas_escritorio'
+              ? 'bg-[var(--bg-card-secondary)] text-[var(--text-main)] border-[var(--border-color)] shadow-xs'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)] border-transparent'
+          }`}
+        >
+          <CheckSquare className="w-4 h-4 text-[#8c7456]" />
+          <span>Tarefas & Eficiência</span>
         </button>
       </div>
 
@@ -974,6 +990,71 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
           )}
         </div>
       )}
+
+      {/* SubTab Content: Tarefas & Eficiência */}
+      {activeSubTab === 'tarefas_escritorio' && (() => {
+        const effectiveProjectId = selectedTaskProjectId || architectureProjects[0]?.id;
+        const currentProject = architectureProjects.find((p) => p.id === effectiveProjectId) || architectureProjects[0];
+
+        if (!currentProject) {
+          return (
+            <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-12 text-center text-[var(--text-muted)]">
+              <CheckSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="text-base font-medium">Nenhum projeto cadastrado ainda para gerenciar tarefas.</p>
+              <button
+                onClick={handleOpenAddProject}
+                className="mt-4 px-4 py-2 bg-[#8c7456] text-white rounded-xl text-xs font-bold cursor-pointer hover:bg-[#786348]"
+              >
+                + Criar Primeiro Projeto
+              </button>
+            </div>
+          );
+        }
+
+        const projectStages = currentProject.stages && currentProject.stages.length > 0
+          ? currentProject.stages
+          : DEFAULT_PROJECT_STAGES;
+
+        return (
+          <div className="space-y-4">
+            {/* Project Picker Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                  Projeto Selecionado:
+                </span>
+                <select
+                  value={currentProject.id}
+                  onChange={(e) => setSelectedTaskProjectId(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border-color)] text-xs font-bold text-[var(--text-main)] cursor-pointer"
+                >
+                  {architectureProjects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title} — {p.clientName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={() => setSelectedProjectForDetail(currentProject)}
+                className="text-xs font-bold text-[#8c7456] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Abrir Workspace Completo do Projeto</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <ProjectTasksTab
+              project={currentProject}
+              stages={projectStages}
+              onUpdateStages={(newStages) => {
+                updateArchitectureProject(currentProject.id, { stages: newStages });
+              }}
+            />
+          </div>
+        );
+      })()}
 
       {/* Shared Modals */}
       <NewContractModal

@@ -48,6 +48,7 @@ import { useFinance } from '../../context/FinanceContext';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
 import { DEFAULT_PROJECT_STAGES } from '../../data/defaultProjectStages';
 import { MemorialDescritivoTab } from './MemorialDescritivoTab';
+import { ProjectTasksTab } from './ProjectTasksTab';
 
 interface ProjectWorkspaceViewProps {
   project: ArchitectureProject;
@@ -64,7 +65,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
   const { teamMembers } = useTeamMembers();
 
   // Active top-level tab
-  const [activeTab, setActiveTab] = useState<'cronograma' | 'board' | 'acoes' | 'financeiro' | 'detalhes' | 'memorial'>('cronograma');
+  const [activeTab, setActiveTab] = useState<'cronograma' | 'tarefas' | 'board' | 'acoes' | 'financeiro' | 'detalhes' | 'memorial'>('cronograma');
 
   // Delete project confirmation modal state
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -634,6 +635,18 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
           </button>
 
           <button
+            onClick={() => setActiveTab('tarefas')}
+            className={`flex items-center gap-2 pb-3 text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap border-b-2 ${
+              activeTab === 'tarefas'
+                ? 'border-[#8c7456] text-zinc-900 font-bold'
+                : 'border-transparent text-zinc-500 hover:text-zinc-800 font-medium'
+            }`}
+          >
+            <CheckSquare className="w-4 h-4 text-zinc-500" />
+            <span>Tarefas</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('board')}
             className={`flex items-center gap-2 pb-3 text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap border-b-2 ${
               activeTab === 'board'
@@ -1088,6 +1101,15 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {/* 5.1 TAB CONTENT: TAREFAS (Images 1, 2, 3, 4, 5, 6) */}
+      {activeTab === 'tarefas' && (
+        <ProjectTasksTab
+          project={project}
+          stages={stages}
+          onUpdateStages={handleUpdateStages}
+        />
       )}
 
       {/* 6. TAB CONTENT: BOARD (Image 2) */}

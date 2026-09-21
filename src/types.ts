@@ -325,6 +325,23 @@ export type ThemeColorId =
 
 export type BgThemeId = 'dark_warm' | 'dark_oled' | 'dark_graphite' | 'light_cream' | 'light_pure';
 
+export interface TaskEditLog {
+  id: string;
+  userId?: string;
+  userName: string;
+  userAvatar?: string;
+  timestamp: number;
+  action: 'created' | 'edited' | 'status_changed' | 'checklist_updated' | 'timer_added';
+  description: string;
+  durationMinutes?: number;
+}
+
+export interface TaskChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 export interface ProjectTaskItem {
   id: string;
   name: string;
@@ -332,8 +349,16 @@ export interface ProjectTaskItem {
   duration?: string;
   startDatePlanned?: string;
   endDatePlanned?: string;
+  startTime?: string;
+  endTime?: string;
+  estimatedHours?: number;
+  realizedHours?: number;
   responsible?: string;
+  responsibleAvatar?: string;
   predecessor?: string;
+  linkedTaskId?: string;
+  checklist?: TaskChecklistItem[];
+  editHistory?: TaskEditLog[];
   hasAlert?: boolean;
   isPromoted?: boolean;
   actionId?: string;
