@@ -1639,31 +1639,40 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
               cleanIncoming.forEach((p: any) => {
                 if (p && p.id && !isDemoProject(p)) {
-                  const existing = map.get(p.id);
-                  map.set(p.id, existing ? { ...existing, ...p } : p);
+                  map.set(p.id, p);
                 }
               });
 
               const merged = Array.from(map.values());
-              safeSetItem('architecture_projects', merged);
+              // Remove projects not present in incoming data if they were marked as deleted locally
+              // This is a simplified fix; ideally Firestore should manage the source of truth better.
+              // We only remove if the project was NOT in cleanIncoming but was present in local map
+              const finalMerged = merged.filter(p => {
+                // If it was in incoming, keep it
+                const inIncoming = cleanIncoming.some((inc: any) => inc.id === p.id);
+                if (inIncoming) return true;
+                // If not in incoming, it means it was deleted on the server, so we should remove it locally
+                return false;
+              });
+
+              safeSetItem('architecture_projects', finalMerged);
 
               if (targetUid) {
-                try { localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(merged)); } catch {}
+                try { localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(finalMerged)); } catch {}
               }
               if (isOwner) {
-                try { localStorage.setItem('office_v2_lfquadrosdecorativos_architecture_projects', JSON.stringify(merged)); } catch {}
-                try { localStorage.setItem('office_architecture_projects', JSON.stringify(merged)); } catch {}
+                try { localStorage.setItem('office_v2_lfquadrosdecorativos_architecture_projects', JSON.stringify(finalMerged)); } catch {}
+                try { localStorage.setItem('office_architecture_projects', JSON.stringify(finalMerged)); } catch {}
               }
 
-              if (targetUid && merged.length > cleanIncoming.length) {
-                const workspaceDocRef = doc(db, 'users', primaryUid, 'data', 'workspace');
-                setDoc(workspaceDocRef, {
-                  architectureProjects: merged,
-                  updatedAt: new Date().toISOString()
-                }, { merge: true }).catch(console.error);
-              }
+              // Always sync back to Firestore to ensure consistency
+              const workspaceDocRef = doc(db, 'users', primaryUid, 'data', 'workspace');
+              setDoc(workspaceDocRef, {
+                architectureProjects: finalMerged,
+                updatedAt: new Date().toISOString()
+              }, { merge: true }).catch(console.error);
 
-              return merged;
+              return finalMerged;
             });
           }
           if (Array.isArray(data.projectInstallments)) {
