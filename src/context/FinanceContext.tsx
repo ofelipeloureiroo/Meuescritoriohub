@@ -51,7 +51,7 @@ import {
 import { applyThemeToDocument, NICHES, THEMES } from '../utils/theme';
 import { getNicheSampleProjects } from '../utils/nicheSampleData';
 import { DEFAULT_PROJECT_TEMPLATES, normalizeTemplateStages, convertTemplateToWorkflowStages } from '../data/defaultProjectTemplates';
-import { deleteClientPortalsForClient, buildClientPortalAccess, saveClientPortalAccess } from '../services/clientPortalService';
+import { deleteClientPortalsForClient, deleteProjectFromPortals, buildClientPortalAccess, saveClientPortalAccess } from '../services/clientPortalService';
 import { deleteGoogleEvent, deleteGoogleTask, addDeletedGcalId, addDeletedGtaskId } from '../services/googleCalendarService';
 
 interface FinanceContextType {
@@ -354,6 +354,7 @@ export function recoverAllCustomTemplates(targetUid?: string, userEmail?: string
 
 export function recoverProjectsForUser(targetUid?: string, userEmail?: string, profileName?: string): ArchitectureProject[] {
   const recoveredProjectsMap = new Map<string, ArchitectureProject>();
+  const tombstones = getDeletedProjectsTombstones();
   const cleanEmail = (userEmail || '').toLowerCase().trim();
   const isLaine = Boolean(
     cleanEmail.includes('laine') ||
@@ -368,7 +369,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
       const parsed = JSON.parse(savedUserProjects);
       if (Array.isArray(parsed)) {
         parsed.forEach((p: any) => {
-          if (p && p.id && !isDemoProject(p) && !p.deletedAt) {
+          if (p && p.id && !isDemoProject(p) && !p.deletedAt && !isProjectTombstoned(p, tombstones)) {
             recoveredProjectsMap.set(p.id, p);
           }
         });
@@ -386,7 +387,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
             parsed.forEach((p: any) => {
-              if (p && p.id && !isDemoProject(p) && !p.deletedAt && !recoveredProjectsMap.has(p.id)) {
+              if (p && p.id && !isDemoProject(p) && !p.deletedAt && !isProjectTombstoned(p, tombstones) && !recoveredProjectsMap.has(p.id)) {
                 recoveredProjectsMap.set(p.id, p);
               }
             });
@@ -420,7 +421,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
             parsed.forEach((p: any) => {
-              if (p && p.id && !isDemoProject(p) && !p.deletedAt) {
+              if (p && p.id && !isDemoProject(p) && !p.deletedAt && !isProjectTombstoned(p, tombstones)) {
                 if (isLaine || isOwnerUid) {
                   if (!recoveredProjectsMap.has(p.id)) {
                     recoveredProjectsMap.set(p.id, p);
@@ -444,7 +445,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
               const parsed = JSON.parse(raw);
               if (Array.isArray(parsed)) {
                 parsed.forEach((p: any) => {
-                  if (p && p.id && !isDemoProject(p) && !p.deletedAt) {
+                  if (p && p.id && !isDemoProject(p) && !p.deletedAt && !isProjectTombstoned(p, tombstones)) {
                     if (isLaine || isOwnerUid) {
                       if (!recoveredProjectsMap.has(p.id)) {
                         recoveredProjectsMap.set(p.id, p);
@@ -498,6 +499,30 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
     }
   }
   return result;
+}
+
+export interface TombstonedProject {
+  id: string;
+  title?: string;
+}
+
+export function getDeletedProjectsTombstones(): TombstonedProject[] {
+  try {
+    const raw = localStorage.getItem('office_deleted_projects_v1');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function isProjectTombstoned(candidate: { id?: string }, tombstones?: TombstonedProject[]): boolean {
+  const list = tombstones || getDeletedProjectsTombstones();
+  if (list.length === 0) return false;
+
+  const candidateId = candidate.id;
+  if (!candidateId) return false;
+
+  return list.some((t) => t.id === candidateId);
 }
 
 export interface TombstonedClient {
@@ -1626,45 +1651,44 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setFreelanceProjects(data.freelanceProjects.filter((p: any) => !isDemoProject(p)));
           }
           if (Array.isArray(data.architectureProjects)) {
-            const cleanIncoming = data.architectureProjects.filter((p: any) => !isDemoProject(p));
+            const tombstones = getDeletedProjectsTombstones();
+            const cleanIncoming = data.architectureProjects.filter((p: any) => !isDemoProject(p) && !p.deletedAt && !isProjectTombstoned(p, tombstones));
             setArchitectureProjects((prev) => {
               const map = new Map<string, ArchitectureProject>();
 
               const localRecovered = recoverProjectsForUser(targetUid, userEmail, architectProfile?.name);
               [...prev, ...localRecovered].forEach((p) => {
-                if (p && p.id && !isDemoProject(p)) {
+                if (p && p.id && !isDemoProject(p) && !p.deletedAt && !isProjectTombstoned(p, tombstones)) {
                   map.set(p.id, p);
                 }
               });
 
               cleanIncoming.forEach((p: any) => {
-                if (p && p.id && !isDemoProject(p)) {
+                if (p && p.id && !isDemoProject(p) && !p.deletedAt && !isProjectTombstoned(p, tombstones)) {
                   map.set(p.id, p);
                 }
               });
 
-              const merged = Array.from(map.values());
-              // Keep only projects that are not marked as deleted
-              const finalMerged = merged.filter(p => !p.deletedAt);
+              const merged = Array.from(map.values()).filter(p => !p.deletedAt && !isProjectTombstoned(p, tombstones));
 
-              safeSetItem('architecture_projects', finalMerged);
+              safeSetItem('architecture_projects', merged);
 
               if (targetUid) {
-                try { localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(finalMerged)); } catch {}
+                try { localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(merged)); } catch {}
               }
               if (isOwner) {
-                try { localStorage.setItem('office_v2_lfquadrosdecorativos_architecture_projects', JSON.stringify(finalMerged)); } catch {}
-                try { localStorage.setItem('office_architecture_projects', JSON.stringify(finalMerged)); } catch {}
+                try { localStorage.setItem('office_v2_lfquadrosdecorativos_architecture_projects', JSON.stringify(merged)); } catch {}
+                try { localStorage.setItem('office_architecture_projects', JSON.stringify(merged)); } catch {}
               }
 
               // Always sync back to Firestore to ensure consistency
               const workspaceDocRef = doc(db, 'users', primaryUid, 'data', 'workspace');
               setDoc(workspaceDocRef, {
-                architectureProjects: finalMerged,
+                architectureProjects: merged,
                 updatedAt: new Date().toISOString()
               }, { merge: true }).catch(console.error);
 
-              return finalMerged;
+              return merged;
             });
           }
           if (Array.isArray(data.projectInstallments)) {
@@ -2588,26 +2612,26 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Helper to persist architecture projects across all storage layers (State, User Storage, Owner Mirror, Cloud Firestore)
   const persistArchitectureProjects = (updatedArch: ArchitectureProject[], extraPayload: Record<string, any> = {}) => {
-    console.log('Persisting architecture projects, count:', updatedArch.length);
-    setArchitectureProjects(updatedArch);
-    safeSetItem('architecture_projects', updatedArch);
+    const tombstones = getDeletedProjectsTombstones();
+    const activeProjects = updatedArch.filter(p => p && p.id && !p.deletedAt && !isProjectTombstoned(p, tombstones));
+
+    console.log('Persisting active architecture projects, count:', activeProjects.length);
+    setArchitectureProjects(activeProjects);
+    safeSetItem('architecture_projects', activeProjects);
 
     try {
       if (targetUid) {
-        localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(updatedArch));
+        localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(activeProjects));
       }
-      localStorage.setItem('office_v2_lfquadrosdecorativos_architecture_projects', JSON.stringify(updatedArch));
-      localStorage.setItem('office_architecture_projects', JSON.stringify(updatedArch));
-      localStorage.setItem('architecture_projects', JSON.stringify(updatedArch));
+      localStorage.setItem('office_v2_lfquadrosdecorativos_architecture_projects', JSON.stringify(activeProjects));
+      localStorage.setItem('office_architecture_projects', JSON.stringify(activeProjects));
+      localStorage.setItem('architecture_projects', JSON.stringify(activeProjects));
     } catch (e) {
       console.warn('LocalStorage architecture_projects write warning:', e);
     }
 
     const activeUid = targetUid || (isOwner ? CANONICAL_OWNER_UID : (user?.uid || 'guest'));
     if (activeUid) {
-      // Filter out deleted projects before syncing
-      const activeProjects = updatedArch.filter(p => !p.deletedAt);
-      
       // Strip any undefined fields so Firestore setDoc never throws unsupported field value error
       const cleanPayload = JSON.parse(JSON.stringify({
         architectureProjects: activeProjects,
@@ -2633,9 +2657,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Architecture Projects & Portfolio Actions
   const addArchitectureProject = (projectData: Omit<ArchitectureProject, 'id' | 'createdAt'> & { id?: string; createdAt?: string }) => {
     recordLocalMutation();
+    const targetId = projectData.id || `proj-arch-${Date.now()}`;
+
+    // Remove from tombstone list if re-adding or editing
+    try {
+      const tombstones = getDeletedProjectsTombstones().filter(t => t.id !== targetId);
+      localStorage.setItem('office_deleted_projects_v1', JSON.stringify(tombstones));
+    } catch {}
+
     const newProj: ArchitectureProject = {
       ...projectData,
-      id: projectData.id || `proj-arch-${Date.now()}`,
+      id: targetId,
       createdAt: projectData.createdAt || new Date().toISOString().split('T')[0],
     };
     const updatedArch = [newProj, ...architectureProjects.filter((p) => p.id !== newProj.id)];
@@ -2675,10 +2707,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deleteArchitectureProject = (id: string) => {
     console.log('Attempting to delete project:', id);
     recordLocalMutation();
-    const updatedArchProjects = architectureProjects.map((p) => 
-      p.id === id ? { ...p, deletedAt: new Date().toISOString() } : p
-    );
-    console.log('Projects marked as deleted:', id);
+
+    // 0. Record in tombstone list
+    try {
+      const tombstones = getDeletedProjectsTombstones();
+      if (!tombstones.some(t => t.id === id)) {
+        tombstones.push({ id });
+      }
+      localStorage.setItem('office_deleted_projects_v1', JSON.stringify(tombstones));
+    } catch {}
+
+    // 1. Filter out deleted project directly from state & storage
+    const updatedArchProjects = architectureProjects.filter((p) => p.id !== id);
+    console.log('Projects count after deletion:', updatedArchProjects.length);
 
     const updatedMilestones = projectMilestones.filter((m) => m.projectId !== id);
     setProjectMilestones(updatedMilestones);
@@ -2699,7 +2740,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Update projects count for remaining clients
     const updatedClients = clients.map((c) => {
       const remainingProjects = updatedArchProjects.filter(
-        (p) => (p.clientId === c.id || (p.clientName && p.clientName.trim().toLowerCase() === c.name.trim().toLowerCase())) && !p.deletedAt
+        (p) => (p.clientId === c.id || (p.clientName && p.clientName.trim().toLowerCase() === c.name.trim().toLowerCase()))
       );
       return {
         ...c,
@@ -2709,6 +2750,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setClients(updatedClients);
     safeSetItem('clients', updatedClients);
 
+    // 2. Remove project from client portals in Firestore & localStorage
+    deleteProjectFromPortals(id).catch(console.error);
+
+    // 3. Persist remaining projects
     persistArchitectureProjects(updatedArchProjects, {
       clients: updatedClients,
       projectMilestones: updatedMilestones,

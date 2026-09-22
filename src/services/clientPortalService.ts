@@ -1255,6 +1255,65 @@ export async function deleteClientPortalsForClient(clientId: string, clientName?
 }
 
 /**
+ * Permanently removes a project from all client portals (both local storage & Firestore).
+ */
+export async function deleteProjectFromPortals(projectId: string): Promise<void> {
+  try {
+    // 1. Local portals
+    const localPortals = getLocalPortals();
+    let localChanged = false;
+
+    const updatedLocalPortals = localPortals.map(portal => {
+      if (portal.projects && portal.projects.some(p => p.id === projectId)) {
+        localChanged = true;
+        return {
+          ...portal,
+          projects: portal.projects.filter(p => p.id !== projectId),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return portal;
+    }).filter(portal => {
+      if (portal.id === `portal-${projectId}` || portal.id === `demo-portal-${projectId}`) {
+        localChanged = true;
+        return false;
+      }
+      return true;
+    });
+
+    if (localChanged) {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_PORTALS_KEY, JSON.stringify(updatedLocalPortals));
+        localStorage.setItem('office_client_portals', JSON.stringify(updatedLocalPortals));
+      } catch {}
+    }
+
+    // 2. Project-specific portals
+    await deleteClientPortalAccess(`portal-${projectId}`);
+    await deleteClientPortalAccess(`demo-portal-${projectId}`);
+
+    // 3. Firestore update
+    const allPortalsSnap = await getDocs(collection(db, 'clientPortals')).catch(() => null);
+    if (allPortalsSnap && !allPortalsSnap.empty) {
+      for (const docSnap of allPortalsSnap.docs) {
+        const portal = docSnap.data() as ClientPortalAccess;
+        if (portal.projects && portal.projects.some(p => p.id === projectId)) {
+          const newProjects = portal.projects.filter(p => p.id !== projectId);
+          await updateDoc(docSnap.ref, {
+            projects: newProjects,
+            updatedAt: new Date().toISOString()
+          }).catch(() => {});
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error deleting project from portals:', projectId, err);
+  } finally {
+    window.dispatchEvent(new CustomEvent('client_portals_updated', { detail: { deletedProjectId: projectId } }));
+  }
+}
+
+/**
  * High-fidelity sample client portal for immediate preview & demonstration.
  */
 export const SAMPLE_CLIENT_PORTAL: ClientPortalAccess = {
