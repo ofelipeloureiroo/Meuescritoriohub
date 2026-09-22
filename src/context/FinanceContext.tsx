@@ -2719,15 +2719,29 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const updateArchitectureProject = (id: string, updatedFields: Partial<ArchitectureProject>) => {
     recordLocalMutation();
     const now = new Date().toISOString();
-    const updatedArch = architectureProjects.map((p) => (p.id === id ? { ...p, ...updatedFields, updatedAt: now } : p));
-    persistArchitectureProjects(updatedArch);
+    const cleanId = (id || '').trim();
+    let foundMatch = false;
+
+    const updatedArch = architectureProjects.map((p) => {
+      if (p.id === cleanId || p.id.trim() === cleanId || (p.title && updatedFields.title && p.title.trim().toLowerCase() === updatedFields.title.trim().toLowerCase())) {
+        foundMatch = true;
+        return { ...p, ...updatedFields, updatedAt: now };
+      }
+      return p;
+    });
+
+    const finalArch = foundMatch
+      ? updatedArch
+      : [...architectureProjects, { id: cleanId, title: 'Projeto', clientName: 'Cliente', status: 'estudo_preliminar', coverImage: '', images: [], ...updatedFields, updatedAt: now } as ArchitectureProject];
+
+    persistArchitectureProjects(finalArch);
 
     // Sync portal if project is linked to a client
-    const updatedProj = updatedArch.find(p => p.id === id);
+    const updatedProj = finalArch.find(p => p.id === cleanId || p.id.trim() === cleanId);
     if (updatedProj && updatedProj.clientId) {
       const client = clients.find(c => c.id === updatedProj.clientId);
       if (client) {
-        const portal = buildClientPortalAccess(client, updatedArch, architectProfile, null, projectMilestones);
+        const portal = buildClientPortalAccess(client, finalArch, architectProfile, null, projectMilestones);
         saveClientPortalAccess(portal).catch(console.error);
       }
     }

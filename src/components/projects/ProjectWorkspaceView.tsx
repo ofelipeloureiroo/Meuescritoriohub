@@ -62,8 +62,13 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
   onBack,
   onEdit,
 }) => {
-  const { updateArchitectureProject, deleteArchitectureProject, addAppAction, actions, officeSettings } = useFinance();
+  const { architectureProjects, updateArchitectureProject, deleteArchitectureProject, addAppAction, actions, officeSettings } = useFinance();
   const { teamMembers } = useTeamMembers();
+
+  // Always resolve the live project from FinanceContext store
+  const liveProject = architectureProjects.find(
+    (p) => p.id === project.id || (p.id && project.id && p.id.trim() === project.id.trim()) || (p.title && project.title && p.title === project.title)
+  ) || project;
 
   // Active top-level tab
   const [activeTab, setActiveTab] = useState<'cronograma' | 'tarefas' | 'board' | 'acoes' | 'financeiro' | 'detalhes' | 'memorial'>('cronograma');
@@ -77,7 +82,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
     : DEFAULT_PROJECT_TEMPLATES;
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [selectedTemplateToApply, setSelectedTemplateToApply] = useState<string>(
-    availableTemplates[0]?.name || ''
+    liveProject.templateId || liveProject.templateName || availableTemplates[0]?.id || ''
   );
 
   // Cronograma view mode: 'lista' | 'timeline'
@@ -89,18 +94,27 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
 
   // Initialize or maintain local stages
   const [stages, setStages] = useState<ProjectWorkflowStage[]>(() => {
-    if (project.stages && project.stages.length > 0) {
-      return project.stages;
+    if (liveProject.stages && liveProject.stages.length > 0) {
+      return liveProject.stages;
+    }
+    if (liveProject.templateId || liveProject.templateName) {
+      const foundTpl = availableTemplates.find(
+        (t) => t.id === liveProject.templateId || t.name === liveProject.templateName
+      );
+      if (foundTpl) {
+        return convertTemplateToWorkflowStages(foundTpl, liveProject.startDate);
+      }
     }
     return DEFAULT_PROJECT_STAGES;
   });
 
-  // Sync stages when project changes
+  // Sync stages when liveProject stages change in store
+  const stagesFingerprint = JSON.stringify(liveProject.stages || []);
   React.useEffect(() => {
-    if (project.stages && project.stages.length > 0) {
-      setStages(project.stages);
+    if (liveProject.stages && liveProject.stages.length > 0) {
+      setStages(liveProject.stages);
     }
-  }, [project.id, project.stages]);
+  }, [liveProject.id, stagesFingerprint]);
 
   // Real-time active office timer state for cronograma
   const [activeOfficeTimer, setActiveOfficeTimer] = useState<any>(null);
@@ -262,7 +276,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
   // Save changes to project in context
   const handleUpdateStages = (newStages: ProjectWorkflowStage[]) => {
     setStages(newStages);
-    updateArchitectureProject(project.id, {
+    updateArchitectureProject(liveProject.id, {
       stages: newStages,
     });
   };
@@ -336,16 +350,16 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
   // Apply chosen template to current project
   const handleApplyTemplate = (templateNameOrId: string) => {
     const found = availableTemplates.find(
-      (t) => t.name === templateNameOrId || t.id === templateNameOrId
+      (t) => t.id === templateNameOrId || t.name === templateNameOrId
     );
     if (!found) return;
 
     const newStages = convertTemplateToWorkflowStages(
       found,
-      project.startDate || project.deliveryDate || undefined
+      liveProject.startDate || liveProject.deliveryDate || undefined
     );
     setStages(newStages);
-    updateArchitectureProject(project.id, {
+    updateArchitectureProject(liveProject.id, {
       stages: newStages,
       templateId: found.id,
       templateName: found.name,
@@ -2449,7 +2463,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                 return (
                   <div
                     key={tpl.id}
-                    onClick={() => setSelectedTemplateToApply(tpl.name)}
+                    onClick={() => setSelectedTemplateToApply(tpl.id)}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer ${
                       isSelected
                         ? 'border-[#8c7456] bg-[#faedd9]/30 ring-2 ring-[#8c7456]/20'

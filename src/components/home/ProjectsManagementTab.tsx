@@ -66,6 +66,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
     receiveInstallmentPayment,
     deleteProjectInstallment,
     bankAccounts,
+    officeSettings,
   } = useFinance();
 
   const [activeSubTab, setActiveSubTab] = useState<'visao_geral' | 'central_atrasos' | 'tarefas_escritorio'>('visao_geral');
@@ -511,10 +512,13 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
             const projectInsts = projectInstallments.filter(i => i.projectId === p.id);
             
             // Calculate progress percentage based on schedule/cronograma tasks + milestones
+            const allAvailableTemplates = (officeSettings?.projectTemplates && officeSettings.projectTemplates.length > 0)
+              ? officeSettings.projectTemplates
+              : DEFAULT_PROJECT_TEMPLATES;
             const pStages = (p.stages && p.stages.length > 0) 
               ? p.stages 
-              : (p.templateId 
-                  ? (convertTemplateToWorkflowStages(DEFAULT_PROJECT_TEMPLATES.find(t => t.id === p.templateId) || DEFAULT_PROJECT_TEMPLATES[0], p.startDate))
+              : ((p.templateId || p.templateName)
+                  ? (convertTemplateToWorkflowStages(allAvailableTemplates.find(t => t.id === p.templateId || t.name === p.templateName) || allAvailableTemplates[0], p.startDate))
                   : DEFAULT_PROJECT_STAGES);
             const stageTasks = pStages.flatMap(s => s.tasks || []);
             const stageTasksTotal = stageTasks.length;
