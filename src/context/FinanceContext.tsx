@@ -1665,7 +1665,25 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
               cleanIncoming.forEach((p: any) => {
                 if (p && p.id && !isDemoProject(p) && !p.deletedAt && !isProjectTombstoned(p, tombstones)) {
-                  map.set(p.id, p);
+                  const existing = map.get(p.id);
+                  if (existing) {
+                    const isRecentLocalMutation = Date.now() - lastLocalMutationRef.current < 20000;
+                    const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+                    const incomingTime = p.updatedAt ? new Date(p.updatedAt).getTime() : 0;
+
+                    if (isRecentLocalMutation || existingTime > incomingTime) {
+                      // Local edits take priority when fresh or newer
+                      map.set(p.id, { ...p, ...existing });
+                    } else {
+                      // Incoming Firestore document is newer, but preserve existing stages if incoming stages are missing/empty
+                      const mergedStages = (p.stages && p.stages.length > 0)
+                        ? p.stages
+                        : (existing.stages && existing.stages.length > 0 ? existing.stages : p.stages);
+                      map.set(p.id, { ...existing, ...p, stages: mergedStages });
+                    }
+                  } else {
+                    map.set(p.id, p);
+                  }
                 }
               });
 
@@ -2700,8 +2718,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateArchitectureProject = (id: string, updatedFields: Partial<ArchitectureProject>) => {
     recordLocalMutation();
-    const updatedArch = architectureProjects.map((p) => (p.id === id ? { ...p, ...updatedFields } : p));
+    const now = new Date().toISOString();
+    const updatedArch = architectureProjects.map((p) => (p.id === id ? { ...p, ...updatedFields, updatedAt: now } : p));
     persistArchitectureProjects(updatedArch);
+
+    // Sync portal if project is linked to a client
+    const updatedProj = updatedArch.find(p => p.id === id);
+    if (updatedProj && updatedProj.clientId) {
+      const client = clients.find(c => c.id === updatedProj.clientId);
+      if (client) {
+        const portal = buildClientPortalAccess(client, updatedArch, architectProfile, null, projectMilestones);
+        saveClientPortalAccess(portal).catch(console.error);
+      }
+    }
   };
 
   const deleteArchitectureProject = (id: string) => {

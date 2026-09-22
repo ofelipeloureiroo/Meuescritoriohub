@@ -637,7 +637,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                 {/* Status Timeline representation based on chosen template / project stages */}
                 <div className="space-y-1 pt-1">
                   <div className="flex items-center justify-between text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                    <span>Etapas do Template ({pStages.length})</span>
+                    <span>Etapas do Projeto ({pStages.length})</span>
                     <span>
                       {pStages.filter(s => s.status === 'completed' || (s.tasks && s.tasks.length > 0 && s.tasks.every(t => t.status === 'completed'))).length}/{pStages.length} Concluídas
                     </span>

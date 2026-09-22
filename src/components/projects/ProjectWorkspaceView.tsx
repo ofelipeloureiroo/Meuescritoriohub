@@ -344,7 +344,12 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
       found,
       project.startDate || project.deliveryDate || undefined
     );
-    handleUpdateStages(newStages);
+    setStages(newStages);
+    updateArchitectureProject(project.id, {
+      stages: newStages,
+      templateId: found.id,
+      templateName: found.name,
+    });
     setIsTemplateModalOpen(false);
   };
 

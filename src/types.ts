@@ -420,6 +420,9 @@ export interface ArchitectureProject {
   featured?: boolean;
   tags?: string[];
   createdAt?: string;
+  updatedAt?: string;
+  templateId?: string;
+  templateName?: string;
   reports?: ConstructionReport[];
   color?: string;
   projectType?: string;
