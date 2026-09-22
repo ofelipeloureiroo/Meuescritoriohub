@@ -488,15 +488,9 @@ export function isClientTombstoned(candidate: { id?: string; name?: string; emai
   if (list.length === 0) return false;
 
   const candidateId = candidate.id;
-  const candidateNameNorm = candidate.name?.trim().toLowerCase();
-  const candidateEmailNorm = candidate.email?.trim().toLowerCase();
+  if (!candidateId) return false;
 
-  return list.some((t) => {
-    if (candidateId && t.id === candidateId) return true;
-    if (candidateEmailNorm && t.email && t.email.trim().toLowerCase() === candidateEmailNorm) return true;
-    if (candidateNameNorm && t.name && t.name.trim().toLowerCase() === candidateNameNorm) return true;
-    return false;
-  });
+  return list.some((t) => t.id === candidateId);
 }
 
 export function recoverClientsForUser(targetUid?: string, userEmail?: string): Client[] {
@@ -2315,6 +2309,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     recordLocalMutation();
     const safeState = clientData.state ? clientData.state.toLowerCase() : 'br';
     const clientId = clientData.id || `cli-${safeState}-${Date.now()}`;
+
+    // Ensure new client ID is not present in tombstone list
+    try {
+      const tombstones = getDeletedClientsTombstones().filter((t) => t.id !== clientId);
+      localStorage.setItem('office_deleted_clients_v1', JSON.stringify(tombstones));
+    } catch {}
+
     const newClient: Client = {
       ...clientData,
       id: clientId,
