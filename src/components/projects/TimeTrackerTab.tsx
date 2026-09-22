@@ -45,7 +45,7 @@ interface TimeEntry {
 }
 
 export const TimeTrackerTab: React.FC = () => {
-  const { ongoingArchitectureProjects } = useFinance();
+  const { ongoingArchitectureProjects, updateArchitectureProject, addAppAction } = useFinance();
   const { user, profile } = useAuth();
 
   const currentUserName = profile?.name || user?.email || 'Arquiteto(a) Responsável';
@@ -211,6 +211,46 @@ export const TimeTrackerTab: React.FC = () => {
     };
 
     setTimeEntries([newEntry, ...timeEntries]);
+
+    // LINK TO SCHEDULE & TASKS (Bidirectional synchronization)
+    if (selectedProjectId && selectedProject) {
+      try {
+        // 1. Add action to Central de Ações / Tasks
+        addAppAction({
+          title: `Apontamento: ${selectedProject.title} (${selectedStageName || 'Geral'})`,
+          description: `${description.trim() || 'Trabalho no projeto'} • Duração: ${formatTime(secondsElapsed)} • Resp: ${currentUserName}`,
+          category: 'Projeto',
+          dueDate: todayStr,
+          status: 'completed',
+          priority: 'media',
+          relatedId: selectedProjectId,
+          origin: 'Projeto'
+        });
+      } catch (e) {
+        console.warn("Error syncing time entry to action center:", e);
+      }
+
+      // 2. Update project schedule stage & tasks
+      if (selectedProject.stages && selectedProject.stages.length > 0) {
+        const updatedStages = selectedProject.stages.map((stage) => {
+          if (stage.name === selectedStageName || (selectedStageName && stage.name.toLowerCase().includes(selectedStageName.toLowerCase()))) {
+            return {
+              ...stage,
+              status: 'in_progress' as const,
+              tasks: stage.tasks
+                ? stage.tasks.map((t, idx) => (idx === 0 ? { ...t, status: 'completed' as const } : t))
+                : []
+            };
+          }
+          return stage;
+        });
+
+        updateArchitectureProject(selectedProjectId, {
+          stages: updatedStages
+        });
+      }
+    }
+
     setIsRunning(false);
     setSecondsElapsed(0);
     setDescription('');
@@ -252,7 +292,7 @@ export const TimeTrackerTab: React.FC = () => {
       if (reportDateFilter === 'today') return e.date === todayStr;
       if (reportDateFilter === 'week') return e.date >= sevenDaysAgo;
       if (reportDateFilter === 'month') return e.date >= thirtyDaysAgo;
-      return true; // 'all'
+      return true;
     });
   }, [timeEntries, reportDateFilter]);
 
@@ -261,7 +301,6 @@ export const TimeTrackerTab: React.FC = () => {
     let billableSeconds = filteredReportEntries.filter((e) => e.billable).reduce((acc, curr) => acc + curr.durationSeconds, 0);
     let totalAmount = filteredReportEntries.filter((e) => e.billable).reduce((acc, curr) => acc + (curr.durationSeconds / 3600) * curr.hourlyRate, 0);
 
-    // Group by project
     const byProject: Record<string, { title: string; client: string; seconds: number; amount: number }> = {};
     filteredReportEntries.forEach((e) => {
       if (!byProject[e.projectId]) {
@@ -273,7 +312,6 @@ export const TimeTrackerTab: React.FC = () => {
       }
     });
 
-    // Group by responsible person
     const byPerson: Record<string, { seconds: number; count: number }> = {};
     filteredReportEntries.forEach((e) => {
       const person = e.responsibleName || 'Arquiteto(a)';
@@ -295,13 +333,13 @@ export const TimeTrackerTab: React.FC = () => {
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full bg-[#faf7f2] border border-[#e2d2bd] text-[#8c7456] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
               <Timer className="w-3.5 h-3.5 text-[#8c7456]" />
-              Produtividade & Faturamento
+              Produtividade & Cronograma Sincronizado
             </span>
             <span className="text-xs text-zinc-400 font-medium">• Responsável: <strong className="text-zinc-700">{currentUserName}</strong></span>
           </div>
-          <h1 className="text-2xl font-serif font-extrabold text-zinc-900">Rastreador de Tempo & Cronograma</h1>
+          <h1 className="text-2xl font-serif font-extrabold text-zinc-900">Rastreador de Tempo & Tarefas</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registre horas trabalhadas por projeto, acompanhe cronogramas e gere relatórios detalhados de faturamento.
+            Apontamentos iniciados aqui são sincronizados automaticamente com o cronograma, tarefas e central de ações do projeto.
           </p>
         </div>
 
@@ -409,7 +447,7 @@ export const TimeTrackerTab: React.FC = () => {
             type="button"
             onClick={() => {
               if (!selectedProjectId) {
-                alert('Selecione um projeto primeiro para escolher a etapa.');
+                alert('Selecione um projeto primeiro para escolher a etapa do cronograma.');
                 return;
               }
               setIsStageDropdownOpen(!isStageDropdownOpen);
@@ -420,7 +458,7 @@ export const TimeTrackerTab: React.FC = () => {
             <div className="flex items-center gap-2 truncate">
               <CheckCircle2 className="w-4 h-4 text-[#8c7456] shrink-0" />
               <span className="truncate">
-                {selectedStageName ? selectedStageName : 'Selecionar Etapa...'}
+                {selectedStageName ? selectedStageName : 'Selecionar Etapa do Cronograma...'}
               </span>
             </div>
             <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0" />
@@ -451,7 +489,7 @@ export const TimeTrackerTab: React.FC = () => {
           )}
         </div>
 
-        {/* Responsible Person badge (Same as login) */}
+        {/* Responsible Person badge */}
         <div className="hidden xl:flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-600">
           <User className="w-3.5 h-3.5 text-[#8c7456]" />
           <span className="font-medium truncate max-w-[130px]" title={currentUserName}>
@@ -512,7 +550,7 @@ export const TimeTrackerTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Navigation Sub-Tabs: Histórico de Registros | Relatórios & Cronograma */}
+      {/* Navigation Sub-Tabs */}
       <div className="flex border-b border-zinc-200 gap-6">
         <button
           onClick={() => setActiveSubTab('entries')}
@@ -543,8 +581,8 @@ export const TimeTrackerTab: React.FC = () => {
         <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-2xs overflow-hidden">
           <div className="p-5 border-b border-zinc-100 flex items-center justify-between">
             <div>
-              <h2 className="text-base font-serif font-bold text-zinc-900">Histórico de Tempo Registrado</h2>
-              <p className="text-xs text-zinc-500">Todas as horas apontadas em projetos e etapas do escritório por responsável.</p>
+              <h2 className="text-base font-serif font-bold text-zinc-900">Histórico Sincronizado de Tempo & Tarefas</h2>
+              <p className="text-xs text-zinc-500">Apontamentos efetuados e vinculados automaticamente ao cronograma do escritório.</p>
             </div>
             <div className="flex items-center gap-2 text-xs text-zinc-500">
               <Calendar className="w-4 h-4 text-[#8c7456]" />
@@ -629,7 +667,6 @@ export const TimeTrackerTab: React.FC = () => {
       {/* SUB-TAB 2: REPORT & SCHEDULE */}
       {activeSubTab === 'report' && (
         <div className="space-y-6">
-          {/* Filter Bar */}
           <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-xs font-bold text-zinc-700">
               <CalendarDays className="w-4 h-4 text-[#8c7456]" />
@@ -657,7 +694,6 @@ export const TimeTrackerTab: React.FC = () => {
             </div>
           </div>
 
-          {/* Report Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-2xs">
               <span className="text-xs uppercase tracking-wider font-bold text-zinc-400 block mb-1">Total de Horas no Período</span>
@@ -690,13 +726,11 @@ export const TimeTrackerTab: React.FC = () => {
             </div>
           </div>
 
-          {/* Breakdown by Project & Responsible */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* By Project */}
             <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xs space-y-4">
               <h3 className="text-base font-serif font-bold text-zinc-900 flex items-center gap-2">
                 <FolderOpen className="w-4 h-4 text-[#8c7456]" />
-                <span>Distribuição por Projeto</span>
+                <span>Distribuição por Projeto & Cronograma</span>
               </h3>
               <div className="space-y-3">
                 {reportTotals.byProject.map((proj, idx) => {
@@ -726,7 +760,6 @@ export const TimeTrackerTab: React.FC = () => {
               </div>
             </div>
 
-            {/* By Responsible Person */}
             <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xs space-y-4">
               <h3 className="text-base font-serif font-bold text-zinc-900 flex items-center gap-2">
                 <User className="w-4 h-4 text-[#8c7456]" />
