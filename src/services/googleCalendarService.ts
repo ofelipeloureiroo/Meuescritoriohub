@@ -300,6 +300,17 @@ export const requestGoogleTokenViaGSI = async (preferredEmail?: string): Promise
  * Authenticates the user with Google and requests Calendar & Tasks scopes directly via Firebase
  */
 export const authenticateGoogleCalendar = async (): Promise<{ token: string; email: string }> => {
+  try {
+    // Primary method: Use Google Identity Services Token Client (reliable access token acquisition)
+    const res = await requestGoogleTokenViaGSI();
+    if (res && res.token && res.email) {
+      return res;
+    }
+  } catch (gsiErr: any) {
+    console.warn('GSI Token request warning, attempting Firebase popup fallback:', gsiErr);
+  }
+
+  // Fallback method: Firebase GoogleAuthProvider popup
   const provider = new GoogleAuthProvider();
   provider.addScope('https://www.googleapis.com/auth/calendar.events');
   provider.addScope('https://www.googleapis.com/auth/tasks');
@@ -315,7 +326,6 @@ export const authenticateGoogleCalendar = async (): Promise<{ token: string; ema
       try {
         result = await linkWithPopup(auth.currentUser, provider);
       } catch (linkErr: any) {
-        // If account is already linked or exists, perform direct popup sign in
         result = await signInWithPopup(auth, provider);
       }
     } else {
@@ -348,8 +358,14 @@ export const authenticateGoogleCalendar = async (): Promise<{ token: string; ema
       return { token, email };
     }
     
-    // In case credential wasn't directly accessible but user authenticated
     if (email) {
+      // If auth succeeded but access token wasn't captured, try requesting token via GSI
+      try {
+        const gsiRetry = await requestGoogleTokenViaGSI(email);
+        if (gsiRetry && gsiRetry.token) {
+          return gsiRetry;
+        }
+      } catch {}
       return { token: 'connected', email };
     }
 
