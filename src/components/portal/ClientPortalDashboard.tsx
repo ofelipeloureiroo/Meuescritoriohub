@@ -401,11 +401,11 @@ export const ClientPortalDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#12100e] text-[#fcf8f5] flex flex-col font-sans selection:bg-[var(--theme-primary)]/30">
+    <div className="min-h-screen bg-[#fdfbf7] text-zinc-900 flex flex-col font-sans selection:bg-[var(--theme-primary)]/30">
       
       {/* Top Office Preview Control Bar - only displayed when architect is logged into the system */}
       {user && (
-        <div className="bg-gradient-to-r from-[#211a14] via-[#2c2219] to-[#211a14] border-b border-[var(--theme-primary)]/40 px-4 py-2.5 text-xs text-[#fcf8f5] shadow-lg sticky top-0 z-50">
+        <div className="bg-gradient-to-r from-amber-50 via-amber-100/70 to-amber-50 border-b border-amber-200 px-4 py-2.5 text-xs text-zinc-900 shadow-sm sticky top-0 z-50">
           <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <span className="px-2.5 py-1 rounded-lg bg-[var(--theme-primary)] text-black font-bold text-xs flex items-center gap-1.5 shadow-sm">
@@ -415,7 +415,7 @@ export const ClientPortalDashboard: React.FC = () => {
 
               {/* Client Selector */}
               <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-[#a89c93] hidden sm:inline">Cliente:</span>
+                <span className="text-zinc-500 hidden sm:inline">Cliente:</span>
                 <select
                   value={effectivePortal.clientId || effectivePortal.id}
                   onChange={(e) => {
@@ -431,7 +431,7 @@ export const ClientPortalDashboard: React.FC = () => {
                       }
                     }
                   }}
-                  className="bg-[#14110f] border border-[#3d342f] text-[var(--theme-primary)] font-bold rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
+                  className="bg-white border border-zinc-300 text-zinc-900 font-bold rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-[var(--theme-primary)] cursor-pointer"
                 >
                   {allOfficeClientPortals.map((p) => (
                     <option key={p.id} value={p.clientId || p.id}>
@@ -445,7 +445,7 @@ export const ClientPortalDashboard: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsManagerModalOpen(true)}
-                className="px-3 py-1.5 rounded-lg bg-[#2e2621] hover:bg-[#382f29] text-[var(--theme-primary)] border border-[var(--theme-primary)]/40 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-3 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                 title="Editar etapas, status, documentos e credenciais deste portal"
               >
                 <Settings2 className="w-3.5 h-3.5" />
@@ -468,7 +468,7 @@ export const ClientPortalDashboard: React.FC = () => {
       )}
 
       {/* Top Client Navbar */}
-      <header className="sticky top-0 z-40 bg-[#161210]/95 backdrop-blur-md border-b border-[#3d342f] px-4 sm:px-8 py-3.5">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-zinc-200 px-4 sm:px-8 py-3.5 shadow-2xs">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           
           {/* Office Branding */}
@@ -481,15 +481,15 @@ export const ClientPortalDashboard: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-serif font-bold text-base sm:text-lg text-[#fcf8f5] leading-tight">
+                <span className="font-serif font-bold text-base sm:text-lg text-zinc-900 leading-tight">
                   {effectivePortal.officeName || 'Escritório'}
                 </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
                   Portal Seguro
                 </span>
               </div>
-              <span className="text-[11px] text-[#a89c93] block">
-                Cliente: <strong className="text-[#fcf8f5]">{effectivePortal.clientName}</strong>
+              <span className="text-[11px] text-zinc-500 block">
+                Cliente: <strong className="text-zinc-900">{effectivePortal.clientName}</strong>
               </span>
             </div>
           </div>
@@ -501,16 +501,16 @@ export const ClientPortalDashboard: React.FC = () => {
                 href={`https://wa.me/${effectivePortal.officePhone.replace(/\D/g, '')}`}
                 target="_blank"
                 rel="noreferrer"
-                className="hidden md:flex items-center gap-1.5 text-xs text-[#a89c93] hover:text-emerald-400 border border-[#3d342f] px-3 py-1.5 rounded-xl transition-colors"
+                className="hidden md:flex items-center gap-1.5 text-xs text-zinc-600 hover:text-emerald-600 border border-zinc-200 px-3 py-1.5 rounded-xl transition-colors"
               >
-                <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                <Phone className="w-3.5 h-3.5 text-emerald-600" />
                 <span>WhatsApp Escritório</span>
               </a>
             )}
 
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-[#3d342f] text-[#a89c93] hover:text-red-400 hover:border-red-500/30 text-xs font-bold transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-zinc-200 text-zinc-600 hover:text-red-600 hover:border-red-500/30 text-xs font-bold transition-colors cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Sair do Portal</span>
@@ -525,8 +525,8 @@ export const ClientPortalDashboard: React.FC = () => {
         
         {/* Project Switcher Bar (if more than 1 project) */}
         {effectivePortal.projects && effectivePortal.projects.length > 1 && (
-          <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl p-3 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-xs text-[#a89c93]">
+          <div className="bg-white border border-zinc-200 rounded-2xl p-3 flex items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-center gap-2 text-xs text-zinc-600">
               <Layers className="w-4 h-4 text-[var(--theme-primary)]" />
               <span>Você possui <strong>{effectivePortal.projects.length} projetos</strong> com este escritório:</span>
             </div>
@@ -538,7 +538,7 @@ export const ClientPortalDashboard: React.FC = () => {
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     activeProjectId === proj.id
                       ? 'bg-[var(--theme-primary)] text-black shadow-md'
-                      : 'bg-[#12100e] border border-[#3d342f] text-[#a89c93] hover:text-[#fcf8f5]'
+                      : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:text-zinc-900'
                   }`}
                 >
                   {proj.title}
@@ -550,26 +550,26 @@ export const ClientPortalDashboard: React.FC = () => {
 
         {/* Project Hero / Status Card */}
         {currentProject ? (
-          <div className="bg-[#1a1614] border border-[#3d342f] rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+          <div className="bg-white border border-zinc-200 rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
             
             {/* Header with Title & Health */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#3d342f]/80">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-100">
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-[11px] uppercase tracking-wider text-[var(--theme-primary)] font-bold">
+                  <span className="text-[11px] uppercase tracking-wider text-amber-800 font-bold">
                     {currentProject.category || 'Projeto em Andamento'}
                   </span>
                   {currentProject.contractStatus && (
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-[#26201c] text-[#a89c93] border border-[#3d342f]">
+                    <span className="px-2 py-0.5 rounded text-[10px] bg-zinc-100 text-zinc-600 border border-zinc-200">
                       {currentProject.contractStatus}
                     </span>
                   )}
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#fcf8f5]">
+                <h1 className="text-2xl sm:text-3xl font-serif font-bold text-zinc-900">
                   {currentProject.title}
                 </h1>
                 {currentProject.description && (
-                  <p className="text-xs sm:text-sm text-[#a89c93] mt-1 max-w-2xl">
+                  <p className="text-xs sm:text-sm text-zinc-500 mt-1 max-w-2xl">
                     {currentProject.description}
                   </p>
                 )}
@@ -577,38 +577,38 @@ export const ClientPortalDashboard: React.FC = () => {
 
               <div className="flex flex-col sm:items-end gap-2 shrink-0">
                 {getHealthBadge(currentProject.generalStatus)}
-                <div className="text-xs text-[#a89c93] flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                  <span>Previsão de Entrega: <strong className="text-[#fcf8f5]">{currentProject.deliveryDate || 'A definir'}</strong></span>
+                <div className="text-xs text-zinc-500 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Previsão de Entrega: <strong className="text-zinc-900">{currentProject.deliveryDate || 'A definir'}</strong></span>
                 </div>
               </div>
             </div>
 
             {/* Current Stage & Progress Bar */}
-            <div className="py-6 border-b border-[#3d342f]/80 space-y-3">
+            <div className="py-6 border-b border-zinc-100 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <span className="text-xs text-[#a89c93] block">Fase Atual do Projeto:</span>
-                  <div className="text-lg sm:text-xl font-serif font-bold text-[var(--theme-primary)] flex items-center gap-2">
+                  <span className="text-xs text-zinc-500 block">Fase Atual do Projeto:</span>
+                  <div className="text-lg sm:text-xl font-serif font-bold text-amber-800 flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />
                     <span>{currentProject.currentStageName || 'Em Execução'}</span>
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <span className="text-xs text-[#a89c93]">Progresso Estimado:</span>
-                  <span className="text-lg font-bold text-[#fcf8f5] ml-2">
+                  <span className="text-xs text-zinc-500">Progresso Estimado:</span>
+                  <span className="text-lg font-bold text-zinc-900 ml-2">
                     {currentProject.progressPercent || 0}%
                   </span>
                 </div>
               </div>
 
               {/* Progress Track */}
-              <div className="w-full bg-[#12100e] h-3 rounded-full overflow-hidden border border-[#3d342f]/60 p-0.5">
+              <div className="w-full bg-zinc-100 h-3 rounded-full overflow-hidden border border-zinc-200 p-0.5">
                 <div 
-                  className="h-full rounded-full transition-all duration-700 shadow-sm"
+                  className="h-full rounded-full transition-all duration-700 shadow-2xs"
                   style={{ 
-                    width: `${Math.max(5, Math.min(100, currentProject.progressPercent || 15))}%`,
+                    width: `${Math.max(5, Math.min(100, currentProject.progressPercent || 0))}%`,
                     backgroundColor: 'var(--theme-primary)'
                   }}
                 />
@@ -617,38 +617,38 @@ export const ClientPortalDashboard: React.FC = () => {
 
             {/* Key Project Numbers / Contract overview */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 text-left">
-              <div className="bg-[#12100e] border border-[#3d342f]/60 p-3.5 rounded-2xl">
-                <span className="text-[10px] uppercase text-[#a89c93] font-bold block mb-1">
+              <div className="bg-zinc-50 border border-zinc-200 p-3.5 rounded-2xl">
+                <span className="text-[10px] uppercase text-zinc-500 font-bold block mb-1">
                   Início do Projeto
                 </span>
-                <span className="text-sm font-bold text-[#fcf8f5]">
+                <span className="text-sm font-bold text-zinc-900">
                   {currentProject.startDate || 'Confirmado'}
                 </span>
               </div>
 
-              <div className="bg-[#12100e] border border-[#3d342f]/60 p-3.5 rounded-2xl">
-                <span className="text-[10px] uppercase text-[#a89c93] font-bold block mb-1">
+              <div className="bg-zinc-50 border border-zinc-200 p-3.5 rounded-2xl">
+                <span className="text-[10px] uppercase text-zinc-500 font-bold block mb-1">
                   Entrega Prevista
                 </span>
-                <span className="text-sm font-bold text-[var(--theme-primary)]">
+                <span className="text-sm font-bold text-amber-800">
                   {currentProject.deliveryDate || 'No Cronograma'}
                 </span>
               </div>
 
-              <div className="bg-[#12100e] border border-[#3d342f]/60 p-3.5 rounded-2xl">
-                <span className="text-[10px] uppercase text-[#a89c93] font-bold block mb-1">
+              <div className="bg-zinc-50 border border-zinc-200 p-3.5 rounded-2xl">
+                <span className="text-[10px] uppercase text-zinc-500 font-bold block mb-1">
                   Etapas Concluídas
                 </span>
-                <span className="text-sm font-bold text-emerald-400">
+                <span className="text-sm font-bold text-emerald-600">
                   {currentProject.stages?.filter((s) => s.status === 'completed').length || 0} de {currentProject.stages?.length || 1}
                 </span>
               </div>
 
-              <div className="bg-[#12100e] border border-[#3d342f]/60 p-3.5 rounded-2xl">
-                <span className="text-[10px] uppercase text-[#a89c93] font-bold block mb-1">
+              <div className="bg-zinc-50 border border-zinc-200 p-3.5 rounded-2xl">
+                <span className="text-[10px] uppercase text-zinc-500 font-bold block mb-1">
                   Documentos & Arquivos
                 </span>
-                <span className="text-sm font-bold text-[#fcf8f5]">
+                <span className="text-sm font-bold text-zinc-900">
                   {effectivePortal.documents?.length || 0} disponíveis
                 </span>
               </div>
@@ -656,10 +656,10 @@ export const ClientPortalDashboard: React.FC = () => {
 
           </div>
         ) : (
-          <div className="bg-[#1a1614] border border-[#3d342f] rounded-3xl p-8 text-center space-y-4">
-            <FolderKanban className="w-12 h-12 text-[var(--theme-primary)] mx-auto opacity-70" />
-            <h3 className="text-lg font-bold text-[#fcf8f5]">Nenhum projeto associado no momento</h3>
-            <p className="text-xs text-[#a89c93] max-w-md mx-auto">
+          <div className="bg-white border border-zinc-200 rounded-3xl p-8 text-center space-y-4 shadow-sm">
+            <FolderKanban className="w-12 h-12 text-amber-700 mx-auto opacity-70" />
+            <h3 className="text-lg font-bold text-zinc-900">Nenhum projeto associado no momento</h3>
+            <p className="text-xs text-zinc-500 max-w-md mx-auto">
               Quando um projeto for cadastrado ou atualizado no gestor do escritório para este cliente, ele aparecerá aqui automaticamente com todas as etapas e entregas em tempo real.
             </p>
             {isAdminMode && (
@@ -678,13 +678,13 @@ export const ClientPortalDashboard: React.FC = () => {
         )}
 
         {/* Navigation Tabs: Etapas & Linha do Tempo | Documentos & Entregáveis | Mensagens */}
-        <div className="flex border-b border-[#3d342f] gap-2 sm:gap-6">
+        <div className="flex border-b border-zinc-200 gap-2 sm:gap-6">
           <button
             onClick={() => setActiveTab('etapas')}
             className={`pb-3 text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer border-b-2 ${
               activeTab === 'etapas'
-                ? 'border-[var(--theme-primary)] text-[var(--theme-primary)]'
-                : 'border-transparent text-[#a89c93] hover:text-[#fcf8f5]'
+                ? 'border-[var(--theme-primary)] text-amber-800'
+                : 'border-transparent text-zinc-500 hover:text-zinc-900'
             }`}
           >
             <Layers className="w-4 h-4" />
@@ -695,8 +695,8 @@ export const ClientPortalDashboard: React.FC = () => {
             onClick={() => setActiveTab('documentos')}
             className={`pb-3 text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer border-b-2 ${
               activeTab === 'documentos'
-                ? 'border-[var(--theme-primary)] text-[var(--theme-primary)]'
-                : 'border-transparent text-[#a89c93] hover:text-[#fcf8f5]'
+                ? 'border-[var(--theme-primary)] text-amber-800'
+                : 'border-transparent text-zinc-500 hover:text-zinc-900'
             }`}
           >
             <FileText className="w-4 h-4" />
@@ -707,8 +707,8 @@ export const ClientPortalDashboard: React.FC = () => {
             onClick={() => setActiveTab('mensagens')}
             className={`pb-3 text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer border-b-2 ${
               activeTab === 'mensagens'
-                ? 'border-[var(--theme-primary)] text-[var(--theme-primary)]'
-                : 'border-transparent text-[#a89c93] hover:text-[#fcf8f5]'
+                ? 'border-[var(--theme-primary)] text-amber-800'
+                : 'border-transparent text-zinc-500 hover:text-zinc-900'
             }`}
           >
             <MessageSquare className="w-4 h-4" />
@@ -719,16 +719,16 @@ export const ClientPortalDashboard: React.FC = () => {
         {/* TAB 1: ETAPAS & LINHA DO TEMPO */}
         {activeTab === 'etapas' && (
           <div className="space-y-6">
-            <div className="bg-[#1a1614] border border-[#3d342f] rounded-3xl p-6 sm:p-8">
-              <h2 className="text-xl font-serif font-bold text-[#fcf8f5] mb-1">
+            <div className="bg-white border border-zinc-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+              <h2 className="text-xl font-serif font-bold text-zinc-900 mb-1">
                 Evolução Passo a Passo do Projeto
               </h2>
-              <p className="text-xs text-[#a89c93] mb-8">
+              <p className="text-xs text-zinc-500 mb-8">
                 Acompanhe o que já foi finalizado e quais são os próximos passos agendados para a entrega do seu serviço.
               </p>
 
               {currentProject?.stages && currentProject.stages.length > 0 ? (
-                <div className="relative border-l-2 border-[#3d342f] ml-4 sm:ml-6 space-y-8 pl-6 sm:pl-8">
+                <div className="relative border-l-2 border-zinc-200 ml-4 sm:ml-6 space-y-8 pl-6 sm:pl-8">
                   {currentProject.stages.map((stage, idx) => {
                     const isCompleted = stage.status === 'completed';
                     const isInProgress = stage.status === 'in_progress';
@@ -740,10 +740,10 @@ export const ClientPortalDashboard: React.FC = () => {
                         <div 
                           className={`absolute -left-[35px] sm:-left-[43px] top-0 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
                             isCompleted 
-                              ? 'bg-emerald-500 border-emerald-400 text-black shadow-lg shadow-emerald-500/20' 
+                              ? 'bg-emerald-500 border-emerald-400 text-white shadow-md' 
                               : isInProgress
-                              ? 'bg-[#1a1614] border-[var(--theme-primary)] text-[var(--theme-primary)] ring-4 ring-[var(--theme-primary)]/20 animate-pulse'
-                              : 'bg-[#12100e] border-[#3d342f] text-[#6b625b]'
+                              ? 'bg-white border-[var(--theme-primary)] text-amber-800 ring-4 ring-amber-500/20 animate-pulse'
+                              : 'bg-zinc-100 border-zinc-300 text-zinc-500'
                           }`}
                         >
                           {isCompleted ? (
@@ -758,15 +758,15 @@ export const ClientPortalDashboard: React.FC = () => {
                         {/* Stage Card */}
                         <div className={`p-4 sm:p-5 rounded-2xl border transition-all ${
                           isInProgress
-                            ? 'bg-[#1f1a17] border-[var(--theme-primary)]/60 shadow-lg'
+                            ? 'bg-amber-50/60 border-amber-300 shadow-sm'
                             : isCompleted
-                            ? 'bg-[#141210] border-[#3d342f]'
-                            : 'bg-[#12100e] border-[#29221d] opacity-80'
+                            ? 'bg-zinc-50/80 border-zinc-200'
+                            : 'bg-white border-zinc-200 opacity-80'
                         }`}>
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2">
                               <h3 className={`text-base font-bold ${
-                                isCompleted ? 'text-[#fcf8f5]' : isInProgress ? 'text-[var(--theme-primary)]' : 'text-[#a89c93]'
+                                isCompleted ? 'text-zinc-900' : isInProgress ? 'text-amber-900' : 'text-zinc-600'
                               }`}>
                                 {stage.name}
                               </h3>
@@ -776,13 +776,13 @@ export const ClientPortalDashboard: React.FC = () => {
                                 </span>
                               )}
                               {isCompleted && (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
                                   Concluído
                                 </span>
                               )}
                             </div>
 
-                            <span className="text-[11px] text-[#a89c93]">
+                            <span className="text-[11px] text-zinc-500">
                               {isCompleted && stage.completedAt 
                                 ? `Finalizado em: ${stage.completedAt}` 
                                 : stage.plannedDate 
@@ -792,7 +792,7 @@ export const ClientPortalDashboard: React.FC = () => {
                           </div>
 
                           {stage.description && (
-                            <p className="text-xs text-[#a89c93] leading-relaxed">
+                            <p className="text-xs text-zinc-600 leading-relaxed">
                               {stage.description}
                             </p>
                           )}
@@ -803,7 +803,7 @@ export const ClientPortalDashboard: React.FC = () => {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-[#a89c93] text-xs">
+                <div className="text-center py-8 text-zinc-500 text-xs">
                   As etapas detalhadas deste projeto estão sendo definidas pela equipe e serão exibidas aqui.
                 </div>
               )}
@@ -814,17 +814,17 @@ export const ClientPortalDashboard: React.FC = () => {
         {/* TAB 2: DOCUMENTOS & ARQUIVOS */}
         {activeTab === 'documentos' && (
           <div className="space-y-6">
-            <div className="bg-[#1a1614] border border-[#3d342f] rounded-3xl p-6 sm:p-8">
+            <div className="bg-white border border-zinc-200 rounded-3xl p-6 sm:p-8 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="text-xl font-serif font-bold text-[#fcf8f5]">
+                  <h2 className="text-xl font-serif font-bold text-zinc-900">
                     Documentos & Arquivos do Projeto
                   </h2>
-                  <p className="text-xs text-[#a89c93] mt-1">
+                  <p className="text-xs text-zinc-500 mt-1">
                     Baixe vias digitais do contrato assinado, relatórios de visita, plantas e arquivos entregues pelo escritório.
                   </p>
                 </div>
-                <span className="text-xs bg-[#241e1b] px-3 py-1.5 rounded-xl border border-[#3d342f] text-[#a89c93] self-start sm:self-center">
+                <span className="text-xs bg-zinc-100 px-3 py-1.5 rounded-xl border border-zinc-200 text-zinc-600 self-start sm:self-center">
                   Total: <strong>{effectivePortal.documents?.length || 0} arquivos</strong>
                 </span>
               </div>
@@ -834,17 +834,17 @@ export const ClientPortalDashboard: React.FC = () => {
                   {effectivePortal.documents.map((docItem) => (
                     <div 
                       key={docItem.id}
-                      className="bg-[#12100e] border border-[#3d342f] p-4 rounded-2xl flex items-center justify-between gap-4 hover:border-[var(--theme-primary)]/40 transition-colors"
+                      className="bg-zinc-50 border border-zinc-200 p-4 rounded-2xl flex items-center justify-between gap-4 hover:border-amber-300 transition-colors"
                     >
                       <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="w-10 h-10 rounded-xl bg-[var(--theme-badge-bg)] text-[var(--theme-primary)] flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
                           <FileText className="w-5 h-5" />
                         </div>
                         <div className="truncate">
-                          <h4 className="text-sm font-bold text-[#fcf8f5] truncate">
+                          <h4 className="text-sm font-bold text-zinc-900 truncate">
                             {docItem.title}
                           </h4>
-                          <div className="flex items-center gap-2 text-[11px] text-[#a89c93] mt-0.5">
+                          <div className="flex items-center gap-2 text-[11px] text-zinc-500 mt-0.5">
                             <span className="capitalize">{docItem.category || 'Documento'}</span>
                             <span>•</span>
                             <span>{new Date(docItem.date).toLocaleDateString('pt-BR')}</span>
@@ -858,7 +858,7 @@ export const ClientPortalDashboard: React.FC = () => {
                           href={docItem.fileUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="px-3.5 py-2 rounded-xl bg-[#241e1b] hover:bg-[var(--theme-primary)] hover:text-black text-xs font-bold text-[#fcf8f5] flex items-center gap-1.5 transition-colors shrink-0"
+                          className="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-[var(--theme-primary)] hover:text-black text-xs font-bold text-zinc-800 flex items-center gap-1.5 transition-colors shrink-0"
                         >
                           <Download className="w-3.5 h-3.5" />
                           <span>Baixar</span>
@@ -866,7 +866,7 @@ export const ClientPortalDashboard: React.FC = () => {
                       ) : (
                         <button
                           onClick={() => alert(`Visualização do arquivo: ${docItem.title}\nSolicite a versão em alta resolução ao escritório caso precise de impressão.`)}
-                          className="px-3.5 py-2 rounded-xl bg-[#241e1b] hover:bg-[var(--theme-primary)] hover:text-black text-xs font-bold text-[#fcf8f5] flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer"
+                          className="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-[var(--theme-primary)] hover:text-black text-xs font-bold text-zinc-800 flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer"
                         >
                           <Download className="w-3.5 h-3.5" />
                           <span>Acessar</span>
@@ -876,10 +876,10 @@ export const ClientPortalDashboard: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <div className="bg-[#12100e] border border-dashed border-[#3d342f] rounded-2xl p-8 text-center text-xs text-[#a89c93]">
-                  <FileText className="w-8 h-8 mx-auto mb-2 text-[#6b625b]" />
+                <div className="bg-zinc-50 border border-dashed border-zinc-200 rounded-2xl p-8 text-center text-xs text-zinc-500">
+                  <FileText className="w-8 h-8 mx-auto mb-2 text-zinc-400" />
                   <p>Nenhum documento anexado ainda.</p>
-                  <p className="text-[11px] mt-1 text-[#6b625b]">
+                  <p className="text-[11px] mt-1 text-zinc-400">
                     Assim que minutas, relatórios ou entregáveis forem disponibilizados pelo escritório, eles aparecerão nesta área para download.
                   </p>
                 </div>
@@ -891,19 +891,19 @@ export const ClientPortalDashboard: React.FC = () => {
         {/* TAB 3: MENSAGENS & COMUNICAÇÃO */}
         {activeTab === 'mensagens' && (
           <div className="space-y-6">
-            <div className="bg-[#1a1614] border border-[#3d342f] rounded-3xl p-6 sm:p-8 flex flex-col h-[580px]">
+            <div className="bg-white border border-zinc-200 rounded-3xl p-6 sm:p-8 flex flex-col h-[580px] shadow-sm">
               
-              <div className="pb-4 border-b border-[#3d342f] mb-4 flex items-center justify-between">
+              <div className="pb-4 border-b border-zinc-200 mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-serif font-bold text-[#fcf8f5]">
+                  <h2 className="text-xl font-serif font-bold text-zinc-900">
                     Canal Direto com o Escritório
                   </h2>
-                  <p className="text-xs text-[#a89c93]">
+                  <p className="text-xs text-zinc-500">
                     Envie observações, dúvidas ou feedbacks sobre o projeto para a equipe responsável.
                   </p>
                 </div>
-                <span className="text-[11px] text-emerald-400 flex items-center gap-1 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[11px] text-emerald-600 flex items-center gap-1 font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   Escritório Online
                 </span>
               </div>
@@ -921,11 +921,11 @@ export const ClientPortalDashboard: React.FC = () => {
                         <div
                           className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${
                             isClient
-                              ? 'bg-[var(--theme-primary)] text-black font-medium rounded-br-none shadow-md'
-                              : 'bg-[#12100e] border border-[#3d342f] text-[#fcf8f5] rounded-bl-none'
+                              ? 'bg-[var(--theme-primary)] text-black font-medium rounded-br-none shadow-sm'
+                              : 'bg-zinc-100 border border-zinc-200 text-zinc-900 rounded-bl-none'
                           }`}
                         >
-                          <div className={`text-[10px] font-bold mb-1 opacity-70 ${isClient ? 'text-black' : 'text-[var(--theme-primary)]'}`}>
+                          <div className={`text-[10px] font-bold mb-1 opacity-70 ${isClient ? 'text-black' : 'text-amber-800'}`}>
                             {msg.senderName || (isClient ? 'Você' : 'Equipe do Escritório')}
                           </div>
                           <p>{msg.text}</p>
@@ -937,10 +937,10 @@ export const ClientPortalDashboard: React.FC = () => {
                     );
                   })
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center text-xs text-[#a89c93] space-y-2">
-                    <MessageSquare className="w-8 h-8 text-[#6b625b]" />
+                  <div className="h-full flex flex-col items-center justify-center text-center text-xs text-zinc-500 space-y-2">
+                    <MessageSquare className="w-8 h-8 text-zinc-400" />
                     <p>Nenhuma mensagem trocada ainda.</p>
-                    <p className="text-[11px] text-[#6b625b] max-w-sm">
+                    <p className="text-[11px] text-zinc-400 max-w-sm">
                       Envie uma mensagem abaixo para falar com o escritório sobre o andamento do seu projeto.
                     </p>
                   </div>
@@ -950,19 +950,19 @@ export const ClientPortalDashboard: React.FC = () => {
 
               {/* If Admin mode, allow choosing who to send as */}
               {isAdminMode && (
-                <div className="pt-2 pb-1 flex items-center justify-between text-xs border-t border-[#3d342f]/70">
-                  <span className="text-[#a89c93] flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+                <div className="pt-2 pb-1 flex items-center justify-between text-xs border-t border-zinc-200">
+                  <span className="text-zinc-600 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
                     <span>Responder mensagem como:</span>
                   </span>
-                  <div className="flex items-center gap-1 bg-[#12100e] p-1 rounded-lg border border-[#3d342f]">
+                  <div className="flex items-center gap-1 bg-zinc-50 p-1 rounded-lg border border-zinc-200">
                     <button
                       type="button"
                       onClick={() => setAdminSenderRole('office')}
                       className={`px-2.5 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
                         adminSenderRole === 'office'
                           ? 'bg-[var(--theme-primary)] text-black shadow-sm'
-                          : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                          : 'text-zinc-600 hover:text-zinc-900'
                       }`}
                     >
                       🏢 Equipe do Escritório
@@ -972,8 +972,8 @@ export const ClientPortalDashboard: React.FC = () => {
                       onClick={() => setAdminSenderRole('client')}
                       className={`px-2.5 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
                         adminSenderRole === 'client'
-                          ? 'bg-amber-500 text-black shadow-sm'
-                          : 'text-[#a89c93] hover:text-[#fcf8f5]'
+                          ? 'bg-amber-400 text-black shadow-sm'
+                          : 'text-zinc-600 hover:text-zinc-900'
                       }`}
                     >
                       👤 Simular Cliente
@@ -983,18 +983,18 @@ export const ClientPortalDashboard: React.FC = () => {
               )}
 
               {/* Message Input Box */}
-              <form onSubmit={handleSendMessage} className="pt-3 border-t border-[#3d342f] flex gap-2">
+              <form onSubmit={handleSendMessage} className="pt-3 border-t border-zinc-200 flex gap-2">
                 <input
                   type="text"
                   value={newMessageText}
                   onChange={(e) => setNewMessageText(e.target.value)}
                   placeholder={isAdminMode && adminSenderRole === 'office' ? "Escreva uma resposta oficial da equipe para o cliente..." : "Escreva sua mensagem ou dúvida sobre o projeto..."}
-                  className="flex-1 bg-[#12100e] border border-[#3d342f] rounded-xl px-4 py-3 text-xs text-[#fcf8f5] placeholder-[#6b625b] focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
+                  className="flex-1 bg-zinc-50 border border-zinc-300 rounded-xl px-4 py-3 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
                 />
                 <button
                   type="submit"
                   disabled={sendingMessage || !newMessageText.trim()}
-                  className="px-5 py-3 rounded-xl bg-[var(--theme-primary)] hover:brightness-110 text-black font-bold text-xs flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+                  className="px-5 py-3 rounded-xl bg-[var(--theme-primary)] hover:brightness-110 text-black font-bold text-xs flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer shadow-sm"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Enviar</span>
@@ -1008,7 +1008,7 @@ export const ClientPortalDashboard: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#3d342f]/40 py-6 text-center text-xs text-[#a89c93] mt-12">
+      <footer className="border-t border-zinc-200 py-6 text-center text-xs text-zinc-500 mt-12 bg-white/50">
         <p>
           {effectivePortal.officeName || 'Meu Escritório Online'} • Site do Cliente • Acompanhamento em Tempo Real
         </p>
