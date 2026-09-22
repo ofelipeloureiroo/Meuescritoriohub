@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { formatCurrency } from '../../utils/formatters';
+import { convertTemplateToWorkflowStages, DEFAULT_PROJECT_TEMPLATES } from '../../data/defaultProjectTemplates';
+import { ProjectWorkflowStage } from '../../types';
 
 interface NewContractModalProps {
   isOpen: boolean;
@@ -170,6 +172,23 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
       status: status === 'Concluído' ? 'paid' : status === 'Aguardando Pagamento' ? 'awaiting_payment' : 'draft',
     });
 
+    // Build workflow stages from selected template
+    let initialStages: ProjectWorkflowStage[] = [];
+    if (stageTemplate && stageTemplate !== 'Sem template — iniciar projeto em branco') {
+      const foundTemplate = availableTemplates.find(
+        (t) => t.name === stageTemplate || t.id === stageTemplate
+      );
+      if (foundTemplate) {
+        initialStages = convertTemplateToWorkflowStages(foundTemplate, startDate || todayStr);
+      }
+    }
+    if (initialStages.length === 0 && stageTemplate !== 'Sem template — iniciar projeto em branco') {
+      const fallbackTpl = availableTemplates[0] || DEFAULT_PROJECT_TEMPLATES[0];
+      if (fallbackTpl) {
+        initialStages = convertTemplateToWorkflowStages(fallbackTpl, startDate || todayStr);
+      }
+    }
+
     // Also register in Architecture Projects
     addArchitectureProject({
       title: projectName || 'Novo Projeto',
@@ -184,6 +203,7 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
       description: notes || '',
       deliveryDate: expectedEndDate || startDate,
       tags: tags ? tags.split(',').map((t) => t.trim()) : ['Design', 'Projeto'],
+      stages: initialStages.length > 0 ? initialStages : undefined,
     });
 
     onClose();

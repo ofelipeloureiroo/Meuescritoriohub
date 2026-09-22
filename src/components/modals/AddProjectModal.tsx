@@ -10,9 +10,10 @@ import {
   X,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
-import { ArchitectureProject } from '../../types';
+import { ArchitectureProject, ProjectWorkflowStage } from '../../types';
 import { NICHES } from '../../utils/theme';
 import { compressImage } from '../../utils/imageCompressor';
+import { convertTemplateToWorkflowStages, DEFAULT_PROJECT_TEMPLATES } from '../../data/defaultProjectTemplates';
 
 interface AddProjectModalProps {
   isOpen: boolean;
@@ -25,14 +26,21 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
   onClose,
   initialProject,
 }) => {
-  const { addArchitectureProject, updateArchitectureProject, deleteArchitectureProject, clients, architectProfile } = useFinance();
+  const { addArchitectureProject, updateArchitectureProject, deleteArchitectureProject, clients, architectProfile, officeSettings } = useFinance();
   const currentNiche = NICHES[architectProfile.niche || 'arquitetura'] || NICHES.outro;
   const form = currentNiche.formConfig;
   const categoryOptions = currentNiche.categories.filter((c) => c.id !== 'all' && c.id !== 'antes_depois');
   const statusOptions = currentNiche.statusOptions;
 
+  const availableTemplates = officeSettings?.projectTemplates && officeSettings.projectTemplates.length > 0
+    ? officeSettings.projectTemplates
+    : DEFAULT_PROJECT_TEMPLATES;
+
   const [title, setTitle] = useState(initialProject?.title || '');
   const [clientName, setClientName] = useState(initialProject?.clientName || '');
+  const [selectedTemplate, setSelectedTemplate] = useState<string>(
+    availableTemplates[0]?.name || 'Projeto Arquitetônico + Interiores'
+  );
   const [category, setCategory] = useState<ArchitectureProject['category']>(
     initialProject?.category || categoryOptions[0]?.id || 'residencial'
   );
@@ -186,6 +194,16 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
       finalGallery = [finalCover];
     }
 
+    let initialStages: ProjectWorkflowStage[] | undefined = initialProject?.stages;
+    if (!initialProject && selectedTemplate) {
+      const foundTemplate = availableTemplates.find(
+        (t) => t.name === selectedTemplate || t.id === selectedTemplate
+      );
+      if (foundTemplate) {
+        initialStages = convertTemplateToWorkflowStages(foundTemplate, deliveryDate || undefined);
+      }
+    }
+
     const projectData = {
       title: title.trim(),
       clientName: clientName.trim(),
@@ -202,6 +220,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
       description: description ? description.trim() : '',
       deliveryDate: deliveryDate || '',
       tags: tags.length > 0 ? tags : [],
+      stages: initialStages,
     };
 
     if (initialProject) {
@@ -325,6 +344,26 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                 {statusOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
+                style={{ color: 'var(--theme-primary)' }}
+              >
+                Template do Projeto (Cronograma & Tarefas)
+              </label>
+              <select
+                value={selectedTemplate}
+                onChange={(e) => setSelectedTemplate(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--theme-primary)] transition-colors font-medium"
+              >
+                {availableTemplates.map((tpl) => (
+                  <option key={tpl.id} value={tpl.name}>
+                    {tpl.name} ({tpl.stages?.length || 0} etapas)
                   </option>
                 ))}
               </select>

@@ -47,6 +47,7 @@ import {
 import { useFinance } from '../../context/FinanceContext';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
 import { DEFAULT_PROJECT_STAGES } from '../../data/defaultProjectStages';
+import { convertTemplateToWorkflowStages, DEFAULT_PROJECT_TEMPLATES } from '../../data/defaultProjectTemplates';
 import { MemorialDescritivoTab } from './MemorialDescritivoTab';
 import { ProjectTasksTab } from './ProjectTasksTab';
 
@@ -61,7 +62,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
   onBack,
   onEdit,
 }) => {
-  const { updateArchitectureProject, deleteArchitectureProject, addAppAction, actions } = useFinance();
+  const { updateArchitectureProject, deleteArchitectureProject, addAppAction, actions, officeSettings } = useFinance();
   const { teamMembers } = useTeamMembers();
 
   // Active top-level tab
@@ -69,6 +70,15 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
 
   // Delete project confirmation modal state
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+
+  // Template switch/apply modal state
+  const availableTemplates = officeSettings?.projectTemplates && officeSettings.projectTemplates.length > 0
+    ? officeSettings.projectTemplates
+    : DEFAULT_PROJECT_TEMPLATES;
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [selectedTemplateToApply, setSelectedTemplateToApply] = useState<string>(
+    availableTemplates[0]?.name || ''
+  );
 
   // Cronograma view mode: 'lista' | 'timeline'
   const [cronogramaView, setCronogramaView] = useState<'lista' | 'timeline'>('lista');
@@ -84,6 +94,13 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
     }
     return DEFAULT_PROJECT_STAGES;
   });
+
+  // Sync stages when project changes
+  React.useEffect(() => {
+    if (project.stages && project.stages.length > 0) {
+      setStages(project.stages);
+    }
+  }, [project.id, project.stages]);
 
   // Board tab states
   const [expandedBoardStageId, setExpandedBoardStageId] = useState<string>(() => {
@@ -240,6 +257,68 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
   const collapseAllStages = () => {
     const updated = stages.map((stg) => ({ ...stg, isExpanded: false }));
     handleUpdateStages(updated);
+  };
+
+  // Toggle entire stage completion (completes all tasks or reopens all)
+  const toggleStageCompletion = (stageId: string) => {
+    const updated = stages.map((stg) => {
+      if (stg.id !== stageId) return stg;
+
+      const isCompleted = stg.status === 'completed' || (stg.tasks.length > 0 && stg.tasks.every((t) => t.status === 'completed'));
+      const newStageStatus: 'not_started' | 'completed' = isCompleted ? 'not_started' : 'completed';
+      const newTaskStatus: 'pending' | 'completed' = isCompleted ? 'pending' : 'completed';
+
+      return {
+        ...stg,
+        status: newStageStatus,
+        tasks: stg.tasks.map((t) => ({
+          ...t,
+          status: newTaskStatus,
+        })),
+      };
+    });
+
+    handleUpdateStages(updated);
+  };
+
+  // Set direct status for entire stage
+  const setStageStatusDirectly = (
+    stageId: string,
+    newStatus: 'not_started' | 'in_progress' | 'completed'
+  ) => {
+    const updated = stages.map((stg) => {
+      if (stg.id !== stageId) return stg;
+
+      let updatedTasks = stg.tasks;
+      if (newStatus === 'completed') {
+        updatedTasks = stg.tasks.map((t) => ({ ...t, status: 'completed' }));
+      } else if (newStatus === 'not_started') {
+        updatedTasks = stg.tasks.map((t) => ({ ...t, status: 'pending' }));
+      }
+
+      return {
+        ...stg,
+        status: newStatus,
+        tasks: updatedTasks,
+      };
+    });
+
+    handleUpdateStages(updated);
+  };
+
+  // Apply chosen template to current project
+  const handleApplyTemplate = (templateNameOrId: string) => {
+    const found = availableTemplates.find(
+      (t) => t.name === templateNameOrId || t.id === templateNameOrId
+    );
+    if (!found) return;
+
+    const newStages = convertTemplateToWorkflowStages(
+      found,
+      project.startDate || project.deliveryDate || undefined
+    );
+    handleUpdateStages(newStages);
+    setIsTemplateModalOpen(false);
   };
 
   // Toggle task completion
@@ -826,8 +905,18 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
               </div>
             </div>
 
-            {/* Expand / Collapse Actions */}
-            <div className="flex items-center gap-2 self-start lg:self-center">
+            {/* Expand / Collapse Actions & Template switcher */}
+            <div className="flex items-center gap-2 self-start lg:self-center flex-wrap">
+              <button
+                type="button"
+                onClick={() => setIsTemplateModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#8c581e] bg-[#faedd9] hover:bg-[#f6e2c8] border border-[#e6d0b3] rounded-xl transition-colors cursor-pointer shadow-2xs"
+                title="Mudar ou aplicar um template com suas etapas e tarefas neste projeto"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Template do Projeto</span>
+              </button>
+
               <button
                 onClick={expandAllStages}
                 className="flex items-center gap-1 px-2.5 py-1 text-xs text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer"
@@ -860,32 +949,60 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
               <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead>
                   <tr className="border-b border-zinc-200 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                    <th className="py-2.5 px-3 w-[340px]">
-                      NOME <span className="text-zinc-300 font-normal">ⓘ</span>
+                    <th className="py-2.5 px-3 w-[360px]">
+                      NOME DA ETAPA / TAREFAS <span className="text-zinc-300 font-normal">ⓘ</span>
                     </th>
-                    <th className="py-2.5 px-3">STATUS</th>
+                    <th className="py-2.5 px-3 w-[160px]">STATUS DA ETAPA</th>
                     <th className="py-2.5 px-3">DURAÇÃO</th>
                     <th className="py-2.5 px-3">INÍCIO PLAN.</th>
                     <th className="py-2.5 px-3">FIM PLAN.</th>
                     <th className="py-2.5 px-3">RESPONSÁVEL</th>
                     <th className="py-2.5 px-3">PREDECESSORA</th>
-                    <th className="py-2.5 px-3 text-right">ALERTAS</th>
+                    <th className="py-2.5 px-3 text-right w-[160px]">AÇÕES / STATUS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 text-xs text-zinc-800">
                   {filteredStages.map((stg) => {
                     const completedTasks = stg.tasks.filter((t) => t.status === 'completed').length;
                     const totalTasks = stg.tasks.length;
+                    const isStageCompleted = stg.status === 'completed' || (totalTasks > 0 && completedTasks === totalTasks);
 
                     return (
                       <React.Fragment key={stg.id}>
                         {/* Stage Header Row */}
                         <tr
                           onClick={() => toggleStageExpand(stg.id)}
-                          className="bg-zinc-50/70 hover:bg-zinc-100/80 transition-colors cursor-pointer font-bold select-none group"
+                          className={`hover:bg-zinc-100/90 transition-colors cursor-pointer font-bold select-none group ${
+                            isStageCompleted ? 'bg-emerald-50/40' : 'bg-zinc-50/80'
+                          }`}
                         >
                           <td className="py-3 px-3">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2.5">
+                              {/* Direct full-stage completion checkbox */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleStageCompletion(stg.id);
+                                }}
+                                className="text-zinc-400 hover:text-emerald-600 transition-colors shrink-0 p-0.5 cursor-pointer"
+                                title={
+                                  isStageCompleted
+                                    ? 'Etapa concluída. Clique para reabrir toda a etapa e subtarefas'
+                                    : 'Clique para finalizar toda a etapa e marcar todas as subtarefas como concluídas'
+                                }
+                              >
+                                {isStageCompleted ? (
+                                  <CheckCircle2 className="w-5 h-5 text-emerald-600 fill-emerald-100" />
+                                ) : completedTasks > 0 ? (
+                                  <div className="w-5 h-5 rounded-full border-2 border-amber-500 flex items-center justify-center">
+                                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                                  </div>
+                                ) : (
+                                  <Circle className="w-5 h-5 text-zinc-300 hover:text-emerald-500 transition-colors" />
+                                )}
+                              </button>
+
                               <span className="text-zinc-400 group-hover:text-zinc-700 transition-colors">
                                 {stg.isExpanded ? (
                                   <ChevronDown className="w-4 h-4" />
@@ -893,38 +1010,66 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                                   <ChevronRight className="w-4 h-4" />
                                 )}
                               </span>
-                              <span className="text-zinc-900 font-bold text-sm">
+
+                              <span
+                                className={`text-sm font-bold ${
+                                  isStageCompleted ? 'line-through text-zinc-500 font-semibold' : 'text-zinc-900'
+                                }`}
+                              >
                                 {stg.name}
                               </span>
-                              <span className="text-xs font-semibold text-zinc-500 ml-1">
+
+                              <span
+                                className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ml-1 ${
+                                  isStageCompleted
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : completedTasks > 0
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-zinc-200/80 text-zinc-600'
+                                }`}
+                              >
                                 {completedTasks}/{totalTasks}
                               </span>
                             </div>
                           </td>
 
-                          <td className="py-3 px-3">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-zinc-200/80 text-zinc-700 text-[11px] font-semibold">
-                              {stg.status === 'completed'
-                                ? 'Concluído'
-                                : stg.status === 'in_progress'
-                                ? 'Em andamento'
-                                : 'Não iniciado'}
-                            </span>
+                          <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+                            <select
+                              value={stg.status}
+                              onChange={(e) =>
+                                setStageStatusDirectly(
+                                  stg.id,
+                                  e.target.value as 'not_started' | 'in_progress' | 'completed'
+                                )
+                              }
+                              className={`text-[11px] font-bold rounded-lg px-2 py-1 border transition-colors cursor-pointer focus:outline-hidden ${
+                                isStageCompleted
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                                  : stg.status === 'in_progress' || completedTasks > 0
+                                  ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                                  : 'bg-zinc-100 text-zinc-700 border-zinc-200 hover:bg-zinc-200'
+                              }`}
+                              title="Alterar status da etapa completa"
+                            >
+                              <option value="not_started">⚪ Não iniciado</option>
+                              <option value="in_progress">🟡 Em andamento</option>
+                              <option value="completed">🟢 Concluído (Tudo)</option>
+                            </select>
                           </td>
 
-                          <td className="py-3 px-3 text-zinc-400 font-medium">
+                          <td className="py-3 px-3 text-zinc-500 font-medium">
                             {stg.duration || '—'}
                           </td>
 
-                          <td className="py-3 px-3 text-zinc-400 font-medium">
+                          <td className="py-3 px-3 text-zinc-500 font-medium">
                             {stg.startDatePlanned || '(auto)'}
                           </td>
 
-                          <td className="py-3 px-3 text-zinc-400 font-medium">
+                          <td className="py-3 px-3 text-zinc-500 font-medium">
                             {stg.endDatePlanned || '—'}
                           </td>
 
-                          <td className="py-3 px-3 text-zinc-400 font-medium">
+                          <td className="py-3 px-3 text-zinc-500 font-medium">
                             {stg.responsible || '—'}
                           </td>
 
@@ -940,9 +1085,28 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                           </td>
 
                           <td className="py-3 px-3 text-right">
-                            {stg.tasks.some((t) => t.hasAlert) && (
-                              <AlertTriangle className="w-4 h-4 text-amber-500 inline-block" />
-                            )}
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleStageCompletion(stg.id);
+                                }}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                                  isStageCompleted
+                                    ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600 border border-zinc-200'
+                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                }`}
+                                title="Finalizar ou reabrir todas as tarefas desta etapa de uma vez"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>{isStageCompleted ? 'Reabrir' : 'Finalizar'}</span>
+                              </button>
+
+                              {stg.tasks.some((t) => t.hasAlert) && (
+                                <AlertTriangle className="w-4 h-4 text-amber-500 inline-block" />
+                              )}
+                            </div>
                           </td>
                         </tr>
 
@@ -2204,6 +2368,109 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Template Selection / Switch Modal */}
+      {isTemplateModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-zinc-200 space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#faedd9] border border-[#e6d0b3] flex items-center justify-center text-[#8c581e]">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-zinc-900">Template de Etapas e Tarefas</h3>
+                  <p className="text-xs text-zinc-500">
+                    Selecione um template para carregar no cronograma e tarefas deste projeto.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTemplateModalOpen(false)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+              {availableTemplates.map((tpl) => {
+                const isSelected = selectedTemplateToApply === tpl.name || selectedTemplateToApply === tpl.id;
+                const stagesCount = tpl.stages?.length || 0;
+                const totalItemsCount = tpl.stages?.reduce((acc, stg) => acc + (stg.items?.length || 0), 0) || 0;
+
+                return (
+                  <div
+                    key={tpl.id}
+                    onClick={() => setSelectedTemplateToApply(tpl.name)}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-[#8c7456] bg-[#faedd9]/30 ring-2 ring-[#8c7456]/20'
+                        : 'border-zinc-200 bg-zinc-50/50 hover:bg-zinc-100/70 hover:border-zinc-300'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-sm text-zinc-900">{tpl.name}</h4>
+                          {tpl.isCustom && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#faedd9] text-[#8c581e] border border-[#e6d0b3]">
+                              Personalizado
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-1">
+                          {tpl.description || `${stagesCount} etapas configuradas`}
+                        </p>
+                        <div className="flex items-center gap-3 mt-2 text-[11px] font-medium text-zinc-600">
+                          <span>📦 {stagesCount} etapas</span>
+                          <span>✓ {totalItemsCount} tarefas / entregáveis</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-1">
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                            isSelected ? 'border-[#8c7456]' : 'border-zinc-300'
+                          }`}
+                        >
+                          {isSelected && <div className="w-2 h-2 rounded-full bg-[#8c7456]" />}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
+              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                Ao aplicar, as etapas e tarefas do projeto serão atualizadas de acordo com o template selecionado.
+              </span>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100">
+              <button
+                type="button"
+                onClick={() => setIsTemplateModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyTemplate(selectedTemplateToApply)}
+                className="px-5 py-2.5 rounded-xl bg-[#8c7456] hover:bg-[#7a6448] text-white text-xs font-bold transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>Aplicar Template ao Projeto</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

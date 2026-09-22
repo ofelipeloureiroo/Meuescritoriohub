@@ -1,4 +1,4 @@
-import { ProjectTemplate, TemplateStage, TemplateTask } from '../types';
+import { ProjectTemplate, TemplateStage, TemplateTask, ProjectWorkflowStage, ProjectTaskItem } from '../types';
 
 export function normalizeTemplateStages(rawStages: (TemplateStage | string)[]): TemplateStage[] {
   if (!rawStages) return [];
@@ -26,6 +26,89 @@ export function normalizeTemplateStages(rawStages: (TemplateStage | string)[]): 
 export function countTemplateItems(template: ProjectTemplate): number {
   const normalized = normalizeTemplateStages(template.stages);
   return normalized.reduce((acc, stg) => acc + (stg.items ? stg.items.length : 0), 0);
+}
+
+export function convertTemplateToWorkflowStages(
+  template: ProjectTemplate,
+  baseStartDate?: string
+): ProjectWorkflowStage[] {
+  const normalized = normalizeTemplateStages(template.stages);
+  let currentDaysOffset = 0;
+  const startBase = baseStartDate ? new Date(baseStartDate) : new Date();
+
+  return normalized.map((stg, sIdx) => {
+    let stageTotalDays = 0;
+    const tasks: ProjectTaskItem[] = (stg.items || []).map((item, tIdx) => {
+      const days = item.estimatedDays ?? (tIdx === 0 ? 0 : 1);
+      stageTotalDays += days;
+
+      let tStart = '(auto)';
+      let tEnd = '—';
+      if (baseStartDate) {
+        const itemStart = new Date(startBase);
+        itemStart.setDate(itemStart.getDate() + currentDaysOffset);
+        const itemEnd = new Date(itemStart);
+        itemEnd.setDate(itemEnd.getDate() + Math.max(1, days));
+        tStart = itemStart.toISOString().split('T')[0];
+        tEnd = itemEnd.toISOString().split('T')[0];
+      }
+
+      return {
+        id: item.id || `tsk-${sIdx + 1}-${tIdx + 1}`,
+        name: item.name,
+        status: 'pending' as const,
+        duration: days > 0 ? `${days}d` : '—',
+        startDatePlanned: tStart,
+        endDatePlanned: tEnd,
+        responsible: '—',
+        estimatedHours: Math.max(1, (days || 1) * 3),
+        realizedHours: 0,
+        checklist: [
+          { id: `chk_${sIdx}_${tIdx}_1`, text: `Instruções e critérios para ${item.name}`, completed: false },
+          { id: `chk_${sIdx}_${tIdx}_2`, text: 'Executar e validar entrega técnica', completed: false },
+        ],
+        editHistory: [
+          {
+            id: `log_init_${sIdx}_${tIdx}`,
+            userName: 'Sistema (Template)',
+            timestamp: Date.now(),
+            action: 'created',
+            description: `Importado do template "${template.name}"`,
+          },
+        ],
+      };
+    });
+
+    currentDaysOffset += stageTotalDays;
+
+    return {
+      id: stg.id || `stg-${sIdx + 1}`,
+      name: stg.name,
+      status: 'not_started' as const,
+      duration: stageTotalDays > 0 ? `${stageTotalDays}d` : '—',
+      startDatePlanned: '(auto)',
+      endDatePlanned: '—',
+      responsible: '—',
+      predecessor: sIdx > 0 ? 'Etapa anterior' : '',
+      isExpanded: sIdx === 0,
+      tasks:
+        tasks.length > 0
+          ? tasks
+          : [
+              {
+                id: `tsk-${sIdx + 1}-1`,
+                name: `Executar entrega de ${stg.name}`,
+                status: 'pending' as const,
+                duration: '—',
+                startDatePlanned: '—',
+                endDatePlanned: '—',
+                responsible: '—',
+                estimatedHours: 3,
+                realizedHours: 0,
+              },
+            ],
+    };
+  });
 }
 
 export const DEFAULT_PROJECT_TEMPLATES: ProjectTemplate[] = [
