@@ -167,6 +167,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       title: 'Operação & Projetos',
       items: [
         {
+          id: 'time_tracker',
+          label: 'Rastreador de Tempo',
+          icon: Clock,
+          badge: 'Novo',
+          visible: !isCollaborator || !permissions || permissions.projects !== false,
+        },
+        {
           id: 'projects',
           label: 'Gestão de Projetos',
           icon: FolderOpen,
@@ -174,13 +181,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             ongoingArchitectureProjects.length > 0
               ? `${ongoingArchitectureProjects.length} Ativos`
               : undefined,
-          visible: !isCollaborator || !permissions || permissions.projects !== false,
-        },
-        {
-          id: 'time_tracker',
-          label: 'Rastreador de Tempo',
-          icon: Clock,
-          badge: 'Novo',
           visible: !isCollaborator || !permissions || permissions.projects !== false,
         },
         {
