@@ -468,8 +468,40 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
   return result;
 }
 
+export interface TombstonedClient {
+  id: string;
+  name?: string;
+  email?: string;
+}
+
+export function getDeletedClientsTombstones(): TombstonedClient[] {
+  try {
+    const raw = localStorage.getItem('office_deleted_clients_v1');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function isClientTombstoned(candidate: { id?: string; name?: string; email?: string }, tombstones?: TombstonedClient[]): boolean {
+  const list = tombstones || getDeletedClientsTombstones();
+  if (list.length === 0) return false;
+
+  const candidateId = candidate.id;
+  const candidateNameNorm = candidate.name?.trim().toLowerCase();
+  const candidateEmailNorm = candidate.email?.trim().toLowerCase();
+
+  return list.some((t) => {
+    if (candidateId && t.id === candidateId) return true;
+    if (candidateEmailNorm && t.email && t.email.trim().toLowerCase() === candidateEmailNorm) return true;
+    if (candidateNameNorm && t.name && t.name.trim().toLowerCase() === candidateNameNorm) return true;
+    return false;
+  });
+}
+
 export function recoverClientsForUser(targetUid?: string, userEmail?: string): Client[] {
   const recoveredMap = new Map<string, Client>();
+  const tombstones = getDeletedClientsTombstones();
 
   // 1. Check primary user-scoped key
   const primaryKey = targetUid ? `office_v2_${targetUid}_clients` : 'office_v2_guest_clients';
@@ -479,7 +511,7 @@ export function recoverClientsForUser(targetUid?: string, userEmail?: string): C
       const parsed = JSON.parse(savedUserClients);
       if (Array.isArray(parsed)) {
         parsed.forEach((c: any) => {
-          if (c && c.id && !isDemoClient(c)) {
+          if (c && c.id && !isDemoClient(c) && !isClientTombstoned(c, tombstones)) {
             recoveredMap.set(c.id, c);
           }
         });
@@ -506,7 +538,8 @@ export function recoverClientsForUser(targetUid?: string, userEmail?: string): C
             if (item && !isDemoClient(item)) {
               const clientId = item.id ? (item.id.startsWith('portal-') ? (item.clientId || item.id) : item.id) : item.clientId;
               const clientName = item.name || item.clientName;
-              if (clientId && clientName && !recoveredMap.has(clientId)) {
+              const candidate = { id: clientId, name: clientName, email: item.email || item.clientEmail };
+              if (clientId && clientName && !isClientTombstoned(candidate, tombstones) && !recoveredMap.has(clientId)) {
                 recoveredMap.set(clientId, {
                   id: clientId,
                   name: clientName,
@@ -543,7 +576,8 @@ export function recoverClientsForUser(targetUid?: string, userEmail?: string): C
               parsed.forEach((item: any) => {
                 const clientId = item?.id ? (item.id.startsWith('portal-') ? (item.clientId || item.id) : item.id) : item?.clientId;
                 const clientName = item?.name || item?.clientName;
-                if (clientId && clientName && !isDemoClient(item) && !recoveredMap.has(clientId)) {
+                const candidate = { id: clientId, name: clientName, email: item?.email || item?.clientEmail };
+                if (clientId && clientName && !isDemoClient(item) && !isClientTombstoned(candidate, tombstones) && !recoveredMap.has(clientId)) {
                   recoveredMap.set(clientId, {
                     id: clientId,
                     name: clientName,
@@ -565,7 +599,8 @@ export function recoverClientsForUser(targetUid?: string, userEmail?: string): C
               const item = parsed;
               const clientId = item?.clientId || item?.id;
               const clientName = item?.clientName || item?.name;
-              if (clientId && clientName && !isDemoClient(item) && !recoveredMap.has(clientId)) {
+              const candidate = { id: clientId, name: clientName, email: item?.clientEmail || item?.email };
+              if (clientId && clientName && !isDemoClient(item) && !isClientTombstoned(candidate, tombstones) && !recoveredMap.has(clientId)) {
                 recoveredMap.set(clientId, {
                   id: clientId,
                   name: clientName,
@@ -590,7 +625,7 @@ export function recoverClientsForUser(targetUid?: string, userEmail?: string): C
   } catch {}
 
   const result = Array.from(recoveredMap.values());
-  if (targetUid && result.length > 0) {
+  if (targetUid) {
     try {
       localStorage.setItem(`office_v2_${targetUid}_clients`, JSON.stringify(result));
     } catch {}
@@ -2318,10 +2353,29 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const clientNameNorm = clientToDelete?.name?.trim().toLowerCase();
     const clientEmailNorm = clientToDelete?.email?.trim().toLowerCase();
 
-    // 1. Remove client from state & storage
+    // 0. Record in tombstone list so recoverClientsForUser never resurrects this deleted client
+    try {
+      const tombstones = getDeletedClientsTombstones();
+      tombstones.push({
+        id,
+        name: clientToDelete?.name,
+        email: clientToDelete?.email
+      });
+      localStorage.setItem('office_deleted_clients_v1', JSON.stringify(tombstones));
+    } catch {}
+
+    // 1. Remove client from state & primary storage
     const updatedClients = clients.filter((c) => c.id !== id);
     setClients(updatedClients);
     safeSetItem('clients', updatedClients);
+
+    // Wipe client from all secondary local storage keys
+    try {
+      if (targetUid) localStorage.setItem(`office_v2_${targetUid}_clients`, JSON.stringify(updatedClients));
+      localStorage.setItem('office_v2_guest_clients', JSON.stringify(updatedClients));
+      localStorage.setItem('office_clients', JSON.stringify(updatedClients));
+      localStorage.setItem('clients', JSON.stringify(updatedClients));
+    } catch {}
 
     // 2. Remove all architecture projects linked to this client
     const updatedArchProjects = architectureProjects.filter((p) => {
@@ -2361,8 +2415,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setActions(updatedActions);
     safeSetItem('actions', updatedActions);
 
-    // 5. Delete associated client portals from Firestore
-    deleteClientPortalsForClient(id).catch(console.error);
+    // 5. Delete associated client portals from Firestore & local storage
+    deleteClientPortalsForClient(id, clientToDelete?.name, clientToDelete?.email).catch(console.error);
 
     // 6. Direct workspace Firestore sync
     if (targetUid) {

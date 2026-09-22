@@ -1152,31 +1152,85 @@ export async function setPortalStatus(
 }
 
 /**
- * Permanently deletes a client portal document.
+ * Permanently deletes a client portal document and removes it from all local storage keys & server API.
  */
 export async function deleteClientPortalAccess(portalId: string): Promise<void> {
   try {
+    // 1. Record in tombstone list
+    try {
+      const rawTombstones = localStorage.getItem('office_deleted_portal_ids');
+      const tombset = new Set<string>(rawTombstones ? JSON.parse(rawTombstones) : []);
+      tombset.add(portalId);
+      localStorage.setItem('office_deleted_portal_ids', JSON.stringify(Array.from(tombset)));
+    } catch {}
+
+    // 2. Clear from primary local storage portals list
+    const localPortals = getLocalPortals().filter(p => p.id !== portalId);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_PORTALS_KEY, JSON.stringify(localPortals));
+      localStorage.setItem('office_client_portals', JSON.stringify(localPortals));
+    } catch {}
+
+    // 3. Clear any matching client_portal_* keys in localStorage
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('client_portal_')) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed && parsed.id === portalId) {
+                keysToRemove.push(key);
+              }
+            } catch {}
+          }
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    } catch {}
+
+    // 4. Delete from Firestore
     const portalRef = doc(db, 'clientPortals', portalId);
-    await deleteDoc(portalRef);
+    await deleteDoc(portalRef).catch(() => {});
   } catch (err) {
     console.error('Error deleting client portal access:', err);
+  } finally {
+    window.dispatchEvent(new CustomEvent('client_portals_updated', { detail: { deletedPortalId: portalId } }));
   }
 }
 
 /**
- * Permanently deletes all portals associated with a specific clientId.
+ * Permanently deletes all portals associated with a specific clientId, clientName, or clientEmail.
  */
-export async function deleteClientPortalsForClient(clientId: string): Promise<void> {
+export async function deleteClientPortalsForClient(clientId: string, clientName?: string, clientEmail?: string): Promise<void> {
   try {
+    const nameNorm = clientName ? clientName.trim().toLowerCase() : '';
+    const emailNorm = clientEmail ? clientEmail.trim().toLowerCase() : '';
+
     // 1. Direct portalId patterns
     await deleteClientPortalAccess(`portal-${clientId}`);
     await deleteClientPortalAccess(`demo-portal-${clientId}`);
 
-    // 2. Query any documents where clientId matches
+    // 2. Filter local portals and delete matching ones
+    const allLocal = getLocalPortals();
+    const matchingPortals = allLocal.filter(p => {
+      if (p.clientId === clientId) return true;
+      if (nameNorm && p.clientName && p.clientName.trim().toLowerCase() === nameNorm) return true;
+      if (emailNorm && p.clientEmail && p.clientEmail.trim().toLowerCase() === emailNorm) return true;
+      return false;
+    });
+
+    for (const p of matchingPortals) {
+      await deleteClientPortalAccess(p.id);
+    }
+
+    // 3. Query Firestore for matching documents
     const q = query(collection(db, 'clientPortals'), where('clientId', '==', clientId));
     const snapshot = await getDocs(q);
     const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));
-    await Promise.all(deletePromises);
+    await Promise.all(deletePromises).catch(() => {});
   } catch (err) {
     console.error('Error deleting portals for client:', clientId, err);
   }

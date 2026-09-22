@@ -32,7 +32,7 @@ import {
   X,
   Loader2
 } from 'lucide-react';
-import { useFinance } from '../../context/FinanceContext';
+import { useFinance, isClientTombstoned, getDeletedClientsTombstones } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { ClientPortalAccess, ArchitectureProject, Client, ClientPortalMessage } from '../../types';
 import { 
@@ -142,8 +142,12 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
 
   // Combine real office clients with real-time projects and any cloud saved portals
   const displayPortals = useMemo(() => {
-    const nonLeads = (clients || []).filter((c) => c.status !== 'lead');
-    const portalsList = portals || [];
+    const tombstones = getDeletedClientsTombstones();
+    const rawTombPortals = localStorage.getItem('office_deleted_portal_ids');
+    const tombPortalIds = new Set<string>(rawTombPortals ? JSON.parse(rawTombPortals) : []);
+
+    const nonLeads = (clients || []).filter((c) => c.status !== 'lead' && !isClientTombstoned(c, tombstones));
+    const portalsList = (portals || []).filter(p => !tombPortalIds.has(p.id) && !isClientTombstoned({ id: p.clientId, name: p.clientName, email: p.clientEmail }, tombstones));
 
     const allClientsMap = new Map<string, Client>();
     nonLeads.forEach(c => allClientsMap.set(c.id, c));
@@ -151,6 +155,9 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
     // Synthesize client entry from any saved portal record if missing from clients array
     portalsList.forEach(p => {
       if (!p || !p.clientName) return;
+      const candidate = { id: p.clientId, name: p.clientName, email: p.clientEmail };
+      if (isClientTombstoned(candidate, tombstones) || tombPortalIds.has(p.id)) return;
+
       const existingKey = Array.from(allClientsMap.keys()).find(id => {
         const c = allClientsMap.get(id)!;
         return c.id === p.clientId ||
@@ -178,7 +185,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
       }
     });
 
-    const combinedClients = Array.from(allClientsMap.values());
+    const combinedClients = Array.from(allClientsMap.values()).filter(c => !isClientTombstoned(c, tombstones));
     if (combinedClients.length === 0) {
       return [];
     }
