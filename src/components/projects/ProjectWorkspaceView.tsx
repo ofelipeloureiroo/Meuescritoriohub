@@ -50,6 +50,7 @@ import { DEFAULT_PROJECT_STAGES } from '../../data/defaultProjectStages';
 import { convertTemplateToWorkflowStages, DEFAULT_PROJECT_TEMPLATES } from '../../data/defaultProjectTemplates';
 import { MemorialDescritivoTab } from './MemorialDescritivoTab';
 import { ProjectTasksTab } from './ProjectTasksTab';
+import { SiteLogTab } from './SiteLogTab';
 
 interface ProjectWorkspaceViewProps {
   project: ArchitectureProject;
@@ -71,7 +72,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
   ) || project;
 
   // Active top-level tab
-  const [activeTab, setActiveTab] = useState<'cronograma' | 'tarefas' | 'board' | 'acoes' | 'financeiro' | 'detalhes' | 'memorial'>('cronograma');
+  const [activeTab, setActiveTab] = useState<'cronograma' | 'diario' | 'tarefas' | 'board' | 'acoes' | 'financeiro' | 'detalhes' | 'memorial'>('cronograma');
 
   // Delete project confirmation modal state
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -757,6 +758,18 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
           >
             <Clock className="w-4 h-4 text-zinc-500" />
             <span>Cronograma</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('diario')}
+            className={`flex items-center gap-2 pb-3 text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap border-b-2 ${
+              activeTab === 'diario'
+                ? 'border-[#8c7456] text-zinc-900 font-bold'
+                : 'border-transparent text-zinc-500 hover:text-zinc-800 font-medium'
+            }`}
+          >
+            <FileText className="w-4 h-4 text-zinc-500" />
+            <span>Diário de Obra</span>
           </button>
 
           <button
@@ -1613,6 +1626,11 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB CONTENT: DIÁRIO DE OBRA */}
+      {activeTab === 'diario' && (
+        <SiteLogTab project={liveProject} />
       )}
 
       {/* 7. TAB CONTENT: MEMORIAL DESCRITIVO */}

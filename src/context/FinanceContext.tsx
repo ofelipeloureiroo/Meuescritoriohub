@@ -37,6 +37,7 @@ import {
   ProjectInstallment,
   ProjectMilestone,
   SavingsGoal,
+  SiteLogReport,
   ThemeColorId,
   Transaction,
   WorkContract,
@@ -71,6 +72,7 @@ interface FinanceContextType {
   architectureProjects: ArchitectureProject[];
   projectInstallments: ProjectInstallment[];
   projectMilestones: ProjectMilestone[];
+  siteLogReports: SiteLogReport[];
   workContracts: WorkContract[];
   savingsGoals: SavingsGoal[];
   categoryBudgets: CategoryBudget[];
@@ -103,6 +105,10 @@ interface FinanceContextType {
   updateProjectMilestone: (id: string, milestone: Partial<ProjectMilestone>) => void;
   deleteProjectMilestone: (id: string) => void;
   toggleProjectMilestone: (id: string) => void;
+
+  addSiteLogReport: (report: Omit<SiteLogReport, 'id' | 'createdAt'>) => void;
+  updateSiteLogReport: (id: string, report: Partial<SiteLogReport>) => void;
+  deleteSiteLogReport: (id: string) => void;
 
   // Actions - Transactions
   addTransaction: (tx: Omit<Transaction, 'id'>) => void;
@@ -1099,6 +1105,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return [];
   });
 
+  const [siteLogReports, setSiteLogReports] = useState<SiteLogReport[]>(() => {
+    const saved = localStorage.getItem(getStorageKey('site_log_reports'));
+    if (saved !== null) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
+  });
+
   const [workContracts, setWorkContracts] = useState<WorkContract[]>(() => {
     const saved = localStorage.getItem(getStorageKey('work_contracts'));
     if (saved !== null) {
@@ -1353,6 +1370,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     safeSetItem('milestones', projectMilestones);
   }, [projectMilestones]);
+
+  useEffect(() => {
+    safeSetItem('site_log_reports', siteLogReports);
+  }, [siteLogReports]);
 
   useEffect(() => {
     safeSetItem('work_contracts', workContracts);
@@ -3461,6 +3482,29 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
+  // Actions - Diário de Obra (Site Log Reports)
+  const addSiteLogReport = (reportData: Omit<SiteLogReport, 'id' | 'createdAt'>) => {
+    recordLocalMutation();
+    const newReport: SiteLogReport = {
+      ...reportData,
+      id: `sitelog-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    setSiteLogReports((prev) => [newReport, ...prev]);
+  };
+
+  const updateSiteLogReport = (id: string, updatedFields: Partial<SiteLogReport>) => {
+    recordLocalMutation();
+    setSiteLogReports((prev) =>
+      prev.map((rep) => (rep.id === id ? { ...rep, ...updatedFields, updatedAt: new Date().toISOString() } : rep))
+    );
+  };
+
+  const deleteSiteLogReport = (id: string) => {
+    recordLocalMutation();
+    setSiteLogReports((prev) => prev.filter((rep) => rep.id !== id));
+  };
+
   // Computations
   const computedBankAccounts = useMemo(() => {
     return bankAccounts.map((acc) => {
@@ -3945,6 +3989,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         architectureProjects,
         projectInstallments,
         projectMilestones,
+        siteLogReports,
         workContracts,
         savingsGoals,
         categoryBudgets,
@@ -3970,6 +4015,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateProjectMilestone,
         deleteProjectMilestone,
         toggleProjectMilestone,
+        addSiteLogReport,
+        updateSiteLogReport,
+        deleteSiteLogReport,
         addTransaction,
         updateTransaction,
         deleteTransaction,

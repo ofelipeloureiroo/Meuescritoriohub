@@ -861,6 +861,26 @@ export interface SupportTicket {
   messages: SupportMessage[];
 }
 
+// ==========================================
+// DIÁRIO DE OBRA (SITE LOG REPORTS)
+// ==========================================
+
+export interface SiteLogReport {
+  id: string;
+  projectId: string;
+  code: string;
+  date: string;
+  shift: 'manha' | 'tarde' | 'noite' | 'dia_todo';
+  weather: 'claro' | 'sol' | 'nublado' | 'chuvoso' | 'tempestade';
+  condition: 'praticavel' | 'impraticavel' | 'parcial';
+  workforceCount?: number;
+  activities?: string;
+  observations?: string;
+  photos: string[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
 
 
 
