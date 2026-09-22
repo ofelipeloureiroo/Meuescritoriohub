@@ -674,6 +674,7 @@ export interface TeamMember {
   role: 'admin' | 'member';
   roleTitle?: string;
   phone?: string;
+  hourlyRate?: number;
   avatarUrl?: string;
   initials: string;
   color?: string;
@@ -694,6 +695,7 @@ export interface TeamMember {
     leads?: boolean;
     health?: boolean;
     portfolio?: boolean;
+    timetracker?: boolean;
   };
   joinedAt?: string;
 }

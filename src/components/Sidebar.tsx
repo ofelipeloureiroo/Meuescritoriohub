@@ -172,7 +172,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           label: 'Rastreador de Tempo',
           icon: Timer,
           badge: 'Novo',
-          visible: !isCollaborator || !permissions || permissions.projects !== false,
+          visible:
+            !isCollaborator ||
+            !permissions ||
+            (permissions.timetracker !== undefined ? permissions.timetracker : permissions.projects !== false),
         },
         {
           id: 'projects',
@@ -355,6 +358,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const mostUsedTabs = useMemo(() => {
     const allowed = ALL_APP_TABS.filter((tab) => {
       if (isCollaborator && permissions) {
+        if (tab.id === 'time_tracker' && permissions.timetracker === false) return false;
         if (tab.id === 'today' && permissions.today === false) return false;
         if (tab.id === 'actions' && permissions.actions === false) return false;
         if (tab.id === 'leads' && permissions.leads === false) return false;
@@ -364,6 +368,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         if (tab.id === 'deadlines' && permissions.deadlines === false) return false;
         if (tab.id === 'team' && permissions.team === false) return false;
         if (tab.id === 'suppliers' && permissions.suppliers === false) return false;
+        if (tab.id === 'goals' && permissions.goals === false) return false;
+        if (tab.id === 'budget' && permissions.budget === false) return false;
       }
       return true;
     });

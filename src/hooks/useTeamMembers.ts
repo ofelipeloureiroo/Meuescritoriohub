@@ -9,6 +9,7 @@ export interface SimpleTeamMember {
   role?: string;
   roleTitle?: string;
   email?: string;
+  hourlyRate?: number;
   isOwner?: boolean;
 }
 
@@ -45,11 +46,12 @@ export function useTeamMembers(): {
       email: defaultOwnerEmail,
       role: 'admin',
       roleTitle: 'Responsável do Escritório',
+      hourlyRate: 150,
       initials: initials,
       color: '#b8a38b',
       isCurrentUser: true,
       status: 'active',
-      accessibleModulesCount: 12,
+      accessibleModulesCount: 13,
       permissions: {
         today: true,
         actions: true,
@@ -63,6 +65,7 @@ export function useTeamMembers(): {
         health: true,
         goals: true,
         budget: true,
+        timetracker: true,
       },
       joinedAt: new Date().toISOString().split('T')[0],
     };
@@ -145,6 +148,7 @@ export function useTeamMembers(): {
           role: m.role,
           roleTitle: m.roleTitle,
           email: m.email,
+          hourlyRate: m.hourlyRate || 150,
           isOwner: m.isCurrentUser || m.id === 'member_owner' || m.role === 'admin',
         });
       }

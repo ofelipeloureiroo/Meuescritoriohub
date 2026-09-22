@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
+import { useTeamMembers } from '../../hooks/useTeamMembers';
 import { ArchitectureProject, ProjectWorkflowStage } from '../../types';
 
 interface TimeEntry {
@@ -47,6 +48,7 @@ interface TimeEntry {
 export const TimeTrackerTab: React.FC = () => {
   const { ongoingArchitectureProjects, updateArchitectureProject, addAppAction } = useFinance();
   const { user, profile } = useAuth();
+  const { fullTeamMembers } = useTeamMembers();
 
   const currentUserName = profile?.name || user?.email || 'Arquiteto(a) Responsável';
 
@@ -55,6 +57,7 @@ export const TimeTrackerTab: React.FC = () => {
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [selectedStageName, setSelectedStageName] = useState<string>('');
   const [selectedTaskName, setSelectedTaskName] = useState<string>('');
+  const [selectedResponsibleName, setSelectedResponsibleName] = useState<string>(currentUserName);
   const [billable, setBillable] = useState(true);
   const [hourlyRate, setHourlyRate] = useState<number>(150);
 
@@ -231,7 +234,7 @@ export const TimeTrackerTab: React.FC = () => {
       endTime: endTimeString,
       billable,
       hourlyRate,
-      responsibleName: currentUserName
+      responsibleName: selectedResponsibleName || currentUserName
     };
 
     setTimeEntries([newEntry, ...timeEntries]);
@@ -465,8 +468,8 @@ export const TimeTrackerTab: React.FC = () => {
           )}
         </div>
 
-        {/* Stage Selector Dropdown (Cronograma Stages) */}
-        <div className="relative min-w-[200px]">
+        {/* Stage & Subetapa Selector Dropdown (Cronograma Stages & Subetapas) */}
+        <div className="relative min-w-[210px]">
           <button
             type="button"
             onClick={() => {
@@ -482,30 +485,72 @@ export const TimeTrackerTab: React.FC = () => {
             <div className="flex items-center gap-2 truncate">
               <CheckCircle2 className="w-4 h-4 text-[#8c7456] shrink-0" />
               <span className="truncate">
-                {selectedStageName ? selectedStageName : 'Selecionar Etapa do Cronograma...'}
+                {selectedTaskName
+                  ? `${selectedStageName} ➔ ${selectedTaskName}`
+                  : selectedStageName
+                  ? selectedStageName
+                  : 'Selecionar Etapa / Subetapa...'}
               </span>
             </div>
             <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0" />
           </button>
 
           {isStageDropdownOpen && (
-            <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-2xl border border-zinc-200 shadow-xl z-50 p-2 space-y-1 max-h-[300px] overflow-y-auto">
-              {availableStages.map((stg) => (
-                <button
-                  key={stg.name}
-                  type="button"
-                  onClick={() => {
-                    setSelectedStageName(stg.name);
-                    setIsStageDropdownOpen(false);
-                  }}
-                  className={`w-full text-left p-2.5 rounded-xl text-xs transition-all flex items-center justify-between gap-2 cursor-pointer ${
-                    selectedStageName === stg.name ? 'bg-[#faf7f2] font-bold text-[#8c7456]' : 'hover:bg-zinc-50 text-zinc-700'
-                  }`}
-                >
-                  <span className="truncate">{stg.name}</span>
-                  {selectedStageName === stg.name && <Check className="w-3.5 h-3.5 text-[#8c7456]" />}
-                </button>
-              ))}
+            <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-2xl border border-zinc-200 shadow-xl z-50 p-2 space-y-1.5 max-h-[350px] overflow-y-auto">
+              <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100">
+                Etapas & Subetapas do Cronograma
+              </div>
+              {availableStages.map((stg) => {
+                const isStageOnlySelected = selectedStageName === stg.name && !selectedTaskName;
+                return (
+                  <div key={stg.name} className="space-y-0.5">
+                    {/* Main Stage */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedStageName(stg.name);
+                        setSelectedTaskName('');
+                        setIsStageDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                        isStageOnlySelected ? 'bg-[#faf7f2] text-[#8c7456]' : 'hover:bg-zinc-100 text-zinc-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#8c7456] shrink-0" />
+                        <span className="truncate">{stg.name}</span>
+                      </div>
+                      {isStageOnlySelected && <Check className="w-3.5 h-3.5 text-[#8c7456]" />}
+                    </button>
+
+                    {/* Subetapas / Tasks list */}
+                    {stg.tasks && stg.tasks.length > 0 && (
+                      <div className="pl-4 space-y-0.5 border-l-2 border-zinc-100 ml-3">
+                        {stg.tasks.map((t) => {
+                          const isTaskSelected = selectedStageName === stg.name && selectedTaskName === t.title;
+                          return (
+                            <button
+                              key={t.id || t.title}
+                              type="button"
+                              onClick={() => {
+                                setSelectedStageName(stg.name);
+                                setSelectedTaskName(t.title);
+                                setIsStageDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                                isTaskSelected ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200' : 'hover:bg-zinc-50 text-zinc-600'
+                              }`}
+                            >
+                              <span className="truncate">└ Subetapa: {t.title}</span>
+                              {isTaskSelected && <Check className="w-3 h-3 text-amber-700" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {availableStages.length === 0 && (
                 <p className="text-center py-4 text-xs text-zinc-400">Este projeto não possui etapas cadastradas.</p>
               )}
@@ -513,27 +558,62 @@ export const TimeTrackerTab: React.FC = () => {
           )}
         </div>
 
-        {/* Responsible Person badge */}
-        <div className="hidden xl:flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-600">
-          <User className="w-3.5 h-3.5 text-[#8c7456]" />
-          <span className="font-medium truncate max-w-[130px]" title={currentUserName}>
-            {currentUserName}
-          </span>
+        {/* Responsible Person Selector */}
+        <div className="relative flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-700">
+            <User className="w-3.5 h-3.5 text-[#8c7456] shrink-0" />
+            <select
+              value={selectedResponsibleName}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedResponsibleName(val);
+                const person = fullTeamMembers.find((m) => m.name === val);
+                if (person?.hourlyRate) {
+                  setHourlyRate(person.hourlyRate);
+                }
+              }}
+              className="bg-transparent font-bold text-zinc-800 text-xs focus:outline-hidden cursor-pointer max-w-[150px] truncate"
+              title="Responsável pela ação"
+            >
+              {fullTeamMembers.map((m) => (
+                <option key={m.id} value={m.name}>
+                  {m.name} ({m.hourlyRate ? `R$ ${m.hourlyRate}/h` : 'R$ 150/h'})
+                </option>
+              ))}
+              {!fullTeamMembers.some((m) => m.name === currentUserName) && (
+                <option value={currentUserName}>{currentUserName}</option>
+              )}
+            </select>
+          </div>
         </div>
 
-        {/* Billable toggle */}
+        {/* Billable toggle & Hourly rate input */}
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setBillable(!billable)}
             title={billable ? 'Marcado como Faturável' : 'Não Faturável'}
-            className={`p-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+            className={`p-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
               billable ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-200 text-zinc-600'
             }`}
           >
             <DollarSign className="w-3.5 h-3.5" />
-            <span>{billable ? 'R$ Faturável' : 'Gratuito'}</span>
+            <span>{billable ? 'Faturável' : 'Gratuito'}</span>
           </button>
+
+          {billable && (
+            <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl text-xs text-emerald-800 font-bold" title="Valor por hora configurado na aba Equipe">
+              <span className="text-[10px] text-emerald-600 uppercase">R$/h:</span>
+              <input
+                type="number"
+                min="0"
+                step="5"
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(Number(e.target.value) || 0)}
+                className="w-12 bg-transparent font-extrabold text-emerald-900 focus:outline-hidden text-right"
+              />
+            </div>
+          )}
         </div>
 
         {/* Timer Counter & Action Button */}
@@ -638,10 +718,17 @@ export const TimeTrackerTab: React.FC = () => {
                         <div className="text-[10px] text-zinc-500">{entry.clientName}</div>
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-800 font-medium text-[11px]">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-[#8c7456]" />
-                          {entry.stageName}
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-800 font-medium text-[11px]">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#8c7456] shrink-0" />
+                            {entry.stageName}
+                          </span>
+                          {entry.taskName && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/80 font-semibold text-[10px]">
+                              └ Subetapa: {entry.taskName}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#faf7f2] text-[#8c7456] font-semibold text-[11px]">

@@ -97,6 +97,7 @@ const MODULE_OPTIONS = [
   { key: 'health', label: 'Saúde do Negócio' },
   { key: 'goals', label: 'Metas & Objetivos' },
   { key: 'budget', label: 'Orçamento & DRE' },
+  { key: 'timetracker', label: 'Rastreador de Tempo' },
 ];
 
 export const TeamTab: React.FC = () => {
@@ -284,6 +285,7 @@ export const TeamTab: React.FC = () => {
   const [formEmail, setFormEmail] = useState('');
   const [formRoleTitle, setFormRoleTitle] = useState('');
   const [formPhone, setFormPhone] = useState('');
+  const [formHourlyRate, setFormHourlyRate] = useState<number>(150);
   const [formRole, setFormRole] = useState<'admin' | 'member'>('member');
   const [formPermissions, setFormPermissions] = useState<TeamMember['permissions']>({
     today: true,
@@ -298,6 +300,7 @@ export const TeamTab: React.FC = () => {
     health: false,
     goals: true,
     budget: false,
+    timetracker: true,
   });
 
   const targetUid = user?.joinedOwnerUid || user?.uid || 'guest';
@@ -428,6 +431,7 @@ export const TeamTab: React.FC = () => {
     setFormEmail('');
     setFormRoleTitle('Projetista');
     setFormPhone('');
+    setFormHourlyRate(150);
     setFormRole('member');
     setFormPermissions({
       today: true,
@@ -442,6 +446,7 @@ export const TeamTab: React.FC = () => {
       health: false,
       goals: false,
       budget: false,
+      timetracker: true,
     });
     setIsAddModalOpen(true);
   };
@@ -452,8 +457,9 @@ export const TeamTab: React.FC = () => {
     setFormEmail(member.email);
     setFormRoleTitle(member.roleTitle || '');
     setFormPhone(member.phone || '');
+    setFormHourlyRate(member.hourlyRate || 150);
     setFormRole(member.role);
-    setFormPermissions({ ...member.permissions });
+    setFormPermissions({ timetracker: true, ...member.permissions });
   };
 
   const handleJoinOfficeByCode = async (e: React.FormEvent) => {
@@ -494,6 +500,7 @@ export const TeamTab: React.FC = () => {
         email: formEmail.trim(),
         roleTitle: formRoleTitle.trim(),
         phone: formPhone.trim(),
+        hourlyRate: formHourlyRate || 150,
         role: formRole,
         permissions: formPermissions,
         accessibleModulesCount: accessibleCount,
@@ -523,6 +530,7 @@ export const TeamTab: React.FC = () => {
         email: formEmail.trim(),
         roleTitle: formRoleTitle.trim() || 'Projetista',
         phone: formPhone.trim(),
+        hourlyRate: formHourlyRate || 150,
         role: formRole,
         initials: initials || 'EQ',
         color: '#b8a38b',
@@ -791,9 +799,14 @@ export const TeamTab: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      {modulesText}
-                    </p>
+                    <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                      <p className="text-xs text-zinc-500">
+                        {modulesText}
+                      </p>
+                      <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-0.5" title="Valor por hora configurado para o rastreador de tempo">
+                        R$ {member.hourlyRate || 150}/h
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -930,6 +943,29 @@ export const TeamTab: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-800 bg-white focus:outline-hidden focus:border-[#8c7456]"
                   />
                 </div>
+              </div>
+
+              {/* Valor da Hora Faturável */}
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                  Valor da Hora Faturável (R$ / h) <span className="text-[#8c7456]">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">R$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5"
+                    required
+                    value={formHourlyRate}
+                    onChange={(e) => setFormHourlyRate(Number(e.target.value) || 0)}
+                    placeholder="150"
+                    className="w-full pl-10 pr-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold text-zinc-900 bg-white focus:outline-hidden focus:border-[#8c7456]"
+                  />
+                </div>
+                <p className="text-[10px] text-zinc-400 mt-1">
+                  Usado no Rastreador de Tempo para calcular o valor gerado nos projetos.
+                </p>
               </div>
 
               {/* Papel na empresa */}
@@ -1072,6 +1108,26 @@ export const TeamTab: React.FC = () => {
                   onChange={(e) => setFormRoleTitle(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-800 bg-white focus:outline-hidden focus:border-[#8c7456]"
                 />
+              </div>
+
+              {/* Valor da Hora Faturável */}
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                  Valor da Hora Faturável (R$ / h) <span className="text-[#8c7456]">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">R$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5"
+                    required
+                    value={formHourlyRate}
+                    onChange={(e) => setFormHourlyRate(Number(e.target.value) || 0)}
+                    placeholder="150"
+                    className="w-full pl-10 pr-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold text-zinc-900 bg-white focus:outline-hidden focus:border-[#8c7456]"
+                  />
+                </div>
               </div>
 
               {/* Papel */}
