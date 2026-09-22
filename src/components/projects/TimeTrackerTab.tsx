@@ -41,14 +41,15 @@ export const TimeTrackerTab: React.FC = () => {
   const { user, profile } = useAuth();
   const { teamMembers } = useTeamMembers();
 
-  const currentUserName = profile?.name || user?.email || 'Arquiteto(a) Responsável';
+  const currentUserEmail = user?.email || profile?.email || 'contato@escritorio.com';
+  const currentUserName = profile?.name || user?.email || 'Responsável';
 
   // Active Timer state
   const [description, setDescription] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [selectedStageName, setSelectedStageName] = useState<string>('');
   const [selectedTaskName, setSelectedTaskName] = useState<string>('');
-  const [selectedResponsibleName, setSelectedResponsibleName] = useState<string>(currentUserName);
+  const [selectedResponsibleEmail, setSelectedResponsibleEmail] = useState<string>(currentUserEmail);
   const [billable, setBillable] = useState(true);
   const [hourlyRate, setHourlyRate] = useState<number>(150);
 
@@ -159,7 +160,8 @@ export const TimeTrackerTab: React.FC = () => {
     const endTimeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const todayStr = now.toISOString().split('T')[0];
 
-    const respMember = teamMembers.find(m => m.name === (selectedResponsibleName || currentUserName));
+    const respMember = teamMembers.find(m => (m.email || '').toLowerCase().trim() === selectedResponsibleEmail.toLowerCase().trim());
+    const respName = respMember?.name || selectedResponsibleEmail.split('@')[0] || currentUserName;
 
     const newEntry: TimeEntry = {
       id: `entry-${Date.now()}`,
@@ -175,8 +177,8 @@ export const TimeTrackerTab: React.FC = () => {
       endTime: endTimeString,
       billable,
       hourlyRate,
-      responsibleName: selectedResponsibleName || currentUserName,
-      responsibleEmail: respMember?.email || user?.email || undefined
+      responsibleName: respName,
+      responsibleEmail: selectedResponsibleEmail
     };
 
     addTimeEntry(newEntry);
@@ -187,7 +189,7 @@ export const TimeTrackerTab: React.FC = () => {
         // 1. Add action to Central de Ações / Tasks
         addAppAction({
           title: `Apontamento: ${selectedProject.title} (${selectedStageName || 'Geral'})`,
-          description: `${description.trim() || 'Trabalho no projeto'} • Duração: ${formatTime(secondsElapsed)} • Resp: ${currentUserName}`,
+          description: `${description.trim() || 'Trabalho no projeto'} • Duração: ${formatTime(secondsElapsed)} • Resp: ${selectedResponsibleEmail}`,
           category: 'Projeto',
           dueDate: todayStr,
           status: 'completed',
@@ -199,23 +201,35 @@ export const TimeTrackerTab: React.FC = () => {
         console.warn("Error syncing time entry to action center:", e);
       }
 
-      // 2. Update project schedule stage & tasks
+      // 2. Update project schedule stage & tasks (Bidirectional sync)
       if (selectedProject.stages && selectedProject.stages.length > 0) {
         const updatedStages = selectedProject.stages.map((stage) => {
-          if (stage.name === selectedStageName || (selectedStageName && stage.name.toLowerCase().includes(selectedStageName.toLowerCase()))) {
+          if (stage.name === selectedStageName) {
+            const updatedTasks = (stage.tasks || []).map((t) => {
+              if (t.name === selectedTaskName || (!selectedTaskName && t.status === 'not_started')) {
+                const currentReal = t.realizedHours || 0;
+                const addedReal = secondsElapsed / 3600;
+                return { 
+                  ...t, 
+                  status: 'completed' as const,
+                  realizedHours: currentReal + addedReal,
+                  responsible: respName
+                };
+              }
+              return t;
+            });
             return {
               ...stage,
               status: 'in_progress' as const,
-              tasks: stage.tasks
-                ? stage.tasks.map((t, idx) => (idx === 0 ? { ...t, status: 'completed' as const } : t))
-                : []
+              tasks: updatedTasks
             };
           }
           return stage;
         });
 
         updateArchitectureProject(selectedProjectId, {
-          stages: updatedStages
+          stages: updatedStages,
+          status: 'em_andamento'
         });
       }
     }
@@ -304,7 +318,7 @@ export const TimeTrackerTab: React.FC = () => {
               <Timer className="w-3.5 h-3.5 text-[#8c7456]" />
               Produtividade & Cronograma Sincronizado
             </span>
-            <span className="text-xs text-zinc-400 font-medium">• Responsável: <strong className="text-zinc-700">{currentUserName}</strong></span>
+            <span className="text-xs text-zinc-400 font-medium">• Responsável: <strong className="text-zinc-700">{selectedResponsibleEmail}</strong></span>
           </div>
           <h1 className="text-2xl font-serif font-extrabold text-zinc-900">Rastreador de Tempo & Tarefas</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
@@ -501,30 +515,30 @@ export const TimeTrackerTab: React.FC = () => {
           )}
         </div>
 
-        {/* Responsible Person Selector */}
+        {/* Responsible Person Selector (By Email) */}
         <div className="relative flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-700">
             <User className="w-3.5 h-3.5 text-[#8c7456] shrink-0" />
             <select
-              value={selectedResponsibleName}
+              value={selectedResponsibleEmail}
               onChange={(e) => {
                 const val = e.target.value;
-                setSelectedResponsibleName(val);
-                const person = teamMembers.find((m) => m.name === val);
+                setSelectedResponsibleEmail(val);
+                const person = teamMembers.find((m) => m.email === val);
                 if (person?.hourlyRate) {
                   setHourlyRate(person.hourlyRate);
                 }
               }}
-              className="bg-transparent font-bold text-zinc-800 text-xs focus:outline-hidden cursor-pointer max-w-[150px] truncate"
+              className="bg-transparent font-bold text-zinc-800 text-xs focus:outline-hidden cursor-pointer max-w-[200px] truncate"
               title="Responsável pela ação"
             >
               {teamMembers.map((m) => (
-                <option key={m.id} value={m.name}>
-                  {m.name} ({m.hourlyRate ? `R$ ${m.hourlyRate}/h` : 'R$ 150/h'})
+                <option key={m.id} value={m.email}>
+                  {m.email} {m.name ? `(${m.name})` : ''}
                 </option>
               ))}
-              {!teamMembers.some((m) => m.name === currentUserName) && (
-                <option value={currentUserName}>{currentUserName}</option>
+              {!teamMembers.some((m) => m.email === currentUserEmail) && (
+                <option value={currentUserEmail}>{currentUserEmail}</option>
               )}
             </select>
           </div>
@@ -643,7 +657,7 @@ export const TimeTrackerTab: React.FC = () => {
                 <tr>
                   <th className="py-3 px-4">Projeto & Cliente</th>
                   <th className="py-3 px-4">Etapa do Cronograma</th>
-                  <th className="py-3 px-4">Responsável</th>
+                  <th className="py-3 px-4">Responsável (E-mail)</th>
                   <th className="py-3 px-4">Descrição da Atividade</th>
                   <th className="py-3 px-4">Data & Horário</th>
                   <th className="py-3 px-4 text-center">Duração</th>
@@ -676,7 +690,7 @@ export const TimeTrackerTab: React.FC = () => {
                       <td className="py-3.5 px-4">
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#faf7f2] text-[#8c7456] font-semibold text-[11px]">
                           <User className="w-3 h-3" />
-                          {entry.responsibleName || currentUserName}
+                          {entry.responsibleEmail || entry.responsibleName || currentUserEmail}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-zinc-700 max-w-xs truncate" title={entry.description}>

@@ -667,6 +667,7 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
     const memberStats: Record<string, {
       name: string;
       roleTitle: string;
+      email: string;
       estimated: number;
       realized: number;
       completed: number;
@@ -677,13 +678,14 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
 
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // Helper to get or create member stats
-    const getMemberStats = (name: string) => {
-      const nameLower = name.toLowerCase().trim();
-      if (!memberStats[nameLower]) {
-        const matchedMember = realMembers.find(m => m.name.toLowerCase().trim() === nameLower);
-        memberStats[nameLower] = {
-          name: matchedMember?.name || name,
+    // Helper to get or create member stats using EMAIL as primary key
+    const getMemberStats = (email: string, fallbackName?: string) => {
+      const emailLower = email.toLowerCase().trim();
+      if (!memberStats[emailLower]) {
+        const matchedMember = realMembers.find(m => (m.email || '').toLowerCase().trim() === emailLower);
+        memberStats[emailLower] = {
+          name: matchedMember?.name || fallbackName || email.split('@')[0] || 'Colaborador',
+          email: emailLower,
           roleTitle: matchedMember?.roleTitle || 'Colaborador',
           estimated: 0,
           realized: 0,
@@ -693,18 +695,23 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
           color: matchedMember?.color || '#a1a1aa',
         };
       }
-      return memberStats[nameLower];
+      return memberStats[emailLower];
     };
 
-    // Initialize with active real members
+    // Initialize with active real members only if they are the current user or have real email
     realMembers.forEach((m) => {
-      const isMasterEmail = m.email?.toLowerCase().includes('master_escritorio') || m.email?.toLowerCase() === 'lfquadrosdecorativos@gmail.com';
+      if (!m.email) return;
+      const mEmailClean = m.email.toLowerCase().trim();
+      const isMasterEmail = mEmailClean.includes('master_escritorio') || mEmailClean === 'lfquadrosdecorativos@gmail.com';
       const currentUserEmail = (user?.email || '').toLowerCase().trim();
       
-      if (isMasterEmail && currentUserEmail !== m.email?.toLowerCase()) {
+      if (isMasterEmail && currentUserEmail !== mEmailClean) {
         return;
       }
-      getMemberStats(m.name);
+      // Only auto-initialize if it's the current user or they have an email that doesn't look like a placeholder
+      if (mEmailClean.includes('@') && !mEmailClean.includes('contato@escritorio.com')) {
+        getMemberStats(m.email, m.name);
+      }
     });
 
     // 1. Accumulate Estimates and Task Counts from Projects
@@ -724,8 +731,12 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
             }
           }
 
-          const respName = (task.responsible || 'Equipe Geral').trim();
-          const stats = getMemberStats(respName);
+          // Try to find responsible by email first
+          const respName = (task.responsible || '').trim();
+          const matchedMember = realMembers.find(m => m.name === respName);
+          const respEmail = matchedMember?.email || (respName.includes('@') ? respName : 'equipe@geral.com');
+          
+          const stats = getMemberStats(respEmail, respName);
           
           stats.estimated += est;
           stats.total += 1;
@@ -744,31 +755,48 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
       const hours = (entry.durationSeconds || 0) / 3600;
       totalRealized += hours;
 
-      const respName = (entry.responsibleName || 'Equipe Geral').trim();
-      const stats = getMemberStats(respName);
+      const respEmail = (entry.responsibleEmail || entry.responsibleName || 'equipe@geral.com').toLowerCase().trim();
+      const stats = getMemberStats(respEmail, entry.responsibleName);
       stats.realized += hours;
     });
 
-    const membersList = Object.values(memberStats).map((stats) => {
-      const efficiency = stats.realized > 0
-        ? Math.round((stats.estimated / stats.realized) * 100)
-        : stats.completed > 0 ? 100 : 0;
+    const membersList = Object.values(memberStats)
+      .filter(stats => {
+        // Only show members who actually have assignments or logged time
+        // OR the current user
+        const isCurrentUser = stats.email === (user?.email || '').toLowerCase().trim();
+        const hasData = stats.estimated > 0 || stats.realized > 0 || stats.total > 0;
+        const isPlaceholder = stats.name.includes('---') || stats.email.includes('contato@escritorio.com');
+        return (isCurrentUser || hasData) && !isPlaceholder;
+      })
+      .map((stats) => {
+        // Efficiency fix: if realized is very low (e.g. seconds), don't show exploding percentages
+        let efficiency = 0;
+        if (stats.realized > 0.1) { // Only calculate if more than 6 minutes logged
+          efficiency = Math.round((stats.estimated / stats.realized) * 100);
+        } else if (stats.completed > 0) {
+          efficiency = 100;
+        }
 
-      const onTimeRate = stats.completed > 0
-        ? Math.round((stats.onTime / stats.completed) * 100)
-        : 100;
+        const onTimeRate = stats.completed > 0
+          ? Math.round((stats.onTime / stats.completed) * 100)
+          : 100;
 
-      return {
-        ...stats,
-        efficiency,
-        onTimeRate,
-        balance: stats.estimated - stats.realized,
-      };
-    });
+        return {
+          ...stats,
+          efficiency,
+          onTimeRate,
+          balance: stats.estimated - stats.realized,
+        };
+      });
 
-    const overallEfficiency = totalRealized > 0
-      ? Math.round((totalEstimated / totalRealized) * 100)
-      : completedTasksCount > 0 ? 100 : 0;
+    // Overall efficiency fix
+    let overallEfficiency = 0;
+    if (totalRealized > 0.1) {
+      overallEfficiency = Math.round((totalEstimated / totalRealized) * 100);
+    } else if (completedTasksCount > 0) {
+      overallEfficiency = 100;
+    }
 
     const overallOnTimeRate = completedTasksCount > 0
       ? Math.round((onTimeTasksCount / completedTasksCount) * 100)
