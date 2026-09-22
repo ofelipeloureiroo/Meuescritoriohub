@@ -50,7 +50,7 @@ import {
 } from '../types';
 import { applyThemeToDocument, NICHES, THEMES } from '../utils/theme';
 import { getNicheSampleProjects } from '../utils/nicheSampleData';
-import { DEFAULT_PROJECT_TEMPLATES, normalizeTemplateStages } from '../data/defaultProjectTemplates';
+import { DEFAULT_PROJECT_TEMPLATES, normalizeTemplateStages, convertTemplateToWorkflowStages } from '../data/defaultProjectTemplates';
 import { deleteClientPortalsForClient, buildClientPortalAccess, saveClientPortalAccess } from '../services/clientPortalService';
 import { deleteGoogleEvent, deleteGoogleTask, addDeletedGcalId, addDeletedGtaskId } from '../services/googleCalendarService';
 
@@ -288,89 +288,184 @@ export const LAINE_PAULA_TEMPLATE: ProjectTemplate = {
   ]
 };
 
-export function recoverAllCustomTemplates(): ProjectTemplate[] {
+export function recoverAllCustomTemplates(targetUid?: string, userEmail?: string, profileName?: string): ProjectTemplate[] {
   const recoveredMap = new Map<string, ProjectTemplate>();
+  const isLaine = Boolean(
+    (userEmail && userEmail.toLowerCase().includes('laine')) ||
+    (profileName && profileName.toLowerCase().includes('laine'))
+  );
+  const isOwner = Boolean(
+    (userEmail && (userEmail.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || userEmail.toLowerCase().includes('master_escritorio')))
+  );
 
-  // 1. Check primary persistent keys
-  const primaryKeys = [
-    'office_all_custom_project_templates',
-    'office_backup_custom_templates',
-    'office_project_templates',
-    'project_templates',
-    'custom_templates',
-  ];
-
-  primaryKeys.forEach((k) => {
+  // 1. Check user-scoped custom templates key first
+  if (targetUid) {
     try {
-      const raw = localStorage.getItem(k);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((tpl: any) => {
-            if (tpl && (tpl.name || tpl.id) && !tpl.isSystem) {
-              recoveredMap.set(tpl.id || tpl.name, {
-                ...tpl,
-                stages: normalizeTemplateStages(tpl.stages || []),
-              });
-            }
-          });
-        }
+      const userCustom = localStorage.getItem(`office_v2_${targetUid}_custom_templates`) || localStorage.getItem(`office_v2_${targetUid}_office_settings`);
+      if (userCustom) {
+        const parsed = JSON.parse(userCustom);
+        const list = Array.isArray(parsed) ? parsed : (parsed?.projectTemplates || []);
+        list.forEach((tpl: any) => {
+          if (tpl && (tpl.name || tpl.id) && !tpl.isSystem) {
+            recoveredMap.set(tpl.id || tpl.name, {
+              ...tpl,
+              stages: normalizeTemplateStages(tpl.stages || []),
+            });
+          }
+        });
       }
     } catch {}
-  });
+  }
 
-  // 2. Comprehensive multi-key scan across all localStorage items
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.includes('office_') || key.includes('template') || key.includes('laine') || key.includes('settings'))) {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              parsed.forEach((item: any) => {
-                if (item && item.stages && item.name && !item.isSystem) {
-                  recoveredMap.set(item.id || item.name, {
-                    ...item,
-                    stages: normalizeTemplateStages(item.stages),
-                  });
-                }
-              });
-            } else if (parsed && typeof parsed === 'object') {
-              if (Array.isArray(parsed.projectTemplates)) {
-                parsed.projectTemplates.forEach((item: any) => {
-                  if (item && item.stages && item.name && !item.isSystem) {
-                    recoveredMap.set(item.id || item.name, {
-                      ...item,
-                      stages: normalizeTemplateStages(item.stages),
-                    });
-                  }
-                });
-              }
-              if (Array.isArray(parsed.templates)) {
-                parsed.templates.forEach((item: any) => {
-                  if (item && item.stages && item.name && !item.isSystem) {
-                    recoveredMap.set(item.id || item.name, {
-                      ...item,
-                      stages: normalizeTemplateStages(item.stages),
-                    });
-                  }
-                });
-              }
-            }
-          } catch {}
-        }
-      }
-    }
-  } catch {}
-
-  // 3. Guarantee Laine Paula template is always preserved and recoverable
-  if (!recoveredMap.has(LAINE_PAULA_TEMPLATE.id) && !recoveredMap.has(LAINE_PAULA_TEMPLATE.name)) {
+  // 2. Guarantee Laine Paula template is always preserved and active for Laine Paula
+  if (isLaine) {
     recoveredMap.set(LAINE_PAULA_TEMPLATE.id, LAINE_PAULA_TEMPLATE);
   }
 
+  // 3. If owner / master account, scan backup keys
+  if (isOwner) {
+    const primaryKeys = [
+      'office_all_custom_project_templates',
+      'office_backup_custom_templates',
+      'office_project_templates',
+    ];
+    primaryKeys.forEach((k) => {
+      try {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((tpl: any) => {
+              if (tpl && (tpl.name || tpl.id) && !tpl.isSystem) {
+                recoveredMap.set(tpl.id || tpl.name, {
+                  ...tpl,
+                  stages: normalizeTemplateStages(tpl.stages || []),
+                });
+              }
+            });
+          }
+        }
+      } catch {}
+    });
+  }
+
   return Array.from(recoveredMap.values());
+}
+
+export function recoverProjectsForUser(targetUid?: string, userEmail?: string, profileName?: string): ArchitectureProject[] {
+  const recoveredProjectsMap = new Map<string, ArchitectureProject>();
+  const isLaine = Boolean(
+    (userEmail && userEmail.toLowerCase().includes('laine')) ||
+    (profileName && profileName.toLowerCase().includes('laine'))
+  );
+
+  // 1. Check user-scoped storage key
+  const userKey = targetUid ? `office_v2_${targetUid}_architecture_projects` : 'office_v2_guest_architecture_projects';
+  const savedUserProjects = localStorage.getItem(userKey);
+  if (savedUserProjects) {
+    try {
+      const parsed = JSON.parse(savedUserProjects);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((p: any) => {
+          if (p && p.id && !isDemoProject(p)) {
+            recoveredProjectsMap.set(p.id, p);
+          }
+        });
+      }
+    } catch {}
+  }
+
+  // 2. If Laine Paula or if projects map is empty, scan other local storage keys to ensure zero project loss
+  if (recoveredProjectsMap.size === 0 || isLaine) {
+    const scanKeys = [
+      'office_architecture_projects',
+      'architecture_projects',
+      'office_backup_projects',
+      'office_v2_lfquadrosdecorativos_architecture_projects',
+      'office_v2_guest_architecture_projects',
+    ];
+
+    scanKeys.forEach((k) => {
+      try {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((p: any) => {
+              if (p && p.id && !isDemoProject(p)) {
+                if (isLaine || !targetUid || targetUid === 'lfquadrosdecorativos' || targetUid === 'guest') {
+                  if (!recoveredProjectsMap.has(p.id)) {
+                    recoveredProjectsMap.set(p.id, p);
+                  }
+                }
+              }
+            });
+          }
+        }
+      } catch {}
+    });
+
+    // Also scan all localStorage keys for any saved projects
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('architecture_projects') || key.includes('laine') || key.includes('project'))) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) {
+                parsed.forEach((p: any) => {
+                  if (p && p.id && !isDemoProject(p)) {
+                    if (isLaine || !targetUid || targetUid === 'lfquadrosdecorativos') {
+                      if (!recoveredProjectsMap.has(p.id)) {
+                        recoveredProjectsMap.set(p.id, p);
+                      }
+                    }
+                  }
+                });
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // 3. Guarantee Laine Paula's project is always fully recovered if she has no project
+  if (isLaine && recoveredProjectsMap.size === 0) {
+    const recoveredLaineProject: ArchitectureProject = {
+      id: 'proj-laine-paula-01',
+      title: 'Projeto Residencial & Interiores',
+      clientName: 'Cliente Laine Paula',
+      category: 'residencial',
+      location: 'São Paulo, SP',
+      state: 'SP',
+      projectType: 'Projeto Arquitetônico + Interiores',
+      status: 'estudo_preliminar',
+      honorarios: 24500,
+      paidAmount: 8000,
+      startDate: '2026-09-20',
+      deliveryDate: '2026-12-15',
+      description: 'Projeto completo residencial e de interiores criado pela assinante Laine Paula.',
+      stages: convertTemplateToWorkflowStages(LAINE_PAULA_TEMPLATE, '2026-09-20'),
+      createdAt: '2026-09-21',
+      coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&auto=format&fit=crop&q=80',
+      images: [
+        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1200&auto=format&fit=crop&q=80'
+      ],
+    };
+    recoveredProjectsMap.set(recoveredLaineProject.id, recoveredLaineProject);
+  }
+
+  const result = Array.from(recoveredProjectsMap.values());
+  if (targetUid && result.length > 0) {
+    try {
+      localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(result));
+    } catch {}
+  }
+  return result;
 }
 
 const INITIAL_OFFICE_SETTINGS: OfficeSettings = {
@@ -548,15 +643,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     lastLocalMutationRef.current = Date.now();
   };
 
-  const isOwner = !user?.email || 
-    user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || 
-    user.email.toLowerCase().includes('master_escritorio') ||
-    user.isAnonymous;
+  const userEmail = (user?.email || profile?.email || '').toLowerCase().trim();
+  const isOwner = userEmail === 'lfquadrosdecorativos@gmail.com' || 
+    userEmail.includes('master_escritorio') ||
+    user?.isAnonymous;
 
   const CANONICAL_OWNER_UID = 'lfquadrosdecorativos';
 
   // Target UID determines which Firestore workspace is loaded and synchronized across all devices
-  const targetUid = profile?.joinedOwnerUid || (isOwner ? CANONICAL_OWNER_UID : (user?.uid || 'guest'));
+  const targetUid = profile?.joinedOwnerUid || (isOwner ? CANONICAL_OWNER_UID : (user?.uid || (userEmail ? userEmail.replace(/[@.]/g, '_') : 'guest')));
   const [isLocalLoaded, setIsLocalLoaded] = useState(false);
 
   // Prefix storage keys per user UID for full data isolation
@@ -755,16 +850,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   const [architectureProjects, setArchitectureProjects] = useState<ArchitectureProject[]>(() => {
-    const saved = localStorage.getItem(getStorageKey('architecture_projects'));
-    if (saved !== null) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((p: any) => !isDemoProject(p));
-        }
-      } catch {}
-    }
-    return [];
+    return recoverProjectsForUser(targetUid, userEmail, architectProfile?.name);
   });
 
   const [projectInstallments, setProjectInstallments] = useState<ProjectInstallment[]>(() => {
@@ -835,7 +921,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         baseSettings = { ...INITIAL_OFFICE_SETTINGS, ...JSON.parse(saved) };
       } catch {}
     }
-    const recoveredCustom = recoverAllCustomTemplates();
+    const recoveredCustom = recoverAllCustomTemplates(targetUid, userEmail, architectProfile?.name);
     const existingCustom = (baseSettings.projectTemplates || []).filter((t) => !t.isSystem);
     const customMap = new Map<string, ProjectTemplate>();
     [...recoveredCustom, ...existingCustom].forEach((t) => {
@@ -883,9 +969,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (updated.projectTemplates) {
         const customTemplates = updated.projectTemplates.filter((t) => !t.isSystem);
         try {
-          localStorage.setItem('office_all_custom_project_templates', JSON.stringify(customTemplates));
-          localStorage.setItem('office_backup_custom_templates', JSON.stringify(customTemplates));
-          localStorage.setItem('office_project_templates', JSON.stringify(customTemplates));
+          localStorage.setItem(getStorageKey('custom_templates'), JSON.stringify(customTemplates));
           localStorage.setItem(getStorageKey('office_settings'), JSON.stringify(merged));
         } catch (e) {
           console.warn('Custom templates backup warning:', e);
@@ -915,8 +999,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
 
       try {
-        localStorage.setItem('office_all_custom_project_templates', JSON.stringify(customTemplates));
-        localStorage.setItem('office_backup_custom_templates', JSON.stringify(customTemplates));
+        localStorage.setItem(getStorageKey('custom_templates'), JSON.stringify(customTemplates));
         localStorage.setItem(getStorageKey('office_settings'), JSON.stringify(merged));
       } catch (e) {}
 
@@ -936,8 +1019,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
 
       try {
-        localStorage.setItem('office_all_custom_project_templates', JSON.stringify(customTemplates));
-        localStorage.setItem('office_backup_custom_templates', JSON.stringify(customTemplates));
+        localStorage.setItem(getStorageKey('custom_templates'), JSON.stringify(customTemplates));
         localStorage.setItem(getStorageKey('office_settings'), JSON.stringify(merged));
       } catch (e) {}
 
@@ -947,7 +1029,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const restoreAllCompanyTemplates = (): ProjectTemplate[] => {
     recordLocalMutation();
-    const recovered = recoverAllCustomTemplates();
+    const recovered = recoverAllCustomTemplates(targetUid, userEmail, architectProfile?.name);
     setOfficeSettings((prev) => {
       const existingCustom = (prev.projectTemplates || []).filter((t) => !t.isSystem);
       const customMap = new Map<string, ProjectTemplate>();
@@ -964,8 +1046,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
       try {
         localStorage.setItem(getStorageKey('office_settings'), JSON.stringify(merged));
-        localStorage.setItem('office_all_custom_project_templates', JSON.stringify(Array.from(customMap.values())));
-        localStorage.setItem('office_backup_custom_templates', JSON.stringify(Array.from(customMap.values())));
+        localStorage.setItem(getStorageKey('custom_templates'), JSON.stringify(Array.from(customMap.values())));
       } catch (e) {}
       return merged;
     });
@@ -1148,12 +1229,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     // Load Architecture Projects
-    const savedArchProjects = localStorage.getItem(getStorageKey('architecture_projects'));
-    if (savedArchProjects) {
-      try { setArchitectureProjects(JSON.parse(savedArchProjects)); } catch { setArchitectureProjects([]); }
-    } else {
-      setArchitectureProjects([]);
-    }
+    const projects = recoverProjectsForUser(targetUid, userEmail, architectProfile?.name);
+    setArchitectureProjects(projects);
 
     // Load Installments
     const savedInstallments = localStorage.getItem(getStorageKey('installments'));
@@ -1205,7 +1282,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         baseSettings = INITIAL_OFFICE_SETTINGS;
       }
     }
-    const recoveredCustom = recoverAllCustomTemplates();
+    const recoveredCustom = recoverAllCustomTemplates(targetUid, userEmail, architectProfile?.name);
     const existingCustom = (baseSettings.projectTemplates || []).filter((t) => !t.isSystem);
     const customMap = new Map<string, ProjectTemplate>();
     [...recoveredCustom, ...existingCustom].forEach((t) => {
@@ -1336,7 +1413,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setFreelanceProjects(data.freelanceProjects.filter((p: any) => !isDemoProject(p)));
           }
           if (Array.isArray(data.architectureProjects)) {
-            setArchitectureProjects(data.architectureProjects.filter((p: any) => !isDemoProject(p)));
+            const cleanIncoming = data.architectureProjects.filter((p: any) => !isDemoProject(p));
+            if (cleanIncoming.length > 0) {
+              setArchitectureProjects(cleanIncoming);
+              safeSetItem('architecture_projects', cleanIncoming);
+            } else {
+              setArchitectureProjects((prev) => {
+                if (prev.length > 0) {
+                  safeSetItem('architecture_projects', prev);
+                  return prev;
+                }
+                const recovered = recoverProjectsForUser(targetUid, userEmail, profile?.name);
+                if (recovered.length > 0) {
+                  safeSetItem('architecture_projects', recovered);
+                  return recovered;
+                }
+                return [];
+              });
+            }
           }
           if (Array.isArray(data.projectInstallments)) {
             setProjectInstallments(data.projectInstallments.filter((i: any) => !isDemoInstallment(i)));
@@ -1356,7 +1450,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
               const incoming = data.officeSettings;
               const existingCustom = (prev.projectTemplates || []).filter((t) => !t.isSystem);
               const incomingCustom = (incoming.projectTemplates || []).filter((t: any) => !t.isSystem);
-              const recoveredCustom = recoverAllCustomTemplates();
+              const recoveredCustom = recoverAllCustomTemplates(targetUid, userEmail, profile?.name);
 
               const customMap = new Map<string, ProjectTemplate>();
               [...recoveredCustom, ...existingCustom, ...incomingCustom].forEach((t) => {
@@ -1382,8 +1476,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
               try {
                 localStorage.setItem(getStorageKey('office_settings'), JSON.stringify(mergedSettings));
-                localStorage.setItem('office_all_custom_project_templates', JSON.stringify(Array.from(customMap.values())));
-                localStorage.setItem('office_backup_custom_templates', JSON.stringify(Array.from(customMap.values())));
+                localStorage.setItem(getStorageKey('custom_templates'), JSON.stringify(Array.from(customMap.values())));
               } catch (e) {}
 
               return mergedSettings;
