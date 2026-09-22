@@ -2189,6 +2189,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newAcc: BankAccount = {
       ...accountData,
       id: `bank-${Date.now()}`,
+      initialBalance: accountData.initialBalance ?? accountData.balance ?? 0,
     };
     setBankAccounts((prev) => [...prev, newAcc]);
   };
@@ -2196,7 +2197,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const updateBankAccount = (id: string, updatedFields: Partial<BankAccount>) => {
     recordLocalMutation();
     setBankAccounts((prev) =>
-      prev.map((acc) => (acc.id === id ? { ...acc, ...updatedFields } : acc))
+      prev.map((acc) => {
+        if (acc.id === id) {
+          const updated = { ...acc, ...updatedFields };
+          if (updatedFields.balance !== undefined && updatedFields.initialBalance === undefined) {
+            let txNet = 0;
+            (transactions || []).forEach((t) => {
+              if (t.status === 'completed') {
+                if (t.type === 'income' && t.bankAccountId === id) txNet += t.amount;
+                else if (t.type === 'expense' && t.bankAccountId === id) txNet -= t.amount;
+                else if (t.type === 'transfer') {
+                  if (t.bankAccountId === id) txNet -= t.amount;
+                  if (t.toBankAccountId === id) txNet += t.amount;
+                }
+              }
+            });
+            updated.initialBalance = updatedFields.balance - txNet;
+          }
+          return updated;
+        }
+        return acc;
+      })
     );
   };
 
@@ -3441,17 +3462,40 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   // Computations
+  const computedBankAccounts = useMemo(() => {
+    return bankAccounts.map((acc) => {
+      const initial = acc.initialBalance ?? 0;
+      let txNet = 0;
+      (transactions || []).forEach((t) => {
+        if (t.status === 'completed') {
+          if (t.type === 'income' && t.bankAccountId === acc.id) {
+            txNet += t.amount;
+          } else if (t.type === 'expense' && t.bankAccountId === acc.id) {
+            txNet -= t.amount;
+          } else if (t.type === 'transfer') {
+            if (t.bankAccountId === acc.id) txNet -= t.amount;
+            if (t.toBankAccountId === acc.id) txNet += t.amount;
+          }
+        }
+      });
+      return {
+        ...acc,
+        balance: initial + txNet,
+      };
+    });
+  }, [bankAccounts, transactions]);
+
   const totalBankBalance = useMemo(() => {
-    return bankAccounts
+    return computedBankAccounts
       .filter((a) => a.type !== 'physical_cash')
       .reduce((sum, a) => sum + (a.balance || 0), 0);
-  }, [bankAccounts]);
+  }, [computedBankAccounts]);
 
   const totalPhysicalCash = useMemo(() => {
-    return bankAccounts
+    return computedBankAccounts
       .filter((a) => a.type === 'physical_cash' || a.id === 'cash-wallet')
       .reduce((sum, a) => sum + (a.balance || 0), 0);
-  }, [bankAccounts]);
+  }, [computedBankAccounts]);
 
   const totalNetWorth = useMemo(() => {
     return totalBankBalance + totalPhysicalCash;
@@ -3893,7 +3937,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         changeNiche,
         loadNicheSampleProjects,
         transactions,
-        bankAccounts,
+        bankAccounts: computedBankAccounts,
         houseMortgage,
         debts,
         clients,

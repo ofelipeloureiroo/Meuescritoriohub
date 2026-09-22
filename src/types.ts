@@ -64,6 +64,7 @@ export interface BankAccount {
   name: string;
   type: 'bank' | 'fintech' | 'investment' | 'physical_cash';
   balance: number;
+  initialBalance?: number;
   color: string;
   textColor?: string;
   iconName: string;
