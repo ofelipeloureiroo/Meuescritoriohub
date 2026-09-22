@@ -143,16 +143,52 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
   // Combine real office clients with real-time projects and any cloud saved portals
   const displayPortals = useMemo(() => {
     const nonLeads = (clients || []).filter((c) => c.status !== 'lead');
-    if (nonLeads.length === 0) {
+    const portalsList = portals || [];
+
+    const allClientsMap = new Map<string, Client>();
+    nonLeads.forEach(c => allClientsMap.set(c.id, c));
+
+    // Synthesize client entry from any saved portal record if missing from clients array
+    portalsList.forEach(p => {
+      if (!p || !p.clientName) return;
+      const existingKey = Array.from(allClientsMap.keys()).find(id => {
+        const c = allClientsMap.get(id)!;
+        return c.id === p.clientId ||
+          (c.email && p.clientEmail && c.email.trim().toLowerCase() === p.clientEmail.trim().toLowerCase()) ||
+          (c.name && p.clientName && c.name.trim().toLowerCase() === p.clientName.trim().toLowerCase());
+      });
+
+      if (!existingKey) {
+        const synthesizedClient: Client = {
+          id: p.clientId || `cli-${p.id}`,
+          name: p.clientName,
+          email: p.clientEmail || '',
+          phone: p.clientPhone || '',
+          status: 'active',
+          createdAt: p.createdAt || new Date().toISOString(),
+          serviceType: 'Arquitetura e Interiores',
+          totalBilled: 0,
+          totalPaid: 0,
+          pendingAmount: 0,
+          projectsCount: p.projects?.length || 1,
+          city: architectProfile?.location || 'São Paulo',
+          state: 'SP'
+        };
+        allClientsMap.set(synthesizedClient.id, synthesizedClient);
+      }
+    });
+
+    const combinedClients = Array.from(allClientsMap.values());
+    if (combinedClients.length === 0) {
       return [];
     }
 
-    return nonLeads.map((client) => {
-      const cloudMatch = portals.find(
+    return combinedClients.map((client) => {
+      const cloudMatch = portalsList.find(
         (p) =>
           p.clientId === client.id ||
           (p.clientEmail && client.email && p.clientEmail.trim().toLowerCase() === client.email.trim().toLowerCase()) ||
-          p.clientName.trim().toLowerCase() === client.name.trim().toLowerCase()
+          (p.clientName && client.name && p.clientName.trim().toLowerCase() === client.name.trim().toLowerCase())
       );
       return buildClientPortalAccess(client, architectureProjects, architectProfile, cloudMatch, projectMilestones);
     });

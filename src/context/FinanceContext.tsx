@@ -468,6 +468,136 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
   return result;
 }
 
+export function recoverClientsForUser(targetUid?: string, userEmail?: string): Client[] {
+  const recoveredMap = new Map<string, Client>();
+
+  // 1. Check primary user-scoped key
+  const primaryKey = targetUid ? `office_v2_${targetUid}_clients` : 'office_v2_guest_clients';
+  const savedUserClients = localStorage.getItem(primaryKey);
+  if (savedUserClients) {
+    try {
+      const parsed = JSON.parse(savedUserClients);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((c: any) => {
+          if (c && c.id && !isDemoClient(c)) {
+            recoveredMap.set(c.id, c);
+          }
+        });
+      }
+    } catch {}
+  }
+
+  // 2. Scan fallback storage keys for any clients or client portals
+  const scanKeys = [
+    'office_clients',
+    'clients',
+    'office_v2_guest_clients',
+    'meu_escritorio_client_portals_v1',
+    'office_client_portals'
+  ];
+
+  scanKeys.forEach((key) => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((item: any) => {
+            if (item && !isDemoClient(item)) {
+              const clientId = item.id ? (item.id.startsWith('portal-') ? (item.clientId || item.id) : item.id) : item.clientId;
+              const clientName = item.name || item.clientName;
+              if (clientId && clientName && !recoveredMap.has(clientId)) {
+                recoveredMap.set(clientId, {
+                  id: clientId,
+                  name: clientName,
+                  email: item.email || item.clientEmail || '',
+                  phone: item.phone || item.clientPhone || '',
+                  status: item.status || 'active',
+                  createdAt: item.createdAt || new Date().toISOString(),
+                  serviceType: 'Arquitetura e Interiores',
+                  totalBilled: item.totalBilled || 0,
+                  totalPaid: item.totalPaid || 0,
+                  pendingAmount: item.pendingAmount || 0,
+                  projectsCount: item.projectsCount || item.projects?.length || 1,
+                  city: 'São Paulo',
+                  state: 'SP'
+                });
+              }
+            }
+          });
+        }
+      }
+    } catch {}
+  });
+
+  // 3. Global multi-key scan for all keys containing client or portal
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes('client') || key.includes('portal'))) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((item: any) => {
+                const clientId = item?.id ? (item.id.startsWith('portal-') ? (item.clientId || item.id) : item.id) : item?.clientId;
+                const clientName = item?.name || item?.clientName;
+                if (clientId && clientName && !isDemoClient(item) && !recoveredMap.has(clientId)) {
+                  recoveredMap.set(clientId, {
+                    id: clientId,
+                    name: clientName,
+                    email: item.email || item.clientEmail || '',
+                    phone: item.phone || item.clientPhone || '',
+                    status: item.status || 'active',
+                    createdAt: item.createdAt || new Date().toISOString(),
+                    serviceType: 'Arquitetura e Interiores',
+                    totalBilled: 0,
+                    totalPaid: 0,
+                    pendingAmount: 0,
+                    projectsCount: 1,
+                    city: 'São Paulo',
+                    state: 'SP'
+                  });
+                }
+              });
+            } else if (parsed && typeof parsed === 'object') {
+              const item = parsed;
+              const clientId = item?.clientId || item?.id;
+              const clientName = item?.clientName || item?.name;
+              if (clientId && clientName && !isDemoClient(item) && !recoveredMap.has(clientId)) {
+                recoveredMap.set(clientId, {
+                  id: clientId,
+                  name: clientName,
+                  email: item.clientEmail || item.email || '',
+                  phone: item.clientPhone || item.phone || '',
+                  status: item.status || 'active',
+                  createdAt: item.createdAt || new Date().toISOString(),
+                  serviceType: 'Arquitetura e Interiores',
+                  totalBilled: 0,
+                  totalPaid: 0,
+                  pendingAmount: 0,
+                  projectsCount: 1,
+                  city: 'São Paulo',
+                  state: 'SP'
+                });
+              }
+            }
+          } catch {}
+        }
+      }
+    }
+  } catch {}
+
+  const result = Array.from(recoveredMap.values());
+  if (targetUid && result.length > 0) {
+    try {
+      localStorage.setItem(`office_v2_${targetUid}_clients`, JSON.stringify(result));
+    } catch {}
+  }
+  return result;
+}
+
 const INITIAL_OFFICE_SETTINGS: OfficeSettings = {
   financialCategories: {
     receitas: [
@@ -798,42 +928,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   const [clients, setClients] = useState<Client[]>(() => {
-    const primaryKey = getStorageKey('clients');
-    const saved = localStorage.getItem(primaryKey);
-    let primaryList: Client[] = [];
-    if (saved !== null) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          primaryList = parsed.filter((c: any) => !isDemoClient(c));
-        }
-      } catch {}
-    }
-
-    // Comprehensive multi-key scan to recover any clients or leads saved across different session/user keys
-    const fallbackList: Client[] = [];
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('office_') && key.endsWith('_clients')) {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              parsed.forEach((item: any) => {
-                if (item && item.id && !primaryList.some((p) => p.id === item.id) && !fallbackList.some((f) => f.id === item.id)) {
-                  if (!isDemoClient(item)) {
-                    fallbackList.push(item);
-                  }
-                }
-              });
-            }
-          }
-        }
-      }
-    } catch {}
-
-    return [...primaryList, ...fallbackList];
+    return recoverClientsForUser(targetUid, userEmail);
   });
 
   const [freelanceProjects, setFreelanceProjects] = useState<FreelanceProject[]>(() => {
@@ -1213,11 +1308,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     // Load Clients
-    const savedClients = localStorage.getItem(getStorageKey('clients'));
-    if (savedClients) {
-      try { setClients(JSON.parse(savedClients)); } catch { setClients([]); }
-    } else {
-      setClients([]);
+    const loadedClients = recoverClientsForUser(targetUid, userEmail);
+    setClients(loadedClients);
+    if (loadedClients.length > 0) {
+      safeSetItem('clients', loadedClients);
     }
 
     // Load Freelance Projects
@@ -1407,7 +1501,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setDebts(data.debts.filter((d: any) => d.id !== 'debt-1' && d.id !== 'debt-2' && d.id !== 'debt-car' && d.id !== 'debt-card-notebook'));
           }
           if (Array.isArray(data.clients)) {
-            setClients(data.clients.filter((c: any) => !isDemoClient(c)));
+            const cleanIncoming = data.clients.filter((c: any) => !isDemoClient(c));
+            if (cleanIncoming.length > 0) {
+              setClients(cleanIncoming);
+              safeSetItem('clients', cleanIncoming);
+            } else {
+              setClients((prev) => {
+                if (prev.length > 0) {
+                  safeSetItem('clients', prev);
+                  return prev;
+                }
+                const recovered = recoverClientsForUser(targetUid, userEmail);
+                if (recovered.length > 0) {
+                  safeSetItem('clients', recovered);
+                  return recovered;
+                }
+                return [];
+              });
+            }
           }
           if (Array.isArray(data.freelanceProjects)) {
             setFreelanceProjects(data.freelanceProjects.filter((p: any) => !isDemoProject(p)));
@@ -2140,22 +2251,31 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  const addClient = (clientData: Omit<Client, 'id' | 'createdAt' | 'totalBilled' | 'totalPaid' | 'pendingAmount' | 'projectsCount'>) => {
+  const addClient = (clientData: Omit<Client, 'id' | 'createdAt' | 'totalBilled' | 'totalPaid' | 'pendingAmount' | 'projectsCount'> & { id?: string }) => {
     recordLocalMutation();
     const safeState = clientData.state ? clientData.state.toLowerCase() : 'br';
+    const clientId = clientData.id || `cli-${safeState}-${Date.now()}`;
     const newClient: Client = {
       ...clientData,
-      id: `cli-${safeState}-${Date.now()}`,
-      createdAt: new Date().toISOString().split('T')[0],
-      totalBilled: 0,
-      totalPaid: 0,
-      pendingAmount: 0,
-      projectsCount: 0,
+      id: clientId,
+      createdAt: clientData.createdAt || new Date().toISOString().split('T')[0],
+      totalBilled: clientData.totalBilled || 0,
+      totalPaid: clientData.totalPaid || 0,
+      pendingAmount: clientData.pendingAmount || 0,
+      projectsCount: clientData.projectsCount || 0,
       status: clientData.status || 'active',
     };
-    const updated = [newClient, ...clients];
+    const updated = [newClient, ...clients.filter((c) => c.id !== newClient.id)];
     setClients(updated);
     safeSetItem('clients', updated);
+
+    // Always persist immediately to multiple keys to guarantee survival across restarts
+    if (targetUid) {
+      try { localStorage.setItem(`office_v2_${targetUid}_clients`, JSON.stringify(updated)); } catch {}
+    }
+    try { localStorage.setItem('office_v2_guest_clients', JSON.stringify(updated)); } catch {}
+    try { localStorage.setItem('office_clients', JSON.stringify(updated)); } catch {}
+    try { localStorage.setItem('clients', JSON.stringify(updated)); } catch {}
 
     // Build and save client portal immediately to server & local storage
     const portal = buildClientPortalAccess(newClient, architectureProjects, architectProfile, null, projectMilestones);
