@@ -1413,28 +1413,9 @@ export function convertArchitectureProjectToPortalProject(
   const isAnteprojeto = ap.status === 'anteprojeto';
 
   const calculatedProgress = calculateProjectScheduleProgress(ap, milestones);
-
-  let defaultProgress = calculatedProgress;
-  let stageName = 'Estudo Preliminar & Modelagem 3D';
-  let stageIndex = 1;
-
-  if (isDelivered) {
-    stageName = 'Entrega Final & Obra Concluída';
-    stageIndex = 5;
-  } else if (isObra) {
-    stageName = 'Acompanhamento de Obra';
-    stageIndex = 4;
-  } else if (isExecutivo) {
-    stageName = 'Projeto Executivo & Marcenaria';
-    stageIndex = 3;
-  } else if (isAnteprojeto) {
-    stageName = 'Anteprojeto & Aprovação 3D';
-    stageIndex = 2;
-  }
+  const progress = calculatedProgress;
 
   const rawAny = ap as any;
-  const progress = typeof rawAny.progressPercent === 'number' ? rawAny.progressPercent : defaultProgress;
-  const currentStage = (rawAny.currentStageName as string) || stageName;
 
   // Stages: Exactly linked to project cronograma
   let portalStages: ClientPortalStage[] = [];
@@ -1494,6 +1475,12 @@ export function convertArchitectureProjectToPortalProject(
     ];
   }
 
+  // Determine exact current stage from cronograma stages
+  const foundInProg = portalStages.find(s => s.status === 'in_progress');
+  const foundCompleted = portalStages.filter(s => s.status === 'completed');
+  let currentStageName = foundInProg?.name || (rawAny.currentStageName as string) || (foundCompleted.length > 0 ? foundCompleted[foundCompleted.length - 1].name : (portalStages[0]?.name || 'Em Andamento'));
+  let stageIndex = foundInProg ? portalStages.indexOf(foundInProg) + 1 : (foundCompleted.length > 0 ? foundCompleted.length : 1);
+
   return {
     id: ap.id,
     title: ap.title,
@@ -1501,7 +1488,7 @@ export function convertArchitectureProjectToPortalProject(
     description: ap.description || `Projeto de ${ap.title} para ${ap.clientName}`,
     status: ap.status || 'executivo',
     generalStatus: isDelivered ? 'concluido' : 'no_prazo',
-    currentStageName: currentStage,
+    currentStageName: currentStageName,
     currentStageIndex: stageIndex,
     progressPercent: progress,
     stages: portalStages,
