@@ -1,5 +1,15 @@
 [
   {
+    "uid": "YupDlOpWe3d8cC0waWJGPfdCsgz2",
+    "email": "lfquadrosdecorativos@gmail.com",
+    "name": "Carlos Felipe Carvalho",
+    "role": "admin",
+    "status": "active",
+    "createdAt": "2026-09-22T18:12:52.635Z",
+    "inviteCode": "MASTER",
+    "notes": "Administrador / Gestor"
+  },
+  {
     "uid": "sub_lainepaulaarq",
     "email": "lainepaulaarq@gmail.com",
     "name": "Laíne Paula Loureiro (LP Arquitetura)",
@@ -9,5 +19,15 @@
     "createdAt": "2026-01-15T10:00:00.000Z",
     "inviteCode": "LAINEP",
     "notes": "Arquiteta Titular / Assinante Oficial da Plataforma"
+  },
+  {
+    "uid": "sub_carlos_felipe",
+    "email": "carlos.felipe.123@hotmail.com",
+    "name": "Carlos Felipe",
+    "role": "user",
+    "status": "active",
+    "subscriptionDueDate": "2027-09-16T14:02:35.731Z",
+    "createdAt": "2026-09-16T14:02:35.731Z",
+    "notes": "Assinante Ativo / Usuário da Plataforma"
   }
 ]

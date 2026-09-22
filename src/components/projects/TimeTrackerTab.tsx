@@ -76,43 +76,12 @@ export const TimeTrackerTab: React.FC = () => {
       const saved = localStorage.getItem('meu_escritorio_time_entries_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((e) => e.id !== 'entry-1' && e.id !== 'entry-2');
+        }
       }
     } catch {}
-    return [
-      {
-        id: 'entry-1',
-        projectId: 'proj-demo-1',
-        projectTitle: 'Residência Alphaville',
-        clientName: 'Dr. Roberto e Ana',
-        stageName: '03. Estudo Preliminar & Zoneamento 3D',
-        taskName: 'Estudo de Layout e Fluxos Funcionais',
-        description: 'Desenho de layout da cozinha gourmet e integração com varanda',
-        durationSeconds: 5400, // 1h 30m
-        date: new Date().toISOString().split('T')[0],
-        startTime: '14:00',
-        endTime: '15:30',
-        billable: true,
-        hourlyRate: 150,
-        responsibleName: currentUserName
-      },
-      {
-        id: 'entry-2',
-        projectId: 'proj-demo-2',
-        projectTitle: 'Reforma Apartamento Jardins',
-        clientName: 'Carla Mendes',
-        stageName: '02. Levantamento Métrico & Fotográfico',
-        taskName: 'Visita Técnica e Medição In Loco',
-        description: 'Conferência de cotas de pilares e pontos hidráulicos',
-        durationSeconds: 7200, // 2h
-        date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-        startTime: '10:00',
-        endTime: '12:00',
-        billable: true,
-        hourlyRate: 180,
-        responsibleName: currentUserName
-      }
-    ];
+    return [];
   });
 
   const [projectSearch, setProjectSearch] = useState('');
