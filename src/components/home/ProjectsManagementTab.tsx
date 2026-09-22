@@ -35,6 +35,7 @@ import {
 import { useFinance } from '../../context/FinanceContext';
 import { ArchitectureProject, ProjectInstallment, ProjectMilestone } from '../../types';
 import { DEFAULT_PROJECT_STAGES } from '../../data/defaultProjectStages';
+import { DEFAULT_PROJECT_TEMPLATES, convertTemplateToWorkflowStages } from '../../data/defaultProjectTemplates';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { NICHES } from '../../utils/theme';
 import { AddProjectModal } from '../modals/AddProjectModal';
@@ -510,7 +511,11 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
             const projectInsts = projectInstallments.filter(i => i.projectId === p.id);
             
             // Calculate progress percentage based on schedule/cronograma tasks + milestones
-            const pStages = (p.stages && p.stages.length > 0) ? p.stages : DEFAULT_PROJECT_STAGES;
+            const pStages = (p.stages && p.stages.length > 0) 
+              ? p.stages 
+              : (p.templateId 
+                  ? (convertTemplateToWorkflowStages(DEFAULT_PROJECT_TEMPLATES.find(t => t.id === p.templateId) || DEFAULT_PROJECT_TEMPLATES[0], p.startDate))
+                  : DEFAULT_PROJECT_STAGES);
             const stageTasks = pStages.flatMap(s => s.tasks || []);
             const stageTasksTotal = stageTasks.length;
             const stageTasksCompleted = stageTasks.filter(t => t.status === 'completed').length;
@@ -629,32 +634,67 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                   </div>
                 </div>
 
-                {/* Status Timeline representation */}
-                <div className="grid grid-cols-5 gap-1 pt-1">
-                  {['briefing', 'estudo_preliminar', 'anteprojeto', 'executivo', 'obra'].map((stg) => {
-                    const stagesOrder = ['briefing', 'estudo_preliminar', 'anteprojeto', 'executivo', 'obra', 'entregue'];
-                    const currentIdx = stagesOrder.indexOf(p.status);
-                    const cellIdx = stagesOrder.indexOf(stg);
-                    const isCompleted = cellIdx < currentIdx;
-                    const isActive = p.status === stg;
-                    
-                    return (
-                      <div key={stg} className="text-center space-y-1">
-                        <div
-                          className={`h-1.5 rounded-full border transition-all ${
-                            isCompleted 
-                              ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' 
-                              : isActive 
-                              ? 'bg-[var(--theme-primary)]/20 border-[var(--theme-primary)]/40' 
-                              : 'bg-[var(--bg-card-secondary)] border-[var(--border-color)]'
-                          }`}
-                        />
-                        <span className={`text-[9px] uppercase tracking-wider font-bold block truncate ${isActive ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]'}`}>
-                          {stg.replace('_', ' ')}
-                        </span>
-                      </div>
-                    );
-                  })}
+                {/* Status Timeline representation based on chosen template / project stages */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex items-center justify-between text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                    <span>Etapas do Template ({pStages.length})</span>
+                    <span>
+                      {pStages.filter(s => s.status === 'completed' || (s.tasks && s.tasks.length > 0 && s.tasks.every(t => t.status === 'completed'))).length}/{pStages.length} Concluídas
+                    </span>
+                  </div>
+                  <div
+                    className="grid gap-1.5"
+                    style={{
+                      gridTemplateColumns: `repeat(${Math.max(1, pStages.length)}, minmax(0, 1fr))`
+                    }}
+                  >
+                    {pStages.map((stg, stgIdx) => {
+                      const totalStageTasks = stg.tasks ? stg.tasks.length : 0;
+                      const completedStageTasks = stg.tasks ? stg.tasks.filter(t => t.status === 'completed').length : 0;
+                      
+                      const isCompleted = stg.status === 'completed' || (totalStageTasks > 0 && completedStageTasks === totalStageTasks);
+                      const isActive = !isCompleted && (
+                        stg.status === 'in_progress' || 
+                        completedStageTasks > 0 || 
+                        (p.status && (
+                          p.status.toLowerCase().includes(stg.name.toLowerCase()) || 
+                          stg.name.toLowerCase().includes(p.status.toLowerCase())
+                        ))
+                      );
+
+                      return (
+                        <div key={stg.id || `stg-${stgIdx}`} className="text-center space-y-1 min-w-0 group/stg">
+                          <div
+                            className={`h-2 rounded-full border transition-all ${
+                              isCompleted 
+                                ? 'bg-emerald-500 border-emerald-600 shadow-2xs' 
+                                : isActive 
+                                ? 'bg-[var(--theme-primary)] border-[var(--theme-primary)] shadow-2xs' 
+                                : 'bg-[var(--bg-card-secondary)] border-[var(--border-color)]'
+                            }`}
+                            title={`${stg.name}${totalStageTasks > 0 ? ` (${completedStageTasks}/${totalStageTasks} tarefas concluídas)` : ''}`}
+                          />
+                          <span 
+                            className={`text-[9.5px] font-bold block truncate tracking-tight transition-colors ${
+                              isCompleted 
+                                ? 'text-emerald-600 font-extrabold' 
+                                : isActive 
+                                ? 'text-[var(--theme-primary)] font-black' 
+                                : 'text-[var(--text-muted)]'
+                            }`}
+                            title={stg.name}
+                          >
+                            {stg.name}
+                          </span>
+                          {totalStageTasks > 0 && (
+                            <span className="text-[8.5px] font-semibold text-[var(--text-muted)] block -mt-0.5">
+                              {completedStageTasks}/{totalStageTasks}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Operational Details Grid: Sub-milestones & Installments */}
