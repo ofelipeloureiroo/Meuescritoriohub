@@ -39,6 +39,7 @@ import {
   subscribeToOfficePortals, 
   setPortalStatus, 
   deleteClientPortalAccess,
+  deleteClientPortalsForClient,
   buildClientPortalAccess,
   syncPortalWithOfficeRegistry,
   saveClientPortalAccess,
@@ -58,7 +59,7 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { architectureProjects, clients, architectProfile, projectMilestones } = useFinance();
+  const { architectureProjects, clients, architectProfile, projectMilestones, deleteClient } = useFinance();
 
   const [portals, setPortals] = useState<ClientPortalAccess[]>([]);
   const [loading, setLoading] = useState(true);
@@ -203,9 +204,9 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
 
   const filteredPortals = displayPortals.filter((p) => {
     const matchSearch =
-      p.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.clientEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.projects?.some((proj) => proj.title.toLowerCase().includes(searchTerm.toLowerCase()));
+      (p.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.clientEmail || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.projects?.some((proj) => (proj?.title || '').toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchStatus =
       statusFilter === 'all' ? true : p.status === statusFilter;
@@ -275,8 +276,13 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
         localStorage.setItem('office_deleted_portal_ids', JSON.stringify(Array.from(tombset)));
 
         const tombstones = getDeletedClientsTombstones();
-        if (p.clientId && !tombstones.some(t => t.id === p.clientId)) {
-          tombstones.push({ id: p.clientId, name: p.clientName, email: p.clientEmail });
+        const clientCandidate = {
+          id: p.clientId || p.id,
+          name: p.clientName || '',
+          email: p.clientEmail || ''
+        };
+        if (!tombstones.some(t => t.id === clientCandidate.id || (clientCandidate.email && t.email === clientCandidate.email))) {
+          tombstones.push(clientCandidate);
           localStorage.setItem('office_deleted_clients_v1', JSON.stringify(tombstones));
         }
       } catch {}
@@ -284,7 +290,11 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
       await deleteClientPortalAccess(p.id);
       if (p.clientId) {
         await deleteClientPortalsForClient(p.clientId, p.clientName, p.clientEmail);
-        deleteClient(p.clientId);
+        if (typeof deleteClient === 'function') {
+          deleteClient(p.clientId);
+        }
+      } else {
+        await deleteClientPortalsForClient(p.id, p.clientName, p.clientEmail);
       }
       setPortals((prev) => prev.filter((item) => item.id !== p.id && item.clientId !== p.clientId));
     }
@@ -538,12 +548,15 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
             // Check linkage to office registry
             const linkedOfficeClient = clients.find(
               c => c.id === p.clientId ||
-                   (c.email && c.email.toLowerCase() === p.clientEmail.toLowerCase()) ||
-                   c.name.toLowerCase() === p.clientName.toLowerCase()
+                   (c.email && p.clientEmail && c.email.trim().toLowerCase() === p.clientEmail.trim().toLowerCase()) ||
+                   (c.name && p.clientName && c.name.trim().toLowerCase() === p.clientName.trim().toLowerCase())
             );
 
             const linkedOfficeProject = architectureProjects.find(
-              ap => p.projects?.some(proj => proj.id === ap.id || proj.title.toLowerCase() === ap.title.toLowerCase())
+              ap => p.projects?.some(proj => 
+                (proj.id && proj.id === ap.id) || 
+                (proj.title && ap.title && proj.title.trim().toLowerCase() === ap.title.trim().toLowerCase())
+              )
             );
 
             return (
@@ -687,10 +700,12 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                     
                     <div className="space-y-2">
                       {(p.projects || []).map((proj) => {
-                        const isAwaitingLink = !linkedOfficeProject && (
-                          proj.title.toLowerCase().includes('aguardando') ||
-                          proj.title.toLowerCase().includes('projeto de arquitetura e interiores') ||
-                          proj.currentStageName?.toLowerCase().includes('aguardando') ||
+                        const projTitle = (proj.title || '').trim().toLowerCase();
+                        const stageName = (proj.currentStageName || '').trim().toLowerCase();
+                        const isAwaitingLink = !linkedOfficeProject || (
+                          projTitle.includes('aguardando') ||
+                          projTitle.includes('projeto de arquitetura e interiores') ||
+                          stageName.includes('aguardando') ||
                           proj.status === 'Aguardando Vínculo'
                         );
 

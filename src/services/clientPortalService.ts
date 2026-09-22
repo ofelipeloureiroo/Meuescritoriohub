@@ -102,7 +102,7 @@ export function getLocalPortals(officeUid?: string): ClientPortalAccess[] {
     const raw = localStorage.getItem(LOCAL_STORAGE_PORTALS_KEY);
     const portals: ClientPortalAccess[] = raw ? JSON.parse(raw) : [];
     if (!officeUid) return portals;
-    return portals.filter(p => p.officeUid === officeUid || p.targetUid === officeUid || (!p.officeUid && !p.targetUid && (officeUid === 'lfquadrosdecorativos' || officeUid === 'guest')));
+    return portals.filter(p => p.officeUid === officeUid || (p as any).targetUid === officeUid || (!p.officeUid && !(p as any).targetUid && (officeUid === 'lfquadrosdecorativos' || officeUid === 'guest')));
   } catch {
     return [];
   }
@@ -232,7 +232,8 @@ export function subscribeToOfficePortals(
   // 1. Initial & recurring poll to server persistent API
   const fetchFromServer = async () => {
     try {
-      const res = await fetch('/api/portals');
+      const url = '/api/portals' + (officeUid ? `?officeUid=${encodeURIComponent(officeUid)}` : '');
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.portals) && isSubscribed) {
@@ -1196,6 +1197,13 @@ export async function deleteClientPortalAccess(portalId: string): Promise<void> 
     // 4. Delete from Firestore
     const portalRef = doc(db, 'clientPortals', portalId);
     await deleteDoc(portalRef).catch(() => {});
+
+    // 5. Delete from Server API
+    try {
+      await fetch(`/api/portals?id=${encodeURIComponent(portalId)}&portalId=${encodeURIComponent(portalId)}`, {
+        method: 'DELETE'
+      });
+    } catch {}
   } catch (err) {
     console.error('Error deleting client portal access:', err);
   } finally {
@@ -1211,11 +1219,19 @@ export async function deleteClientPortalsForClient(clientId: string, clientName?
     const nameNorm = clientName ? clientName.trim().toLowerCase() : '';
     const emailNorm = clientEmail ? clientEmail.trim().toLowerCase() : '';
 
-    // 1. Direct portalId patterns
+    // 1. Notify server immediately
+    try {
+      const params = new URLSearchParams();
+      if (clientId) params.set('clientId', clientId);
+      if (emailNorm) params.set('email', emailNorm);
+      await fetch(`/api/portals?${params.toString()}`, { method: 'DELETE' });
+    } catch {}
+
+    // 2. Direct portalId patterns
     await deleteClientPortalAccess(`portal-${clientId}`);
     await deleteClientPortalAccess(`demo-portal-${clientId}`);
 
-    // 2. Filter local portals and delete matching ones
+    // 3. Filter local portals and delete matching ones
     const allLocal = getLocalPortals();
     const matchingPortals = allLocal.filter(p => {
       if (p.clientId === clientId) return true;
@@ -1228,7 +1244,7 @@ export async function deleteClientPortalsForClient(clientId: string, clientName?
       await deleteClientPortalAccess(p.id);
     }
 
-    // 3. Query Firestore for matching documents
+    // 4. Query Firestore for matching documents
     const q = query(collection(db, 'clientPortals'), where('clientId', '==', clientId));
     const snapshot = await getDocs(q);
     const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));

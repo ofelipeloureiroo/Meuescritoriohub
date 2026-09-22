@@ -527,21 +527,22 @@ export const TimeTrackerTab: React.FC = () => {
                     {stg.tasks && stg.tasks.length > 0 && (
                       <div className="pl-4 space-y-0.5 border-l-2 border-zinc-100 ml-3">
                         {stg.tasks.map((t) => {
-                          const isTaskSelected = selectedStageName === stg.name && selectedTaskName === t.title;
+                          const taskName = (t as any).name || (t as any).title || '';
+                          const isTaskSelected = selectedStageName === stg.name && selectedTaskName === taskName;
                           return (
                             <button
-                              key={t.id || t.title}
+                              key={t.id || taskName}
                               type="button"
                               onClick={() => {
                                 setSelectedStageName(stg.name);
-                                setSelectedTaskName(t.title);
+                                setSelectedTaskName(taskName);
                                 setIsStageDropdownOpen(false);
                               }}
                               className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] transition-all flex items-center justify-between gap-2 cursor-pointer ${
                                 isTaskSelected ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200' : 'hover:bg-zinc-50 text-zinc-600'
                               }`}
                             >
-                              <span className="truncate">└ Subetapa: {t.title}</span>
+                              <span className="truncate">└ Subetapa: {taskName}</span>
                               {isTaskSelected && <Check className="w-3 h-3 text-amber-700" />}
                             </button>
                           );

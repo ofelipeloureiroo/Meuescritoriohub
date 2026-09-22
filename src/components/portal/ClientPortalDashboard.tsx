@@ -291,6 +291,13 @@ export const ClientPortalDashboard: React.FC = () => {
   };
 
   const currentProject = effectivePortal.projects?.find((p) => p.id === activeProjectId) || effectivePortal.projects?.[0];
+  const projTitle = (currentProject?.title || '').trim().toLowerCase();
+  const stageName = (currentProject?.currentStageName || '').trim().toLowerCase();
+  const isAwaitingProject = !currentProject || 
+    projTitle.includes('aguardando') ||
+    projTitle.includes('projeto de arquitetura e interiores') ||
+    stageName.includes('aguardando') ||
+    currentProject?.status === 'Aguardando Vínculo';
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -557,63 +564,85 @@ export const ClientPortalDashboard: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-[11px] uppercase tracking-wider text-amber-800 font-bold">
-                    {currentProject.category || 'Projeto em Andamento'}
+                    {isAwaitingProject ? 'Aguardando Vínculo' : (currentProject.category || 'Projeto em Andamento')}
                   </span>
                   {currentProject.contractStatus && (
                     <span className="px-2 py-0.5 rounded text-[10px] bg-zinc-100 text-zinc-600 border border-zinc-200">
                       {currentProject.contractStatus}
                     </span>
                   )}
+                  {isAwaitingProject && (
+                    <span className="px-2 py-0.5 rounded text-[10px] bg-amber-50 text-amber-700 border border-amber-200 font-bold">
+                      Aguardando Início do Projeto
+                    </span>
+                  )}
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-serif font-bold text-zinc-900">
-                  {currentProject.title}
+                  {isAwaitingProject ? 'Aguardando projeto ser vinculado' : currentProject.title}
                 </h1>
-                {currentProject.description && (
-                  <p className="text-xs sm:text-sm text-zinc-500 mt-1 max-w-2xl">
-                    {currentProject.description}
-                  </p>
-                )}
+                <p className="text-xs sm:text-sm text-zinc-500 mt-1 max-w-2xl">
+                  {isAwaitingProject 
+                    ? 'O escritório ainda não vinculou um projeto a este cliente. Assim que a equipe vincular seu projeto, você poderá acompanhar todo o cronograma, pranchas, entregas e falar com os profissionais por aqui.'
+                    : (currentProject.description || 'Acompanhe as fases, cronograma e arquivos do seu projeto em tempo real.')}
+                </p>
               </div>
 
               <div className="flex flex-col sm:items-end gap-2 shrink-0">
-                {getHealthBadge(currentProject.generalStatus)}
+                {isAwaitingProject ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Aguardando Vínculo</span>
+                  </span>
+                ) : (
+                  getHealthBadge(currentProject.generalStatus)
+                )}
                 <div className="text-xs text-zinc-500 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-amber-700" />
-                  <span>Previsão de Entrega: <strong className="text-zinc-900">{currentProject.deliveryDate || 'A definir'}</strong></span>
+                  <span>Previsão de Entrega: <strong className="text-zinc-900">{isAwaitingProject ? 'A definir pelo escritório' : (currentProject.deliveryDate || 'A definir')}</strong></span>
                 </div>
               </div>
             </div>
 
-            {/* Current Stage & Progress Bar */}
-            <div className="py-6 border-b border-zinc-100 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <span className="text-xs text-zinc-500 block">Fase Atual do Projeto:</span>
-                  <div className="text-lg sm:text-xl font-serif font-bold text-amber-800 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    <span>{currentProject.currentStageName || 'Em Execução'}</span>
+            {/* Current Stage & Progress Bar - ONLY shown when project is linked */}
+            {isAwaitingProject ? (
+              <div className="py-5 border-b border-zinc-100 flex items-center gap-3 text-amber-800 bg-amber-50/60 p-4 rounded-2xl border border-amber-200/60 my-2">
+                <Clock className="w-5 h-5 shrink-0 text-amber-600" />
+                <div className="text-xs">
+                  <strong className="block text-zinc-900 font-bold mb-0.5">Status: Aguardando projeto ser vinculado</strong>
+                  <span className="text-zinc-500">Assim que o escritório associar o seu projeto oficial a este acesso, você visualizará todas as fases, pranchas e evolução aqui.</span>
+                </div>
+              </div>
+            ) : (
+              <div className="py-6 border-b border-zinc-100 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <span className="text-xs text-zinc-500 block">Fase Atual do Projeto:</span>
+                    <div className="text-lg sm:text-xl font-serif font-bold text-amber-800 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      <span>{currentProject.currentStageName || 'Em Execução'}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-xs text-zinc-500">Progresso Estimado:</span>
+                    <span className="text-lg font-bold text-zinc-900 ml-2">
+                      {currentProject.progressPercent || 0}%
+                    </span>
                   </div>
                 </div>
 
-                <div className="text-right">
-                  <span className="text-xs text-zinc-500">Progresso Estimado:</span>
-                  <span className="text-lg font-bold text-zinc-900 ml-2">
-                    {currentProject.progressPercent || 0}%
-                  </span>
+                {/* Progress Track */}
+                <div className="w-full bg-zinc-100 h-3 rounded-full overflow-hidden border border-zinc-200 p-0.5">
+                  <div 
+                    className="h-full rounded-full transition-all duration-700 shadow-2xs"
+                    style={{ 
+                      width: `${Math.max(5, Math.min(100, currentProject.progressPercent || 0))}%`,
+                      backgroundColor: 'var(--theme-primary)'
+                    }}
+                  />
                 </div>
               </div>
-
-              {/* Progress Track */}
-              <div className="w-full bg-zinc-100 h-3 rounded-full overflow-hidden border border-zinc-200 p-0.5">
-                <div 
-                  className="h-full rounded-full transition-all duration-700 shadow-2xs"
-                  style={{ 
-                    width: `${Math.max(5, Math.min(100, currentProject.progressPercent || 0))}%`,
-                    backgroundColor: 'var(--theme-primary)'
-                  }}
-                />
-              </div>
-            </div>
+            )}
 
             {/* Key Project Numbers / Contract overview */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 text-left">
@@ -622,7 +651,7 @@ export const ClientPortalDashboard: React.FC = () => {
                   Início do Projeto
                 </span>
                 <span className="text-sm font-bold text-zinc-900">
-                  {currentProject.startDate || 'Confirmado'}
+                  {isAwaitingProject ? 'A definir' : (currentProject.startDate || 'Confirmado')}
                 </span>
               </div>
 
@@ -631,7 +660,7 @@ export const ClientPortalDashboard: React.FC = () => {
                   Entrega Prevista
                 </span>
                 <span className="text-sm font-bold text-amber-800">
-                  {currentProject.deliveryDate || 'No Cronograma'}
+                  {isAwaitingProject ? 'A definir' : (currentProject.deliveryDate || 'No Cronograma')}
                 </span>
               </div>
 
@@ -640,7 +669,7 @@ export const ClientPortalDashboard: React.FC = () => {
                   Etapas Concluídas
                 </span>
                 <span className="text-sm font-bold text-emerald-600">
-                  {currentProject.stages?.filter((s) => s.status === 'completed').length || 0} de {currentProject.stages?.length || 1}
+                  {isAwaitingProject ? '0 etapas' : `${currentProject.stages?.filter((s) => s.status === 'completed').length || 0} de ${currentProject.stages?.length || 1}`}
                 </span>
               </div>
 
@@ -803,8 +832,16 @@ export const ClientPortalDashboard: React.FC = () => {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-zinc-500 text-xs">
-                  As etapas detalhadas deste projeto estão sendo definidas pela equipe e serão exibidas aqui.
+                <div className="text-center py-10 px-4 rounded-2xl bg-zinc-50 border border-zinc-200">
+                  <Clock className="w-8 h-8 text-amber-600 mx-auto mb-2 opacity-60" />
+                  <p className="font-bold text-zinc-900 text-xs mb-1">
+                    {isAwaitingProject ? 'Aguardando projeto ser vinculado' : 'Etapas em definição'}
+                  </p>
+                  <p className="text-[11px] text-zinc-500 max-w-sm mx-auto">
+                    {isAwaitingProject 
+                      ? 'O cronograma detalhado de etapas será disponibilizado assim que o escritório vincular seu projeto a este portal.'
+                      : 'As etapas detalhadas deste projeto estão sendo preparadas pela equipe e serão exibidas aqui.'}
+                  </p>
                 </div>
               )}
             </div>

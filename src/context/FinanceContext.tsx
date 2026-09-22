@@ -354,8 +354,9 @@ export function recoverAllCustomTemplates(targetUid?: string, userEmail?: string
 
 export function recoverProjectsForUser(targetUid?: string, userEmail?: string, profileName?: string): ArchitectureProject[] {
   const recoveredProjectsMap = new Map<string, ArchitectureProject>();
+  const cleanEmail = (userEmail || '').toLowerCase().trim();
   const isLaine = Boolean(
-    (userEmail && userEmail.toLowerCase().includes('laine')) ||
+    cleanEmail.includes('laine') ||
     (profileName && profileName.toLowerCase().includes('laine'))
   );
 
@@ -375,14 +376,40 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
     } catch {}
   }
 
+  // Also check email-based storage key if targetUid is different from email-slug
+  if (cleanEmail) {
+    const emailKey = `office_v2_${cleanEmail.replace(/[@.]/g, '_')}_architecture_projects`;
+    if (emailKey !== userKey) {
+      try {
+        const raw = localStorage.getItem(emailKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((p: any) => {
+              if (p && p.id && !isDemoProject(p) && !recoveredProjectsMap.has(p.id)) {
+                recoveredProjectsMap.set(p.id, p);
+              }
+            });
+          }
+        }
+      } catch {}
+    }
+  }
+
   // 2. Scan fallback keys ONLY for canonical owner or Laine Paula to prevent cross-subscriber leakage
-  const isOwnerUid = !targetUid || targetUid === 'lfquadrosdecorativos' || targetUid === 'guest';
+  const isOwnerUid = !targetUid || 
+    targetUid === 'lfquadrosdecorativos' || 
+    targetUid === 'lfquadrosdecorativos_gmail_com' || 
+    targetUid === 'guest' || 
+    cleanEmail === 'lfquadrosdecorativos@gmail.com';
+
   if ((recoveredProjectsMap.size === 0 && isOwnerUid) || isLaine) {
     const scanKeys = [
       'office_architecture_projects',
       'architecture_projects',
       'office_backup_projects',
       'office_v2_lfquadrosdecorativos_architecture_projects',
+      'office_v2_lfquadrosdecorativos_gmail_com_architecture_projects',
       'office_v2_guest_architecture_projects',
     ];
 
@@ -465,6 +492,10 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
     try {
       localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(result));
     } catch {}
+    if (isOwnerUid) {
+      try { localStorage.setItem('office_v2_lfquadrosdecorativos_architecture_projects', JSON.stringify(result)); } catch {}
+      try { localStorage.setItem('office_architecture_projects', JSON.stringify(result)); } catch {}
+    }
   }
   return result;
 }
@@ -514,8 +545,33 @@ export function recoverClientsForUser(targetUid?: string, userEmail?: string): C
     } catch {}
   }
 
+  // Also check email-based storage key if targetUid is different from email-slug
+  const cleanEmail = (userEmail || '').toLowerCase().trim();
+  if (cleanEmail) {
+    const emailKey = `office_v2_${cleanEmail.replace(/[@.]/g, '_')}_clients`;
+    if (emailKey !== primaryKey) {
+      try {
+        const raw = localStorage.getItem(emailKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((c: any) => {
+              if (c && c.id && !isDemoClient(c) && !isClientTombstoned(c, tombstones) && !recoveredMap.has(c.id)) {
+                recoveredMap.set(c.id, c);
+              }
+            });
+          }
+        }
+      } catch {}
+    }
+  }
+
   // 2. Scan fallback storage keys ONLY for canonical owner or guest to prevent cross-subscriber leakage
-  const isOwnerUid = !targetUid || targetUid === 'lfquadrosdecorativos' || targetUid === 'guest';
+  const isOwnerUid = !targetUid || 
+    targetUid === 'lfquadrosdecorativos' || 
+    targetUid === 'lfquadrosdecorativos_gmail_com' || 
+    targetUid === 'guest' || 
+    cleanEmail === 'lfquadrosdecorativos@gmail.com';
   if (isOwnerUid) {
     const scanKeys = [
       'office_clients',
@@ -816,6 +872,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Target UID determines which Firestore workspace is loaded and synchronized across all devices
   const targetUid = profile?.joinedOwnerUid || (isOwner ? CANONICAL_OWNER_UID : (user?.uid || (userEmail ? userEmail.replace(/[@.]/g, '_') : 'guest')));
   const [isLocalLoaded, setIsLocalLoaded] = useState(false);
+  const loadedUidRef = useRef<string | null>(null);
 
   // Prefix storage keys per user UID for full data isolation
   const getStorageKey = (key: string) => {
@@ -1208,33 +1265,33 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Sync to user-scoped localStorage
   useEffect(() => {
-    if (!targetUid || !isLocalLoaded) return;
+    if (!targetUid || !isLocalLoaded || loadedUidRef.current !== targetUid) return;
     localStorage.setItem(getStorageKey('office_settings'), JSON.stringify(officeSettings));
-  }, [officeSettings, targetUid, isLocalLoaded]);
+  }, [officeSettings]);
 
   // Sync to user-scoped localStorage
   useEffect(() => {
-    if (!targetUid || !isLocalLoaded) return;
+    if (!targetUid || !isLocalLoaded || loadedUidRef.current !== targetUid) return;
     localStorage.setItem(getStorageKey('transactions'), JSON.stringify(transactions));
-  }, [transactions, targetUid, isLocalLoaded]);
+  }, [transactions]);
 
   useEffect(() => {
-    if (!targetUid || !isLocalLoaded) return;
+    if (!targetUid || !isLocalLoaded || loadedUidRef.current !== targetUid) return;
     localStorage.setItem(getStorageKey('accounts'), JSON.stringify(bankAccounts));
-  }, [bankAccounts, targetUid, isLocalLoaded]);
+  }, [bankAccounts]);
 
   useEffect(() => {
-    if (!targetUid || !isLocalLoaded) return;
+    if (!targetUid || !isLocalLoaded || loadedUidRef.current !== targetUid) return;
     localStorage.setItem(getStorageKey('mortgage'), JSON.stringify(houseMortgage));
-  }, [houseMortgage, targetUid, isLocalLoaded]);
+  }, [houseMortgage]);
 
   useEffect(() => {
-    if (!targetUid || !isLocalLoaded) return;
+    if (!targetUid || !isLocalLoaded || loadedUidRef.current !== targetUid) return;
     localStorage.setItem(getStorageKey('debts'), JSON.stringify(debts));
-  }, [debts, targetUid, isLocalLoaded]);
+  }, [debts]);
 
   const safeSetItem = (key: string, data: any) => {
-    if (!targetUid || !isLocalLoaded) return;
+    if (!targetUid || !isLocalLoaded || loadedUidRef.current !== targetUid) return;
     try {
       localStorage.setItem(getStorageKey(key), JSON.stringify(data));
     } catch (err) {
@@ -1244,48 +1301,49 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     safeSetItem('clients', clients);
-  }, [clients, targetUid, isLocalLoaded]);
+  }, [clients]);
 
   useEffect(() => {
     safeSetItem('projects', freelanceProjects);
-  }, [freelanceProjects, targetUid, isLocalLoaded]);
+  }, [freelanceProjects]);
 
   useEffect(() => {
     safeSetItem('architecture_projects', architectureProjects);
-  }, [architectureProjects, targetUid, isLocalLoaded]);
+  }, [architectureProjects]);
 
   useEffect(() => {
     safeSetItem('installments', projectInstallments);
-  }, [projectInstallments, targetUid, isLocalLoaded]);
+  }, [projectInstallments]);
 
   useEffect(() => {
     safeSetItem('milestones', projectMilestones);
-  }, [projectMilestones, targetUid, isLocalLoaded]);
+  }, [projectMilestones]);
 
   useEffect(() => {
     safeSetItem('work_contracts', workContracts);
-  }, [workContracts, targetUid, isLocalLoaded]);
+  }, [workContracts]);
 
   useEffect(() => {
     safeSetItem('goals', savingsGoals);
-  }, [savingsGoals, targetUid, isLocalLoaded]);
+  }, [savingsGoals]);
 
   useEffect(() => {
     safeSetItem('budgets', categoryBudgets);
-  }, [categoryBudgets, targetUid, isLocalLoaded]);
+  }, [categoryBudgets]);
 
   useEffect(() => {
     safeSetItem('profile', architectProfile);
-  }, [architectProfile, targetUid, isLocalLoaded]);
+  }, [architectProfile]);
 
   useEffect(() => {
     safeSetItem('actions', actions);
-  }, [actions, targetUid, isLocalLoaded]);
+  }, [actions]);
 
   // Load and synchronize states from local storage whenever targetUid changes
   useEffect(() => {
     if (!targetUid) return;
 
+    loadedUidRef.current = null;
     setIsLocalLoaded(false);
     // Reset cloud loaded reference as we are switching/starting a new authenticated session
     isCloudLoadedRef.current = false;
@@ -1437,6 +1495,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setActions([]);
     }
     
+    loadedUidRef.current = targetUid;
     setIsLocalLoaded(true);
   }, [targetUid]);
 
@@ -1590,6 +1649,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
               if (targetUid) {
                 try { localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(merged)); } catch {}
+              }
+              if (isOwner) {
+                try { localStorage.setItem('office_v2_lfquadrosdecorativos_architecture_projects', JSON.stringify(merged)); } catch {}
+                try { localStorage.setItem('office_architecture_projects', JSON.stringify(merged)); } catch {}
+              }
+
+              if (targetUid && merged.length > cleanIncoming.length) {
+                const workspaceDocRef = doc(db, 'users', primaryUid, 'data', 'workspace');
+                setDoc(workspaceDocRef, {
+                  architectureProjects: merged,
+                  updatedAt: new Date().toISOString()
+                }, { merge: true }).catch(console.error);
               }
 
               return merged;
@@ -1935,7 +2006,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setArchitectureProjects((prev) => {
       if (prev.length === 0) return prev;
       const isInitialSamples =
-        prev.every((p) => p.id.startsWith('proj-arch-') || p.id.startsWith('sample-'));
+        prev.every((p) => p.id.startsWith('sample-') || (p as any).isSample === true);
       if (isInitialSamples) {
         return getNicheSampleProjects(niche);
       }
@@ -2303,7 +2374,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  const addClient = (clientData: Omit<Client, 'id' | 'createdAt' | 'totalBilled' | 'totalPaid' | 'pendingAmount' | 'projectsCount'> & { id?: string }) => {
+  const addClient = (clientData: Omit<Client, 'id' | 'createdAt' | 'totalBilled' | 'totalPaid' | 'pendingAmount' | 'projectsCount'> & { id?: string; createdAt?: string; totalBilled?: number; totalPaid?: number; pendingAmount?: number; projectsCount?: number }) => {
     recordLocalMutation();
     const safeState = clientData.state ? clientData.state.toLowerCase() : 'br';
     const clientId = clientData.id || `cli-${safeState}-${Date.now()}`;
@@ -2514,21 +2585,59 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setFreelanceProjects((prev) => prev.filter((p) => p.id !== id));
   };
 
-  // Architecture Projects & Portfolio Actions
-  const addArchitectureProject = (projectData: Omit<ArchitectureProject, 'id' | 'createdAt'>) => {
-    recordLocalMutation();
-    const newProj: ArchitectureProject = {
-      ...projectData,
-      id: `proj-arch-${Date.now()}`,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    const updatedArch = [newProj, ...architectureProjects];
+  // Helper to persist architecture projects across all storage layers (State, User Storage, Owner Mirror, Cloud Firestore)
+  const persistArchitectureProjects = (updatedArch: ArchitectureProject[], extraPayload: Record<string, any> = {}) => {
     setArchitectureProjects(updatedArch);
     safeSetItem('architecture_projects', updatedArch);
 
+    if (targetUid) {
+      try {
+        localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(updatedArch));
+      } catch {}
+      if (isOwner) {
+        try { localStorage.setItem('office_v2_lfquadrosdecorativos_architecture_projects', JSON.stringify(updatedArch)); } catch {}
+        try { localStorage.setItem('office_architecture_projects', JSON.stringify(updatedArch)); } catch {}
+      }
+
+      const activeUid = targetUid || (isOwner ? CANONICAL_OWNER_UID : (user?.uid || 'guest'));
+      if (activeUid) {
+        const workspaceDocRef = doc(db, 'users', activeUid, 'data', 'workspace');
+        setDoc(workspaceDocRef, {
+          architectureProjects: updatedArch,
+          ...extraPayload,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(console.error);
+
+        if (isOwner) {
+          setDoc(doc(db, 'workspaces', 'canonical'), {
+            architectureProjects: updatedArch,
+            ...extraPayload,
+            updatedAt: new Date().toISOString()
+          }, { merge: true }).catch(console.error);
+          fetch('/api/workspace', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ architectureProjects: updatedArch, ...extraPayload, updatedAt: new Date().toISOString() })
+          }).catch(() => {});
+        }
+      }
+    }
+  };
+
+  // Architecture Projects & Portfolio Actions
+  const addArchitectureProject = (projectData: Omit<ArchitectureProject, 'id' | 'createdAt'> & { id?: string; createdAt?: string }) => {
+    recordLocalMutation();
+    const newProj: ArchitectureProject = {
+      ...projectData,
+      id: projectData.id || `proj-arch-${Date.now()}`,
+      createdAt: projectData.createdAt || new Date().toISOString().split('T')[0],
+    };
+    const updatedArch = [newProj, ...architectureProjects.filter((p) => p.id !== newProj.id)];
+
     // Update clients project count
+    let updatedClients = clients;
     if (projectData.clientId || projectData.clientName) {
-      const updatedClients = clients.map((c) => {
+      updatedClients = clients.map((c) => {
         if (
           (projectData.clientId && c.id === projectData.clientId) ||
           (projectData.clientName && c.name.trim().toLowerCase() === projectData.clientName.trim().toLowerCase())
@@ -2543,21 +2652,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
       setClients(updatedClients);
       safeSetItem('clients', updatedClients);
+      if (targetUid) {
+        try { localStorage.setItem(`office_v2_${targetUid}_clients`, JSON.stringify(updatedClients)); } catch {}
+      }
     }
+
+    persistArchitectureProjects(updatedArch, { clients: updatedClients });
   };
 
   const updateArchitectureProject = (id: string, updatedFields: Partial<ArchitectureProject>) => {
     recordLocalMutation();
-    setArchitectureProjects((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p))
-    );
+    const updatedArch = architectureProjects.map((p) => (p.id === id ? { ...p, ...updatedFields } : p));
+    persistArchitectureProjects(updatedArch);
   };
 
   const deleteArchitectureProject = (id: string) => {
     recordLocalMutation();
     const updatedArchProjects = architectureProjects.filter((p) => p.id !== id);
-    setArchitectureProjects(updatedArchProjects);
-    safeSetItem('architecture_projects', updatedArchProjects);
 
     const updatedMilestones = projectMilestones.filter((m) => m.projectId !== id);
     setProjectMilestones(updatedMilestones);
@@ -2588,59 +2699,51 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setClients(updatedClients);
     safeSetItem('clients', updatedClients);
 
-    if (targetUid) {
-      const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
-      setDoc(workspaceDocRef, {
-        clients: updatedClients,
-        architectureProjects: updatedArchProjects,
-        projectMilestones: updatedMilestones,
-        projectInstallments: updatedInstallments,
-        workContracts: updatedContracts,
-        actions: updatedActions,
-        updatedAt: new Date().toISOString()
-      }, { merge: true }).catch(console.error);
-    }
+    persistArchitectureProjects(updatedArchProjects, {
+      clients: updatedClients,
+      projectMilestones: updatedMilestones,
+      projectInstallments: updatedInstallments,
+      workContracts: updatedContracts,
+      actions: updatedActions,
+    });
   };
 
   const addPhotoToProject = (projectId: string, photoUrl: string) => {
     if (!photoUrl.trim()) return;
     recordLocalMutation();
-    setArchitectureProjects((prev) =>
-      prev.map((p) => {
-        if (p.id === projectId) {
-          const currentImages = p.images || [];
-          return {
-            ...p,
-            images: [...currentImages, photoUrl.trim()],
-          };
-        }
-        return p;
-      })
-    );
+    const updatedArch = architectureProjects.map((p) => {
+      if (p.id === projectId) {
+        const currentImages = p.images || [];
+        return {
+          ...p,
+          images: [...currentImages, photoUrl.trim()],
+        };
+      }
+      return p;
+    });
+    persistArchitectureProjects(updatedArch);
   };
 
   const removePhotoFromProject = (projectId: string, photoIndex: number) => {
     recordLocalMutation();
-    setArchitectureProjects((prev) =>
-      prev.map((p) => {
-        if (p.id === projectId) {
-          const currentImages = [...(p.images || [])];
-          currentImages.splice(photoIndex, 1);
-          return {
-            ...p,
-            images: currentImages,
-          };
-        }
-        return p;
-      })
-    );
+    const updatedArch = architectureProjects.map((p) => {
+      if (p.id === projectId) {
+        const currentImages = [...(p.images || [])];
+        currentImages.splice(photoIndex, 1);
+        return {
+          ...p,
+          images: currentImages,
+        };
+      }
+      return p;
+    });
+    persistArchitectureProjects(updatedArch);
   };
 
   const updateProjectStatus = (id: string, newStatus: ArchitectureProject['status']) => {
     recordLocalMutation();
-    setArchitectureProjects((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: newStatus } : p))
-    );
+    const updatedArch = architectureProjects.map((p) => (p.id === id ? { ...p, status: newStatus } : p));
+    persistArchitectureProjects(updatedArch);
   };
 
   const addConstructionReport = (projectId: string, report: Omit<ConstructionReport, 'id'>) => {
@@ -2648,17 +2751,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ...report,
       id: `rep-${Date.now()}`,
     };
-    setArchitectureProjects((prev) =>
-      prev.map((p) => {
-        if (p.id === projectId) {
-          return {
-            ...p,
-            reports: [newReport, ...(p.reports || [])],
-          };
-        }
-        return p;
-      })
-    );
+    recordLocalMutation();
+    const updatedArch = architectureProjects.map((p) => {
+      if (p.id === projectId) {
+        return {
+          ...p,
+          reports: [newReport, ...(p.reports || [])],
+        };
+      }
+      return p;
+    });
+    persistArchitectureProjects(updatedArch);
   };
 
   const receiveProjectPayment = (projectId: string, amount: number, bankAccountId: string) => {
@@ -3083,18 +3186,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
 
     // 2. Update parent ArchitectureProject's paidAmount
-    setArchitectureProjects((prev) =>
-      prev.map((p) => {
-        if (p.id === inst.projectId || p.title === inst.projectTitle) {
-          const currentPaid = p.paidAmount || 0;
-          return {
-            ...p,
-            paidAmount: currentPaid + actualAmount,
-          };
-        }
-        return p;
-      })
-    );
+    const updatedArch = architectureProjects.map((p) => {
+      if (p.id === inst.projectId || p.title === inst.projectTitle) {
+        const currentPaid = p.paidAmount || 0;
+        return {
+          ...p,
+          paidAmount: currentPaid + actualAmount,
+        };
+      }
+      return p;
+    });
+    persistArchitectureProjects(updatedArch);
 
     // 3. Create income transaction in the selected bank account
     const newTx: Transaction = {

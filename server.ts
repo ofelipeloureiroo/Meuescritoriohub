@@ -626,8 +626,15 @@ Acesse o painel administrativo: ${baseUrl}/admin
 
   // GET all portals
   app.get('/api/portals', (req, res) => {
+    const officeUid = ((req.query.officeUid as string) || '').trim();
     const map = loadPortalsMap();
-    const list = Object.values(map).filter((p: any) => p && typeof p === 'object' && p.id && !p.id.startsWith('email_') && !p.id.startsWith('code_'));
+    let list = Object.values(map).filter((p: any) => p && typeof p === 'object' && p.id && !p.id.startsWith('email_') && !p.id.startsWith('code_'));
+    if (officeUid) {
+      list = list.filter((p: any) => {
+        if (!p.officeUid) return officeUid === 'lfquadrosdecorativos' || officeUid === 'office-canonical';
+        return p.officeUid === officeUid;
+      });
+    }
     // deduplicate and merge messages across matching portal records
     const uniqueMap = new Map<string, any>();
     for (const p of list) {
@@ -648,7 +655,7 @@ Acesse o painel administrativo: ${baseUrl}/admin
   // POST save one or multiple portals
   app.post('/api/portals', (req, res) => {
     try {
-      const { portal, portals } = req.body;
+      const { portal, portals, officeUid } = req.body;
       const listToSave: any[] = portals ? (Array.isArray(portals) ? portals : []) : (portal ? [portal] : []);
       if (listToSave.length === 0) {
         res.status(400).json({ success: false, error: 'No portal payload provided' });
@@ -669,12 +676,14 @@ Acesse o painel administrativo: ${baseUrl}/admin
           ...(existing || {}),
           ...p,
           id: pId,
+          officeUid: p.officeUid || officeUid || existing?.officeUid || 'office-canonical',
           clientId: p.clientId || existing?.clientId,
           clientEmail: cleanEmail || p.clientEmail,
           accessCode: cleanCode || existing?.accessCode || p.accessCode,
           messages: mergedMessages,
           updatedAt: new Date().toISOString()
         };
+
         map[pId] = enriched;
         if (enriched.clientId) {
           map[enriched.clientId] = enriched;
@@ -691,6 +700,59 @@ Acesse o painel administrativo: ${baseUrl}/admin
       res.json({ success: true, saved: listToSave.length, total: Object.keys(map).length });
     } catch (err: any) {
       console.error('Error saving portals to server:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // DELETE remove one or multiple portals
+  app.delete('/api/portals', (req, res) => {
+    try {
+      const id = ((req.query.id as string) || (req.query.portalId as string) || (req.body?.id as string) || (req.body?.portalId as string) || '').trim();
+      const clientId = ((req.query.clientId as string) || (req.body?.clientId as string) || '').trim();
+      const rawEmail = ((req.query.email as string) || (req.query.clientEmail as string) || (req.body?.email as string) || (req.body?.clientEmail as string) || '').trim();
+      const cleanEmail = normalizeEmailStr(rawEmail);
+
+      if (!id && !clientId && !cleanEmail) {
+        res.status(400).json({ success: false, error: 'No deletion filter provided' });
+        return;
+      }
+
+      const map = loadPortalsMap();
+      const keysToDelete = new Set<string>();
+
+      for (const [key, val] of Object.entries(map)) {
+        if (!val || typeof val !== 'object') {
+          if (id && (key === id || key === `portal-${id}`)) keysToDelete.add(key);
+          if (clientId && (key === clientId || key === `portal-${clientId}`)) keysToDelete.add(key);
+          if (cleanEmail && key === `email_${cleanEmail}`) keysToDelete.add(key);
+          continue;
+        }
+
+        const p = val as any;
+        const pEmail = normalizeEmailStr(p.clientEmail);
+        const matchId = Boolean(id && (p.id === id || key === id || p.id === `portal-${id}`));
+        const matchClient = Boolean(clientId && (p.clientId === clientId || key === clientId || key === `portal-${clientId}`));
+        const matchEmail = Boolean(cleanEmail && (pEmail === cleanEmail || key === `email_${cleanEmail}`));
+
+        if (matchId || matchClient || matchEmail) {
+          keysToDelete.add(key);
+          if (p.id) keysToDelete.add(p.id);
+          if (p.clientId) {
+            keysToDelete.add(p.clientId);
+            keysToDelete.add(`portal-${p.clientId}`);
+          }
+          if (pEmail) keysToDelete.add(`email_${pEmail}`);
+        }
+      }
+
+      keysToDelete.forEach(k => {
+        delete map[k];
+      });
+
+      savePortalsMap(map);
+      res.json({ success: true, deletedCount: keysToDelete.size, remaining: Object.keys(map).length });
+    } catch (err: any) {
+      console.error('Error deleting portals from server:', err);
       res.status(500).json({ success: false, error: err.message });
     }
   });

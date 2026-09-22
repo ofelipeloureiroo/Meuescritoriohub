@@ -363,8 +363,8 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
       // Auto-find project associated with this client
       const clientProject = architectureProjects.find(
         p => p.linkedClients?.some(lc => lc.clientId === found.id) ||
-             (p.clientName && p.clientName.toLowerCase() === found.name.toLowerCase()) ||
-             p.title.toLowerCase().includes(found.name.toLowerCase())
+             (p.clientName && found.name && p.clientName.trim().toLowerCase() === found.name.trim().toLowerCase()) ||
+             (p.title && found.name && p.title.trim().toLowerCase().includes(found.name.trim().toLowerCase()))
       );
       if (clientProject) {
         setSelectedProjectId(clientProject.id);
@@ -426,7 +426,7 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
       if (!selectedClientId && found.clientName) {
         const matchingClient = clients.find(
           c => found.linkedClients?.some(lc => lc.clientId === c.id) ||
-               c.name.toLowerCase() === found.clientName?.toLowerCase()
+               (c.name && found.clientName && c.name.trim().toLowerCase() === found.clientName.trim().toLowerCase())
         );
         if (matchingClient) {
           setSelectedClientId(matchingClient.id);
@@ -512,45 +512,49 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
       // 1. Resolve or Create Client in Office Registry
       let resolvedClientId = selectedClientId;
       const existingClient = clients.find(
-        c => c.id === selectedClientId ||
-             (c.email && c.email.toLowerCase() === clientEmail.trim().toLowerCase()) ||
-             c.name.toLowerCase() === clientName.trim().toLowerCase()
+        c => (selectedClientId && c.id === selectedClientId) ||
+             (c.email && clientEmail && c.email.trim().toLowerCase() === clientEmail.trim().toLowerCase()) ||
+             (c.name && clientName && c.name.trim().toLowerCase() === clientName.trim().toLowerCase())
       );
 
       if (existingClient) {
         resolvedClientId = existingClient.id;
         // Keep office registry updated with phone/email
-        updateClient(existingClient.id, {
-          name: clientName.trim(),
-          email: clientEmail.trim().toLowerCase(),
-          phone: clientPhone.trim() || existingClient.phone,
-          status: 'active'
-        });
+        if (typeof updateClient === 'function') {
+          updateClient(existingClient.id, {
+            name: clientName.trim(),
+            email: clientEmail.trim().toLowerCase(),
+            phone: clientPhone.trim() || existingClient.phone,
+            status: 'active'
+          });
+        }
       } else {
         // Automatically add new client to Office Registry
         resolvedClientId = selectedClientId || `cli-${Date.now()}`;
-        addClient({
-          id: resolvedClientId,
-          name: clientName.trim(),
-          email: clientEmail.trim().toLowerCase(),
-          phone: clientPhone.trim(),
-          status: 'active',
-          createdAt: new Date().toISOString(),
-          serviceType: 'Arquitetura e Interiores',
-          totalBilled: 0,
-          totalPaid: 0,
-          pendingAmount: 0,
-          projectsCount: 1,
-          city: architectProfile?.location || 'São Paulo',
-          state: 'SP'
-        });
+        if (typeof addClient === 'function') {
+          addClient({
+            id: resolvedClientId,
+            name: clientName.trim(),
+            email: clientEmail.trim().toLowerCase(),
+            phone: clientPhone.trim(),
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            serviceType: 'Arquitetura e Interiores',
+            totalBilled: 0,
+            totalPaid: 0,
+            pendingAmount: 0,
+            projectsCount: 1,
+            city: architectProfile?.location || 'São Paulo',
+            state: 'SP'
+          });
+        }
       }
 
       // 2. Resolve or Create Project in Office Registry
       let resolvedProjectId = selectedProjectId;
       const existingProject = architectureProjects.find(
-        p => p.id === selectedProjectId ||
-             p.title.toLowerCase() === (projectTitle.trim() || '').toLowerCase()
+        p => (selectedProjectId && p.id === selectedProjectId) ||
+             (p.title && projectTitle.trim() && p.title.trim().toLowerCase() === projectTitle.trim().toLowerCase())
       );
 
       const resolvedTitle = projectTitle.trim() || `Projeto de ${clientName.trim()}`;
@@ -558,50 +562,54 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
       if (existingProject) {
         resolvedProjectId = existingProject.id;
         // Keep office project progress and current stage synchronized
-        updateArchitectureProject(existingProject.id, {
-          title: resolvedTitle,
-          clientName: clientName.trim(),
-          deliveryDate: deliveryDate.trim() || existingProject.deliveryDate,
-          currentStageName: currentStageName,
-          progressPercent: Number(progressPercent),
-          status: generalStatus === 'concluido' ? 'entregue' : (existingProject.status || 'executivo'),
-          linkedClients: [
-            {
-              id: resolvedClientId,
-              clientId: resolvedClientId,
-              name: clientName.trim(),
-              clientName: clientName.trim(),
-              role: 'Contratante Principal'
-            } as any
-          ]
-        });
+        if (typeof updateArchitectureProject === 'function') {
+          updateArchitectureProject(existingProject.id, {
+            title: resolvedTitle,
+            clientName: clientName.trim(),
+            deliveryDate: deliveryDate.trim() || existingProject.deliveryDate,
+            currentStageName: currentStageName,
+            progressPercent: Number(progressPercent) || 0,
+            status: generalStatus === 'concluido' ? 'entregue' : (existingProject.status || 'executivo'),
+            linkedClients: [
+              {
+                id: resolvedClientId,
+                clientId: resolvedClientId,
+                name: clientName.trim(),
+                clientName: clientName.trim(),
+                role: 'Contratante Principal'
+              } as any
+            ]
+          });
+        }
       } else {
         // Automatically add new project to Office Registry
         resolvedProjectId = selectedProjectId || `proj-${Date.now()}`;
-        addArchitectureProject({
-          id: resolvedProjectId,
-          title: resolvedTitle,
-          clientName: clientName.trim(),
-          category: 'residencial',
-          location: architectProfile?.location || 'São Paulo, SP',
-          state: 'SP',
-          status: generalStatus === 'concluido' ? 'entregue' : 'executivo',
-          coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
-          images: ['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'],
-          deliveryDate: deliveryDate.trim() || 'Sob consulta',
-          createdAt: new Date().toISOString(),
-          progressPercent: Number(progressPercent),
-          currentStageName: currentStageName,
-          linkedClients: [
-            {
-              id: resolvedClientId,
-              clientId: resolvedClientId,
-              name: clientName.trim(),
-              clientName: clientName.trim(),
-              role: 'Contratante Principal'
-            } as any
-          ]
-        });
+        if (typeof addArchitectureProject === 'function') {
+          addArchitectureProject({
+            id: resolvedProjectId,
+            title: resolvedTitle,
+            clientName: clientName.trim(),
+            category: 'residencial',
+            location: architectProfile?.location || 'São Paulo, SP',
+            state: 'SP',
+            status: generalStatus === 'concluido' ? 'entregue' : 'executivo',
+            coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
+            images: ['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'],
+            deliveryDate: deliveryDate.trim() || 'Sob consulta',
+            createdAt: new Date().toISOString(),
+            progressPercent: Number(progressPercent) || 0,
+            currentStageName: currentStageName,
+            linkedClients: [
+              {
+                id: resolvedClientId,
+                clientId: resolvedClientId,
+                name: clientName.trim(),
+                clientName: clientName.trim(),
+                role: 'Contratante Principal'
+              } as any
+            ]
+          });
+        }
       }
 
       // 3. Save Connected Client Portal Access Record
