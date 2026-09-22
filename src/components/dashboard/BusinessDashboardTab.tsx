@@ -60,6 +60,7 @@ const DEFAULT_SECTORS_CONFIG = {
   finance: true,
   tasks: true,
   team_activity: true,
+  team_efficiency: true,
   projects: true,
   week_calendar: true,
   construction: true,
@@ -69,6 +70,120 @@ const DEFAULT_SECTORS_CONFIG = {
 interface BusinessDashboardTabProps {
   onNavigateTab?: (tab: string) => void;
 }
+
+interface PieChartItem {
+  name: string;
+  value: number;
+  color: string;
+  percentage: number;
+}
+
+interface SimplePieChartProps {
+  data: PieChartItem[];
+  metricLabel: string;
+}
+
+const SimplePieChart: React.FC<SimplePieChartProps> = ({ data, metricLabel }) => {
+  const activeData = data.filter((d) => d.value > 0);
+
+  if (activeData.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-48 text-[var(--text-muted)] bg-[var(--bg-input)] rounded-2xl border border-dashed border-[var(--border-color)]">
+        <Clock className="w-6 h-6 text-[var(--text-muted)] opacity-50 mb-2 animate-pulse" />
+        <p className="text-xs font-semibold">Sem dados para exibir</p>
+        <p className="text-[10px] text-[var(--text-muted)] mt-0.5">Registre horas trabalhadas nos projetos</p>
+      </div>
+    );
+  }
+
+  let accumulatedPercent = 0;
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 p-4">
+      {/* SVG Donut/Pie Chart */}
+      <div className="relative w-36 h-36 shrink-0">
+        <svg viewBox="0 0 200 200" className="w-full h-full -rotate-90">
+          {activeData.map((slice, idx) => {
+            const startAngle = accumulatedPercent * 360;
+            accumulatedPercent += slice.percentage / 100;
+            const endAngle = accumulatedPercent * 360;
+
+            const radius = 90;
+            const center = 100;
+            const startRad = (startAngle * Math.PI) / 180;
+            const endRad = (endAngle * Math.PI) / 180;
+
+            const x1 = center + radius * Math.cos(startRad);
+            const y1 = center + radius * Math.sin(startRad);
+            const x2 = center + radius * Math.cos(endRad);
+            const y2 = center + radius * Math.sin(endRad);
+
+            const largeArcFlag = slice.percentage > 50 ? 1 : 0;
+
+            // If a single slice is 100% or very close, render a simple circle to avoid path math issues
+            if (slice.percentage >= 99.9) {
+              return (
+                <circle
+                  key={idx}
+                  cx="100"
+                  cy="100"
+                  r="90"
+                  fill={slice.color}
+                  className="transition-all duration-300 hover:scale-[1.02] origin-center"
+                  style={{ transformOrigin: '100px 100px' }}
+                />
+              );
+            }
+
+            const pathData = `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+
+            return (
+              <path
+                key={idx}
+                d={pathData}
+                fill={slice.color}
+                className="transition-all duration-300 hover:scale-[1.03] hover:opacity-95 origin-center cursor-pointer"
+                style={{ transformOrigin: '100px 100px' }}
+              />
+            );
+          })}
+          {/* Inner cutout to make it a elegant Donut chart */}
+          <circle cx="100" cy="100" r="48" fill="var(--bg-card)" />
+        </svg>
+
+        {/* Center Text inside Donut */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-2">
+          <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider leading-none">
+            {metricLabel}
+          </span>
+          <span className="text-base font-bold text-[var(--text-main)] font-mono tracking-tight mt-1">
+            {data.reduce((acc, curr) => acc + curr.value, 0).toFixed(0)}
+          </span>
+        </div>
+      </div>
+
+      {/* Legend Column */}
+      <div className="flex-1 space-y-2 w-full">
+        {data.map((item, idx) => (
+          <div
+            key={idx}
+            className="flex items-center justify-between text-xs py-1 border-b border-[var(--border-subtle)]/30 last:border-0"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+              <span className="font-bold text-[var(--text-main)] truncate" title={item.name}>
+                {item.name}
+              </span>
+            </div>
+            <span className="font-mono text-[var(--text-muted)] font-semibold shrink-0 ml-2">
+              {item.value.toFixed(0)} <span className="text-[10px] text-zinc-400">({item.percentage.toFixed(0)}%)</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNavigateTab }) => {
   const { user, profile } = useAuth();
@@ -538,6 +653,144 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
     );
   }, [clients]);
 
+  const [pieChartMetric, setPieChartMetric] = useState<'hours' | 'tasks'>('hours');
+
+  // Calculate office-wide team efficiency analytics
+  const teamEfficiencyAnalytics = useMemo(() => {
+    let totalEstimated = 0;
+    let totalRealized = 0;
+    let totalTasksCount = 0;
+    let completedTasksCount = 0;
+    let onTimeTasksCount = 0;
+
+    const memberStats: Record<string, {
+      name: string;
+      roleTitle: string;
+      estimated: number;
+      realized: number;
+      completed: number;
+      total: number;
+      onTime: number;
+      color: string;
+    }> = {};
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // Initialize with active real members (filtered of master administrative/owner emails to keep strict data isolation)
+    realMembers.forEach((m) => {
+      const isMasterEmail = m.email?.toLowerCase().includes('master_escritorio') || m.email?.toLowerCase() === 'lfquadrosdecorativos@gmail.com';
+      const currentUserEmail = (user?.email || '').toLowerCase().trim();
+      
+      // Strict subscriber data isolation
+      if (isMasterEmail && currentUserEmail !== m.email?.toLowerCase()) {
+        return;
+      }
+
+      memberStats[m.name.toLowerCase().trim()] = {
+        name: m.name,
+        roleTitle: m.roleTitle || 'Colaborador',
+        estimated: 0,
+        realized: 0,
+        completed: 0,
+        total: 0,
+        onTime: 0,
+        color: m.color || '#8c7456',
+      };
+    });
+
+    architectureProjects.forEach((project) => {
+      if (project.deletedAt) return;
+
+      project.stages?.forEach((stage) => {
+        stage.tasks?.forEach((task) => {
+          const est = task.estimatedHours || 0;
+          const real = task.realizedHours || 0;
+
+          totalEstimated += est;
+          totalRealized += real;
+          totalTasksCount += 1;
+
+          if (task.status === 'completed') {
+            completedTasksCount += 1;
+            if (!task.endDatePlanned || task.endDatePlanned >= todayStr) {
+              onTimeTasksCount += 1;
+            }
+          }
+
+          const respName = (task.responsible || 'Equipe Geral').trim();
+          const respNameLower = respName.toLowerCase();
+
+          // Don't leak master admins
+          const isMasterResp = respNameLower.includes('master_escritorio') || respNameLower === 'lfquadrosdecorativos@gmail.com';
+          const currentUserEmail = (user?.email || '').toLowerCase().trim();
+          if (isMasterResp && currentUserEmail !== 'master_escritorio@meuescritorio.app' && currentUserEmail !== 'lfquadrosdecorativos@gmail.com') {
+            return;
+          }
+
+          if (!memberStats[respNameLower]) {
+            const matchedMember = realMembers.find(m => m.name.toLowerCase().trim() === respNameLower);
+            memberStats[respNameLower] = {
+              name: matchedMember?.name || respName,
+              roleTitle: matchedMember?.roleTitle || 'Colaborador',
+              estimated: 0,
+              realized: 0,
+              completed: 0,
+              total: 0,
+              onTime: 0,
+              color: matchedMember?.color || '#a1a1aa',
+            };
+          }
+
+          const stats = memberStats[respNameLower];
+          stats.estimated += est;
+          stats.realized += real;
+          stats.total += 1;
+          if (task.status === 'completed') {
+            stats.completed += 1;
+            if (!task.endDatePlanned || task.endDatePlanned >= todayStr) {
+              stats.onTime += 1;
+            }
+          }
+        });
+      });
+    });
+
+    const membersList = Object.values(memberStats).map((stats) => {
+      const efficiency = stats.realized > 0
+        ? Math.round((stats.estimated / stats.realized) * 100)
+        : stats.completed > 0 ? 100 : 0;
+
+      const onTimeRate = stats.completed > 0
+        ? Math.round((stats.onTime / stats.completed) * 100)
+        : 100;
+
+      return {
+        ...stats,
+        efficiency,
+        onTimeRate,
+        balance: stats.estimated - stats.realized,
+      };
+    });
+
+    const overallEfficiency = totalRealized > 0
+      ? Math.round((totalEstimated / totalRealized) * 100)
+      : completedTasksCount > 0 ? 100 : 0;
+
+    const overallOnTimeRate = completedTasksCount > 0
+      ? Math.round((onTimeTasksCount / completedTasksCount) * 100)
+      : 100;
+
+    return {
+      totalEstimated: Math.round(totalEstimated),
+      totalRealized: Math.round(totalRealized),
+      totalTasksCount,
+      completedTasksCount,
+      overallEfficiency,
+      overallOnTimeRate,
+      members: membersList,
+    };
+  }, [architectureProjects, realMembers, user]);
+
   return (
     <div className="space-y-6 pb-16 animate-in fade-in duration-300 font-sans">
       {/* ========================================================================= */}
@@ -956,6 +1209,209 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
                     </button>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SECTOR: EFICIÊNCIA & PRODUTIVIDADE DA EQUIPE (PIE CHART) */}
+      {/* ========================================================================= */}
+      {sectorsConfig.team_efficiency && (
+        <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] overflow-hidden shadow-sm">
+          <div className="p-4 sm:p-5 flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-card-secondary)]/50">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-[var(--theme-primary)]/10 border border-[var(--theme-primary)]/20 text-[var(--theme-primary)] flex items-center justify-center">
+                <Timer className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-[var(--text-main)]">Eficiência & Desempenho da Equipe</h2>
+                <p className="text-[11px] text-[var(--text-muted)]">Indicadores de produtividade, saldo de horas e entregas no prazo</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleNav('team')}
+                className="text-xs font-bold text-[var(--theme-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Gestão da Equipe</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => toggleSectionCollapse('team_efficiency')}
+                className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] cursor-pointer"
+                title="Minimizar / Expandir"
+              >
+                {collapsedSections.team_efficiency ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          {!collapsedSections.team_efficiency && (
+            <div className="p-4 sm:p-6 space-y-6">
+              {/* Core metrics overview cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)]">
+                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">Eficiência Média</span>
+                  <div className="flex items-baseline gap-1 mt-1.5">
+                    <span className="text-xl sm:text-2xl font-bold text-[var(--text-main)] font-mono">
+                      {teamEfficiencyAnalytics.overallEfficiency}%
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">Horas estimadas vs trabalhadas</p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)]">
+                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">Entregas no Prazo</span>
+                  <div className="flex items-baseline gap-1 mt-1.5">
+                    <span className="text-xl sm:text-2xl font-bold text-emerald-400 font-mono">
+                      {teamEfficiencyAnalytics.overallOnTimeRate}%
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">Pontualidade nas tarefas concluídas</p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)]">
+                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block font-sans">Tempo Trabalhado</span>
+                  <div className="flex items-baseline gap-1 mt-1.5">
+                    <span className="text-xl sm:text-2xl font-bold text-[var(--text-main)] font-mono">
+                      {teamEfficiencyAnalytics.totalRealized}h
+                    </span>
+                    <span className="text-xs text-[var(--text-muted)]">/ {teamEfficiencyAnalytics.totalEstimated}h est.</span>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">Soma de horas gastas em tarefas</p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)]">
+                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block font-sans">Tarefas Concluídas</span>
+                  <div className="flex items-baseline gap-1 mt-1.5">
+                    <span className="text-xl sm:text-2xl font-bold text-[var(--text-main)] font-mono">
+                      {teamEfficiencyAnalytics.completedTasksCount}
+                    </span>
+                    <span className="text-xs text-[var(--text-muted)]">/ {teamEfficiencyAnalytics.totalTasksCount} total</span>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">Fluxo de entrega da equipe</p>
+                </div>
+              </div>
+
+              {/* Main content split: Pie Chart on Left, Leaderboard on Right */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                {/* Pie Chart Panel (5 cols) */}
+                <div className="lg:col-span-5 p-5 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">
+                      {pieChartMetric === 'hours' ? 'Horas Trabalhadas' : 'Tarefas Concluídas'}
+                    </h4>
+                    
+                    {/* Toggle Metric Button */}
+                    <div className="flex items-center gap-1 bg-[var(--bg-card)] p-1 rounded-lg border border-[var(--border-color)]">
+                      <button
+                        onClick={() => setPieChartMetric('hours')}
+                        className={`px-2 py-1 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                          pieChartMetric === 'hours'
+                            ? 'bg-[var(--theme-primary)] text-black shadow-xs'
+                            : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                        }`}
+                      >
+                        Horas
+                      </button>
+                      <button
+                        onClick={() => setPieChartMetric('tasks')}
+                        className={`px-2 py-1 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                          pieChartMetric === 'tasks'
+                            ? 'bg-[var(--theme-primary)] text-black shadow-xs'
+                            : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                        }`}
+                      >
+                        Tarefas
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Render SimplePieChart component */}
+                  <SimplePieChart
+                    data={teamEfficiencyAnalytics.members.map((m) => {
+                      const totalValue = pieChartMetric === 'hours'
+                        ? teamEfficiencyAnalytics.totalRealized
+                        : teamEfficiencyAnalytics.completedTasksCount;
+
+                      const val = pieChartMetric === 'hours' ? m.realized : m.completed;
+                      const percentage = totalValue > 0 ? (val / totalValue) * 100 : 0;
+
+                      return {
+                        name: m.name,
+                        value: val,
+                        color: m.color,
+                        percentage,
+                      };
+                    })}
+                    metricLabel={pieChartMetric === 'hours' ? 'Horas' : 'Tarefas'}
+                  />
+                </div>
+
+                {/* Leaderboard/Table Panel (7 cols) */}
+                <div className="lg:col-span-7 p-5 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">
+                      Desempenho Individual de Cada Integrante
+                    </h4>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-[var(--border-color)] text-[var(--text-muted)] font-semibold uppercase tracking-wider text-[10px] pb-2">
+                            <th className="py-2 pr-2 col-span-2">Integrante</th>
+                            <th className="py-2 px-2 text-center">Horas Realizadas</th>
+                            <th className="py-2 px-2 text-center">Eficiência</th>
+                            <th className="py-2 pl-2 text-center">Pontualidade</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--border-subtle)]/30">
+                          {teamEfficiencyAnalytics.members.map((m, idx) => {
+                            const isHighEfficiency = m.efficiency >= 100;
+                            return (
+                              <tr key={idx} className="hover:bg-[var(--bg-card-hover)]/30 transition-all">
+                                <td className="py-3 pr-2">
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold text-black shrink-0 shadow-xs"
+                                      style={{ backgroundColor: m.color }}
+                                    >
+                                      {m.name.substring(0, 2).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="font-bold text-[var(--text-main)] truncate text-xs">{m.name}</p>
+                                      <p className="text-[10px] text-[var(--text-muted)] truncate">{m.roleTitle}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-2 text-center font-mono font-semibold text-[var(--text-main)]">
+                                  {m.realized.toFixed(0)}h <span className="text-[10px] text-[var(--text-muted)]">/ {m.estimated.toFixed(0)}h</span>
+                                </td>
+                                <td className="py-3 px-2 text-center">
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                      isHighEfficiency
+                                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                    }`}
+                                  >
+                                    {m.efficiency > 0 ? `${m.efficiency}%` : 'Apurando'}
+                                  </span>
+                                </td>
+                                <td className="py-3 pl-2 text-center font-mono font-semibold text-emerald-400">
+                                  {m.onTimeRate}%
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1403,6 +1859,7 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
                 { key: 'finance', label: 'Financeiro de Hoje (A receber / A pagar)', icon: DollarSign },
                 { key: 'tasks', label: 'Tarefas de Hoje (DO DIA)', icon: CheckCircle2 },
                 { key: 'team_activity', label: 'Equipe & Projetos do Escritório', icon: Users },
+                { key: 'team_efficiency', label: 'Eficiência & Produtividade da Equipe', icon: Timer },
                 { key: 'projects', label: 'Projetos (Filtros por Prazo e Status)', icon: FolderOpen },
                 { key: 'week_calendar', label: 'Agenda da Semana (7 dias)', icon: Calendar },
                 { key: 'construction', label: 'Obras em Andamento', icon: Building2 },
