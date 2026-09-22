@@ -1436,7 +1436,7 @@ export function convertArchitectureProjectToPortalProject(
   const progress = typeof rawAny.progressPercent === 'number' ? rawAny.progressPercent : defaultProgress;
   const currentStage = (rawAny.currentStageName as string) || stageName;
 
-  // Stages
+  // Stages: Exactly linked to project cronograma
   let portalStages: ClientPortalStage[] = [];
   if (ap.stages && ap.stages.length > 0) {
     portalStages = ap.stages.map((st, i) => {
@@ -1445,51 +1445,51 @@ export function convertArchitectureProjectToPortalProject(
         stStatus = 'completed';
       } else if (st.status === 'in_progress' || (st as any).status === 'em_andamento') {
         stStatus = 'in_progress';
+      } else {
+        stStatus = 'pending'; // Zerada / Não iniciada por padrão
       }
       const stAny = st as any;
       return {
         id: st.id || `stg-${i}`,
         name: st.name,
+        description: stAny.description || `Etapa ${i + 1} do cronograma`,
         status: stStatus,
         completedAt: stStatus === 'completed' ? (stAny.completedDate || 'Concluído') : undefined,
         plannedDate: st.endDatePlanned || stAny.deadline || undefined
       };
     });
   } else {
-    // Generate standard 5 stages reflecting project status & progress
+    // Default stages starting as pending / zeradas if project has no custom stages yet
     portalStages = [
       { 
         id: `stg-${ap.id}-1`, 
         name: '1. Briefing & Levantamento Técnico', 
         description: 'Alinhamento do programa de necessidades e medições detalhadas.',
-        status: 'completed', 
-        completedAt: 'Concluído' 
+        status: 'pending'
       },
       { 
         id: `stg-${ap.id}-2`, 
         name: '2. Estudo Preliminar & Modelagem 3D', 
         description: 'Apresentação de layouts humanizados e volumetria 3D.',
-        status: (progress >= 35 ? 'completed' : 'in_progress'), 
-        completedAt: progress >= 35 ? 'Concluído' : undefined 
+        status: 'pending'
       },
       { 
         id: `stg-${ap.id}-3`, 
         name: '3. Anteprojeto & Aprovação', 
         description: 'Definição de materiais, iluminação e aprovações necessárias.',
-        status: (progress >= 55 ? 'completed' : progress >= 35 ? 'in_progress' : 'pending'), 
-        completedAt: progress >= 55 ? 'Concluído' : undefined 
+        status: 'pending'
       },
       { 
         id: `stg-${ap.id}-4`, 
         name: '4. Projeto Executivo & Marcenaria', 
         description: 'Pranchas executivas técnicas para marcenaria, forro e marmoraria.',
-        status: (progress >= 75 ? 'completed' : progress >= 55 ? 'in_progress' : 'pending') 
+        status: 'pending'
       },
       { 
         id: `stg-${ap.id}-5`, 
         name: '5. Acompanhamento & Entrega Final', 
         description: 'Visitas técnicas, fiscalização de obra e entrega do caderno final.',
-        status: (progress >= 100 ? 'completed' : progress >= 75 ? 'in_progress' : 'pending') 
+        status: 'pending'
       }
     ];
   }
