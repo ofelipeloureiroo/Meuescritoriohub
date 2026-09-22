@@ -33,6 +33,7 @@ import { SuppliersTab } from './components/suppliers/SuppliersTab';
 import { SettingsTab } from './components/settings/SettingsTab';
 import { ClientPortalOfficeTab } from './components/portal/ClientPortalOfficeTab';
 import { ExpressConsultingTab } from './components/projects/ExpressConsultingTab';
+import { TimeTrackerTab } from './components/projects/TimeTrackerTab';
 import { WhatsAppCenterTab } from './components/whatsapp/WhatsAppCenterTab';
 import { PublicConsultoriaPage } from './components/projects/PublicConsultoriaPage';
 import { NewTransactionModal } from './components/modals/NewTransactionModal';
@@ -151,6 +152,7 @@ const AppContent: React.FC = () => {
       case 'dashboard': return <BusinessDashboardTab onNavigateTab={setActiveTab} />;
       case 'home': return <HomeProjectsTab onNavigateTab={setActiveTab} onOpenNewTxModal={handleOpenNewTx} />;
       case 'projects': return <ProjectsManagementTab onNavigateTab={setActiveTab} />;
+      case 'time_tracker': return <TimeTrackerTab />;
       case 'consultoria_expressa': return <ExpressConsultingTab onExit={() => setActiveTab('projects')} />;
       case 'suppliers': return <SuppliersTab />;
       case 'team': return <TeamTab />;

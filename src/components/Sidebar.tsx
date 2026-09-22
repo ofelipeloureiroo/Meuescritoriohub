@@ -177,6 +177,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           visible: !isCollaborator || !permissions || permissions.projects !== false,
         },
         {
+          id: 'time_tracker',
+          label: 'Rastreador de Tempo',
+          icon: Clock,
+          badge: 'Novo',
+          visible: !isCollaborator || !permissions || permissions.projects !== false,
+        },
+        {
           id: 'consultoria_expressa',
           label: 'Consultoria Expressa',
           icon: Sparkles,
