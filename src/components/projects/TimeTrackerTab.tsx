@@ -46,9 +46,9 @@ interface TimeEntry {
 }
 
 export const TimeTrackerTab: React.FC = () => {
-  const { ongoingArchitectureProjects, updateArchitectureProject, addAppAction } = useFinance();
+  const { architectureProjects, updateArchitectureProject, addAppAction } = useFinance();
   const { user, profile } = useAuth();
-  const { fullTeamMembers } = useTeamMembers();
+  const { teamMembers } = useTeamMembers();
 
   const currentUserName = profile?.name || user?.email || 'Arquiteto(a) Responsável';
 
@@ -110,8 +110,8 @@ export const TimeTrackerTab: React.FC = () => {
 
   // Selected project object
   const selectedProject = useMemo(() => {
-    return ongoingArchitectureProjects.find((p) => p.id === selectedProjectId);
-  }, [ongoingArchitectureProjects, selectedProjectId]);
+    return architectureProjects.find((p) => p.id === selectedProjectId);
+  }, [architectureProjects, selectedProjectId]);
 
   // Available stages from the selected project's cronograma
   const availableStages: ProjectWorkflowStage[] = useMemo(() => {
@@ -404,7 +404,7 @@ export const TimeTrackerTab: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-1">
-                {ongoingArchitectureProjects
+                {architectureProjects
                   .filter((p) =>
                     `${p.title} ${p.clientName} ${p.location}`.toLowerCase().includes(projectSearch.toLowerCase())
                   )
@@ -429,7 +429,7 @@ export const TimeTrackerTab: React.FC = () => {
                       {selectedProjectId === proj.id && <Check className="w-4 h-4 text-[#8c7456]" />}
                     </button>
                   ))}
-                {ongoingArchitectureProjects.length === 0 && (
+                {architectureProjects.length === 0 && (
                   <p className="text-center py-4 text-xs text-zinc-400">Nenhum projeto cadastrado no escritório.</p>
                 )}
               </div>
@@ -537,7 +537,7 @@ export const TimeTrackerTab: React.FC = () => {
               onChange={(e) => {
                 const val = e.target.value;
                 setSelectedResponsibleName(val);
-                const person = fullTeamMembers.find((m) => m.name === val);
+                const person = teamMembers.find((m) => m.name === val);
                 if (person?.hourlyRate) {
                   setHourlyRate(person.hourlyRate);
                 }
@@ -545,12 +545,12 @@ export const TimeTrackerTab: React.FC = () => {
               className="bg-transparent font-bold text-zinc-800 text-xs focus:outline-hidden cursor-pointer max-w-[150px] truncate"
               title="Responsável pela ação"
             >
-              {fullTeamMembers.map((m) => (
+              {teamMembers.map((m) => (
                 <option key={m.id} value={m.name}>
                   {m.name} ({m.hourlyRate ? `R$ ${m.hourlyRate}/h` : 'R$ 150/h'})
                 </option>
               ))}
-              {!fullTeamMembers.some((m) => m.name === currentUserName) && (
+              {!teamMembers.some((m) => m.name === currentUserName) && (
                 <option value={currentUserName}>{currentUserName}</option>
               )}
             </select>
