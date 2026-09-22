@@ -9,6 +9,7 @@ export interface SimpleTeamMember {
   role?: string;
   roleTitle?: string;
   email?: string;
+  isOwner?: boolean;
 }
 
 export function useTeamMembers(): {
@@ -18,22 +19,33 @@ export function useTeamMembers(): {
   const { user, profile } = useAuth();
   const { architectProfile } = useFinance();
 
+  const targetUid = user?.joinedOwnerUid || user?.uid || 'guest';
+
   const getMembersFromStorage = (): TeamMember[] => {
     const defaultOwnerName =
       architectProfile?.ownerName ||
       architectProfile?.name ||
+      profile?.name ||
       profile?.companyName ||
       user?.displayName ||
-      'LF Quadros & Decoração';
-    const defaultOwnerEmail = user?.email || 'lfquadrosdecorativos@gmail.com';
+      (user?.email ? user.email.split('@')[0] : 'Responsável do Escritório');
+    const defaultOwnerEmail = user?.email || profile?.email || 'contato@escritorio.com';
+
+    const initials = defaultOwnerName
+      .split(' ')
+      .filter(Boolean)
+      .map((w: string) => w[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase() || 'RE';
 
     const defaultOwner: TeamMember = {
       id: 'member_owner',
       name: defaultOwnerName,
       email: defaultOwnerEmail,
       role: 'admin',
-      roleTitle: 'Administrador / Gestor',
-      initials: 'LF',
+      roleTitle: 'Responsável do Escritório',
+      initials: initials,
       color: '#b8a38b',
       isCurrentUser: true,
       status: 'active',
@@ -56,20 +68,31 @@ export function useTeamMembers(): {
     };
 
     try {
-      const saved = localStorage.getItem('meu_escritorio_equipe_v1');
+      const saved =
+        localStorage.getItem(`meu_escritorio_equipe_v1_${targetUid}`) ||
+        localStorage.getItem('meu_escritorio_equipe_v1');
+
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((m: TeamMember) => {
-            if (m.isCurrentUser || m.id === 'member_owner') {
+          let hasOwner = false;
+          const mapped = parsed.map((m: TeamMember) => {
+            if (m.isCurrentUser || m.id === 'member_owner' || m.role === 'admin') {
+              hasOwner = true;
               return {
                 ...m,
                 name: defaultOwnerName || m.name,
                 email: defaultOwnerEmail || m.email,
+                roleTitle: m.roleTitle || 'Responsável do Escritório',
               };
             }
             return m;
           });
+
+          if (!hasOwner) {
+            return [defaultOwner, ...mapped];
+          }
+          return mapped;
         }
       }
     } catch {}
@@ -98,7 +121,15 @@ export function useTeamMembers(): {
       window.removeEventListener('team_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
-  }, [architectProfile?.ownerName, architectProfile?.name, profile?.companyName, user?.displayName, user?.email]);
+  }, [
+    targetUid,
+    architectProfile?.ownerName,
+    architectProfile?.name,
+    profile?.companyName,
+    profile?.name,
+    user?.displayName,
+    user?.email,
+  ]);
 
   const teamMembers = useMemo<SimpleTeamMember[]>(() => {
     const list: SimpleTeamMember[] = [];
@@ -114,6 +145,7 @@ export function useTeamMembers(): {
           role: m.role,
           roleTitle: m.roleTitle,
           email: m.email,
+          isOwner: m.isCurrentUser || m.id === 'member_owner' || m.role === 'admin',
         });
       }
     });
@@ -127,8 +159,9 @@ export function useTeamMembers(): {
             id: c.uid,
             name: cName,
             role: 'member',
-            roleTitle: 'Colaborador',
+            roleTitle: 'Membro da Equipe',
             email: c.email,
+            isOwner: false,
           });
         }
       });

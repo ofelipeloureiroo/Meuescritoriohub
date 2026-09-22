@@ -300,23 +300,30 @@ export const TeamTab: React.FC = () => {
     budget: false,
   });
 
+  const targetUid = user?.joinedOwnerUid || user?.uid || 'guest';
+
   useEffect(() => {
     try {
       const serialized = JSON.stringify(members);
-      const currentSaved = localStorage.getItem('meu_escritorio_equipe_v1');
+      const currentSaved =
+        localStorage.getItem(`meu_escritorio_equipe_v1_${targetUid}`) ||
+        localStorage.getItem('meu_escritorio_equipe_v1');
       if (currentSaved !== serialized) {
+        localStorage.setItem(`meu_escritorio_equipe_v1_${targetUid}`, serialized);
         localStorage.setItem('meu_escritorio_equipe_v1', serialized);
         window.dispatchEvent(new CustomEvent('team_updated'));
       }
     } catch (e) {
       console.error('Failed to persist team members', e);
     }
-  }, [members]);
+  }, [members, targetUid]);
 
   useEffect(() => {
     const handleTeamUpdated = () => {
       try {
-        const saved = localStorage.getItem('meu_escritorio_equipe_v1');
+        const saved =
+          localStorage.getItem(`meu_escritorio_equipe_v1_${targetUid}`) ||
+          localStorage.getItem('meu_escritorio_equipe_v1');
         if (saved) {
           const parsed = JSON.parse(saved);
           setMembers((prev) => {
@@ -336,10 +343,10 @@ export const TeamTab: React.FC = () => {
       window.removeEventListener('team_updated', handleTeamUpdated);
       window.removeEventListener('storage', handleTeamUpdated);
     };
-  }, []);
+  }, [targetUid]);
 
   const officeTitle =
-    architectProfile?.name || profile?.companyName || user?.displayName || 'LF Quadros & Decoração';
+    architectProfile?.name || profile?.companyName || user?.displayName || 'Meu Escritório';
 
   const handleSendInvite = async (member: TeamMember, isNew = false) => {
     setIsSendingInvite(true);

@@ -1343,14 +1343,32 @@ export const ProjectTasksTab: React.FC<ProjectTasksTabProps> = ({
                       <select
                         value={formResponsible}
                         onChange={(e) => setFormResponsible(e.target.value)}
-                        className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs focus:ring-2 focus:ring-[#8c7456]/20 focus:border-[#8c7456]"
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs focus:ring-2 focus:ring-[#8c7456]/20 focus:border-[#8c7456] bg-white text-zinc-800"
                       >
                         <option value="">Selecionar responsável...</option>
-                        {fullTeamMembers.map((m) => (
-                          <option key={m.id} value={m.name}>
-                            {m.name} ({m.roleTitle || 'Colaborador'})
-                          </option>
-                        ))}
+                        {/* Responsável do Escritório */}
+                        {fullTeamMembers
+                          .filter((m) => m.isCurrentUser || m.id === 'member_owner' || m.role === 'admin')
+                          .map((m) => (
+                            <option key={m.id} value={m.name}>
+                              {m.name} (Responsável do Escritório)
+                            </option>
+                          ))}
+                        {/* Membros da Equipe */}
+                        {fullTeamMembers
+                          .filter((m) => !m.isCurrentUser && m.id !== 'member_owner' && m.role !== 'admin')
+                          .map((m) => (
+                            <option key={m.id} value={m.name}>
+                              {m.name} ({m.roleTitle || 'Membro da Equipe'})
+                            </option>
+                          ))}
+                        {/* Preservar responsável já preenchido anteriormente caso não esteja na lista */}
+                        {formResponsible &&
+                          !fullTeamMembers.some((m) => m.name?.trim().toLowerCase() === formResponsible.trim().toLowerCase()) && (
+                            <option value={formResponsible}>
+                              {formResponsible} (Atual)
+                            </option>
+                          )}
                       </select>
                     </div>
                   </div>
