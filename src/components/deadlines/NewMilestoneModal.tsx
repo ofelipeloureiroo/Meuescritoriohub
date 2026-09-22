@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { ProjectMilestone } from '../../types';
 import { useFinance } from '../../context/FinanceContext';
+import { DEFAULT_PROJECT_TEMPLATES, convertTemplateToWorkflowStages } from '../../data/defaultProjectTemplates';
 
 interface NewMilestoneModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export const NewMilestoneModal: React.FC<NewMilestoneModalProps> = ({
     architectureProjects = [],
     clients = [],
     freelanceProjects = [],
+    officeSettings,
     addProjectMilestone,
   } = useFinance();
 
@@ -79,8 +81,36 @@ export const NewMilestoneModal: React.FC<NewMilestoneModalProps> = ({
   const [customClientName, setCustomClientName] = useState<string>('');
 
   const [title, setTitle] = useState('');
-  const [stage, setStage] = useState<ProjectMilestone['stage']>('anteprojeto');
+  const [stage, setStage] = useState<string>('');
   const [priority, setPriority] = useState<ProjectMilestone['priority']>('alta');
+
+  const selectedProject = useMemo(() => {
+    return (architectureProjects || []).find((p) => p.id === selectedId);
+  }, [architectureProjects, selectedId]);
+
+  const availableStages = useMemo(() => {
+    if (!selectedProject) return null;
+    const templates = (officeSettings?.projectTemplates && officeSettings.projectTemplates.length > 0)
+      ? officeSettings.projectTemplates
+      : DEFAULT_PROJECT_TEMPLATES;
+    
+    if (selectedProject.stages && selectedProject.stages.length > 0) {
+      return selectedProject.stages.map(s => s.name);
+    }
+    if (selectedProject.templateId || selectedProject.templateName) {
+      const tmpl = templates.find(t => t.id === selectedProject.templateId || t.name === selectedProject.templateName) || templates[0];
+      if (tmpl && tmpl.stages) {
+        return tmpl.stages.map(s => s.name);
+      }
+    }
+    return null;
+  }, [selectedProject, officeSettings]);
+
+  useEffect(() => {
+    if (availableStages && availableStages.length > 0) {
+      setStage(availableStages[0]);
+    }
+  }, [availableStages]);
   const [dueDate, setDueDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
@@ -268,15 +298,25 @@ export const NewMilestoneModal: React.FC<NewMilestoneModalProps> = ({
               </label>
               <select
                 value={stage}
-                onChange={(e) => setStage(e.target.value as any)}
+                onChange={(e) => setStage(e.target.value)}
                 className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-main)] focus:outline-none focus:border-[var(--theme-primary)] transition-colors"
               >
-                <option value="briefing" className="bg-[var(--bg-card)] text-[var(--text-main)]">Briefing & Levantamento</option>
-                <option value="estudo_preliminar" className="bg-[var(--bg-card)] text-[var(--text-main)]">Estudo Preliminar</option>
-                <option value="anteprojeto" className="bg-[var(--bg-card)] text-[var(--text-main)]">Anteprojeto (3D & Layout)</option>
-                <option value="executivo" className="bg-[var(--bg-card)] text-[var(--text-main)]">Projeto Executivo</option>
-                <option value="obra" className="bg-[var(--bg-card)] text-[var(--text-main)]">Acompanhamento de Obra</option>
-                <option value="entregue" className="bg-[var(--bg-card)] text-[var(--text-main)]">Entrega Final</option>
+                {availableStages && availableStages.length > 0 ? (
+                  availableStages.map((stgName) => (
+                    <option key={stgName} value={stgName} className="bg-[var(--bg-card)] text-[var(--text-main)]">
+                      {stgName}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="briefing" className="bg-[var(--bg-card)] text-[var(--text-main)]">Briefing & Levantamento</option>
+                    <option value="estudo_preliminar" className="bg-[var(--bg-card)] text-[var(--text-main)]">Estudo Preliminar</option>
+                    <option value="anteprojeto" className="bg-[var(--bg-card)] text-[var(--text-main)]">Anteprojeto (3D & Layout)</option>
+                    <option value="executivo" className="bg-[var(--bg-card)] text-[var(--text-main)]">Projeto Executivo</option>
+                    <option value="obra" className="bg-[var(--bg-card)] text-[var(--text-main)]">Acompanhamento de Obra</option>
+                    <option value="entregue" className="bg-[var(--bg-card)] text-[var(--text-main)]">Entrega Final</option>
+                  </>
+                )}
               </select>
             </div>
             <div>

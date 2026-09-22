@@ -566,7 +566,7 @@ export interface ProjectMilestone {
   clientName: string;
   clientPhone?: string;
   title: string;
-  stage: 'briefing' | 'estudo_preliminar' | 'anteprojeto' | 'executivo' | 'obra' | 'entregue';
+  stage: string;
   dueDate: string; // YYYY-MM-DD
   completed: boolean;
   completedDate?: string;

@@ -86,7 +86,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
   // Mini-form state for quick milestones inside cards
   const [activeAddingMilestoneProjectId, setActiveAddingMilestoneProjectId] = useState<string | null>(null);
   const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
-  const [newMilestoneStage, setNewMilestoneStage] = useState<'briefing' | 'estudo_preliminar' | 'anteprojeto' | 'executivo' | 'obra' | 'entregue'>('estudo_preliminar');
+  const [newMilestoneStage, setNewMilestoneStage] = useState<string>('');
   const [newMilestoneDueDate, setNewMilestoneDueDate] = useState('');
   const [newMilestonePriority, setNewMilestonePriority] = useState<'baixa' | 'media' | 'alta' | 'urgente'>('media');
 
@@ -210,13 +210,25 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
     const project = architectureProjects.find(p => p.id === projectId);
     if (!project) return;
 
+    const allAvailableTemplates = (officeSettings?.projectTemplates && officeSettings.projectTemplates.length > 0)
+      ? officeSettings.projectTemplates
+      : DEFAULT_PROJECT_TEMPLATES;
+
+    const pStages = (project.stages && project.stages.length > 0) 
+      ? project.stages 
+      : ((project.templateId || project.templateName)
+          ? (convertTemplateToWorkflowStages(allAvailableTemplates.find(t => t.id === project.templateId || t.name === project.templateName) || allAvailableTemplates[0], project.startDate))
+          : DEFAULT_PROJECT_STAGES);
+
+    const finalStage = newMilestoneStage || pStages[0]?.name || 'Inicial';
+
     addProjectMilestone({
       projectId,
       projectTitle: project.title,
       clientName,
       clientPhone,
       title: newMilestoneTitle.trim(),
-      stage: newMilestoneStage,
+      stage: finalStage,
       dueDate: newMilestoneDueDate,
       completed: false,
       priority: newMilestonePriority,
@@ -713,8 +725,13 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                       </span>
                       <button
                         onClick={() => {
-                          setActiveAddingMilestoneProjectId(activeAddingMilestoneProjectId === p.id ? null : p.id);
-                          setNewMilestoneTitle('');
+                          if (activeAddingMilestoneProjectId === p.id) {
+                            setActiveAddingMilestoneProjectId(null);
+                          } else {
+                            setActiveAddingMilestoneProjectId(p.id);
+                            setNewMilestoneTitle('');
+                            setNewMilestoneStage(pStages[0]?.name || 'Inicial');
+                          }
                         }}
                         className="text-[10px] font-bold text-[var(--theme-primary)] hover:underline flex items-center gap-0.5 cursor-pointer"
                       >
@@ -739,14 +756,15 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                             className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-main)] focus:outline-hidden cursor-pointer"
                           />
                           <select
-                            value={newMilestoneStage}
-                            onChange={(e) => setNewMilestoneStage(e.target.value as any)}
+                            value={newMilestoneStage || pStages[0]?.name || ''}
+                            onChange={(e) => setNewMilestoneStage(e.target.value)}
                             className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-1.5 py-1 text-[10px] text-[var(--text-main)] focus:outline-hidden cursor-pointer"
                           >
-                            <option value="estudo_preliminar">Estudo Prel.</option>
-                            <option value="anteprojeto">Anteprojeto</option>
-                            <option value="executivo">Executivo</option>
-                            <option value="obra">Obra / Acomp.</option>
+                            {pStages.map((stg) => (
+                              <option key={stg.id || stg.name} value={stg.name}>
+                                {stg.name}
+                              </option>
+                            ))}
                           </select>
                         </div>
                         <button
