@@ -745,6 +745,7 @@ export interface AppAction {
   completedAt?: string;
   createdAt: string;
   isAppointment?: boolean;
+  milestoneId?: string;
   gcalEventId?: string;
   gcalTaskId?: string;
   gcalTaskListId?: string;

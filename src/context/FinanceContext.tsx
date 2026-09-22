@@ -3350,12 +3350,35 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Actions - Project Milestones & Prazos
   const addProjectMilestone = (milestoneData: Omit<ProjectMilestone, 'id' | 'createdAt'>) => {
     recordLocalMutation();
+    const milestoneId = `ms-${Date.now()}`;
     const newMs: ProjectMilestone = {
       ...milestoneData,
-      id: `ms-${Date.now()}`,
+      id: milestoneId,
       createdAt: new Date().toISOString().split('T')[0],
     };
     setProjectMilestones((prev) => [newMs, ...prev]);
+
+    // Automatically create corresponding entry in Central de Ações (actions)
+    const projectTitleStr = milestoneData.projectTitle 
+      ? (milestoneData.clientName && !milestoneData.projectTitle.includes(milestoneData.clientName)
+          ? `${milestoneData.projectTitle} - ${milestoneData.clientName}` 
+          : milestoneData.projectTitle)
+      : (milestoneData.clientName || 'Projeto');
+
+    const newAction: AppAction = {
+      id: `act-${milestoneId}`,
+      type: 'Prazo do Projeto',
+      area: 'Operação',
+      origin: 'Projeto',
+      relatedId: milestoneData.projectId,
+      relatedTitle: projectTitleStr,
+      milestoneId: milestoneId,
+      description: `[Prazo] ${milestoneData.title}${milestoneData.stage ? ` (${milestoneData.stage})` : ''}`,
+      date: milestoneData.dueDate,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+    setActions((prev) => [newAction, ...prev]);
   };
 
   const updateProjectMilestone = (id: string, updatedFields: Partial<ProjectMilestone>) => {
@@ -3363,19 +3386,36 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setProjectMilestones((prev) =>
       prev.map((ms) => (ms.id === id ? { ...ms, ...updatedFields } : ms))
     );
+    if (updatedFields.title || updatedFields.dueDate || updatedFields.stage) {
+      setActions((prev) =>
+        prev.map((a) => {
+          if (a.milestoneId === id || a.id === `act-${id}`) {
+            return {
+              ...a,
+              description: updatedFields.title ? `[Prazo] ${updatedFields.title}${updatedFields.stage ? ` (${updatedFields.stage})` : ''}` : a.description,
+              date: updatedFields.dueDate || a.date,
+            };
+          }
+          return a;
+        })
+      );
+    }
   };
 
   const deleteProjectMilestone = (id: string) => {
     recordLocalMutation();
     setProjectMilestones((prev) => prev.filter((ms) => ms.id !== id));
+    setActions((prev) => prev.filter((a) => a.milestoneId !== id && a.id !== `act-${id}`));
   };
 
   const toggleProjectMilestone = (id: string) => {
     recordLocalMutation();
+    let isNowCompleted = false;
     setProjectMilestones((prev) =>
       prev.map((ms) => {
         if (ms.id === id) {
           const isCompleted = !ms.completed;
+          isNowCompleted = isCompleted;
           return {
             ...ms,
             completed: isCompleted,
@@ -3383,6 +3423,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           };
         }
         return ms;
+      })
+    );
+
+    setActions((prev) =>
+      prev.map((a) => {
+        if (a.milestoneId === id || a.id === `act-${id}`) {
+          return {
+            ...a,
+            status: isNowCompleted ? 'completed' : 'pending',
+            completedAt: isNowCompleted ? new Date().toISOString() : undefined,
+          };
+        }
+        return a;
       })
     );
   };
