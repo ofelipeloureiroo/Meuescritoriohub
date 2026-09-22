@@ -154,16 +154,22 @@ export const ClientLogin: React.FC = () => {
   const handleDirectLogin = async (e: string, code: string) => {
     setLoading(true);
     setErrorMessage(null);
-    const res = await loginClient(e, code);
-    setLoading(false);
-    if (res.success && res.portal) {
-      sessionStorage.setItem('client_portal_session', JSON.stringify(res.portal));
-      try {
-        localStorage.setItem('client_portal_session', JSON.stringify(res.portal));
-      } catch {}
-      navigate(`/cliente/dashboard?portalId=${encodeURIComponent(res.portal.id)}&clientId=${encodeURIComponent(res.portal.clientId)}&clientView=true`);
-    } else {
-      setErrorMessage(res.error || 'Não foi possível validar o acesso.');
+    try {
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000));
+      const res = (await Promise.race([loginClient(e, code), timeoutPromise])) as any;
+      if (res && res.success && res.portal) {
+        sessionStorage.setItem('client_portal_session', JSON.stringify(res.portal));
+        try {
+          localStorage.setItem('client_portal_session', JSON.stringify(res.portal));
+        } catch {}
+        navigate(`/cliente/dashboard?portalId=${encodeURIComponent(res.portal.id)}&clientId=${encodeURIComponent(res.portal.clientId)}&clientView=true`);
+      } else {
+        setErrorMessage(res?.error || 'Não foi possível validar o acesso.');
+      }
+    } catch (err) {
+      setErrorMessage('Erro ao validar acesso ou tempo excedido. Verifique suas credenciais.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -180,17 +186,23 @@ export const ClientLogin: React.FC = () => {
 
     setLoading(true);
     setErrorMessage(null);
-    const res = await loginClient(email, accessCode);
-    setLoading(false);
+    try {
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000));
+      const res = (await Promise.race([loginClient(email, accessCode), timeoutPromise])) as any;
 
-    if (res.success && res.portal) {
-      sessionStorage.setItem('client_portal_session', JSON.stringify(res.portal));
-      try {
-        localStorage.setItem('client_portal_session', JSON.stringify(res.portal));
-      } catch {}
-      navigate(`/cliente/dashboard?portalId=${encodeURIComponent(res.portal.id)}&clientId=${encodeURIComponent(res.portal.clientId)}&clientView=true`);
-    } else {
-      setErrorMessage(res.error || 'Credenciais inválidas.');
+      if (res && res.success && res.portal) {
+        sessionStorage.setItem('client_portal_session', JSON.stringify(res.portal));
+        try {
+          localStorage.setItem('client_portal_session', JSON.stringify(res.portal));
+        } catch {}
+        navigate(`/cliente/dashboard?portalId=${encodeURIComponent(res.portal.id)}&clientId=${encodeURIComponent(res.portal.clientId)}&clientView=true`);
+      } else {
+        setErrorMessage(res?.error || 'Credenciais inválidas.');
+      }
+    } catch (err) {
+      setErrorMessage('Erro de conexão ou tempo limite excedido. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
   };
 
