@@ -567,10 +567,12 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
           status: generalStatus === 'concluido' ? 'entregue' : (existingProject.status || 'executivo'),
           linkedClients: [
             {
+              id: resolvedClientId,
               clientId: resolvedClientId,
+              name: clientName.trim(),
               clientName: clientName.trim(),
               role: 'Contratante Principal'
-            }
+            } as any
           ]
         });
       } else {
@@ -592,10 +594,12 @@ export const OfficeClientPortalManagerModal: React.FC<OfficeClientPortalManagerM
           currentStageName: currentStageName,
           linkedClients: [
             {
+              id: resolvedClientId,
               clientId: resolvedClientId,
+              name: clientName.trim(),
               clientName: clientName.trim(),
               role: 'Contratante Principal'
-            }
+            } as any
           ]
         });
       }

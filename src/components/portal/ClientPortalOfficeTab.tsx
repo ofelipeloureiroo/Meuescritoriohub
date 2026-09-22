@@ -263,7 +263,30 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
       return;
     }
     if (window.confirm(`Tem certeza de que deseja remover o acesso do cliente "${p.clientName}" ao portal?`)) {
+      try {
+        const rawTombPortals = localStorage.getItem('office_deleted_portal_ids');
+        const tombset = new Set<string>(rawTombPortals ? JSON.parse(rawTombPortals) : []);
+        tombset.add(p.id);
+        if (p.clientId) {
+          tombset.add(p.clientId);
+          tombset.add(`portal-${p.clientId}`);
+          tombset.add(`demo-portal-${p.clientId}`);
+        }
+        localStorage.setItem('office_deleted_portal_ids', JSON.stringify(Array.from(tombset)));
+
+        const tombstones = getDeletedClientsTombstones();
+        if (p.clientId && !tombstones.some(t => t.id === p.clientId)) {
+          tombstones.push({ id: p.clientId, name: p.clientName, email: p.clientEmail });
+          localStorage.setItem('office_deleted_clients_v1', JSON.stringify(tombstones));
+        }
+      } catch {}
+
       await deleteClientPortalAccess(p.id);
+      if (p.clientId) {
+        await deleteClientPortalsForClient(p.clientId, p.clientName, p.clientEmail);
+        deleteClient(p.clientId);
+      }
+      setPortals((prev) => prev.filter((item) => item.id !== p.id && item.clientId !== p.clientId));
     }
   };
 
@@ -663,41 +686,78 @@ export const ClientPortalOfficeTab: React.FC<ClientPortalOfficeTabProps> = ({
                     </span>
                     
                     <div className="space-y-2">
-                      {(p.projects || []).map((proj) => (
-                        <div
-                          key={proj.id}
-                          className="bg-[var(--bg-card-secondary)] border border-[var(--border-color)] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                        >
-                          <div className="space-y-1">
-                            <span className="font-bold text-[var(--text-main)] block">
-                              {proj.title}
-                            </span>
-                            <div className="flex items-center gap-2 flex-wrap text-[11px] text-[var(--text-muted)]">
-                              <span className="px-2 py-0.5 rounded-md bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--theme-primary)] font-medium">
-                                Fase: {proj.currentStageName || proj.status}
-                              </span>
-                              <span>•</span>
-                              <span>Progresso: <strong className="text-[var(--text-main)]">{proj.progressPercent || 0}%</strong></span>
-                              {proj.deliveryDate && (
-                                <>
-                                  <span>•</span>
-                                  <span>Previsão: {proj.deliveryDate}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
+                      {(p.projects || []).map((proj) => {
+                        const isAwaitingLink = !linkedOfficeProject && (
+                          proj.title.toLowerCase().includes('aguardando') ||
+                          proj.title.toLowerCase().includes('projeto de arquitetura e interiores') ||
+                          proj.currentStageName?.toLowerCase().includes('aguardando') ||
+                          proj.status === 'Aguardando Vínculo'
+                        );
 
-                          {/* Progress mini bar */}
-                          <div className="w-full sm:w-28 space-y-1">
-                            <div className="h-1.5 w-full bg-[var(--bg-card)] rounded-full overflow-hidden border border-[var(--border-color)]">
-                              <div 
-                                className="h-full bg-[var(--theme-primary)] rounded-full transition-all"
-                                style={{ width: `${proj.progressPercent || 0}%` }}
-                              />
+                        if (isAwaitingLink) {
+                          return (
+                            <div
+                              key={proj.id}
+                              className="bg-[var(--bg-card-secondary)] border border-amber-500/30 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                            >
+                              <div className="space-y-1">
+                                <span className="font-bold text-amber-600 dark:text-amber-400 block text-xs">
+                                  Aguardando projeto ser vinculado
+                                </span>
+                                <p className="text-[11px] text-[var(--text-muted)]">
+                                  Nenhum projeto do escritório foi vinculado a este cliente ainda.
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setSelectedPortalForEdit(p);
+                                  setIsManagerModalOpen(true);
+                                }}
+                                className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                              >
+                                <FolderOpen className="w-3.5 h-3.5" />
+                                <span>Vincular Projeto</span>
+                              </button>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={proj.id}
+                            className="bg-[var(--bg-card-secondary)] border border-[var(--border-color)] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                          >
+                            <div className="space-y-1">
+                              <span className="font-bold text-[var(--text-main)] block">
+                                {proj.title}
+                              </span>
+                              <div className="flex items-center gap-2 flex-wrap text-[11px] text-[var(--text-muted)]">
+                                <span className="px-2 py-0.5 rounded-md bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--theme-primary)] font-medium">
+                                  Fase: {proj.currentStageName || proj.status}
+                                </span>
+                                <span>•</span>
+                                <span>Progresso: <strong className="text-[var(--text-main)]">{proj.progressPercent || 0}%</strong></span>
+                                {proj.deliveryDate && (
+                                  <>
+                                    <span>•</span>
+                                    <span>Previsão: {proj.deliveryDate}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Progress mini bar */}
+                            <div className="w-full sm:w-28 space-y-1">
+                              <div className="h-1.5 w-full bg-[var(--bg-card)] rounded-full overflow-hidden border border-[var(--border-color)]">
+                                <div 
+                                  className="h-full bg-[var(--theme-primary)] rounded-full transition-all"
+                                  style={{ width: `${proj.progressPercent || 0}%` }}
+                                />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 

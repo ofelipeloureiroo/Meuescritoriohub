@@ -1577,8 +1577,12 @@ export function buildClientPortalAccess(
   const clientProjects = allProjects.filter(ap => {
     if (ap.clientName && ap.clientName.trim().toLowerCase() === clientNameNormalized) return true;
     if (ap.clientEmail && clientEmailNormalized && ap.clientEmail.trim().toLowerCase() === clientEmailNormalized) return true;
-    if (ap.linkedClients?.some(lc => lc.id === client.id || lc.name.trim().toLowerCase() === clientNameNormalized)) return true;
-    if (existingPortal?.projects?.some(p => p.id === ap.id || p.title.trim().toLowerCase() === ap.title.trim().toLowerCase())) return true;
+    if (ap.linkedClients?.some(lc => {
+      const lcId = lc.id || (lc as any).clientId;
+      const lcName = (lc.name || (lc as any).clientName || '').trim().toLowerCase();
+      return lcId === client.id || (lcName && lcName === clientNameNormalized);
+    })) return true;
+    if (existingPortal?.projects?.some(p => p.id === ap.id || (p.title && ap.title && p.title.trim().toLowerCase() === ap.title.trim().toLowerCase()))) return true;
     return false;
   });
 
@@ -1586,24 +1590,25 @@ export function buildClientPortalAccess(
   const generatedEmail = `${sanitizedClientName || 'cliente'}@cliente.com`;
   const cleanClientEmail = (client.email && client.email.trim()) ? client.email.trim().toLowerCase() : generatedEmail;
 
+  const hasRealExistingProjects = existingPortal?.projects && existingPortal.projects.length > 0 && !existingPortal.projects.some(p => p.title.toLowerCase().includes('projeto de arquitetura e interiores'));
+
   const portalProjects: ClientPortalProject[] = clientProjects.length > 0
     ? clientProjects.map(p => convertArchitectureProjectToPortalProject(p, milestones))
-    : (existingPortal?.projects && existingPortal.projects.length > 0)
-      ? existingPortal.projects
+    : hasRealExistingProjects
+      ? existingPortal.projects!
       : [
-          convertArchitectureProjectToPortalProject({
-            id: `proj-${client.id}-1`,
-            title: `Projeto de Arquitetura e Interiores`,
-            clientName: client.name,
-            clientEmail: cleanClientEmail,
-            category: 'interiores',
-            projectType: 'Projeto Completo',
-            status: 'executivo',
-            honorarios: client.totalBilled || 25000,
-            currency: 'BRL',
-            startDate: client.createdAt || new Date().toLocaleDateString('pt-BR'),
-            deliveryDate: 'A combinar com o escritório'
-          } as any)
+          {
+            id: `pending-proj-${client.id}`,
+            title: `Aguardando projeto ser vinculado`,
+            currentStageName: `Aguardando vínculo`,
+            currentStageIndex: 0,
+            progressPercent: 0,
+            generalStatus: 'no_prazo',
+            status: 'Aguardando Vínculo',
+            deliveryDate: 'A definir',
+            startDate: new Date().toLocaleDateString('pt-BR'),
+            stages: []
+          }
         ];
 
   const portalId = existingPortal?.id || `portal-${client.id}`;
