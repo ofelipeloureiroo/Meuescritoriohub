@@ -124,89 +124,99 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('handleSubmit: Starting project creation...');
 
-    let finalClient = selectedClient;
+    try {
+      let finalClient = selectedClient;
 
-    if (clientMode === 'new') {
-      const clientName = newClientName.trim() || projectName.trim() || 'Cliente sem nome';
-      const newCli = {
-        id: `cli-${Date.now()}`,
-        name: clientName,
-        type: 'Pessoa Física',
-        clientProfile: 'Médio',
-        status: 'Ativo' as const,
-        createdAt: new Date().toISOString(),
-      };
-      addClient(newCli);
-      finalClient = newCli as any;
-    }
-
-    if (!finalClient) {
-      finalClient = {
-        id: `cli-${Date.now()}`,
-        name: projectName || 'Cliente sem nome',
-        email: '',
-        phone: '',
-        document: '',
-        city: '',
-        state: '',
-      } as any;
-    }
-
-    // Save as Work Contract
-    addWorkContract({
-      clientId: finalClient.id,
-      clientName: finalClient.name,
-      clientEmail: finalClient.email || '',
-      clientPhone: finalClient.phone || (finalClient as any).whatsapp || '',
-      clientDocument: (finalClient as any).document || '',
-      clientCity: finalClient.city || '',
-      clientState: finalClient.state || '',
-      projectTitle: projectName || 'Novo Projeto',
-      title: projectType ? `${projectType} - ${projectName}` : (projectName || 'Novo Projeto'),
-      serviceScope: notes || 'Prestação de serviços e desenvolvimento de projeto técnico.',
-      totalAmount: valNum,
-      downPaymentAmount: valNum * 0.5,
-      paymentTerms: pricingMethod,
-      deadline: expectedEndDate || closingDate || startDate,
-      status: status === 'Concluído' ? 'paid' : status === 'Aguardando Pagamento' ? 'awaiting_payment' : 'draft',
-    });
-
-    // Build workflow stages from selected template
-    let initialStages: ProjectWorkflowStage[] = [];
-    if (stageTemplate && stageTemplate !== 'Sem template — iniciar projeto em branco') {
-      const foundTemplate = availableTemplates.find(
-        (t) => t.name === stageTemplate || t.id === stageTemplate
-      );
-      if (foundTemplate) {
-        initialStages = convertTemplateToWorkflowStages(foundTemplate, startDate || todayStr);
+      if (clientMode === 'new') {
+        const clientName = newClientName.trim() || projectName.trim() || 'Cliente sem nome';
+        const newCli = {
+          id: `cli-${Date.now()}`,
+          name: clientName,
+          type: 'Pessoa Física',
+          clientProfile: 'Médio',
+          status: 'Ativo' as const,
+          createdAt: new Date().toISOString(),
+        };
+        addClient(newCli);
+        finalClient = newCli as any;
+        console.log('handleSubmit: New client created', finalClient.id);
       }
-    }
-    if (initialStages.length === 0 && stageTemplate !== 'Sem template — iniciar projeto em branco') {
-      const fallbackTpl = availableTemplates[0] || DEFAULT_PROJECT_TEMPLATES[0];
-      if (fallbackTpl) {
-        initialStages = convertTemplateToWorkflowStages(fallbackTpl, startDate || todayStr);
+
+      if (!finalClient) {
+        finalClient = {
+          id: `cli-${Date.now()}`,
+          name: projectName || 'Cliente sem nome',
+          email: '',
+          phone: '',
+          document: '',
+          city: '',
+          state: '',
+        } as any;
       }
+
+      // Save as Work Contract
+      addWorkContract({
+        clientId: finalClient.id,
+        clientName: finalClient.name,
+        clientEmail: finalClient.email || '',
+        clientPhone: finalClient.phone || (finalClient as any).whatsapp || '',
+        clientDocument: (finalClient as any).document || '',
+        clientCity: finalClient.city || '',
+        clientState: finalClient.state || '',
+        projectTitle: projectName || 'Novo Projeto',
+        title: projectType ? `${projectType} - ${projectName}` : (projectName || 'Novo Projeto'),
+        serviceScope: notes || 'Prestação de serviços e desenvolvimento de projeto técnico.',
+        totalAmount: valNum,
+        downPaymentAmount: valNum * 0.5,
+        paymentTerms: pricingMethod,
+        deadline: expectedEndDate || closingDate || startDate,
+        status: status === 'Concluído' ? 'paid' : status === 'Aguardando Pagamento' ? 'awaiting_payment' : 'draft',
+      });
+      console.log('handleSubmit: Work contract added.');
+
+      // Build workflow stages from selected template
+      let initialStages: ProjectWorkflowStage[] = [];
+      if (stageTemplate && stageTemplate !== 'Sem template — iniciar projeto em branco') {
+        const foundTemplate = availableTemplates.find(
+          (t) => t.name === stageTemplate || t.id === stageTemplate
+        );
+        if (foundTemplate) {
+          initialStages = convertTemplateToWorkflowStages(foundTemplate, startDate || todayStr);
+        }
+      }
+      if (initialStages.length === 0 && stageTemplate !== 'Sem template — iniciar projeto em branco') {
+        const fallbackTpl = availableTemplates[0] || DEFAULT_PROJECT_TEMPLATES[0];
+        if (fallbackTpl) {
+          initialStages = convertTemplateToWorkflowStages(fallbackTpl, startDate || todayStr);
+        }
+      }
+
+      // Also register in Architecture Projects
+      addArchitectureProject({
+        title: projectName || 'Novo Projeto',
+        clientName: finalClient.name,
+        category: 'residencial',
+        location: finalClient.city ? `${finalClient.city}, ${finalClient.state || 'RJ'}` : 'Rio de Janeiro, RJ',
+        state: finalClient.state || 'RJ',
+        areaM2: 0,
+        honorarios: valNum,
+        status: 'estudo_preliminar',
+        coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
+        description: notes || '',
+        deliveryDate: expectedEndDate || startDate,
+        tags: tags ? tags.split(',').map((t) => t.trim()) : ['Design', 'Projeto'],
+        stages: initialStages.length > 0 ? initialStages : undefined,
+      });
+      console.log('handleSubmit: Architecture project added.');
+
+    } catch (error) {
+      console.error('handleSubmit: Error creating project:', error);
+    } finally {
+      console.log('handleSubmit: Finished.');
+      onClose();
     }
-
-    // Also register in Architecture Projects
-    addArchitectureProject({
-      title: projectName || 'Novo Projeto',
-      clientName: finalClient.name,
-      category: 'residencial',
-      location: finalClient.city ? `${finalClient.city}, ${finalClient.state || 'RJ'}` : 'Rio de Janeiro, RJ',
-      state: finalClient.state || 'RJ',
-      areaM2: 0,
-      honorarios: valNum,
-      status: 'estudo_preliminar',
-      coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
-      description: notes || '',
-      deliveryDate: expectedEndDate || startDate,
-      tags: tags ? tags.split(',').map((t) => t.trim()) : ['Design', 'Projeto'],
-      stages: initialStages.length > 0 ? initialStages : undefined,
-    });
-
-    onClose();
   };
 
   return (

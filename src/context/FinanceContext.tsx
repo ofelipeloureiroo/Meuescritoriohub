@@ -403,12 +403,12 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
     targetUid === 'guest' || 
     cleanEmail === 'lfquadrosdecorativos@gmail.com';
 
-  if ((recoveredProjectsMap.size === 0 && isOwnerUid) || isLaine) {
+  if (isOwnerUid || isLaine) {
     const scanKeys = [
+      'office_v2_lfquadrosdecorativos_architecture_projects',
       'office_architecture_projects',
       'architecture_projects',
       'office_backup_projects',
-      'office_v2_lfquadrosdecorativos_architecture_projects',
       'office_v2_lfquadrosdecorativos_gmail_com_architecture_projects',
       'office_v2_guest_architecture_projects',
     ];
@@ -2590,36 +2590,36 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setArchitectureProjects(updatedArch);
     safeSetItem('architecture_projects', updatedArch);
 
-    if (targetUid) {
-      try {
+    try {
+      if (targetUid) {
         localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(updatedArch));
-      } catch {}
-      if (isOwner) {
-        try { localStorage.setItem('office_v2_lfquadrosdecorativos_architecture_projects', JSON.stringify(updatedArch)); } catch {}
-        try { localStorage.setItem('office_architecture_projects', JSON.stringify(updatedArch)); } catch {}
       }
+      localStorage.setItem('office_v2_lfquadrosdecorativos_architecture_projects', JSON.stringify(updatedArch));
+      localStorage.setItem('office_architecture_projects', JSON.stringify(updatedArch));
+      localStorage.setItem('architecture_projects', JSON.stringify(updatedArch));
+    } catch (e) {
+      console.warn('LocalStorage architecture_projects write warning:', e);
+    }
 
-      const activeUid = targetUid || (isOwner ? CANONICAL_OWNER_UID : (user?.uid || 'guest'));
-      if (activeUid) {
-        const workspaceDocRef = doc(db, 'users', activeUid, 'data', 'workspace');
-        setDoc(workspaceDocRef, {
-          architectureProjects: updatedArch,
-          ...extraPayload,
-          updatedAt: new Date().toISOString()
-        }, { merge: true }).catch(console.error);
+    const activeUid = targetUid || (isOwner ? CANONICAL_OWNER_UID : (user?.uid || 'guest'));
+    if (activeUid) {
+      // Strip any undefined fields so Firestore setDoc never throws unsupported field value error
+      const cleanPayload = JSON.parse(JSON.stringify({
+        architectureProjects: updatedArch,
+        ...extraPayload,
+        updatedAt: new Date().toISOString()
+      }));
 
-        if (isOwner) {
-          setDoc(doc(db, 'workspaces', 'canonical'), {
-            architectureProjects: updatedArch,
-            ...extraPayload,
-            updatedAt: new Date().toISOString()
-          }, { merge: true }).catch(console.error);
-          fetch('/api/workspace', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ architectureProjects: updatedArch, ...extraPayload, updatedAt: new Date().toISOString() })
-          }).catch(() => {});
-        }
+      const workspaceDocRef = doc(db, 'users', activeUid, 'data', 'workspace');
+      setDoc(workspaceDocRef, cleanPayload, { merge: true }).catch(console.error);
+
+      if (isOwner) {
+        setDoc(doc(db, 'workspaces', 'canonical'), cleanPayload, { merge: true }).catch(console.error);
+        fetch('/api/workspace', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cleanPayload)
+        }).catch(() => {});
       }
     }
   };
