@@ -1537,46 +1537,71 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
           if (Array.isArray(data.clients)) {
             const cleanIncoming = data.clients.filter((c: any) => !isDemoClient(c));
-            if (cleanIncoming.length > 0) {
-              setClients(cleanIncoming);
-              safeSetItem('clients', cleanIncoming);
-            } else {
-              setClients((prev) => {
-                if (prev.length > 0) {
-                  safeSetItem('clients', prev);
-                  return prev;
+            setClients((prev) => {
+              const tombstones = getDeletedClientsTombstones();
+              const map = new Map<string, Client>();
+
+              const localRecovered = recoverClientsForUser(targetUid, userEmail);
+              [...prev, ...localRecovered].forEach((c) => {
+                if (c && c.id && !isDemoClient(c) && !isClientTombstoned(c, tombstones)) {
+                  map.set(c.id, c);
                 }
-                const recovered = recoverClientsForUser(targetUid, userEmail);
-                if (recovered.length > 0) {
-                  safeSetItem('clients', recovered);
-                  return recovered;
-                }
-                return [];
               });
-            }
+
+              cleanIncoming.forEach((c: any) => {
+                if (c && c.id && !isDemoClient(c) && !isClientTombstoned(c, tombstones)) {
+                  const existing = map.get(c.id);
+                  map.set(c.id, existing ? { ...existing, ...c } : c);
+                }
+              });
+
+              const merged = Array.from(map.values());
+              safeSetItem('clients', merged);
+
+              if (targetUid) {
+                try { localStorage.setItem(`office_v2_${targetUid}_clients`, JSON.stringify(merged)); } catch {}
+              }
+              try { localStorage.setItem('office_v2_guest_clients', JSON.stringify(merged)); } catch {}
+              try { localStorage.setItem('office_clients', JSON.stringify(merged)); } catch {}
+              try { localStorage.setItem('clients', JSON.stringify(merged)); } catch {}
+
+              return merged;
+            });
           }
           if (Array.isArray(data.freelanceProjects)) {
             setFreelanceProjects(data.freelanceProjects.filter((p: any) => !isDemoProject(p)));
           }
           if (Array.isArray(data.architectureProjects)) {
             const cleanIncoming = data.architectureProjects.filter((p: any) => !isDemoProject(p));
-            if (cleanIncoming.length > 0) {
-              setArchitectureProjects(cleanIncoming);
-              safeSetItem('architecture_projects', cleanIncoming);
-            } else {
-              setArchitectureProjects((prev) => {
-                if (prev.length > 0) {
-                  safeSetItem('architecture_projects', prev);
-                  return prev;
+            setArchitectureProjects((prev) => {
+              const map = new Map<string, ArchitectureProject>();
+
+              const localRecovered = recoverProjectsForUser(targetUid, userEmail, architectProfile?.name);
+              [...prev, ...localRecovered].forEach((p) => {
+                if (p && p.id && !isDemoProject(p)) {
+                  map.set(p.id, p);
                 }
-                const recovered = recoverProjectsForUser(targetUid, userEmail, profile?.name);
-                if (recovered.length > 0) {
-                  safeSetItem('architecture_projects', recovered);
-                  return recovered;
-                }
-                return [];
               });
-            }
+
+              cleanIncoming.forEach((p: any) => {
+                if (p && p.id && !isDemoProject(p)) {
+                  const existing = map.get(p.id);
+                  map.set(p.id, existing ? { ...existing, ...p } : p);
+                }
+              });
+
+              const merged = Array.from(map.values());
+              safeSetItem('architecture_projects', merged);
+
+              if (targetUid) {
+                try { localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(merged)); } catch {}
+              }
+              try { localStorage.setItem('office_v2_guest_architecture_projects', JSON.stringify(merged)); } catch {}
+              try { localStorage.setItem('office_architecture_projects', JSON.stringify(merged)); } catch {}
+              try { localStorage.setItem('architecture_projects', JSON.stringify(merged)); } catch {}
+
+              return merged;
+            });
           }
           if (Array.isArray(data.projectInstallments)) {
             setProjectInstallments(data.projectInstallments.filter((i: any) => !isDemoInstallment(i)));
@@ -2331,6 +2356,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const updated = clients.map((c) => (c.id === id ? { ...c, ...updatedFields } : c));
     setClients(updated);
     safeSetItem('clients', updated);
+
+    if (targetUid) {
+      try { localStorage.setItem(`office_v2_${targetUid}_clients`, JSON.stringify(updated)); } catch {}
+    }
+    try { localStorage.setItem('office_v2_guest_clients', JSON.stringify(updated)); } catch {}
+    try { localStorage.setItem('office_clients', JSON.stringify(updated)); } catch {}
+    try { localStorage.setItem('clients', JSON.stringify(updated)); } catch {}
+
     const target = updated.find((c) => c.id === id);
     if (target) {
       const portal = buildClientPortalAccess(target, architectureProjects, architectProfile, null, projectMilestones);
