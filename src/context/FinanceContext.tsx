@@ -375,8 +375,9 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
     } catch {}
   }
 
-  // 2. If Laine Paula or if projects map is empty, scan other local storage keys to ensure zero project loss
-  if (recoveredProjectsMap.size === 0 || isLaine) {
+  // 2. Scan fallback keys ONLY for canonical owner or Laine Paula to prevent cross-subscriber leakage
+  const isOwnerUid = !targetUid || targetUid === 'lfquadrosdecorativos' || targetUid === 'guest';
+  if ((recoveredProjectsMap.size === 0 && isOwnerUid) || isLaine) {
     const scanKeys = [
       'office_architecture_projects',
       'architecture_projects',
@@ -393,7 +394,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
           if (Array.isArray(parsed)) {
             parsed.forEach((p: any) => {
               if (p && p.id && !isDemoProject(p)) {
-                if (isLaine || !targetUid || targetUid === 'lfquadrosdecorativos' || targetUid === 'guest') {
+                if (isLaine || isOwnerUid) {
                   if (!recoveredProjectsMap.has(p.id)) {
                     recoveredProjectsMap.set(p.id, p);
                   }
@@ -405,7 +406,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
       } catch {}
     });
 
-    // Also scan all localStorage keys for any saved projects
+    // Also scan all localStorage keys for owner or Laine Paula
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -417,7 +418,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
               if (Array.isArray(parsed)) {
                 parsed.forEach((p: any) => {
                   if (p && p.id && !isDemoProject(p)) {
-                    if (isLaine || !targetUid || targetUid === 'lfquadrosdecorativos') {
+                    if (isLaine || isOwnerUid) {
                       if (!recoveredProjectsMap.has(p.id)) {
                         recoveredProjectsMap.set(p.id, p);
                       }
@@ -513,14 +514,16 @@ export function recoverClientsForUser(targetUid?: string, userEmail?: string): C
     } catch {}
   }
 
-  // 2. Scan fallback storage keys for any clients or client portals
-  const scanKeys = [
-    'office_clients',
-    'clients',
-    'office_v2_guest_clients',
-    'meu_escritorio_client_portals_v1',
-    'office_client_portals'
-  ];
+  // 2. Scan fallback storage keys ONLY for canonical owner or guest to prevent cross-subscriber leakage
+  const isOwnerUid = !targetUid || targetUid === 'lfquadrosdecorativos' || targetUid === 'guest';
+  if (isOwnerUid) {
+    const scanKeys = [
+      'office_clients',
+      'clients',
+      'office_v2_guest_clients',
+      'meu_escritorio_client_portals_v1',
+      'office_client_portals'
+    ];
 
   scanKeys.forEach((key) => {
     try {
@@ -561,7 +564,7 @@ export function recoverClientsForUser(targetUid?: string, userEmail?: string): C
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.includes('client') || key.includes('portal'))) {
+      if (key && (key.includes('client') || key.includes('portal')) && !key.startsWith('office_v2_')) {
         const raw = localStorage.getItem(key);
         if (raw) {
           try {
@@ -617,6 +620,7 @@ export function recoverClientsForUser(targetUid?: string, userEmail?: string): C
       }
     }
   } catch {}
+  }
 
   const result = Array.from(recoveredMap.values());
   if (targetUid) {
@@ -1555,9 +1559,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
               if (targetUid) {
                 try { localStorage.setItem(`office_v2_${targetUid}_clients`, JSON.stringify(merged)); } catch {}
               }
-              try { localStorage.setItem('office_v2_guest_clients', JSON.stringify(merged)); } catch {}
-              try { localStorage.setItem('office_clients', JSON.stringify(merged)); } catch {}
-              try { localStorage.setItem('clients', JSON.stringify(merged)); } catch {}
 
               return merged;
             });
@@ -1590,9 +1591,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
               if (targetUid) {
                 try { localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(merged)); } catch {}
               }
-              try { localStorage.setItem('office_v2_guest_architecture_projects', JSON.stringify(merged)); } catch {}
-              try { localStorage.setItem('office_architecture_projects', JSON.stringify(merged)); } catch {}
-              try { localStorage.setItem('architecture_projects', JSON.stringify(merged)); } catch {}
 
               return merged;
             });
@@ -2330,13 +2328,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setClients(updated);
     safeSetItem('clients', updated);
 
-    // Always persist immediately to multiple keys to guarantee survival across restarts
+    // Always persist immediately to user-scoped key
     if (targetUid) {
       try { localStorage.setItem(`office_v2_${targetUid}_clients`, JSON.stringify(updated)); } catch {}
     }
-    try { localStorage.setItem('office_v2_guest_clients', JSON.stringify(updated)); } catch {}
-    try { localStorage.setItem('office_clients', JSON.stringify(updated)); } catch {}
-    try { localStorage.setItem('clients', JSON.stringify(updated)); } catch {}
 
     // Build and save client portal immediately to server & local storage
     const portal = buildClientPortalAccess(newClient, architectureProjects, architectProfile, null, projectMilestones);
@@ -2361,9 +2356,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (targetUid) {
       try { localStorage.setItem(`office_v2_${targetUid}_clients`, JSON.stringify(updated)); } catch {}
     }
-    try { localStorage.setItem('office_v2_guest_clients', JSON.stringify(updated)); } catch {}
-    try { localStorage.setItem('office_clients', JSON.stringify(updated)); } catch {}
-    try { localStorage.setItem('clients', JSON.stringify(updated)); } catch {}
 
     const target = updated.find((c) => c.id === id);
     if (target) {
@@ -2403,12 +2395,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setClients(updatedClients);
     safeSetItem('clients', updatedClients);
 
-    // Wipe client from all secondary local storage keys
+    // Update user-scoped local storage key
     try {
       if (targetUid) localStorage.setItem(`office_v2_${targetUid}_clients`, JSON.stringify(updatedClients));
-      localStorage.setItem('office_v2_guest_clients', JSON.stringify(updatedClients));
-      localStorage.setItem('office_clients', JSON.stringify(updatedClients));
-      localStorage.setItem('clients', JSON.stringify(updatedClients));
     } catch {}
 
     // 2. Remove all architecture projects linked to this client

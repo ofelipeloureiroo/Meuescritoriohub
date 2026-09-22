@@ -95,12 +95,14 @@ export function savePortalLocally(portal: ClientPortalAccess): void {
 }
 
 /**
- * Retrieves all locally cached portals
+ * Retrieves all locally cached portals, optionally filtered by officeUid
  */
-export function getLocalPortals(): ClientPortalAccess[] {
+export function getLocalPortals(officeUid?: string): ClientPortalAccess[] {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_PORTALS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const portals: ClientPortalAccess[] = raw ? JSON.parse(raw) : [];
+    if (!officeUid) return portals;
+    return portals.filter(p => p.officeUid === officeUid || p.targetUid === officeUid || (!p.officeUid && !p.targetUid && (officeUid === 'lfquadrosdecorativos' || officeUid === 'guest')));
   } catch {
     return [];
   }
@@ -245,7 +247,7 @@ export function subscribeToOfficePortals(
 
   // 2. Local updates
   const handleLocalUpdate = () => {
-    const localList = getLocalPortals();
+    const localList = getLocalPortals(officeUid);
     if (localList.length > 0 && isSubscribed) {
       emitIfChanged(localList);
     }

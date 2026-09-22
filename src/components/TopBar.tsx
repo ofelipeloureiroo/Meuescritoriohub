@@ -208,9 +208,12 @@ export const TopBar: React.FC<TopBarProps> = ({
   const [approvingEmail, setApprovingEmail] = useState<string | null>(null);
   const [approvalNotice, setApprovalNotice] = useState<string | null>(null);
 
-  const isOwner = !user?.email || 
-    user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || 
-    user.email.toLowerCase().includes('master_escritorio');
+  const isOwner = Boolean(
+    user?.email && (
+      user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || 
+      user.email.toLowerCase().includes('master_escritorio')
+    )
+  );
 
   useEffect(() => {
     if (!isOwner && user?.email !== 'lfquadrosdecorativos@gmail.com') return;

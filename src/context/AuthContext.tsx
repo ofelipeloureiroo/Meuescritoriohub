@@ -466,7 +466,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const isOwner = !user?.email || (!!user?.email && user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com') || profile?.role === 'admin' || user?.isAnonymous || false;
+  const isOwner = Boolean(user?.email && user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com');
   const isAdmin = true;
 
   return (
