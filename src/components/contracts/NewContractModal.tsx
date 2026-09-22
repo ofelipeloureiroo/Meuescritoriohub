@@ -38,7 +38,11 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
   onClose,
   defaultClientId,
 }) => {
-  const { clients, addWorkContract, addArchitectureProject, addClient } = useFinance();
+  const { clients, addWorkContract, addArchitectureProject, addClient, officeSettings } = useFinance();
+
+  const availableTemplates = officeSettings?.projectTemplates && officeSettings.projectTemplates.length > 0
+    ? officeSettings.projectTemplates
+    : [];
 
   const [clientMode, setClientMode] = useState<'new' | 'select'>('new');
   const [newClientName, setNewClientName] = useState('');
@@ -408,9 +412,28 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
                 <option value="Sem template — iniciar projeto em branco">
                   Sem template — iniciar projeto em branco
                 </option>
-                <option value="Template Residencial Completo">Template Residencial Completo</option>
-                <option value="Template Comercial Express">Template Comercial Express</option>
-                <option value="Template Consultoria Rápida">Template Consultoria Rápida</option>
+                {availableTemplates.some(t => !t.isSystem) && (
+                  <optgroup label="Templates da Empresa (Personalizados)">
+                    {availableTemplates
+                      .filter(t => !t.isSystem)
+                      .map(t => (
+                        <option key={t.id} value={t.name}>
+                          ★ {t.name} ({t.stages?.length || 0} etapas)
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+                {availableTemplates.some(t => t.isSystem) && (
+                  <optgroup label="Templates Padrão do Sistema">
+                    {availableTemplates
+                      .filter(t => t.isSystem)
+                      .map(t => (
+                        <option key={t.id} value={t.name}>
+                          {t.name} ({t.stages?.length || 0} etapas)
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
               </select>
             </div>
             <p className="text-[11px] text-zinc-400">

@@ -16,10 +16,13 @@ import {
   ArrowUp,
   ArrowDown,
   Info,
-  GripVertical
+  GripVertical,
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 import { OfficeSettings, ProjectTemplate, TemplateStage, TemplateTask } from '../../types';
 import { DEFAULT_PROJECT_TEMPLATES, normalizeTemplateStages, countTemplateItems } from '../../data/defaultProjectTemplates';
+import { useFinance } from '../../context/FinanceContext';
 
 interface ProjectTemplatesManagerProps {
   officeSettings: OfficeSettings;
@@ -36,14 +39,31 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
   templateBindings,
   handleUpdateTemplateBinding
 }) => {
-  const rawTemplates = officeSettings.projectTemplates && officeSettings.projectTemplates.length > 0 
-    ? officeSettings.projectTemplates 
-    : DEFAULT_PROJECT_TEMPLATES;
+  const { restoreAllCompanyTemplates } = useFinance();
+  const [restoreFeedback, setRestoreFeedback] = useState<string | null>(null);
 
-  const projectTemplates: ProjectTemplate[] = rawTemplates.map(t => ({
-    ...t,
-    stages: normalizeTemplateStages(t.stages)
-  }));
+  // Combine default system templates with all custom company templates
+  const allTemplatesMap = new Map<string, ProjectTemplate>();
+  
+  DEFAULT_PROJECT_TEMPLATES.forEach((t) => {
+    allTemplatesMap.set(t.id, {
+      ...t,
+      stages: normalizeTemplateStages(t.stages),
+    });
+  });
+
+  if (officeSettings.projectTemplates && Array.isArray(officeSettings.projectTemplates)) {
+    officeSettings.projectTemplates.forEach((t) => {
+      if (t && t.id) {
+        allTemplatesMap.set(t.id, {
+          ...t,
+          stages: normalizeTemplateStages(t.stages),
+        });
+      }
+    });
+  }
+
+  const projectTemplates: ProjectTemplate[] = Array.from(allTemplatesMap.values());
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(projectTemplates[0]?.id || 'tpl-1');
   const [expandedStageIds, setExpandedStageIds] = useState<Record<string, boolean>>({ 'stg-1': true });
@@ -438,14 +458,41 @@ export const ProjectTemplatesManager: React.FC<ProjectTemplatesManagerProps> = (
               Padronize as etapas e tarefas detalhadas dos projetos criados no seu escritório
             </p>
           </div>
-          <button
-            onClick={() => setIsCreatingTemplateModal(true)}
-            className="px-3.5 py-1.5 rounded-xl border border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] text-xs font-bold hover:bg-[var(--theme-primary)]/20 transition-all cursor-pointer flex items-center gap-1.5 self-start sm:self-auto"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Novo template
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+            <button
+              onClick={() => {
+                const recovered = restoreAllCompanyTemplates();
+                setRestoreFeedback(`Varredura completa: ${recovered.length} template(s) da empresa sincronizado(s) e restaurado(s) com sucesso!`);
+                setTimeout(() => setRestoreFeedback(null), 5000);
+              }}
+              className="px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              title="Varre todas as chaves de armazenamento local e nuvem para recuperar templates de assinantes"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Recuperar / Sincronizar
+            </button>
+            <button
+              onClick={() => setIsCreatingTemplateModal(true)}
+              className="px-3.5 py-1.5 rounded-xl border border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] text-xs font-bold hover:bg-[var(--theme-primary)]/20 transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Novo template
+            </button>
+          </div>
         </div>
+
+        {restoreFeedback && (
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center gap-2.5 text-xs text-emerald-700 dark:text-emerald-300 animate-in fade-in duration-200">
+            <Sparkles className="w-4 h-4 shrink-0 text-emerald-500" />
+            <span className="font-medium flex-1">{restoreFeedback}</span>
+            <button
+              onClick={() => setRestoreFeedback(null)}
+              className="p-1 text-emerald-600 dark:text-emerald-400 hover:opacity-75 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Main Grid: Left Sidebar + Right Detail */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[420px]">

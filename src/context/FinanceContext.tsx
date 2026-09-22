@@ -44,9 +44,13 @@ import {
   BudgetLimits,
   AppAction,
   TeamMember,
+  ProjectTemplate,
+  TemplateStage,
+  TemplateTask,
 } from '../types';
 import { applyThemeToDocument, NICHES, THEMES } from '../utils/theme';
 import { getNicheSampleProjects } from '../utils/nicheSampleData';
+import { DEFAULT_PROJECT_TEMPLATES, normalizeTemplateStages } from '../data/defaultProjectTemplates';
 import { deleteClientPortalsForClient, buildClientPortalAccess, saveClientPortalAccess } from '../services/clientPortalService';
 import { deleteGoogleEvent, deleteGoogleTask, addDeletedGcalId, addDeletedGtaskId } from '../services/googleCalendarService';
 
@@ -74,6 +78,11 @@ interface FinanceContextType {
   updateOfficeSettings: (settings: Partial<OfficeSettings>) => void;
   selectedMonth: string; // YYYY-MM
   setSelectedMonth: (month: string) => void;
+
+  // Template recovery & persistence
+  restoreAllCompanyTemplates: () => ProjectTemplate[];
+  saveCustomProjectTemplate: (template: ProjectTemplate) => void;
+  deleteCustomProjectTemplate: (templateId: string) => void;
 
   // Actions - Architecture Projects & Photos
   addArchitectureProject: (project: Omit<ArchitectureProject, 'id' | 'createdAt'>) => void;
@@ -200,6 +209,170 @@ interface FinanceContextType {
   resetRequestedModules: () => void;
 }
 
+export const LAINE_PAULA_TEMPLATE: ProjectTemplate = {
+  id: 'tpl-laine-paula-arq',
+  name: 'Template Laine Paula — Arquitetura & Interiores',
+  type: 'Projeto Residencial & Interiores',
+  date: '21/09/2026',
+  isSystem: false,
+  stages: [
+    {
+      id: 'stg-lp-1',
+      name: '01. Contato Inicial & Briefing Estratégico',
+      items: [
+        { id: 'tsk-lp-1-1', name: 'Reunião de Diagnóstico e Alinhamento com Cliente', estimatedDays: 1, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-1-2', name: 'Envio e Coleta do Questionário de Briefing', estimatedDays: 2, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-1-3', name: 'Montagem do Moodboard de Conceito e Referências', estimatedDays: 3, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-1-4', name: 'Aprovação e Assinatura da Ata de Briefing', estimatedDays: 1, dayType: 'business', startMode: 'automatic' }
+      ]
+    },
+    {
+      id: 'stg-lp-2',
+      name: '02. Levantamento Métrico & Fotográfico',
+      items: [
+        { id: 'tsk-lp-2-1', name: 'Visita Técnica e Medição In Loco com Trena a Laser', estimatedDays: 1, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-2-2', name: 'Mapeamento Fotográfico e Pontos de Infraestrutura', estimatedDays: 1, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-2-3', name: 'Desenho da Planta de Levantamento Cad/Bim', estimatedDays: 2, dayType: 'business', startMode: 'automatic' }
+      ]
+    },
+    {
+      id: 'stg-lp-3',
+      name: '03. Estudo Preliminar & Zoneamento 3D',
+      items: [
+        { id: 'tsk-lp-3-1', name: 'Estudo de Layout e Fluxos Funcionais (2 a 3 Opções)', estimatedDays: 4, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-3-2', name: 'Modelagem 3D Volumétrica dos Ambientes', estimatedDays: 5, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-3-3', name: 'Apresentação R00 para o Cliente', estimatedDays: 1, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-3-4', name: 'Registro de Ajustes e Feedback do Cliente', estimatedDays: 1, dayType: 'business', startMode: 'automatic' }
+      ]
+    },
+    {
+      id: 'stg-lp-4',
+      name: '04. Anteprojeto & Renderização Realista',
+      items: [
+        { id: 'tsk-lp-4-1', name: 'Aplicação de Texturas, Cores e Revestimentos Definidos', estimatedDays: 3, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-4-2', name: 'Renderização das Imagens Finais em Alta Resolução', estimatedDays: 3, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-4-3', name: 'Montagem do Caderno de Apresentação Final 3D', estimatedDays: 2, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-4-4', name: 'Aprovação Definitiva do Conceito Visual', estimatedDays: 1, dayType: 'business', startMode: 'automatic' }
+      ]
+    },
+    {
+      id: 'stg-lp-5',
+      name: '05. Projeto Executivo & Detalhamento Técnico',
+      items: [
+        { id: 'tsk-lp-5-1', name: 'Planta Baixa Executiva e Cotas de Obra', estimatedDays: 3, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-5-2', name: 'Planta de Demolição e Construção (Civil)', estimatedDays: 2, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-5-3', name: 'Planta de Pontos Elétricos, Tomadas e Iluminação (Luminotécnico)', estimatedDays: 3, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-5-4', name: 'Planta Hidráulica e Paginação de Pisos e Paredes', estimatedDays: 3, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-5-5', name: 'Planta de Forro de Gesso e Detalhes Construtivos', estimatedDays: 2, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-5-6', name: 'Caderno Completo de Detalhamento de Marcenaria e Marmoraria', estimatedDays: 5, dayType: 'business', startMode: 'automatic' }
+      ]
+    },
+    {
+      id: 'stg-lp-6',
+      name: '06. Memorial Descritivo & Lista de Compras',
+      items: [
+        { id: 'tsk-lp-6-1', name: 'Elaboração do Memorial Descritivo de Acabamentos', estimatedDays: 2, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-6-2', name: 'Montagem da Planilha de Quantitativos e Especificações', estimatedDays: 2, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-6-3', name: 'Envio para Orçamentistas e Fornecedores Parceiros', estimatedDays: 3, dayType: 'business', startMode: 'automatic' }
+      ]
+    },
+    {
+      id: 'stg-lp-7',
+      name: '07. Entrega Final do Projeto & Acompanhamento',
+      items: [
+        { id: 'tsk-lp-7-1', name: 'Emissão e Assinatura das Pranchas Finais (PDF/DWG)', estimatedDays: 1, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-7-2', name: 'Reunião de Entrega das Pranchas e Esclarecimento de Dúvidas', estimatedDays: 1, dayType: 'business', startMode: 'automatic' },
+        { id: 'tsk-lp-7-3', name: 'Início do Acompanhamento / Visitas de Obra', estimatedDays: 10, dayType: 'calendar', startMode: 'manual' }
+      ]
+    }
+  ]
+};
+
+export function recoverAllCustomTemplates(): ProjectTemplate[] {
+  const recoveredMap = new Map<string, ProjectTemplate>();
+
+  // 1. Check primary persistent keys
+  const primaryKeys = [
+    'office_all_custom_project_templates',
+    'office_backup_custom_templates',
+    'office_project_templates',
+    'project_templates',
+    'custom_templates',
+  ];
+
+  primaryKeys.forEach((k) => {
+    try {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((tpl: any) => {
+            if (tpl && (tpl.name || tpl.id) && !tpl.isSystem) {
+              recoveredMap.set(tpl.id || tpl.name, {
+                ...tpl,
+                stages: normalizeTemplateStages(tpl.stages || []),
+              });
+            }
+          });
+        }
+      }
+    } catch {}
+  });
+
+  // 2. Comprehensive multi-key scan across all localStorage items
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes('office_') || key.includes('template') || key.includes('laine') || key.includes('settings'))) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((item: any) => {
+                if (item && item.stages && item.name && !item.isSystem) {
+                  recoveredMap.set(item.id || item.name, {
+                    ...item,
+                    stages: normalizeTemplateStages(item.stages),
+                  });
+                }
+              });
+            } else if (parsed && typeof parsed === 'object') {
+              if (Array.isArray(parsed.projectTemplates)) {
+                parsed.projectTemplates.forEach((item: any) => {
+                  if (item && item.stages && item.name && !item.isSystem) {
+                    recoveredMap.set(item.id || item.name, {
+                      ...item,
+                      stages: normalizeTemplateStages(item.stages),
+                    });
+                  }
+                });
+              }
+              if (Array.isArray(parsed.templates)) {
+                parsed.templates.forEach((item: any) => {
+                  if (item && item.stages && item.name && !item.isSystem) {
+                    recoveredMap.set(item.id || item.name, {
+                      ...item,
+                      stages: normalizeTemplateStages(item.stages),
+                    });
+                  }
+                });
+              }
+            }
+          } catch {}
+        }
+      }
+    }
+  } catch {}
+
+  // 3. Guarantee Laine Paula template is always preserved and recoverable
+  if (!recoveredMap.has(LAINE_PAULA_TEMPLATE.id) && !recoveredMap.has(LAINE_PAULA_TEMPLATE.name)) {
+    recoveredMap.set(LAINE_PAULA_TEMPLATE.id, LAINE_PAULA_TEMPLATE);
+  }
+
+  return Array.from(recoveredMap.values());
+}
+
 const INITIAL_OFFICE_SETTINGS: OfficeSettings = {
   financialCategories: {
     receitas: [
@@ -267,6 +440,7 @@ const INITIAL_OFFICE_SETTINGS: OfficeSettings = {
   ],
   acquisitionChannels: ['Indicação', 'Instagram', 'WhatsApp', 'Evento/Feira', 'Google'],
   tags: [],
+  projectTemplates: DEFAULT_PROJECT_TEMPLATES,
   mercadoPagoAccessToken: 'APP_USR-3573349139215622-091408-39d733a8863ebb870c694cd79c7a1d7d-44930358',
   mercadoPagoPublicKey: 'APP_USR-b4400ce4-2825-453a-b397-782bcffa457c',
 };
@@ -655,10 +829,33 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [officeSettings, setOfficeSettings] = useState<OfficeSettings>(() => {
     const saved = localStorage.getItem(getStorageKey('office_settings'));
+    let baseSettings: OfficeSettings = INITIAL_OFFICE_SETTINGS;
     if (saved) {
-      try { return JSON.parse(saved); } catch {}
+      try {
+        baseSettings = { ...INITIAL_OFFICE_SETTINGS, ...JSON.parse(saved) };
+      } catch {}
     }
-    return INITIAL_OFFICE_SETTINGS;
+    const recoveredCustom = recoverAllCustomTemplates();
+    const existingCustom = (baseSettings.projectTemplates || []).filter((t) => !t.isSystem);
+    const customMap = new Map<string, ProjectTemplate>();
+    [...recoveredCustom, ...existingCustom].forEach((t) => {
+      if (t && t.name) {
+        customMap.set(t.id || t.name, {
+          ...t,
+          stages: normalizeTemplateStages(t.stages || []),
+        });
+      }
+    });
+
+    const combinedTemplates = [
+      ...DEFAULT_PROJECT_TEMPLATES,
+      ...Array.from(customMap.values()),
+    ];
+
+    return {
+      ...baseSettings,
+      projectTemplates: combinedTemplates,
+    };
   });
 
   const [actions, setActions] = useState<AppAction[]>(() => {
@@ -676,10 +873,103 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   const updateOfficeSettings = (updated: Partial<OfficeSettings>) => {
-    setOfficeSettings((prev) => ({
-      ...prev,
-      ...updated,
-    }));
+    recordLocalMutation();
+    setOfficeSettings((prev) => {
+      const merged: OfficeSettings = {
+        ...prev,
+        ...updated,
+      };
+
+      if (updated.projectTemplates) {
+        const customTemplates = updated.projectTemplates.filter((t) => !t.isSystem);
+        try {
+          localStorage.setItem('office_all_custom_project_templates', JSON.stringify(customTemplates));
+          localStorage.setItem('office_backup_custom_templates', JSON.stringify(customTemplates));
+          localStorage.setItem('office_project_templates', JSON.stringify(customTemplates));
+          localStorage.setItem(getStorageKey('office_settings'), JSON.stringify(merged));
+        } catch (e) {
+          console.warn('Custom templates backup warning:', e);
+        }
+      }
+
+      return merged;
+    });
+  };
+
+  const saveCustomProjectTemplate = (template: ProjectTemplate) => {
+    recordLocalMutation();
+    setOfficeSettings((prev) => {
+      const normalizedTemplate: ProjectTemplate = {
+        ...template,
+        isSystem: false,
+        stages: normalizeTemplateStages(template.stages),
+      };
+      const existingTemplates = prev.projectTemplates || DEFAULT_PROJECT_TEMPLATES;
+      const filtered = existingTemplates.filter((t) => t.id !== template.id && t.name !== template.name);
+      const updatedList = [...filtered, normalizedTemplate];
+
+      const customTemplates = updatedList.filter((t) => !t.isSystem);
+      const merged: OfficeSettings = {
+        ...prev,
+        projectTemplates: updatedList,
+      };
+
+      try {
+        localStorage.setItem('office_all_custom_project_templates', JSON.stringify(customTemplates));
+        localStorage.setItem('office_backup_custom_templates', JSON.stringify(customTemplates));
+        localStorage.setItem(getStorageKey('office_settings'), JSON.stringify(merged));
+      } catch (e) {}
+
+      return merged;
+    });
+  };
+
+  const deleteCustomProjectTemplate = (templateId: string) => {
+    recordLocalMutation();
+    setOfficeSettings((prev) => {
+      const existing = prev.projectTemplates || DEFAULT_PROJECT_TEMPLATES;
+      const updatedList = existing.filter((t) => t.id !== templateId || t.isSystem);
+      const customTemplates = updatedList.filter((t) => !t.isSystem);
+      const merged: OfficeSettings = {
+        ...prev,
+        projectTemplates: updatedList,
+      };
+
+      try {
+        localStorage.setItem('office_all_custom_project_templates', JSON.stringify(customTemplates));
+        localStorage.setItem('office_backup_custom_templates', JSON.stringify(customTemplates));
+        localStorage.setItem(getStorageKey('office_settings'), JSON.stringify(merged));
+      } catch (e) {}
+
+      return merged;
+    });
+  };
+
+  const restoreAllCompanyTemplates = (): ProjectTemplate[] => {
+    recordLocalMutation();
+    const recovered = recoverAllCustomTemplates();
+    setOfficeSettings((prev) => {
+      const existingCustom = (prev.projectTemplates || []).filter((t) => !t.isSystem);
+      const customMap = new Map<string, ProjectTemplate>();
+      [...recovered, ...existingCustom].forEach((t) => {
+        if (t && t.name) customMap.set(t.id || t.name, t);
+      });
+      const combined = [
+        ...DEFAULT_PROJECT_TEMPLATES,
+        ...Array.from(customMap.values()),
+      ];
+      const merged: OfficeSettings = {
+        ...prev,
+        projectTemplates: combined,
+      };
+      try {
+        localStorage.setItem(getStorageKey('office_settings'), JSON.stringify(merged));
+        localStorage.setItem('office_all_custom_project_templates', JSON.stringify(Array.from(customMap.values())));
+        localStorage.setItem('office_backup_custom_templates', JSON.stringify(Array.from(customMap.values())));
+      } catch (e) {}
+      return merged;
+    });
+    return recovered;
   };
 
   // Automatically sync login photo (Google / Auth / Profile) to architectProfile if not set or if user photo updated
@@ -907,11 +1197,33 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Load Settings
     const savedSettings = localStorage.getItem(getStorageKey('office_settings'));
+    let baseSettings: OfficeSettings = INITIAL_OFFICE_SETTINGS;
     if (savedSettings) {
-      try { setOfficeSettings(JSON.parse(savedSettings)); } catch { setOfficeSettings(INITIAL_OFFICE_SETTINGS); }
-    } else {
-      setOfficeSettings(INITIAL_OFFICE_SETTINGS);
+      try {
+        baseSettings = { ...INITIAL_OFFICE_SETTINGS, ...JSON.parse(savedSettings) };
+      } catch {
+        baseSettings = INITIAL_OFFICE_SETTINGS;
+      }
     }
+    const recoveredCustom = recoverAllCustomTemplates();
+    const existingCustom = (baseSettings.projectTemplates || []).filter((t) => !t.isSystem);
+    const customMap = new Map<string, ProjectTemplate>();
+    [...recoveredCustom, ...existingCustom].forEach((t) => {
+      if (t && t.name) {
+        customMap.set(t.id || t.name, {
+          ...t,
+          stages: normalizeTemplateStages(t.stages || []),
+        });
+      }
+    });
+    const combined = [
+      ...DEFAULT_PROJECT_TEMPLATES,
+      ...Array.from(customMap.values()),
+    ];
+    setOfficeSettings({
+      ...baseSettings,
+      projectTemplates: combined,
+    });
 
     // Load Actions
     const savedActions = localStorage.getItem(getStorageKey('actions'));
@@ -1039,7 +1351,44 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setSavingsGoals(data.savingsGoals.filter((g: any) => !g.id?.startsWith('goal-')));
           }
           if (Array.isArray(data.categoryBudgets)) setCategoryBudgets(data.categoryBudgets);
-          if (data.officeSettings) setOfficeSettings(data.officeSettings);
+          if (data.officeSettings) {
+            setOfficeSettings((prev) => {
+              const incoming = data.officeSettings;
+              const existingCustom = (prev.projectTemplates || []).filter((t) => !t.isSystem);
+              const incomingCustom = (incoming.projectTemplates || []).filter((t: any) => !t.isSystem);
+              const recoveredCustom = recoverAllCustomTemplates();
+
+              const customMap = new Map<string, ProjectTemplate>();
+              [...recoveredCustom, ...existingCustom, ...incomingCustom].forEach((t) => {
+                if (t && t.name) {
+                  customMap.set(t.id || t.name, {
+                    ...t,
+                    stages: normalizeTemplateStages(t.stages || []),
+                  });
+                }
+              });
+
+              const combined = [
+                ...DEFAULT_PROJECT_TEMPLATES,
+                ...Array.from(customMap.values()),
+              ];
+
+              const mergedSettings: OfficeSettings = {
+                ...INITIAL_OFFICE_SETTINGS,
+                ...prev,
+                ...incoming,
+                projectTemplates: combined,
+              };
+
+              try {
+                localStorage.setItem(getStorageKey('office_settings'), JSON.stringify(mergedSettings));
+                localStorage.setItem('office_all_custom_project_templates', JSON.stringify(Array.from(customMap.values())));
+                localStorage.setItem('office_backup_custom_templates', JSON.stringify(Array.from(customMap.values())));
+              } catch (e) {}
+
+              return mergedSettings;
+            });
+          }
           if (Array.isArray(data.actions)) {
             setActions(data.actions.filter((a: any) => !a.id?.startsWith('act-demo-')));
           }
@@ -2968,6 +3317,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         categoryBudgets,
         officeSettings,
         updateOfficeSettings,
+        restoreAllCompanyTemplates,
+        saveCustomProjectTemplate,
+        deleteCustomProjectTemplate,
         selectedMonth,
         setSelectedMonth,
         addArchitectureProject,
