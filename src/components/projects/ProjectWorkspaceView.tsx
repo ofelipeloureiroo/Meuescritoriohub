@@ -102,6 +102,33 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
     }
   }, [project.id, project.stages]);
 
+  // Real-time active office timer state for cronograma
+  const [activeOfficeTimer, setActiveOfficeTimer] = useState<any>(null);
+
+  React.useEffect(() => {
+    const checkTimer = () => {
+      try {
+        const saved = localStorage.getItem('meu_escritorio_active_timer_state_v1');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && Date.now() - parsed.timestamp < 86400000) {
+            setActiveOfficeTimer(parsed);
+          } else {
+            setActiveOfficeTimer(null);
+          }
+        } else {
+          setActiveOfficeTimer(null);
+        }
+      } catch {
+        setActiveOfficeTimer(null);
+      }
+    };
+
+    checkTimer();
+    const interval = setInterval(checkTimer, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Board tab states
   const [expandedBoardStageId, setExpandedBoardStageId] = useState<string>(() => {
     if (project.stages && project.stages.length > 0) {
@@ -1018,6 +1045,17 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                               >
                                 {stg.name}
                               </span>
+
+                              {/* Real-time active office timer indicator */}
+                              {activeOfficeTimer &&
+                                activeOfficeTimer.projectId === project.id &&
+                                (activeOfficeTimer.stageName === stg.name ||
+                                  stg.name.toLowerCase().includes(activeOfficeTimer.stageName.toLowerCase())) && (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[10px] animate-pulse ml-2 shadow-2xs border border-rose-300">
+                                    <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
+                                    <span>TRABALHANDO AGORA: {activeOfficeTimer.responsibleName}</span>
+                                  </span>
+                                )}
 
                               <span
                                 className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ml-1 ${

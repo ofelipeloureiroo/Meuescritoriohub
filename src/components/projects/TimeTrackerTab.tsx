@@ -169,25 +169,49 @@ export const TimeTrackerTab: React.FC = () => {
       return;
     }
     if (!isRunning) {
+      const startTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       if (secondsElapsed === 0) {
-        const now = new Date();
-        setStartTimeString(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        setStartTimeString(startTimeStr);
       }
       setIsRunning(true);
+
+      // Save real-time active office timer state
+      try {
+        const activeTimerData = {
+          projectId: selectedProjectId,
+          projectTitle: selectedProject ? selectedProject.title : '',
+          stageName: selectedStageName || 'Geral',
+          description: description || 'Trabalhando no projeto',
+          responsibleName: currentUserName,
+          startTime: startTimeStr,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('meu_escritorio_active_timer_state_v1', JSON.stringify(activeTimerData));
+      } catch {}
     }
   };
 
   const handlePauseTimer = () => {
     setIsRunning(false);
+    try {
+      localStorage.removeItem('meu_escritorio_active_timer_state_v1');
+    } catch {}
   };
 
   const handleStopAndSave = () => {
     if (secondsElapsed < 5) {
       alert('O tempo registrado é muito curto (< 5 segundos).');
       setIsRunning(false);
+      try {
+        localStorage.removeItem('meu_escritorio_active_timer_state_v1');
+      } catch {}
       setSecondsElapsed(0);
       return;
     }
+
+    try {
+      localStorage.removeItem('meu_escritorio_active_timer_state_v1');
+    } catch {}
 
     const now = new Date();
     const endTimeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
