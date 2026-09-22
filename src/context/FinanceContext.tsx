@@ -2587,6 +2587,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Helper to persist architecture projects across all storage layers (State, User Storage, Owner Mirror, Cloud Firestore)
   const persistArchitectureProjects = (updatedArch: ArchitectureProject[], extraPayload: Record<string, any> = {}) => {
+    console.log('Persisting architecture projects, count:', updatedArch.length);
     setArchitectureProjects(updatedArch);
     safeSetItem('architecture_projects', updatedArch);
 
@@ -2611,15 +2612,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }));
 
       const workspaceDocRef = doc(db, 'users', activeUid, 'data', 'workspace');
-      setDoc(workspaceDocRef, cleanPayload, { merge: true }).catch(console.error);
+      console.log('Syncing architecture projects to Firestore:', activeUid);
+      setDoc(workspaceDocRef, cleanPayload, { merge: true }).catch(err => console.error('Firestore sync error:', err));
 
       if (isOwner) {
-        setDoc(doc(db, 'workspaces', 'canonical'), cleanPayload, { merge: true }).catch(console.error);
+        setDoc(doc(db, 'workspaces', 'canonical'), cleanPayload, { merge: true }).catch(err => console.error('Firestore canonical sync error:', err));
         fetch('/api/workspace', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(cleanPayload)
-        }).catch(() => {});
+        }).catch(err => console.warn('API workspace sync error:', err));
       }
     }
   };
@@ -2667,8 +2669,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteArchitectureProject = (id: string) => {
+    console.log('Attempting to delete project:', id);
     recordLocalMutation();
     const updatedArchProjects = architectureProjects.filter((p) => p.id !== id);
+    console.log('Projects after filter:', updatedArchProjects.length);
 
     const updatedMilestones = projectMilestones.filter((m) => m.projectId !== id);
     setProjectMilestones(updatedMilestones);
