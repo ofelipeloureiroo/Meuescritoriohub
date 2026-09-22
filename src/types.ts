@@ -881,6 +881,24 @@ export interface SiteLogReport {
   updatedAt?: string;
 }
 
+export interface TimeEntry {
+  id: string;
+  projectId: string;
+  projectTitle: string;
+  clientName: string;
+  stageName: string;
+  taskName?: string;
+  description: string;
+  durationSeconds: number;
+  date: string; // YYYY-MM-DD
+  startTime: string;
+  endTime: string;
+  billable: boolean;
+  hourlyRate: number;
+  responsibleName: string;
+  responsibleEmail?: string;
+}
+
 
 
 

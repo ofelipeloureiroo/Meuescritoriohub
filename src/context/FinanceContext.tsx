@@ -48,6 +48,7 @@ import {
   ProjectTemplate,
   TemplateStage,
   TemplateTask,
+  TimeEntry,
 } from '../types';
 import { applyThemeToDocument, NICHES, THEMES } from '../utils/theme';
 import { getNicheSampleProjects } from '../utils/nicheSampleData';
@@ -109,6 +110,12 @@ interface FinanceContextType {
   addSiteLogReport: (report: Omit<SiteLogReport, 'id' | 'createdAt'>) => void;
   updateSiteLogReport: (id: string, report: Partial<SiteLogReport>) => void;
   deleteSiteLogReport: (id: string) => void;
+  
+  // Actions - Time Tracker (Rastreador de Tempo)
+  timeEntries: TimeEntry[];
+  addTimeEntry: (entry: Omit<TimeEntry, 'id'>) => void;
+  updateTimeEntry: (id: string, entry: Partial<TimeEntry>) => void;
+  deleteTimeEntry: (id: string) => void;
 
   // Actions - Transactions
   addTransaction: (tx: Omit<Transaction, 'id'>) => void;
@@ -1116,6 +1123,26 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return [];
   });
 
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>(() => {
+    // Try app pattern key first
+    const savedApp = localStorage.getItem(getStorageKey('time_entries'));
+    if (savedApp !== null) {
+      try {
+        const parsed = JSON.parse(savedApp);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    // Fallback to legacy key used in TimeTrackerTab
+    const savedLegacy = localStorage.getItem('meu_escritorio_time_entries_v2');
+    if (savedLegacy !== null) {
+      try {
+        const parsed = JSON.parse(savedLegacy);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
+  });
+
   const [workContracts, setWorkContracts] = useState<WorkContract[]>(() => {
     const saved = localStorage.getItem(getStorageKey('work_contracts'));
     if (saved !== null) {
@@ -1395,6 +1422,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     safeSetItem('actions', actions);
   }, [actions]);
 
+  useEffect(() => {
+    safeSetItem('time_entries', timeEntries);
+  }, [timeEntries]);
+
   // Load and synchronize states from local storage whenever targetUid changes
   useEffect(() => {
     if (!targetUid) return;
@@ -1549,6 +1580,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       try { setActions(JSON.parse(savedActions)); } catch { setActions([]); }
     } else {
       setActions([]);
+    }
+
+    // Load Time Entries
+    const savedTime = localStorage.getItem(getStorageKey('time_entries'));
+    if (savedTime) {
+      try { setTimeEntries(JSON.parse(savedTime)); } catch { setTimeEntries([]); }
+    } else {
+      // Try legacy key fallback on first load if app key is missing
+      const legacyTime = localStorage.getItem('meu_escritorio_time_entries_v2');
+      if (legacyTime) {
+        try { setTimeEntries(JSON.parse(legacyTime)); } catch { setTimeEntries([]); }
+      } else {
+        setTimeEntries([]);
+      }
     }
     
     loadedUidRef.current = targetUid;
@@ -3505,6 +3550,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSiteLogReports((prev) => prev.filter((rep) => rep.id !== id));
   };
 
+  const addTimeEntry = (entry: Omit<TimeEntry, 'id'>) => {
+    recordLocalMutation();
+    const newEntry: TimeEntry = {
+      ...entry,
+      id: `time-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    };
+    setTimeEntries((prev) => [newEntry, ...prev]);
+  };
+
+  const updateTimeEntry = (id: string, updatedFields: Partial<TimeEntry>) => {
+    recordLocalMutation();
+    setTimeEntries((prev) =>
+      prev.map((entry) => (entry.id === id ? { ...entry, ...updatedFields } : entry))
+    );
+  };
+
+  const deleteTimeEntry = (id: string) => {
+    recordLocalMutation();
+    setTimeEntries((prev) => prev.filter((entry) => entry.id !== id));
+  };
+
   // Computations
   const computedBankAccounts = useMemo(() => {
     return bankAccounts.map((acc) => {
@@ -3756,6 +3822,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       architectureProjects,
       projectInstallments,
       projectMilestones,
+      siteLogReports,
+      timeEntries,
       savingsGoals,
       categoryBudgets,
       architectProfile,
@@ -3806,6 +3874,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (data.architectureProjects) setArchitectureProjects(data.architectureProjects);
       if (data.projectInstallments) setProjectInstallments(data.projectInstallments);
       if (data.projectMilestones) setProjectMilestones(data.projectMilestones);
+      if (data.siteLogReports) setSiteLogReports(data.siteLogReports);
+      if (data.timeEntries) setTimeEntries(data.timeEntries);
       if (data.savingsGoals) setSavingsGoals(data.savingsGoals);
       if (data.categoryBudgets) setCategoryBudgets(data.categoryBudgets);
       if (data.architectProfile) setArchitectProfile(data.architectProfile);
@@ -3872,10 +3942,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setArchitectureProjects([]);
     setFreelanceProjects([]);
     setProjectMilestones([]);
+    setSiteLogReports([]);
+    setTimeEntries([]);
     setActions((prev) => prev.filter((a) => a.origin !== 'Projeto'));
     safeSetItem('architecture_projects', []);
     safeSetItem('projects', []);
     safeSetItem('milestones', []);
+    safeSetItem('site_log_reports', []);
+    safeSetItem('time_entries', []);
     if (targetUid) {
       const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
       setDoc(
@@ -4018,6 +4092,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addSiteLogReport,
         updateSiteLogReport,
         deleteSiteLogReport,
+        timeEntries,
+        addTimeEntry,
+        updateTimeEntry,
+        deleteTimeEntry,
         addTransaction,
         updateTransaction,
         deleteTransaction,

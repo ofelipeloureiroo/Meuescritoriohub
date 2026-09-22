@@ -26,27 +26,18 @@ import {
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
-import { ArchitectureProject, ProjectWorkflowStage } from '../../types';
-
-interface TimeEntry {
-  id: string;
-  projectId: string;
-  projectTitle: string;
-  clientName: string;
-  stageName: string;
-  taskName?: string;
-  description: string;
-  durationSeconds: number;
-  date: string; // YYYY-MM-DD
-  startTime: string;
-  endTime: string;
-  billable: boolean;
-  hourlyRate: number;
-  responsibleName: string;
-}
+import { ArchitectureProject, ProjectWorkflowStage, TimeEntry } from '../../types';
 
 export const TimeTrackerTab: React.FC = () => {
-  const { architectureProjects, updateArchitectureProject, addAppAction } = useFinance();
+  const { 
+    architectureProjects, 
+    updateArchitectureProject, 
+    addAppAction,
+    timeEntries,
+    addTimeEntry,
+    updateTimeEntry,
+    deleteTimeEntry
+  } = useFinance();
   const { user, profile } = useAuth();
   const { teamMembers } = useTeamMembers();
 
@@ -70,30 +61,9 @@ export const TimeTrackerTab: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'entries' | 'report'>('entries');
   const [reportDateFilter, setReportDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('week');
 
-  // Saved Time Entries state
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>(() => {
-    try {
-      const saved = localStorage.getItem('meu_escritorio_time_entries_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((e) => e.id !== 'entry-1' && e.id !== 'entry-2');
-        }
-      }
-    } catch {}
-    return [];
-  });
-
   const [projectSearch, setProjectSearch] = useState('');
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
   const [isStageDropdownOpen, setIsStageDropdownOpen] = useState(false);
-
-  // Persist time entries
-  useEffect(() => {
-    try {
-      localStorage.setItem('meu_escritorio_time_entries_v2', JSON.stringify(timeEntries));
-    } catch {}
-  }, [timeEntries]);
 
   // Live timer ticker
   useEffect(() => {
@@ -189,6 +159,8 @@ export const TimeTrackerTab: React.FC = () => {
     const endTimeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const todayStr = now.toISOString().split('T')[0];
 
+    const respMember = teamMembers.find(m => m.name === (selectedResponsibleName || currentUserName));
+
     const newEntry: TimeEntry = {
       id: `entry-${Date.now()}`,
       projectId: selectedProjectId || 'geral',
@@ -203,10 +175,11 @@ export const TimeTrackerTab: React.FC = () => {
       endTime: endTimeString,
       billable,
       hourlyRate,
-      responsibleName: selectedResponsibleName || currentUserName
+      responsibleName: selectedResponsibleName || currentUserName,
+      responsibleEmail: respMember?.email || user?.email || undefined
     };
 
-    setTimeEntries([newEntry, ...timeEntries]);
+    addTimeEntry(newEntry);
 
     // LINK TO SCHEDULE & TASKS (Bidirectional synchronization)
     if (selectedProjectId && selectedProject) {
@@ -256,7 +229,7 @@ export const TimeTrackerTab: React.FC = () => {
 
   const handleDeleteEntry = (id: string) => {
     if (confirm('Deseja excluir este registro de tempo?')) {
-      setTimeEntries(timeEntries.filter((e) => e.id !== id));
+      deleteTimeEntry(id);
     }
   };
 

@@ -203,6 +203,7 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
     monthlyTotalIncome,
     monthlyTotalExpense,
     monthlyBalance,
+    timeEntries,
   } = useFinance();
 
   // Navigation handler to any office module
@@ -676,38 +677,44 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
 
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // Initialize with active real members (filtered of master administrative/owner emails to keep strict data isolation)
+    // Helper to get or create member stats
+    const getMemberStats = (name: string) => {
+      const nameLower = name.toLowerCase().trim();
+      if (!memberStats[nameLower]) {
+        const matchedMember = realMembers.find(m => m.name.toLowerCase().trim() === nameLower);
+        memberStats[nameLower] = {
+          name: matchedMember?.name || name,
+          roleTitle: matchedMember?.roleTitle || 'Colaborador',
+          estimated: 0,
+          realized: 0,
+          completed: 0,
+          total: 0,
+          onTime: 0,
+          color: matchedMember?.color || '#a1a1aa',
+        };
+      }
+      return memberStats[nameLower];
+    };
+
+    // Initialize with active real members
     realMembers.forEach((m) => {
       const isMasterEmail = m.email?.toLowerCase().includes('master_escritorio') || m.email?.toLowerCase() === 'lfquadrosdecorativos@gmail.com';
       const currentUserEmail = (user?.email || '').toLowerCase().trim();
       
-      // Strict subscriber data isolation
       if (isMasterEmail && currentUserEmail !== m.email?.toLowerCase()) {
         return;
       }
-
-      memberStats[m.name.toLowerCase().trim()] = {
-        name: m.name,
-        roleTitle: m.roleTitle || 'Colaborador',
-        estimated: 0,
-        realized: 0,
-        completed: 0,
-        total: 0,
-        onTime: 0,
-        color: m.color || '#8c7456',
-      };
+      getMemberStats(m.name);
     });
 
+    // 1. Accumulate Estimates and Task Counts from Projects
     architectureProjects.forEach((project) => {
       if (project.deletedAt) return;
 
       project.stages?.forEach((stage) => {
         stage.tasks?.forEach((task) => {
           const est = task.estimatedHours || 0;
-          const real = task.realizedHours || 0;
-
           totalEstimated += est;
-          totalRealized += real;
           totalTasksCount += 1;
 
           if (task.status === 'completed') {
@@ -718,32 +725,9 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
           }
 
           const respName = (task.responsible || 'Equipe Geral').trim();
-          const respNameLower = respName.toLowerCase();
-
-          // Don't leak master admins
-          const isMasterResp = respNameLower.includes('master_escritorio') || respNameLower === 'lfquadrosdecorativos@gmail.com';
-          const currentUserEmail = (user?.email || '').toLowerCase().trim();
-          if (isMasterResp && currentUserEmail !== 'master_escritorio@meuescritorio.app' && currentUserEmail !== 'lfquadrosdecorativos@gmail.com') {
-            return;
-          }
-
-          if (!memberStats[respNameLower]) {
-            const matchedMember = realMembers.find(m => m.name.toLowerCase().trim() === respNameLower);
-            memberStats[respNameLower] = {
-              name: matchedMember?.name || respName,
-              roleTitle: matchedMember?.roleTitle || 'Colaborador',
-              estimated: 0,
-              realized: 0,
-              completed: 0,
-              total: 0,
-              onTime: 0,
-              color: matchedMember?.color || '#a1a1aa',
-            };
-          }
-
-          const stats = memberStats[respNameLower];
+          const stats = getMemberStats(respName);
+          
           stats.estimated += est;
-          stats.realized += real;
           stats.total += 1;
           if (task.status === 'completed') {
             stats.completed += 1;
@@ -753,6 +737,16 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
           }
         });
       });
+    });
+
+    // 2. Accumulate Realized Hours from Time Tracker (THIS IS THE NEW CORE LOGIC)
+    (timeEntries || []).forEach((entry) => {
+      const hours = (entry.durationSeconds || 0) / 3600;
+      totalRealized += hours;
+
+      const respName = (entry.responsibleName || 'Equipe Geral').trim();
+      const stats = getMemberStats(respName);
+      stats.realized += hours;
     });
 
     const membersList = Object.values(memberStats).map((stats) => {
@@ -789,7 +783,7 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
       overallOnTimeRate,
       members: membersList,
     };
-  }, [architectureProjects, realMembers, user]);
+  }, [architectureProjects, realMembers, user, timeEntries]);
 
   return (
     <div className="space-y-6 pb-16 animate-in fade-in duration-300 font-sans">
