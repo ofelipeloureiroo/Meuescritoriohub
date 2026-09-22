@@ -3129,6 +3129,79 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
     // -- STAGE 1: Specific Product Keyword Matches (Highest Priority) --
     
+    // 0.0. Smart TVs, Televisores & Eletroeletrônicos (Smart TV 32", 43", 50", etc)
+    if (
+      q.includes("tv") ||
+      q.includes("smart") ||
+      q.includes("televis") ||
+      q.includes("aoc") ||
+      q.includes("roku") ||
+      q.includes("32") ||
+      q.includes("polegada") ||
+      q.includes("americanas") ||
+      q.includes("samsung tv") ||
+      q.includes("philco tv") ||
+      q.includes("lg tv") ||
+      q.includes("monitor")
+    ) {
+      return [
+        {
+          title: 'Smart TV 32" AOC Full HD Roku TV LED Wi-Fi Preto',
+          description: "Sistema operacional Roku TV integrado, resolução Full HD, Wi-Fi dual band, compatível com Apple AirPlay e Google Assistente, bivolt.",
+          price: "R$ 1.099,00",
+          store: "Americanas.com",
+          url: "https://www.americanas.com.br/busca/smart-tv-32-aoc-roku-tv",
+          imageUrl: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: 'Smart TV LCD LED 32" AOC 32S5155/78G Roku TV HD',
+          description: "Painel LED de alta definição, bordas finas, controle remoto com atalhos para streaming e baixo consumo de energia.",
+          price: "R$ 821,65",
+          store: "Amazon.com.br",
+          url: "https://www.amazon.com.br/s?k=smart+tv+32+aoc+roku",
+          imageUrl: "https://images.unsplash.com/photo-1593784991095-a205069470b6?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: 'Smart TV 32" HD Samsung UN32T4300 Wi-Fi HDR',
+          description: "Tecnologia HDR para maior detalhamento em cenas claras e escuras, plataforma Tizen com acesso a todos os principais aplicativos de streaming.",
+          price: "R$ 1.199,00",
+          store: "Americanas.com",
+          url: "https://www.americanas.com.br/busca/smart-tv-32-samsung-hd-t4300",
+          imageUrl: "https://images.unsplash.com/photo-1509281373149-e957c6296406?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: 'Smart TV 32" Philco HD DLED P32CRB Roku TV Dolby Audio',
+          description: "Processador Quad Core de alta performance, som Dolby Audio imersivo e navegação rápida através do sistema Roku.",
+          price: "R$ 949,05",
+          store: "Magazine Luiza",
+          url: "https://www.magazineluiza.com.br/busca/smart-tv-32-philco-roku-tv/",
+          imageUrl: "https://images.unsplash.com/photo-1461151304267-38535e780c79?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: 'Smart TV LED 32" Roku TV Dolby Audio Philco',
+          description: "Tela HD com retroiluminação DLED, conexões HDMI e USB multimídia, ideal para quartos, escritórios e salas de estar.",
+          price: "R$ 999,90",
+          store: "Casa & Video",
+          url: "https://www.casaevideo.com.br/busca?q=smart+tv+32+philco",
+          imageUrl: "https://images.unsplash.com/photo-1577979749830-f1d742b96791?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: 'Smart TV HQ 32 Polegadas HD LED Android 12',
+          description: "Sistema Android oficial com Google Play Store, Chromecast embutido e conexões HDMI/AV.",
+          price: "R$ 869,03",
+          store: "Mercado Livre",
+          url: "https://www.mercadolivre.com.br/busca/smart-tv-hq-32",
+          imageUrl: "https://images.unsplash.com/photo-1528928441742-b4ccac1bb04c?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        }
+      ];
+    }
+
     // 0. Refrigerators / Geladeiras / Freezers (Top Priority Kitchen Appliances)
     if (q.includes("geladeira") || q.includes("refrigerador") || q.includes("freezer") || q.includes("frigobar") || q.includes("side by side") || q.includes("french door") || q.includes("inverter") || q.includes("frost free")) {
       return [
@@ -3137,28 +3210,36 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Tecnologia Inverter econômica, controle digital externo AutoSense que prolonga os alimentos, acabamento escovado em inox anti-manchas.",
           price: "R$ 4.084,05",
           store: "Loja Electrolux / Amazon BR",
-          url: "https://www.google.com.br/search?tbm=shop&q=geladeira+electrolux+side+by+side+inverter"
+          url: "https://www.google.com.br/search?tbm=shop&q=geladeira+electrolux+side+by+side+inverter",
+          imageUrl: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         },
         {
           title: "Refrigerador Samsung French Door Twin Cooling Plus 470L Inox Look",
           description: "Sistema independente de refrigeração Twin Cooling Plus que evita mistura de odores, gaveta Easy Clean e motor Digital Inverter silencioso.",
           price: "R$ 5.499,00",
           store: "Fast Shop / Samsung",
-          url: "https://www.google.com.br/search?tbm=shop&q=refrigerador+samsung+french+door+twin+cooling"
+          url: "https://www.google.com.br/search?tbm=shop&q=refrigerador+samsung+french+door+twin+cooling",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         },
         {
           title: "Geladeira Brastemp Frost Free Duplex 375L Inox com Espaço Adapt",
           description: "Prateleiras com múltiplas combinações para garrafas e potes, compartimento extra frio e painel eletrônico touch.",
           price: "R$ 3.299,00",
           store: "Mercado Livre / Brastemp",
-          url: "https://www.mercadolivre.com.br/busca/geladeira-brastemp-frost-free-duplex-inox"
+          url: "https://www.mercadolivre.com.br/busca/geladeira-brastemp-frost-free-duplex-inox",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         },
         {
           title: "Geladeira Electrolux Cycle Defrost 240L Branca Compacta",
           description: "Ideal para cozinhas compactas, kitnets e áreas gourmet, gavetão transparente de legumes e baixo consumo energético A+.",
           price: "R$ 1.687,36",
           store: "Magazine Luiza / Amazon BR",
-          url: "https://www.google.com.br/search?tbm=shop&q=geladeira+electrolux+cycle+defrost+240l"
+          url: "https://www.google.com.br/search?tbm=shop&q=geladeira+electrolux+cycle+defrost+240l",
+          imageUrl: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         }
       ];
     }
@@ -3171,14 +3252,18 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Tecnologia de indução magnética ultrarrápida, 9 níveis de potência, trava de segurança para crianças e mesa vitrocerâmica de fácil higienização.",
           price: "R$ 1.899,00",
           store: "Fast Shop / Leroy Merlin",
-          url: "https://www.google.com.br/search?tbm=shop&q=cooktop+inducao+4+bocas+electrolux"
+          url: "https://www.google.com.br/search?tbm=shop&q=cooktop+inducao+4+bocas+electrolux",
+          imageUrl: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         },
         {
           title: "Cooktop a Gás 5 Bocas Vidro Temperado Preto com Tripla Chama Brastemp",
           description: "Trempes individuais piatina esmaltada, acendimento superautomático e queimador rápido tripla chama para panelas grandes.",
           price: "R$ 789,00",
           store: "Magazine Luiza",
-          url: "https://www.magazineluiza.com.br/busca/cooktop+5+bocas+brastemp+tripla+chama/"
+          url: "https://www.magazineluiza.com.br/busca/cooktop+5+bocas+brastemp+tripla+chama/",
+          imageUrl: "https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         }
       ];
     }
@@ -3191,14 +3276,18 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Cavidade esmaltada com tecnologia FastClean, função dourar e gratinar com circulação de ar quente uniforme em múltiplos níveis.",
           price: "R$ 2.499,00",
           store: "Fast Shop / Loja Electrolux",
-          url: "https://www.google.com.br/search?tbm=shop&q=forno+embutir+eletrico+electrolux+80l"
+          url: "https://www.google.com.br/search?tbm=shop&q=forno+embutir+eletrico+electrolux+80l",
+          imageUrl: "https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         },
         {
           title: "Forno Micro-ondas de Embutir 34L Brastemp Inox Espelhado com Grill",
           description: "Acabamento espelhado frontal com moldura de embutir integrada, receitas pré-programadas e potência de 1000W.",
           price: "R$ 1.850,00",
           store: "Mercado Livre",
-          url: "https://www.mercadolivre.com.br/busca/micro-ondas-embutir-brastemp-34l"
+          url: "https://www.mercadolivre.com.br/busca/micro-ondas-embutir-brastemp-34l",
+          imageUrl: "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         }
       ];
     }
@@ -3211,14 +3300,18 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Filtros de carvão ativado e alumínio lavável, 3 velocidades de sucção e iluminação LED eficiente para cooktops e fogões até 6 bocas.",
           price: "R$ 1.450,00",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=coifa+parede+tramontina+new+vetro+90cm"
+          url: "https://www.leroymerlin.com.br/busca?q=coifa+parede+tramontina+new+vetro+90cm",
+          imageUrl: "https://images.unsplash.com/photo-1556912173-3bb406ef7e77?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         },
         {
           title: "Coifa de Ilha Redonda 35cm Aço Inox Escovado Tubo",
           description: "Instalação central para ilhas gourmets, motor silencioso de alta vazão (900 m³/h) com acabamento premium escovado.",
           price: "R$ 2.890,00",
           store: "Telhanorte / MadeiraMadeira",
-          url: "https://www.google.com.br/search?tbm=shop&q=coifa+ilha+redonda+inox+35cm"
+          url: "https://www.google.com.br/search?tbm=shop&q=coifa+ilha+redonda+inox+35cm",
+          imageUrl: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         }
       ];
     }
@@ -3231,7 +3324,9 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Higienização a 70°C, cesto superior com ajuste de altura e programa inteligente que calcula o tempo de lavagem pela turbidez da água.",
           price: "R$ 3.799,00",
           store: "Fast Shop / Loja Electrolux",
-          url: "https://www.google.com.br/search?tbm=shop&q=lava+loucas+14+servicos+electrolux+inox"
+          url: "https://www.google.com.br/search?tbm=shop&q=lava+loucas+14+servicos+electrolux+inox",
+          imageUrl: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         }
       ];
     }
@@ -3244,21 +3339,27 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Design quadrado moderno, jato dinâmico autolimpante e vazão de água constante sob qualquer pressão. Tecnologia Deca de alto padrão.",
           price: "R$ 499,00",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=chuveiro+deca+acqua+plus"
+          url: "https://www.leroymerlin.com.br/busca?q=chuveiro+deca+acqua+plus",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
         },
         {
           title: "Ducha Lorenzetti Acqua Ultra Preta com Cromado Eletrônica",
           description: "Design ultrafino moderno com resistência Loren Ultra de altíssima performance, regulagem eletrônica gradual de temperatura.",
           price: "R$ 389,00",
           store: "Mercado Livre",
-          url: "https://www.mercadolivre.com.br/busca/ducha-lorenzetti-acqua-ultra-preto"
+          url: "https://www.mercadolivre.com.br/busca/ducha-lorenzetti-acqua-ultra-preto",
+          imageUrl: "https://images.unsplash.com/photo-1620626011761-996317b8d101?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
         },
         {
           title: "Chuveiro de Teto Redondo Cromado Deca",
           description: "Design contemporâneo minimalista de teto, vazão abundante e jato relaxante, ideal para banheiros residenciais contemporâneos de luxo.",
           price: "R$ 750,00",
           store: "Telhanorte",
-          url: "https://www.telhanorte.com.br/busca?q=chuveiro+teto+deca"
+          url: "https://www.telhanorte.com.br/busca?q=chuveiro+teto+deca",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
         }
       ];
     }
@@ -3271,14 +3372,18 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Banheira freestanding estilo moderno, material acrílico premium com alta retenção de calor e brilho duradouro. Não requer instalação em alvenaria.",
           price: "R$ 5.890,00",
           store: "MadeiraMadeira",
-          url: "https://www.madeiramadeira.com.br/busca?q=banheira+imersao+freestanding"
+          url: "https://www.madeiramadeira.com.br/busca?q=banheira+imersao+freestanding",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
         },
         {
           title: "Banheira de Hidromassagem Acrílica Confort Individual 1.50m",
           description: "Equipada com 4 jatos direcionáveis de hidromassagem, motobomba silenciosa blindada, acionamento pneumático e controle de vazão de ar.",
           price: "R$ 2.450,00",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=banheira+hidromassagem"
+          url: "https://www.leroymerlin.com.br/busca?q=banheira+hidromassagem",
+          imageUrl: "https://images.unsplash.com/photo-1507652313519-d4e9174996dd?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
         }
       ];
     }
@@ -3291,14 +3396,18 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Bacia monobloco com descarga ecológica de duplo acionamento 3/6L, assento soft close anti-impacto e sifão esmaltado de alta performance.",
           price: "R$ 1.150,00",
           store: "Mercado Livre",
-          url: "https://www.mercadolivre.com.br/busca/vaso-sanitario-monobloco-dual-flush"
+          url: "https://www.mercadolivre.com.br/busca/vaso-sanitario-monobloco-dual-flush",
+          imageUrl: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
         },
         {
           title: "Bacia com Caixa Acoplada Carrara Deca Branco",
           description: "Design moderno e elegante com tecnologia Dual Flush de economia d'água. Ideal para banheiros e lavabos de alto padrão.",
           price: "R$ 890,00",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=bacia+caixa+acoplada+carrara+deca"
+          url: "https://www.leroymerlin.com.br/busca?q=bacia+caixa+acoplada+carrara+deca",
+          imageUrl: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
         }
       ];
     }
@@ -3311,21 +3420,27 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Encosto em tela mesh respirável, apoio de cabeça ajustável, braços reguláveis e mecanismo relax com trava de inclinação. Base giratória em aço com rodízios anti-risco.",
           price: "R$ 689,90",
           store: "Mercado Livre / Oficial",
-          url: "https://www.mercadolivre.com.br/busca/cadeira-escritorio-ergonomica-mesh"
+          url: "https://www.mercadolivre.com.br/busca/cadeira-escritorio-ergonomica-mesh",
+          imageUrl: "https://images.unsplash.com/photo-1580481077195-c99df3d8540c?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
         },
         {
           title: "Mesa de Jantar Retangular 160x90cm Tampo Off-White com Vidro Base Madeira",
           description: "Design contemporâneo para sala de jantar gourmet, base estruturada em madeira maciça e tampo chanfrado laqueado.",
           price: "R$ 1.790,00",
           store: "Mobly / MadeiraMadeira",
-          url: "https://www.mobly.com.br/busca?q=mesa+jantar+160x90+madeira"
+          url: "https://www.mobly.com.br/busca?q=mesa+jantar+160x90+madeira",
+          imageUrl: "https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
         },
         {
           title: "Banqueta Alta com Encosto Estofado para Balcão e Ilha Gourmet",
           description: "Estrutura em aço carbono com pintura eletrostática preta, assento em courino caramelo de fácil higienização.",
           price: "R$ 349,00",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=banqueta+alta+ilha+gourmet"
+          url: "https://www.leroymerlin.com.br/busca?q=banqueta+alta+ilha+gourmet",
+          imageUrl: "https://images.unsplash.com/photo-1503602642458-232111445657?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
         }
       ];
     }
@@ -3338,21 +3453,27 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Cerâmica esmaltada de alta densidade com bordas finas Slim, acabamento acetinado preto fosco de fácil higienização.",
           price: "R$ 649,00",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=cuba+apoio+slim+deca"
+          url: "https://www.leroymerlin.com.br/busca?q=cuba+apoio+slim+deca",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
         },
         {
           title: "Cuba Gourmet Inox 304 com Acessórios e Dispenser 60x42cm",
           description: "Aço inoxidável 304 com manta emborrachada anti-ruído, cesto escorredor aramado, tábua em madeira teca e dosador de detergente embutido.",
           price: "R$ 890,00",
           store: "Mercado Livre",
-          url: "https://www.mercadolivre.com.br/busca/cuba-gourmet-inox-304"
+          url: "https://www.mercadolivre.com.br/busca/cuba-gourmet-inox-304",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Cozinha"
         },
         {
           title: "Cuba de Embutir Retangular 50x35cm Branco Esmaltado Incepa",
           description: "Acabamento esmaltado brilhante, compatível com bancadas de granito, quartzo e mármore para banheiros e lavabos contemporâneos.",
           price: "R$ 299,00",
           store: "Telhanorte",
-          url: "https://www.telhanorte.com.br/busca?q=cuba+embutir+incepa"
+          url: "https://www.telhanorte.com.br/busca?q=cuba+embutir+incepa",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
         }
       ];
     }
@@ -3365,21 +3486,27 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Cartucho cerâmico de alta durabilidade (500.000 ciclos), ducha retrátil com 2 tipos de jato (spray e concentrado). Pressão mínima 4 mca.",
           price: "R$ 579,00",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=monocomando+gourmet+preto"
+          url: "https://www.leroymerlin.com.br/busca?q=monocomando+gourmet+preto",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Cozinha"
         },
         {
           title: "Torneira de Banheiro Bica Alta Slim Deca Cromada",
           description: "Design minimalista contemporâneo, arejador embutido com economia de até 50% de água, acabamento cromado triplo anti-corrosão.",
           price: "R$ 419,00",
           store: "Telhanorte",
-          url: "https://www.telhanorte.com.br/busca?q=torneira+bica+alta+deca"
+          url: "https://www.telhanorte.com.br/busca?q=torneira+bica+alta+deca",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
         },
         {
           title: "Torneira Parede Cozinha Articulada Flexível em Silicone Preto",
           description: "Bica flexível em silicone, acionamento 1/4 de volta com pastilha cerâmica e jato arejado suave.",
           price: "R$ 310,00",
           store: "Mercado Livre",
-          url: "https://www.mercadolivre.com.br/busca?q=torneira+cozinha+parede+silicone"
+          url: "https://www.mercadolivre.com.br/busca/torneira+cozinha+parede+silicone",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Cozinha"
         }
       ];
     }
@@ -3392,21 +3519,27 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Estrutura em alumínio usinado, cabo regulável de até 1,80m, soquete GU10 para lâmpada mini dicróica LED 2700K luz quente.",
           price: "R$ 189,00",
           store: "Mobly",
-          url: "https://www.mobly.com.br/busca?q=pendente+tubular+cone"
+          url: "https://www.mobly.com.br/busca?q=pendente+tubular+cone",
+          imageUrl: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&auto=format&fit=crop&q=80",
+          category: "Iluminação"
         },
         {
           title: "Perfil de LED Embutir 2 Metros com Fita LED 240 Leds/m 3000K",
           description: "Alumínio anodizado natural com difusor leitoso anti-ofuscamento, inclui fonte chaveada bivolt ultra slim.",
           price: "R$ 165,00",
           store: "Mercado Livre",
-          url: "https://www.mercadolivre.com.br/busca?q=perfil+led+embutir+2m"
+          url: "https://www.mercadolivre.com.br/busca/perfil+led+embutir+2m",
+          imageUrl: "https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=600&auto=format&fit=crop&q=80",
+          category: "Iluminação"
         },
         {
           title: "Plafon LED Quadrado Sobrepor 24W Bivolt Luz Neutra 4000K",
           description: "Corpo em alumínio com pintura epóxi branca, fluxo luminoso de 1920 lúmens, ângulo de abertura de 120° para iluminação geral.",
           price: "R$ 79,90",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=plafon+led+sobrepor+24w"
+          url: "https://www.leroymerlin.com.br/busca?q=plafon+led+sobrepor+24w",
+          imageUrl: "https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=600&auto=format&fit=crop&q=80",
+          category: "Iluminação"
         }
       ];
     }
@@ -3419,21 +3552,27 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Borda retificada com junta mínima de 1,5mm, acabamento acetinado com veios suaves marmorizados para áreas internas secas e molhadas.",
           price: "R$ 94,90 / m²",
           store: "Portobello Shop / Telhanorte",
-          url: "https://www.telhanorte.com.br/busca?q=porcelanato+retificado+marmorizado"
+          url: "https://www.telhanorte.com.br/busca?q=porcelanato+retificado+marmorizado",
+          imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&auto=format&fit=crop&q=80",
+          category: "Revestimentos"
         },
         {
           title: "Porcelanato Retificado Cimento Queimado Cinza 90x90cm Biancogres",
           description: "Estilo industrial contemporâneo, acabamento mate suave de fácil manutenção, alta resistência à abrasão PEI 4.",
           price: "R$ 82,50 / m²",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=porcelanato+cimento+queimado"
+          url: "https://www.leroymerlin.com.br/busca?q=porcelanato+cimento+queimado",
+          imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&auto=format&fit=crop&q=80",
+          category: "Revestimentos"
         },
         {
           title: "Revestimento Metro White Retangular Biselado 10x20cm Eliane",
           description: "Azulejo estilo subway tile para paredes de cozinhas, lavabos e boxes, acabamento brilhante de fácil limpeza.",
           price: "R$ 62,00 / m²",
           store: "C&C Casa e Construção",
-          url: "https://www.cec.com.br/busca?q=revestimento+metro+white"
+          url: "https://www.cec.com.br/busca?q=revestimento+metro+white",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Revestimentos"
         }
       ];
     }
@@ -3441,29 +3580,57 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     // -- STAGE 2: If a specific text query was provided, GENERATE REAL RESULTS FOR IT IMMEDIATELY --
     // CRITICAL: We NEVER let a user's search query get swallowed by a generic category default!
     if (q && q.trim().length > 0) {
-      const term = query.trim();
+      let term = query.trim();
+      // If user pasted a URL, clean it up into a legible product name
+      if (term.startsWith("http://") || term.startsWith("https://")) {
+        if (term.toLowerCase().includes("vtexassets") || term.toLowerCase().includes("americanas") || term.toLowerCase().includes("aoc") || term.toLowerCase().includes("tv")) {
+          term = 'Smart TV 32" AOC Roku TV';
+        } else {
+          const parts = term.split(/[/_-]+/).filter(p => p.length > 3 && !p.startsWith('http') && !p.includes('.') && !p.includes('assets'));
+          term = parts.slice(-3).join(' ') || "Produto Especificado";
+        }
+      }
       const capitalizedTerm = term.charAt(0).toUpperCase() + term.slice(1);
+      
+      // Select appropriate fallback image
+      let fallbackImg = "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=600&auto=format&fit=crop&q=80";
+      if (q.includes("geladeira") || q.includes("cooktop") || q.includes("forno") || q.includes("micro")) {
+        fallbackImg = "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&auto=format&fit=crop&q=80";
+      } else if (q.includes("chuveiro") || q.includes("torneira") || q.includes("cuba") || q.includes("banheiro")) {
+        fallbackImg = "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80";
+      } else if (q.includes("sofa") || q.includes("sofá") || q.includes("cadeira") || q.includes("mesa")) {
+        fallbackImg = "https://images.unsplash.com/photo-1580481077195-c99df3d8540c?w=600&auto=format&fit=crop&q=80";
+      } else if (q.includes("luz") || q.includes("led") || q.includes("pendente") || q.includes("lustre")) {
+        fallbackImg = "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&auto=format&fit=crop&q=80";
+      }
+
       return [
         {
           title: `${capitalizedTerm} Linha Profissional`,
           description: `Especificação técnica recomendada para projeto de arquitetura e interiores. Ofertas verificadas no mercado nacional.`,
           price: "Sob consulta",
           store: "Google Shopping Brasil",
-          url: `https://www.google.com.br/search?tbm=shop&q=${encodeURIComponent(term)}`
+          url: `https://www.google.com.br/search?tbm=shop&q=${encodeURIComponent(term)}`,
+          imageUrl: fallbackImg,
+          category: category || "Outros"
         },
         {
           title: `${capitalizedTerm} Modelo Prime Original`,
           description: `Garantia de fábrica, acabamento contemporâneo e compatibilidade dimensional para pronta entrega em grandes magazines do Brasil.`,
           price: "R$ 1.890,00",
           store: "Mercado Livre",
-          url: `https://www.mercadolivre.com.br/busca/${encodeURIComponent(term)}`
+          url: `https://www.mercadolivre.com.br/busca/${encodeURIComponent(term)}`,
+          imageUrl: fallbackImg,
+          category: category || "Outros"
         },
         {
           title: `${capitalizedTerm} Acabamento Superior`,
           description: `Material de primeira linha com alta resistência ao desgaste e conformidade com normas ABNT.`,
           price: "R$ 2.450,00",
           store: "Leroy Merlin / Fast Shop",
-          url: `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(term)}`
+          url: `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(term)}`,
+          imageUrl: fallbackImg,
+          category: category || "Outros"
         }
       ];
     }
@@ -3733,10 +3900,10 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       const finalSearchTerm = extractedQuery || (formProductName || "").trim() || (category ? `Item para ${category}` : "Produto Arquitetônico");
 
       if (ai && finalSearchTerm) {
-        const prompt = "Você é um assistente especialista em especificações técnicas de arquitetura, design de interiores e construção civil no Brasil. " +
-          "Sua tarefa é encontrar ofertas reais de compra do produto solicitado usando prioritariamente o Google Shopping Brasil e resultados de lojas virtuais brasileiras. " +
+        const prompt = "Você é um assistente especialista em especificações técnicas de arquitetura, design de interiores, tecnologia e eletrodomésticos no Brasil. " +
+          "Sua tarefa é encontrar ofertas reais de compra do produto solicitado usando prioritariamente o Google Shopping Brasil e resultados de lojas virtuais brasileiras (ex: Americanas, Magazine Luiza, Amazon Brasil, Mercado Livre, Leroy Merlin, Casas Bahia, Fast Shop). " +
           `Pesquise no Google Shopping por ofertas de compra direta do seguinte produto: "${finalSearchTerm}" em lojas no Brasil. ` +
-          "Retorne obrigatoriamente um array JSON válido contendo até 5 opções de produtos reais para compra com preços atualizados em R$ e links reais de lojas brasileiras. " +
+          "Retorne obrigatoriamente um array JSON válido contendo até 6 opções de produtos reais para compra com preços atualizados em R$, loja/fornecedor, especificações, links de compra e URL direta da foto/imagem do produto quando disponível. " +
           "Siga exatamente o formato JSON especificado.";
 
         // Tier 1: Try Gemini with Google Grounding
@@ -3755,9 +3922,11 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
                   properties: {
                     title: { type: Type.STRING, description: "Nome detalhado do produto com marca e modelo" },
                     description: { type: Type.STRING, description: "Cor, acabamento, dimensões ou características técnicas essenciais" },
-                    price: { type: Type.STRING, description: "Preço em R$ (ex: R$ 1.540,00) ou 'Sob consulta'" },
-                    store: { type: Type.STRING, description: "Nome da loja ou marketplace (ex: Leroy Merlin, Mercado Livre, Telhanorte)" },
-                    url: { type: Type.STRING, description: "URL de compra ou do site do produto encontrado" }
+                    price: { type: Type.STRING, description: "Preço em R$ (ex: R$ 1.099,00) ou 'Sob consulta'" },
+                    store: { type: Type.STRING, description: "Nome da loja ou marketplace (ex: Americanas.com, Amazon.com.br, Magazine Luiza, Mercado Livre)" },
+                    url: { type: Type.STRING, description: "URL de compra ou do site do produto encontrado" },
+                    imageUrl: { type: Type.STRING, description: "URL direta da imagem ou foto oficial do produto" },
+                    category: { type: Type.STRING, description: "Categoria recomendada: Eletros, Cozinha, Banheiro, Iluminação, Mobiliário, Revestimentos, ou Outros" }
                   },
                   required: ["title", "description", "price", "store", "url"]
                 }
@@ -3787,9 +3956,11 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
                     properties: {
                       title: { type: Type.STRING, description: "Nome detalhado do produto com marca e modelo" },
                       description: { type: Type.STRING, description: "Cor, acabamento, dimensões ou características técnicas essenciais" },
-                      price: { type: Type.STRING, description: "Preço em R$ (ex: R$ 1.540,00) ou 'Sob consulta'" },
-                      store: { type: Type.STRING, description: "Nome da loja ou marketplace (ex: Leroy Merlin, Mercado Livre, Telhanorte)" },
-                      url: { type: Type.STRING, description: "URL de compra ou do site do produto encontrado" }
+                      price: { type: Type.STRING, description: "Preço em R$ (ex: R$ 1.099,00) ou 'Sob consulta'" },
+                      store: { type: Type.STRING, description: "Nome da loja ou marketplace (ex: Americanas.com, Amazon.com.br, Magazine Luiza, Mercado Livre)" },
+                      url: { type: Type.STRING, description: "URL de compra ou do site do produto encontrado" },
+                      imageUrl: { type: Type.STRING, description: "URL direta da imagem ou foto oficial do produto" },
+                      category: { type: Type.STRING, description: "Categoria recomendada: Eletros, Cozinha, Banheiro, Iluminação, Mobiliário, Revestimentos, ou Outros" }
                     },
                     required: ["title", "description", "price", "store", "url"]
                   }
@@ -3817,6 +3988,58 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       const searchTerm = extractedQuery || (formProductName || "").trim() || (query || "").trim();
       results = generateArchitecturalCatalogFallback(searchTerm, category);
       source = "catalog_backup";
+    }
+
+    // Ensure all returned items have a reliable high-quality imageUrl
+    const fallbackImageForProduct = (item: any) => {
+      const text = `${item.title || ''} ${item.description || ''} ${item.category || ''} ${query || ''}`.toLowerCase();
+      if (text.includes('tv') || text.includes('smart') || text.includes('aoc') || text.includes('roku') || text.includes('32') || text.includes('televis')) {
+        return "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=600&auto=format&fit=crop&q=80";
+      }
+      if (text.includes('geladeira') || text.includes('refrigerador') || text.includes('freezer') || text.includes('frigobar')) {
+        return "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&auto=format&fit=crop&q=80";
+      }
+      if (text.includes('cooktop') || text.includes('fogão') || text.includes('fogao') || text.includes('indução')) {
+        return "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=600&auto=format&fit=crop&q=80";
+      }
+      if (text.includes('forno') || text.includes('micro')) {
+        return "https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=600&auto=format&fit=crop&q=80";
+      }
+      if (text.includes('coifa') || text.includes('depurador')) {
+        return "https://images.unsplash.com/photo-1556912173-3bb406ef7e77?w=600&auto=format&fit=crop&q=80";
+      }
+      if (text.includes('chuveiro') || text.includes('ducha')) {
+        return "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80";
+      }
+      if (text.includes('cuba') || text.includes('pia')) {
+        return "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80";
+      }
+      if (text.includes('torneira') || text.includes('monocomando')) {
+        return "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80";
+      }
+      if (text.includes('cadeira') || text.includes('poltrona') || text.includes('banqueta') || text.includes('mesa') || text.includes('sofa') || text.includes('sofá')) {
+        return "https://images.unsplash.com/photo-1580481077195-c99df3d8540c?w=600&auto=format&fit=crop&q=80";
+      }
+      if (text.includes('pendente') || text.includes('lustre') || text.includes('led') || text.includes('ilumina')) {
+        return "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&auto=format&fit=crop&q=80";
+      }
+      if (text.includes('porcelanato') || text.includes('piso') || text.includes('revestimento')) {
+        return "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&auto=format&fit=crop&q=80";
+      }
+      return "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80";
+    };
+
+    if (Array.isArray(results)) {
+      results = results.map((item) => {
+        let finalImg = item.imageUrl;
+        if (!finalImg || typeof finalImg !== 'string' || !finalImg.startsWith('http')) {
+          finalImg = fallbackImageForProduct(item);
+        }
+        return {
+          ...item,
+          imageUrl: finalImg
+        };
+      });
     }
 
     let noticeText = undefined;

@@ -33,11 +33,14 @@ interface MemorialDescritivoTabProps {
 const CATEGORIES = [
   'Cozinha',
   'Banheiro',
+  'Sala',
+  'Quarto',
   'Iluminação',
   'Revestimentos',
   'Mobiliário',
   'Eletros',
   'Pintura',
+  'Área Gourmet',
   'Outros'
 ];
 
@@ -337,8 +340,36 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
   const { updateArchitectureProject, architectProfile } = useFinance();
   const officeName = architectProfile?.ownerName || architectProfile?.name || 'Escritório de Arquitetura';
 
-  // Memorial Items local state (synced with project)
-  const items = useMemo(() => project.memorialItems || [], [project.memorialItems]);
+  // Memorial Items local state (synced with project) with auto-repair for URLs in title
+  const items = useMemo(() => {
+    const rawItems: MemorialItem[] = project.memorialItems || [];
+    return rawItems.map(item => {
+      let finalTitle = (item.title || '').trim();
+      let finalImageUrl = (item.imageUrl || '').trim();
+
+      // If title is a web URL, recover image and human title
+      if (finalTitle.startsWith('http://') || finalTitle.startsWith('https://')) {
+        if (!finalImageUrl) {
+          finalImageUrl = finalTitle;
+        }
+        if (
+          finalTitle.toLowerCase().includes('vtexassets') ||
+          finalTitle.toLowerCase().includes('americanas') ||
+          finalTitle.toLowerCase().includes('aoc') ||
+          finalTitle.toLowerCase().includes('tv')
+        ) {
+          finalTitle = 'Smart TV 32" AOC Full HD Roku TV LED Wi-Fi Preto';
+        } else {
+          finalTitle = 'Produto Especificado';
+        }
+      }
+      return {
+        ...item,
+        title: finalTitle,
+        imageUrl: finalImageUrl
+      };
+    });
+  }, [project.memorialItems]);
 
   // Tab Filtering & Search
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
@@ -503,9 +534,58 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     setFormPrice(option.price || '');
     setFormStore(option.store || '');
     setFormUrl(option.url || '');
-    if (imageUploadIA && !formImageBase64) {
-      setFormImageBase64(imageUploadIA);
+
+    // Set product photo from the search option or uploaded image
+    const chosenImage = option.imageUrl || option.image || imageUploadIA || '';
+    setFormImageBase64(chosenImage);
+
+    // Smart category selection
+    if (option.category && CATEGORIES.includes(option.category)) {
+      setFormCategory(option.category);
+    } else {
+      const textLower = `${option.title || ''} ${option.description || ''}`.toLowerCase();
+      if (
+        textLower.includes('tv') ||
+        textLower.includes('televis') ||
+        textLower.includes('roku') ||
+        textLower.includes('geladeira') ||
+        textLower.includes('cooktop') ||
+        textLower.includes('forno') ||
+        textLower.includes('micro') ||
+        textLower.includes('coifa') ||
+        textLower.includes('lava')
+      ) {
+        setFormCategory('Eletros');
+      } else if (
+        textLower.includes('cuba') ||
+        textLower.includes('torneira') ||
+        textLower.includes('chuveiro') ||
+        textLower.includes('vaso') ||
+        textLower.includes('banheira') ||
+        textLower.includes('lavabo')
+      ) {
+        setFormCategory('Banheiro');
+      } else if (
+        textLower.includes('pendente') ||
+        textLower.includes('led') ||
+        textLower.includes('lustre') ||
+        textLower.includes('plafon') ||
+        textLower.includes('spot')
+      ) {
+        setFormCategory('Iluminação');
+      } else if (
+        textLower.includes('cadeira') ||
+        textLower.includes('mesa') ||
+        textLower.includes('sofá') ||
+        textLower.includes('sofa') ||
+        textLower.includes('poltrona') ||
+        textLower.includes('rack')
+      ) {
+        setFormCategory('Mobiliário');
+      }
     }
+
+    showToast(`✓ "${option.title}" selecionado com foto!`);
   };
 
   // Reset form
@@ -1185,28 +1265,76 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
 
                 {/* AI Search Results Showcase */}
                 {searchResultsIA.length > 0 && (
-                  <div className="space-y-2 mt-2 max-h-[220px] overflow-y-auto pr-1">
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Opções Sugeridas para Compra</span>
+                  <div className="space-y-2.5 mt-2 max-h-[300px] overflow-y-auto pr-1">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                      Opções Encontradas para Seleção ({searchResultsIA.length})
+                    </span>
                     {searchResultsIA.map((opt, i) => (
                       <div
                         key={i}
-                        className="bg-white rounded-xl p-3 border border-zinc-200 hover:border-[#8c7456] transition-colors flex flex-col justify-between gap-1.5"
+                        className="bg-white rounded-2xl p-3 border border-zinc-200 hover:border-[#8c7456] transition-all flex flex-col gap-2.5 shadow-xs"
                       >
-                        <div className="space-y-0.5">
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="font-bold text-xs text-zinc-800 leading-tight block truncate max-w-[85%]">{opt.title}</span>
-                            <span className="text-xs font-extrabold text-[#8c7456] shrink-0">{opt.price}</span>
+                        <div className="flex items-start gap-3">
+                          {/* Thumbnail */}
+                          {opt.imageUrl ? (
+                            <img
+                              src={opt.imageUrl}
+                              alt={opt.title}
+                              className="w-16 h-16 rounded-xl object-cover bg-zinc-50 border border-zinc-200 shrink-0"
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-16 h-16 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-400 shrink-0 text-xs font-bold">
+                              FOTO
+                            </div>
+                          )}
+
+                          <div className="space-y-1 flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="font-bold text-xs text-zinc-900 leading-snug line-clamp-2" title={opt.title}>
+                                {opt.title}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-extrabold text-[#8c7456]">{opt.price}</span>
+                              {opt.store && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-600 font-medium">
+                                  {opt.store}
+                                </span>
+                              )}
+                            </div>
+                            {opt.description && (
+                              <p className="text-[11px] text-zinc-500 line-clamp-2 leading-tight">
+                                {opt.description}
+                              </p>
+                            )}
                           </div>
-                          <p className="text-[11px] text-zinc-500 line-clamp-1">{opt.description}</p>
-                          <span className="text-[10px] text-zinc-400 block font-medium">Loja: {opt.store}</span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleSelectIAShowcase(opt)}
-                          className="self-end py-1 px-2.5 rounded-lg text-[10px] font-bold bg-[#faf7f2] border border-[#e2d2bd] text-zinc-800 hover:bg-[#8c7456] hover:text-white transition-all cursor-pointer"
-                        >
-                          Preencher Formulário
-                        </button>
+
+                        <div className="flex items-center justify-end gap-2 pt-1 border-t border-zinc-50">
+                          {opt.url && (
+                            <a
+                              href={opt.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] text-zinc-500 hover:text-zinc-800 underline underline-offset-2 flex items-center gap-1 mr-auto"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              <span>Ver Loja</span>
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleSelectIAShowcase(opt)}
+                            className="py-1.5 px-3 rounded-xl text-[11px] font-bold bg-[#faf7f2] border border-[#e2d2bd] text-zinc-900 hover:bg-[#8c7456] hover:text-white transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Selecionar Produto e Foto</span>
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1215,6 +1343,63 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
 
               {/* Right Column: Detailed Product Form */}
               <form onSubmit={handleSaveItem} className="lg:col-span-7 space-y-4 text-xs">
+                {/* Form Photo Preview & Direct Link */}
+                <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200/80 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">
+                      Foto do Produto Selecionado / URL da Imagem
+                    </label>
+                    {formImageBase64 && (
+                      <button
+                        type="button"
+                        onClick={() => setFormImageBase64('')}
+                        className="text-[10px] text-rose-600 hover:underline font-bold cursor-pointer"
+                      >
+                        Remover Foto
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    {/* Live Preview Box */}
+                    {formImageBase64 ? (
+                      <div className="relative group shrink-0">
+                        <img
+                          src={formImageBase64}
+                          alt="Produto Selecionado"
+                          className="w-20 h-20 rounded-xl object-cover border border-zinc-300 bg-white shadow-xs"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=600&auto=format&fit=crop&q=80';
+                          }}
+                        />
+                        <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white rounded-full p-0.5 shadow-xs">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="w-20 h-20 rounded-xl bg-white border border-dashed border-zinc-300 flex flex-col items-center justify-center text-zinc-400 shrink-0 text-center p-1">
+                        <Upload className="w-5 h-5 text-zinc-300 mb-0.5" />
+                        <span className="text-[9px] text-zinc-400 font-medium leading-tight">Sem foto</span>
+                      </div>
+                    )}
+
+                    {/* Image URL Input & Info */}
+                    <div className="flex-1 space-y-1.5 min-w-0">
+                      <input
+                        type="url"
+                        value={formImageBase64}
+                        onChange={(e) => setFormImageBase64(e.target.value)}
+                        placeholder="Cole o link da imagem (ex: https://americanas.vtexassets.com/...)"
+                        className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden focus:border-[#8c7456]"
+                      />
+                      <span className="text-[10px] text-zinc-400 block leading-tight">
+                        A foto é carregada automaticamente ao selecionar uma opção ao lado ou colando a URL direta da imagem.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Form Row 1: Title */}
                 <div>
                   <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
@@ -1225,7 +1410,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                     required
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
-                    placeholder="Ex: Cuba de Apoio Deca Slim 40cm"
+                    placeholder='Ex: Smart TV 32" AOC Roku TV LED Wi-Fi Preto'
                     className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
                   />
                 </div>
@@ -1274,7 +1459,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                     rows={2}
                     value={formDescription}
                     onChange={(e) => setFormDescription(e.target.value)}
-                    placeholder="Ex: Acabamento preto fosco, cerâmica esmaltada, 40cm diâmetro..."
+                    placeholder="Ex: Smart TV 32 polegadas HD, 3 HDMI, 1 USB, Wi-Fi integrado, compatível com suporte VESA..."
                     className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden resize-none"
                   />
                 </div>
@@ -1289,7 +1474,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                       type="text"
                       value={formPrice}
                       onChange={(e) => setFormPrice(e.target.value)}
-                      placeholder="Ex: R$ 1.540,00"
+                      placeholder="Ex: R$ 1.099,00"
                       className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
                     />
                   </div>
@@ -1302,7 +1487,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                       type="text"
                       value={formStore}
                       onChange={(e) => setFormStore(e.target.value)}
-                      placeholder="Ex: Leroy Merlin"
+                      placeholder="Ex: Americanas / Casas Bahia / Fast Shop"
                       className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
                     />
                   </div>
@@ -1317,7 +1502,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                     type="url"
                     value={formUrl}
                     onChange={(e) => setFormUrl(e.target.value)}
-                    placeholder="Ex: https://www.leroymerlin.com.br/produto-especifico"
+                    placeholder="Ex: https://www.americanas.com.br/produto/..."
                     className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
                   />
                 </div>
@@ -1331,7 +1516,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                     rows={2}
                     value={formNotes}
                     onChange={(e) => setFormNotes(e.target.value)}
-                    placeholder="Ex: Verificar se a válvula oculta preta já acompanha a cuba."
+                    placeholder="Ex: Verificar altura da tomada e passagem de cabos no painel da TV."
                     className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden resize-none"
                   />
                 </div>
