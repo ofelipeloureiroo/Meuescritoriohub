@@ -56,7 +56,7 @@ export const ClientPortalDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { clients, architectureProjects, architectProfile } = useFinance();
+  const { clients, architectureProjects, architectProfile, projectMilestones } = useFinance();
 
   const isAdminParam = searchParams.get('admin') === 'true';
   const isClientView = searchParams.get('clientView') === 'true';
@@ -98,11 +98,11 @@ export const ClientPortalDashboard: React.FC = () => {
     );
 
     if (matchedClient) {
-      return buildClientPortalAccess(matchedClient, architectureProjects, architectProfile, portal);
+      return buildClientPortalAccess(matchedClient, architectureProjects, architectProfile, portal, projectMilestones);
     }
 
-    return syncPortalWithOfficeRegistry(portal, clients, architectureProjects, architectProfile);
-  }, [portal, clients, architectureProjects, architectProfile, requestedClientId, requestedPortalId]);
+    return syncPortalWithOfficeRegistry(portal, clients, architectureProjects, architectProfile, projectMilestones);
+  }, [portal, clients, architectureProjects, architectProfile, projectMilestones, requestedClientId, requestedPortalId]);
 
   // All client portal options available for office preview
   const allOfficeClientPortals = useMemo(() => {
@@ -115,11 +115,11 @@ export const ClientPortalDashboard: React.FC = () => {
             (p.clientEmail && c.email && p.clientEmail.trim().toLowerCase() === c.email.trim().toLowerCase()) ||
             p.clientName.trim().toLowerCase() === c.name.trim().toLowerCase()
         );
-        return buildClientPortalAccess(c, architectureProjects, architectProfile, match);
+        return buildClientPortalAccess(c, architectureProjects, architectProfile, match, projectMilestones);
       });
     }
     return officePortals.length > 0 ? officePortals.filter(p => p.id !== SAMPLE_CLIENT_PORTAL.id) : [];
-  }, [clients, officePortals, architectureProjects, architectProfile]);
+  }, [clients, officePortals, architectureProjects, architectProfile, projectMilestones]);
 
   // Load office portals if admin/office user is logged in
   useEffect(() => {

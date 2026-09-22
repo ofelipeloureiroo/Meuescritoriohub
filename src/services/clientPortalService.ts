@@ -22,6 +22,7 @@ import {
   ArchitectProfile,
   ProjectMilestone
 } from '../types';
+import { DEFAULT_PROJECT_STAGES } from '../data/defaultProjectStages';
 
 export const generateProvisionalPassword = (): string => {
   const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -179,9 +180,12 @@ export async function saveClientPortalAccess(portal: ClientPortalAccess): Promis
       updatedAt: new Date().toISOString()
     }, { merge: true }));
 
-    await Promise.allSettled(writes);
+    const firestoreTimeout = new Promise(resolve => setTimeout(resolve, 800));
+    await Promise.race([Promise.allSettled(writes), firestoreTimeout]);
   } catch (err) {
     console.warn('Notice saving to Firestore clientPortals:', err);
+  } finally {
+    window.dispatchEvent(new CustomEvent('client_portals_updated', { detail: { portal: normalizedPortal } }));
   }
 }
 
@@ -1363,12 +1367,12 @@ export function calculateProjectScheduleProgress(
   ap: ArchitectureProject, 
   milestones?: ProjectMilestone[]
 ): number {
-  const pStages = (ap.stages && ap.stages.length > 0) ? ap.stages : [];
+  const pStages = (ap.stages && ap.stages.length > 0) ? ap.stages : DEFAULT_PROJECT_STAGES;
   const stageTasks = pStages.flatMap(s => s.tasks || []);
   const projectMils = (milestones || []).filter(m => m.projectId === ap.id);
 
   const stageTasksTotal = stageTasks.length;
-  const stageTasksCompleted = stageTasks.filter(t => t.status === 'completed').length;
+  const stageTasksCompleted = stageTasks.filter(t => t.status === 'completed' || (t as any).status === 'concluida').length;
   const milsTotal = projectMils.length;
   const milsCompleted = projectMils.filter(m => m.completed).length;
 
@@ -1408,9 +1412,6 @@ export function convertArchitectureProjectToPortalProject(
   milestones?: ProjectMilestone[]
 ): ClientPortalProject {
   const isDelivered = ap.status === 'entregue' || ap.status === 'concluido';
-  const isObra = ap.status === 'obra';
-  const isExecutivo = ap.status === 'executivo';
-  const isAnteprojeto = ap.status === 'anteprojeto';
 
   const calculatedProgress = calculateProjectScheduleProgress(ap, milestones);
   const progress = calculatedProgress;
@@ -1481,11 +1482,14 @@ export function convertArchitectureProjectToPortalProject(
   let currentStageName = foundInProg?.name || (rawAny.currentStageName as string) || (foundCompleted.length > 0 ? foundCompleted[foundCompleted.length - 1].name : (portalStages[0]?.name || 'Em Andamento'));
   let stageIndex = foundInProg ? portalStages.indexOf(foundInProg) + 1 : (foundCompleted.length > 0 ? foundCompleted.length : 1);
 
+  const projTitle = ap.title || 'Projeto de Arquitetura e Interiores';
+  const projDesc = ap.description || (projTitle.toLowerCase().startsWith('projeto') ? `${projTitle} para ${ap.clientName}` : `Projeto de ${projTitle} para ${ap.clientName}`);
+
   return {
     id: ap.id,
-    title: ap.title,
+    title: projTitle,
     category: ap.category || 'Arquitetura e Interiores',
-    description: ap.description || `Projeto de ${ap.title} para ${ap.clientName}`,
+    description: projDesc,
     status: ap.status || 'executivo',
     generalStatus: isDelivered ? 'concluido' : 'no_prazo',
     currentStageName: currentStageName,
@@ -1494,7 +1498,7 @@ export function convertArchitectureProjectToPortalProject(
     stages: portalStages,
     startDate: ap.startDate || ap.createdAt || new Date().toLocaleDateString('pt-BR'),
     deliveryDate: ap.deliveryDate || 'A combinar com o escritório',
-    contractTitle: `Contrato de Prestação de Serviços - ${ap.title}`,
+    contractTitle: `Contrato de Prestação de Serviços - ${projTitle}`,
     contractNumber: `CTR-${ap.id.slice(-4).toUpperCase()}`,
     contractStatus: 'signed',
     totalValue: ap.honorarios || 0,
