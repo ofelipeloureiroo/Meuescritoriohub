@@ -297,36 +297,31 @@ export const requestGoogleTokenViaGSI = async (preferredEmail?: string): Promise
 };
 
 /**
- * Authenticates the user with Google and requests Calendar & Tasks scopes
+ * Authenticates the user with Google and requests Calendar & Tasks scopes directly via Firebase
  */
 export const authenticateGoogleCalendar = async (): Promise<{ token: string; email: string }> => {
-  // Strategy 1: Google Identity Services (GSI) - Direct official branded dialog
-  try {
-    const gsiResult = await requestGoogleTokenViaGSI(auth.currentUser?.email || undefined);
-    if (gsiResult?.token) {
-      return gsiResult;
-    }
-  } catch (gsiErr: any) {
-    console.warn('GSI client failed, trying Firebase popup fallback:', gsiErr?.message || gsiErr);
-    // If the user deliberately closed or denied, throw directly
-    if (gsiErr?.message?.includes('cancelada pelo usuário')) {
-      throw gsiErr;
-    }
-  }
+  const provider = new GoogleAuthProvider();
+  provider.addScope('https://www.googleapis.com/auth/calendar.events');
+  provider.addScope('https://www.googleapis.com/auth/tasks');
+  provider.addScope('https://www.googleapis.com/auth/userinfo.email');
+  provider.setCustomParameters({ 
+    prompt: 'select_account consent',
+    login_hint: auth.currentUser?.email || undefined
+  });
 
-  // Strategy 2: Attempt direct Firebase popup (only safe, specific scopes)
   try {
-    const provider = new GoogleAuthProvider();
-    // NEVER request 'https://www.googleapis.com/auth/calendar' (dangerous root scope)
-    provider.addScope('https://www.googleapis.com/auth/calendar.events');
-    provider.addScope('https://www.googleapis.com/auth/tasks');
-    provider.addScope('https://www.googleapis.com/auth/userinfo.email');
-    provider.setCustomParameters({ 
-      prompt: 'consent',
-      login_hint: auth.currentUser?.email || undefined
-    });
+    let result;
+    if (auth.currentUser && !auth.currentUser.isAnonymous) {
+      try {
+        result = await linkWithPopup(auth.currentUser, provider);
+      } catch (linkErr: any) {
+        // If account is already linked or exists, perform direct popup sign in
+        result = await signInWithPopup(auth, provider);
+      }
+    } else {
+      result = await signInWithPopup(auth, provider);
+    }
 
-    const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     const token = credential?.accessToken;
     const email = result.user?.email || auth.currentUser?.email || '';
@@ -338,151 +333,36 @@ export const authenticateGoogleCalendar = async (): Promise<{ token: string; ema
         sessionStorage.setItem('office_gcal_token', token);
         localStorage.setItem('office_gcal_token', token);
         localStorage.setItem('office_gcal_synced', 'true');
-        localStorage.setItem('office_gcal_email', email);
+        if (email) localStorage.setItem('office_gcal_email', email);
       } catch {}
 
       try {
-        setDoc(doc(db, 'system_integrations', 'google_calendar'), {
+        await setDoc(doc(db, 'system_integrations', 'google_calendar'), {
           token,
           email,
           updatedAt: Date.now(),
           synced: true,
-        }, { merge: true }).catch(() => {});
+        }, { merge: true });
       } catch {}
 
       return { token, email };
     }
-  } catch (directErr: any) {
-    console.warn('Direct popup attempt redirected to proxy popup:', directErr?.message || directErr);
-    if (directErr?.code === 'auth/popup-closed-by-user') {
-      throw new Error('Janela de conexão fechada antes da confirmação.');
-    }
-  }
-
-  // Strategy 2: Popup proxy with cross-channel Firestore & postMessage listeners
-  return new Promise((resolve, reject) => {
-    const sessionId = 'gcal_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
     
-    // Choose proxy base domain
-    const isLocalOrPreview = window.location.hostname.includes('ais-pre-') || 
-                             window.location.hostname.includes('localhost') || 
-                             window.location.hostname.includes('ais-dev-');
-
-    const baseOrigin = isLocalOrPreview 
-      ? window.location.origin 
-      : 'https://ais-pre-su4zqshj47o55562to2iuv-729561127771.us-east1.run.app';
-
-    const proxyUrl = `${baseOrigin}/oauth-proxy?session=${sessionId}`;
-
-    let isFinished = false;
-    let unsubscribeFirestore: (() => void) | null = null;
-    let timeoutTimer: any = null;
-
-    const cleanup = () => {
-      if (unsubscribeFirestore) {
-        try { unsubscribeFirestore(); } catch {}
-      }
-      if (timeoutTimer) {
-        clearTimeout(timeoutTimer);
-      }
-      window.removeEventListener('message', messageListener);
-    };
-
-    const handleSuccess = (token: string, email: string) => {
-      if (isFinished) return;
-      isFinished = true;
-      cleanup();
-
-      cachedGCalToken = token;
-      cachedGCalEmail = email || auth.currentUser?.email || '';
-      try {
-        sessionStorage.setItem('office_gcal_token', token);
-        localStorage.setItem('office_gcal_token', token);
-        localStorage.setItem('office_gcal_synced', 'true');
-        localStorage.setItem('office_gcal_email', cachedGCalEmail);
-      } catch {}
-
-      // Persist to Firestore for durable cross-session sync
-      try {
-        setDoc(doc(db, 'system_integrations', 'google_calendar'), {
-          token,
-          email: cachedGCalEmail,
-          updatedAt: Date.now(),
-          synced: true,
-        }, { merge: true }).catch(() => {});
-      } catch {}
-
-      if (popup && !popup.closed) {
-        try { popup.close(); } catch {}
-      }
-
-      resolve({ token, email: cachedGCalEmail });
-    };
-
-    const handleError = (errorMsg: string) => {
-      if (isFinished) return;
-      isFinished = true;
-      cleanup();
-
-      if (popup && !popup.closed) {
-        try { popup.close(); } catch {}
-      }
-
-      reject(new Error(errorMsg));
-    };
-
-    // Channel 1: postMessage listener
-    const messageListener = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'OAUTH_SUCCESS' && event.data.token) {
-        handleSuccess(event.data.token, event.data.email);
-      } else if (event.data && event.data.type === 'OAUTH_ERROR') {
-        handleError(event.data.error || 'Falha na autenticação do Google.');
-      }
-    };
-    window.addEventListener('message', messageListener);
-
-    // Channel 2: Firestore snapshot listener
-    try {
-      const sessionDocRef = doc(db, 'oauth_sessions', sessionId);
-      unsubscribeFirestore = onSnapshot(sessionDocRef, (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          if (data.status === 'success' && data.token) {
-            handleSuccess(data.token, data.email);
-          } else if (data.status === 'error') {
-            handleError(data.error || 'Erro na autenticação.');
-          }
-        }
-      });
-    } catch (fsErr) {
-      console.warn('Firestore snapshot listener failed to attach:', fsErr);
+    // In case credential wasn't directly accessible but user authenticated
+    if (email) {
+      return { token: 'connected', email };
     }
 
-    // Open popup directly within the click event
-    const width = 500;
-    const height = 650;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
-
-    const popup = window.open(
-      proxyUrl,
-      'GoogleOAuthPopup',
-      `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`
-    );
-
-    if (!popup) {
-      cleanup();
-      reject(new Error('Bloqueador de popups ativo. Por favor, permita popups para este site ou clique no botão para autorizar.'));
-      return;
+    throw new Error('Nenhum token retornado pelo Google. Tente novamente.');
+  } catch (authErr: any) {
+    if (authErr?.code === 'auth/popup-closed-by-user' || authErr?.code === 'auth/cancelled-popup-request') {
+      throw new Error('Janela de conexão do Google fechada antes da confirmação.');
     }
-
-    // Maximum wait time: 2 minutes
-    timeoutTimer = setTimeout(() => {
-      if (!isFinished) {
-        handleError('Tempo limite para login do Google excedido. Clique em Conectar novamente.');
-      }
-    }, 120000);
-  });
+    if (authErr?.code === 'auth/popup-blocked') {
+      throw new Error('O navegador bloqueou a janela do Google. Permita popups para este site.');
+    }
+    throw new Error(authErr?.message || 'Erro ao conectar conta Google.');
+  }
 };
 
 /**
