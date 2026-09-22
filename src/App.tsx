@@ -105,7 +105,8 @@ const AppContent: React.FC = () => {
       case 'actions': return permissions.actions !== false;
       case 'leads': return permissions.leads !== false;
       case 'home':
-      case 'projects': return permissions.projects !== false;
+      case 'projects':
+      case 'time_tracker': return permissions.projects !== false;
       case 'suppliers': return permissions.suppliers !== false;
       case 'team': return permissions.team !== false;
       case 'portal_cliente':

@@ -69,6 +69,7 @@ const TAB_TITLES: Record<string, { label: string; icon: React.ElementType; descr
   leads: { label: 'Leads & Comercial', icon: Users, description: 'Pipeline de vendas, propostas e captação' },
   whatsapp_center: { label: 'Central de Atendimento WhatsApp', icon: MessageSquare, description: 'Comunicação integrada em tempo real entre clientes e membros da equipe' },
   projects: { label: 'Gestão de Projetos', icon: FolderOpen, description: 'Acompanhamento de etapas, cronogramas e entregas' },
+  time_tracker: { label: 'Rastreador de Tempo', icon: Clock, description: 'Controle de horas trabalhadas em projetos e etapas' },
   consultoria_expressa: { label: 'Consultoria Expressa', icon: Sparkles, description: 'Propostas ágeis de redesign de ambientes com Inteligência Artificial' },
   suppliers: { label: 'Fornecedores', icon: Package, description: 'Catálogo de parceiros, lojas e contatos técnicos' },
   team: { label: 'Equipe & Colaboradores', icon: Users, description: 'Membros, funções, permissões e convites' },
@@ -100,6 +101,7 @@ const CATEGORIES = [
     id: 'projects',
     label: 'Operação',
     tabs: [
+      { id: 'time_tracker', label: 'Rastreador de Tempo' },
       { id: 'projects', label: 'Gestão de Projetos' },
       { id: 'consultoria_expressa', label: 'Consultoria Expressa' },
       { id: 'suppliers', label: 'Fornecedores' },
