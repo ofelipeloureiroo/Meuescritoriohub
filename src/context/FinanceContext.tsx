@@ -361,6 +361,40 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
     (profileName && profileName.toLowerCase().includes('laine'))
   );
 
+  const upsertProjectToMap = (p: any) => {
+    if (!p || !p.id || isDemoProject(p) || p.deletedAt || isProjectTombstoned(p, tombstones)) return;
+    const cleanId = (p.id || '').trim();
+    const existing = recoveredProjectsMap.get(cleanId);
+    if (!existing) {
+      recoveredProjectsMap.set(cleanId, { ...p, id: cleanId });
+      return;
+    }
+    const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+    const incomingTime = p.updatedAt ? new Date(p.updatedAt).getTime() : 0;
+
+    if (incomingTime > existingTime) {
+      const mergedStages = (p.stages && p.stages.length > 0) ? p.stages : existing.stages;
+      recoveredProjectsMap.set(cleanId, {
+        ...existing,
+        ...p,
+        id: cleanId,
+        stages: mergedStages,
+        templateId: p.templateId || existing.templateId,
+        templateName: p.templateName || existing.templateName,
+      });
+    } else {
+      const mergedStages = (existing.stages && existing.stages.length > 0) ? existing.stages : p.stages;
+      recoveredProjectsMap.set(cleanId, {
+        ...p,
+        ...existing,
+        id: cleanId,
+        stages: mergedStages,
+        templateId: existing.templateId || p.templateId,
+        templateName: existing.templateName || p.templateName,
+      });
+    }
+  };
+
   // 1. Check user-scoped storage key
   const userKey = targetUid ? `office_v2_${targetUid}_architecture_projects` : 'office_v2_guest_architecture_projects';
   const savedUserProjects = localStorage.getItem(userKey);
@@ -368,11 +402,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
     try {
       const parsed = JSON.parse(savedUserProjects);
       if (Array.isArray(parsed)) {
-        parsed.forEach((p: any) => {
-          if (p && p.id && !isDemoProject(p) && !p.deletedAt && !isProjectTombstoned(p, tombstones)) {
-            recoveredProjectsMap.set(p.id, p);
-          }
-        });
+        parsed.forEach(upsertProjectToMap);
       }
     } catch {}
   }
@@ -386,11 +416,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            parsed.forEach((p: any) => {
-              if (p && p.id && !isDemoProject(p) && !p.deletedAt && !isProjectTombstoned(p, tombstones) && !recoveredProjectsMap.has(p.id)) {
-                recoveredProjectsMap.set(p.id, p);
-              }
-            });
+            parsed.forEach(upsertProjectToMap);
           }
         }
       } catch {}
@@ -420,15 +446,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            parsed.forEach((p: any) => {
-              if (p && p.id && !isDemoProject(p) && !p.deletedAt && !isProjectTombstoned(p, tombstones)) {
-                if (isLaine || isOwnerUid) {
-                  if (!recoveredProjectsMap.has(p.id)) {
-                    recoveredProjectsMap.set(p.id, p);
-                  }
-                }
-              }
-            });
+            parsed.forEach(upsertProjectToMap);
           }
         }
       } catch {}
@@ -444,15 +462,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
             try {
               const parsed = JSON.parse(raw);
               if (Array.isArray(parsed)) {
-                parsed.forEach((p: any) => {
-                  if (p && p.id && !isDemoProject(p) && !p.deletedAt && !isProjectTombstoned(p, tombstones)) {
-                    if (isLaine || isOwnerUid) {
-                      if (!recoveredProjectsMap.has(p.id)) {
-                        recoveredProjectsMap.set(p.id, p);
-                      }
-                    }
-                  }
-                });
+                parsed.forEach(upsertProjectToMap);
               }
             } catch {}
           }
@@ -1665,24 +1675,40 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
               cleanIncoming.forEach((p: any) => {
                 if (p && p.id && !isDemoProject(p) && !p.deletedAt && !isProjectTombstoned(p, tombstones)) {
-                  const existing = map.get(p.id);
+                  const cleanId = (p.id || '').trim();
+                  const existing = map.get(cleanId);
                   if (existing) {
-                    const isRecentLocalMutation = Date.now() - lastLocalMutationRef.current < 20000;
+                    const isRecentLocalMutation = Date.now() - lastLocalMutationRef.current < 30000;
                     const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
                     const incomingTime = p.updatedAt ? new Date(p.updatedAt).getTime() : 0;
 
-                    if (isRecentLocalMutation || existingTime > incomingTime) {
-                      // Local edits take priority when fresh or newer
-                      map.set(p.id, { ...p, ...existing });
+                    if (isRecentLocalMutation || existingTime >= incomingTime) {
+                      // Local edits take priority when fresh or newer/equal timestamp
+                      const mergedStages = (existing.stages && existing.stages.length > 0) ? existing.stages : p.stages;
+                      map.set(cleanId, {
+                        ...p,
+                        ...existing,
+                        id: cleanId,
+                        stages: mergedStages,
+                        templateId: existing.templateId || p.templateId,
+                        templateName: existing.templateName || p.templateName,
+                      });
                     } else {
-                      // Incoming Firestore document is newer, but preserve existing stages if incoming stages are missing/empty
+                      // Incoming Firestore document is strictly newer
                       const mergedStages = (p.stages && p.stages.length > 0)
                         ? p.stages
                         : (existing.stages && existing.stages.length > 0 ? existing.stages : p.stages);
-                      map.set(p.id, { ...existing, ...p, stages: mergedStages });
+                      map.set(cleanId, {
+                        ...existing,
+                        ...p,
+                        id: cleanId,
+                        stages: mergedStages,
+                        templateId: p.templateId || existing.templateId,
+                        templateName: p.templateName || existing.templateName,
+                      });
                     }
                   } else {
-                    map.set(p.id, p);
+                    map.set(cleanId, p);
                   }
                 }
               });
