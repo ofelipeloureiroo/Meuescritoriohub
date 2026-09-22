@@ -2141,6 +2141,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const addClient = (clientData: Omit<Client, 'id' | 'createdAt' | 'totalBilled' | 'totalPaid' | 'pendingAmount' | 'projectsCount'>) => {
+    recordLocalMutation();
     const safeState = clientData.state ? clientData.state.toLowerCase() : 'br';
     const newClient: Client = {
       ...clientData,
@@ -2159,9 +2160,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Build and save client portal immediately to server & local storage
     const portal = buildClientPortalAccess(newClient, architectureProjects, architectProfile, null, projectMilestones);
     saveClientPortalAccess(portal).catch(() => {});
+
+    // Direct workspace Firestore sync
+    if (targetUid) {
+      const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
+      setDoc(workspaceDocRef, {
+        clients: updated,
+        updatedAt: new Date().toISOString()
+      }, { merge: true }).catch(console.error);
+    }
   };
 
   const updateClient = (id: string, updatedFields: Partial<Client>) => {
+    recordLocalMutation();
     const updated = clients.map((c) => (c.id === id ? { ...c, ...updatedFields } : c));
     setClients(updated);
     safeSetItem('clients', updated);
@@ -2169,6 +2180,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (target) {
       const portal = buildClientPortalAccess(target, architectureProjects, architectProfile, null, projectMilestones);
       saveClientPortalAccess(portal).catch(() => {});
+    }
+
+    // Direct workspace Firestore sync
+    if (targetUid) {
+      const workspaceDocRef = doc(db, 'users', targetUid, 'data', 'workspace');
+      setDoc(workspaceDocRef, {
+        clients: updated,
+        updatedAt: new Date().toISOString()
+      }, { merge: true }).catch(console.error);
     }
   };
 
