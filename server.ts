@@ -1454,6 +1454,16 @@ Retorne uma resposta JSON com o formato estrito:
 
   const getInitialSubscribers = () => [
     {
+      uid: 'sub_lfquadrosdecorativos',
+      email: 'lfquadrosdecorativos@gmail.com',
+      name: 'Carlos Felipe Carvalho',
+      role: 'admin',
+      status: 'active',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      inviteCode: 'MASTER',
+      notes: 'Gestor / Dono (Administrador / Gestor)',
+    },
+    {
       uid: 'sub_lainepaulaarq',
       email: 'lainepaulaarq@gmail.com',
       name: 'Laíne Paula Loureiro (LP Arquitetura)',
@@ -1484,9 +1494,24 @@ Retorne uma resposta JSON com o formato estrito:
         const raw = fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8');
         const list = JSON.parse(raw);
         if (Array.isArray(list) && list.length > 0) {
+          let updated = false;
+          const hasOwner = list.some(u => u.email?.toLowerCase().trim() === 'lfquadrosdecorativos@gmail.com');
+          if (!hasOwner) {
+            list.unshift({
+              uid: 'sub_lfquadrosdecorativos',
+              email: 'lfquadrosdecorativos@gmail.com',
+              name: 'Carlos Felipe Carvalho',
+              role: 'admin',
+              status: 'active',
+              createdAt: '2026-01-01T00:00:00.000Z',
+              inviteCode: 'MASTER',
+              notes: 'Gestor / Dono (Administrador / Gestor)',
+            });
+            updated = true;
+          }
           const hasLaine = list.some(u => u.email?.toLowerCase().trim() === 'lainepaulaarq@gmail.com');
           if (!hasLaine) {
-            list.unshift({
+            list.push({
               uid: 'sub_lainepaulaarq',
               email: 'lainepaulaarq@gmail.com',
               name: 'Laíne Paula Loureiro (LP Arquitetura)',
@@ -1497,6 +1522,9 @@ Retorne uma resposta JSON com o formato estrito:
               inviteCode: 'LAINEP',
               notes: 'Arquiteta Titular / Assinante Oficial da Plataforma',
             });
+            updated = true;
+          }
+          if (updated) {
             saveSubscribersToFile(list);
           }
           return list;

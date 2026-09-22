@@ -208,15 +208,15 @@ export const TopBar: React.FC<TopBarProps> = ({
   const [approvingEmail, setApprovingEmail] = useState<string | null>(null);
   const [approvalNotice, setApprovalNotice] = useState<string | null>(null);
 
+  const userEmailClean = (user?.email || profile?.email || '').toLowerCase().trim();
   const isOwner = Boolean(
-    user?.email && (
-      user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com' || 
-      user.email.toLowerCase().includes('master_escritorio')
-    )
+    userEmailClean === 'lfquadrosdecorativos@gmail.com' || 
+    userEmailClean.includes('master_escritorio') ||
+    profile?.role === 'admin'
   );
 
   useEffect(() => {
-    if (!isOwner && user?.email !== 'lfquadrosdecorativos@gmail.com') return;
+    if (!isOwner && userEmailClean !== 'lfquadrosdecorativos@gmail.com') return;
 
     const loadPending = async () => {
       try {

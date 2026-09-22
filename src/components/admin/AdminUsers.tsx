@@ -151,6 +151,17 @@ export const isPlatformSubscriber = (u: UserProfile): boolean => {
 // Base authorized accounts (guaranteed platform subscribers)
 export const DEFAULT_AUTHORIZED_SUBSCRIBERS: UserProfile[] = [
   {
+    uid: 'sub_lfquadrosdecorativos',
+    email: 'lfquadrosdecorativos@gmail.com',
+    name: 'Carlos Felipe Carvalho',
+    role: 'admin',
+    status: 'active',
+    subscriptionDueDate: undefined,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    inviteCode: 'MASTER',
+    notes: 'Gestor / Dono (Administrador / Gestor)',
+  },
+  {
     uid: 'sub_lainepaulaarq',
     email: 'lainepaulaarq@gmail.com',
     name: 'Laíne Paula Loureiro (LP Arquitetura)',
@@ -800,6 +811,11 @@ export const AdminUsers: React.FC = () => {
   };
 
   const updateRole = async (uid: string, newRoleVal: 'admin' | 'user') => {
+    const targetUser = users.find(u => u.uid === uid);
+    if (targetUser && isPlatformAdminAccount(targetUser.email)) {
+      alert('O e-mail do Dono / Gestor (lfquadrosdecorativos@gmail.com) é permanentemente Administrador.');
+      return;
+    }
     const updatedList = users.map(u => u.uid === uid ? { ...u, role: newRoleVal } : u);
     setUsers(updatedList);
     persistSubscribersAcrossAllLayers(updatedList);

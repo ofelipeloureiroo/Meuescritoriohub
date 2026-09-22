@@ -136,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         unsubscribeProfile = onSnapshot(docRef, async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
-            if (data.joinedOwnerUid) {
+            if (data.joinedOwnerUid && !isOwnerAccount) {
               if (unsubscribeOwnerProfile) unsubscribeOwnerProfile();
               const ownerRef = doc(db, 'users', data.joinedOwnerUid);
               unsubscribeOwnerProfile = onSnapshot(ownerRef, (ownerSnap) => {
@@ -154,10 +154,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } else {
               const isMaster =
                 isOwnerAccount ||
-                (data.email && data.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com');
+                (data.email && data.email.toLowerCase().trim() === 'lfquadrosdecorativos@gmail.com');
               setProfile((prev) => ({
                 ...prev,
                 ...data,
+                joinedOwnerUid: undefined,
                 role: isMaster ? 'admin' : data.role || 'user',
                 status: 'active',
               }));
@@ -211,6 +212,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } else {
               setDoc(userDocRef, sanitizeFirestoreData({
                 email: userEmail || snap.data()?.email,
+                role: isMaster ? 'admin' : (snap.data()?.role || 'user'),
+                status: isMaster ? 'active' : (snap.data()?.status || 'active'),
+                ...(isMaster ? { joinedOwnerUid: null } : {}),
                 updatedAt: new Date().toISOString()
               }), { merge: true }).catch(console.warn);
             }
@@ -466,11 +470,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const currentEmail = (user?.email || profile?.email || '').toLowerCase().trim();
   const isOwner = Boolean(
-    (user?.email && user.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com') ||
-    (profile?.email && profile.email.toLowerCase() === 'lfquadrosdecorativos@gmail.com')
+    currentEmail === 'lfquadrosdecorativos@gmail.com' ||
+    currentEmail.includes('master_escritorio') ||
+    profile?.role === 'admin'
   );
-  const isAdmin = true;
+  const isAdmin = isOwner || profile?.role === 'admin';
 
   return (
     <AuthContext.Provider value={{ 
