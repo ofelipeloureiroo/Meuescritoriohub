@@ -44,7 +44,7 @@ import { CashActionModal } from './components/modals/CashActionModal';
 import { SettingsModal } from './components/modals/SettingsModal';
 import { SupportChatWidget } from './components/support/SupportChatWidget';
 
-import { Building2, LogOut, Shield, Loader2, Lock } from 'lucide-react';
+import { Building2, LogOut, Shield, Loader2, Lock, Timer } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from './lib/firebase';
 
@@ -219,6 +219,17 @@ const AppContent: React.FC = () => {
       <TransferModal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} />
       <CashActionModal isOpen={isCashModalOpen} onClose={() => setIsCashModalOpen(false)} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      
+      {/* Fixed Side / Bottom-Right Button for Time Tracker */}
+      <button
+        onClick={() => setActiveTab('time_tracker')}
+        className="fixed bottom-20 right-6 z-40 bg-[#8c7456] hover:bg-[#786146] text-white p-3.5 rounded-2xl shadow-xl flex items-center gap-2.5 transition-all cursor-pointer group"
+        title="Abrir Rastreador de Tempo"
+      >
+        <Timer className="w-5 h-5 transition-transform group-hover:scale-110" />
+        <span className="text-xs font-bold hidden sm:inline pr-1">Rastreador de Tempo</span>
+      </button>
+
       <SupportChatWidget />
     </div>
   );

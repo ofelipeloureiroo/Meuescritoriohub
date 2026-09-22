@@ -30,6 +30,7 @@ import {
   LayoutDashboard,
   Sun,
   Moon,
+  Timer,
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
@@ -169,7 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {
           id: 'time_tracker',
           label: 'Rastreador de Tempo',
-          icon: Clock,
+          icon: Timer,
           badge: 'Novo',
           visible: !isCollaborator || !permissions || permissions.projects !== false,
         },

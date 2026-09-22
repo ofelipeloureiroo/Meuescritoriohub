@@ -16,9 +16,15 @@ import {
   Plus,
   RefreshCw,
   Search,
-  Check
+  Check,
+  User,
+  BarChart3,
+  CalendarDays,
+  FileText,
+  Timer
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
+import { useAuth } from '../../context/AuthContext';
 import { ArchitectureProject, ProjectWorkflowStage } from '../../types';
 
 interface TimeEntry {
@@ -35,10 +41,14 @@ interface TimeEntry {
   endTime: string;
   billable: boolean;
   hourlyRate: number;
+  responsibleName: string;
 }
 
 export const TimeTrackerTab: React.FC = () => {
   const { ongoingArchitectureProjects } = useFinance();
+  const { user, profile } = useAuth();
+
+  const currentUserName = profile?.name || user?.email || 'Arquiteto(a) Responsável';
 
   // Active Timer state
   const [description, setDescription] = useState('');
@@ -46,17 +56,21 @@ export const TimeTrackerTab: React.FC = () => {
   const [selectedStageName, setSelectedStageName] = useState<string>('');
   const [selectedTaskName, setSelectedTaskName] = useState<string>('');
   const [billable, setBillable] = useState(true);
-  const [hourlyRate, setHourlyRate] = useState<number>(150); // default hourly rate in R$
+  const [hourlyRate, setHourlyRate] = useState<number>(150);
 
   // Timer running state
   const [isRunning, setIsRunning] = useState(false);
   const [secondsElapsed, setSecondsElapsed] = useState(0);
   const [startTimeString, setStartTimeString] = useState<string>('');
 
+  // Sub-tab: 'entries' | 'report'
+  const [activeSubTab, setActiveSubTab] = useState<'entries' | 'report'>('entries');
+  const [reportDateFilter, setReportDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('week');
+
   // Saved Time Entries state
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>(() => {
     try {
-      const saved = localStorage.getItem('meu_escritorio_time_entries_v1');
+      const saved = localStorage.getItem('meu_escritorio_time_entries_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed;
@@ -76,7 +90,8 @@ export const TimeTrackerTab: React.FC = () => {
         startTime: '14:00',
         endTime: '15:30',
         billable: true,
-        hourlyRate: 150
+        hourlyRate: 150,
+        responsibleName: currentUserName
       },
       {
         id: 'entry-2',
@@ -91,7 +106,8 @@ export const TimeTrackerTab: React.FC = () => {
         startTime: '10:00',
         endTime: '12:00',
         billable: true,
-        hourlyRate: 180
+        hourlyRate: 180,
+        responsibleName: currentUserName
       }
     ];
   });
@@ -103,7 +119,7 @@ export const TimeTrackerTab: React.FC = () => {
   // Persist time entries
   useEffect(() => {
     try {
-      localStorage.setItem('meu_escritorio_time_entries_v1', JSON.stringify(timeEntries));
+      localStorage.setItem('meu_escritorio_time_entries_v2', JSON.stringify(timeEntries));
     } catch {}
   }, [timeEntries]);
 
@@ -144,11 +160,6 @@ export const TimeTrackerTab: React.FC = () => {
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const formatHoursShort = (totalSeconds: number) => {
-    const hours = (totalSeconds / 3600).toFixed(1);
-    return `${hours}h`;
   };
 
   const handleStartTimer = () => {
@@ -195,7 +206,8 @@ export const TimeTrackerTab: React.FC = () => {
       startTime: startTimeString || '09:00',
       endTime: endTimeString,
       billable,
-      hourlyRate
+      hourlyRate,
+      responsibleName: currentUserName
     };
 
     setTimeEntries([newEntry, ...timeEntries]);
@@ -212,7 +224,7 @@ export const TimeTrackerTab: React.FC = () => {
     }
   };
 
-  // Calculations
+  // Calculations for Today
   const totalSecondsToday = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     return timeEntries
@@ -229,20 +241,67 @@ export const TimeTrackerTab: React.FC = () => {
     return loggedSum + activeSum;
   }, [timeEntries, isRunning, secondsElapsed, billable, hourlyRate]);
 
+  // Filtered entries for report
+  const filteredReportEntries = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0];
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0];
+
+    return timeEntries.filter((e) => {
+      if (reportDateFilter === 'today') return e.date === todayStr;
+      if (reportDateFilter === 'week') return e.date >= sevenDaysAgo;
+      if (reportDateFilter === 'month') return e.date >= thirtyDaysAgo;
+      return true; // 'all'
+    });
+  }, [timeEntries, reportDateFilter]);
+
+  const reportTotals = useMemo(() => {
+    let totalSeconds = filteredReportEntries.reduce((acc, curr) => acc + curr.durationSeconds, 0);
+    let billableSeconds = filteredReportEntries.filter((e) => e.billable).reduce((acc, curr) => acc + curr.durationSeconds, 0);
+    let totalAmount = filteredReportEntries.filter((e) => e.billable).reduce((acc, curr) => acc + (curr.durationSeconds / 3600) * curr.hourlyRate, 0);
+
+    // Group by project
+    const byProject: Record<string, { title: string; client: string; seconds: number; amount: number }> = {};
+    filteredReportEntries.forEach((e) => {
+      if (!byProject[e.projectId]) {
+        byProject[e.projectId] = { title: e.projectTitle, client: e.clientName, seconds: 0, amount: 0 };
+      }
+      byProject[e.projectId].seconds += e.durationSeconds;
+      if (e.billable) {
+        byProject[e.projectId].amount += (e.durationSeconds / 3600) * e.hourlyRate;
+      }
+    });
+
+    // Group by responsible person
+    const byPerson: Record<string, { seconds: number; count: number }> = {};
+    filteredReportEntries.forEach((e) => {
+      const person = e.responsibleName || 'Arquiteto(a)';
+      if (!byPerson[person]) {
+        byPerson[person] = { seconds: 0, count: 0 };
+      }
+      byPerson[person].seconds += e.durationSeconds;
+      byPerson[person].count += 1;
+    });
+
+    return { totalSeconds, billableSeconds, totalAmount, byProject: Object.values(byProject), byPerson: Object.entries(byPerson) };
+  }, [filteredReportEntries]);
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header Title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-zinc-200/80 shadow-2xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full bg-[#faf7f2] border border-[#e2d2bd] text-[#8c7456] text-xs font-bold uppercase tracking-wider">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#faf7f2] border border-[#e2d2bd] text-[#8c7456] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <Timer className="w-3.5 h-3.5 text-[#8c7456]" />
               Produtividade & Faturamento
             </span>
-            <span className="text-xs text-zinc-400 font-medium">• Tempo Real</span>
+            <span className="text-xs text-zinc-400 font-medium">• Responsável: <strong className="text-zinc-700">{currentUserName}</strong></span>
           </div>
-          <h1 className="text-2xl font-serif font-extrabold text-zinc-900">Rastreador de Tempo</h1>
+          <h1 className="text-2xl font-serif font-extrabold text-zinc-900">Rastreador de Tempo & Cronograma</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registre as horas trabalhadas em cada projeto e escolha diretamente as etapas do cronograma do escritório.
+            Registre horas trabalhadas por projeto, acompanhe cronogramas e gere relatórios detalhados de faturamento.
           </p>
         </div>
 
@@ -348,54 +407,60 @@ export const TimeTrackerTab: React.FC = () => {
         <div className="relative min-w-[200px]">
           <button
             type="button"
-            disabled={!selectedProjectId}
             onClick={() => {
-              if (selectedProjectId) {
-                setIsStageDropdownOpen(!isStageDropdownOpen);
-                setIsProjectDropdownOpen(false);
+              if (!selectedProjectId) {
+                alert('Selecione um projeto primeiro para escolher a etapa.');
+                return;
               }
+              setIsStageDropdownOpen(!isStageDropdownOpen);
+              setIsProjectDropdownOpen(false);
             }}
-            className={`w-full px-4 py-3 rounded-xl border text-xs font-medium flex items-center justify-between gap-2 transition-all ${
-              selectedProjectId
-                ? 'bg-zinc-50 border-zinc-200 text-zinc-800 hover:bg-zinc-100 cursor-pointer'
-                : 'bg-zinc-100 border-zinc-200 text-zinc-400 cursor-not-allowed'
-            }`}
+            className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-800 font-medium flex items-center justify-between gap-2 hover:bg-zinc-100 transition-all cursor-pointer"
           >
             <div className="flex items-center gap-2 truncate">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span className="truncate">{selectedStageName || (selectedProjectId ? 'Selecionar Etapa do Cronograma' : 'Selecione o Projeto')}</span>
+              <CheckCircle2 className="w-4 h-4 text-[#8c7456] shrink-0" />
+              <span className="truncate">
+                {selectedStageName ? selectedStageName : 'Selecionar Etapa...'}
+              </span>
             </div>
             <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0" />
           </button>
 
-          {isStageDropdownOpen && availableStages.length > 0 && (
+          {isStageDropdownOpen && (
             <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-2xl border border-zinc-200 shadow-xl z-50 p-2 space-y-1 max-h-[300px] overflow-y-auto">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider px-2 py-1 block">
-                Etapas do Cronograma
-              </span>
-              {availableStages.map((stage) => (
+              {availableStages.map((stg) => (
                 <button
-                  key={stage.id}
+                  key={stg.name}
                   type="button"
                   onClick={() => {
-                    setSelectedStageName(stage.name);
-                    setSelectedTaskName('');
+                    setSelectedStageName(stg.name);
                     setIsStageDropdownOpen(false);
                   }}
                   className={`w-full text-left p-2.5 rounded-xl text-xs transition-all flex items-center justify-between gap-2 cursor-pointer ${
-                    selectedStageName === stage.name ? 'bg-[#faf7f2] font-bold text-[#8c7456]' : 'hover:bg-zinc-50 text-zinc-700'
+                    selectedStageName === stg.name ? 'bg-[#faf7f2] font-bold text-[#8c7456]' : 'hover:bg-zinc-50 text-zinc-700'
                   }`}
                 >
-                  <span className="truncate">{stage.name}</span>
-                  {selectedStageName === stage.name && <Check className="w-4 h-4 text-[#8c7456]" />}
+                  <span className="truncate">{stg.name}</span>
+                  {selectedStageName === stg.name && <Check className="w-3.5 h-3.5 text-[#8c7456]" />}
                 </button>
               ))}
+              {availableStages.length === 0 && (
+                <p className="text-center py-4 text-xs text-zinc-400">Este projeto não possui etapas cadastradas.</p>
+              )}
             </div>
           )}
         </div>
 
-        {/* Billable & Hourly Rate Toggle */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl">
+        {/* Responsible Person badge (Same as login) */}
+        <div className="hidden xl:flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-600">
+          <User className="w-3.5 h-3.5 text-[#8c7456]" />
+          <span className="font-medium truncate max-w-[130px]" title={currentUserName}>
+            {currentUserName}
+          </span>
+        </div>
+
+        {/* Billable toggle */}
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setBillable(!billable)}
@@ -447,84 +512,254 @@ export const TimeTrackerTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Time Entries History Table */}
-      <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-2xs overflow-hidden">
-        <div className="p-5 border-b border-zinc-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-serif font-bold text-zinc-900">Histórico de Tempo Registrado</h2>
-            <p className="text-xs text-zinc-500">Todas as horas apontadas em projetos e etapas do escritório.</p>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <Calendar className="w-4 h-4 text-[#8c7456]" />
-            <span>Total de registros: {timeEntries.length}</span>
-          </div>
-        </div>
+      {/* Navigation Sub-Tabs: Histórico de Registros | Relatórios & Cronograma */}
+      <div className="flex border-b border-zinc-200 gap-6">
+        <button
+          onClick={() => setActiveSubTab('entries')}
+          className={`pb-3 text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer border-b-2 ${
+            activeSubTab === 'entries'
+              ? 'border-[#8c7456] text-[#8c7456]'
+              : 'border-transparent text-zinc-500 hover:text-zinc-900'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Histórico de Registros ({timeEntries.length})</span>
+        </button>
+        <button
+          onClick={() => setActiveSubTab('report')}
+          className={`pb-3 text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer border-b-2 ${
+            activeSubTab === 'report'
+              ? 'border-[#8c7456] text-[#8c7456]'
+              : 'border-transparent text-zinc-500 hover:text-zinc-900'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" />
+          <span>Relatórios & Cronograma de Horas</span>
+        </button>
+      </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#faf7f2] text-zinc-500 uppercase font-semibold border-b border-zinc-200">
-              <tr>
-                <th className="py-3 px-4">Projeto & Cliente</th>
-                <th className="py-3 px-4">Etapa do Cronograma</th>
-                <th className="py-3 px-4">Descrição da Atividade</th>
-                <th className="py-3 px-4">Data & Horário</th>
-                <th className="py-3 px-4 text-center">Duração</th>
-                <th className="py-3 px-4 text-right">Valor Est.</th>
-                <th className="py-3 px-4 text-center">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {timeEntries.map((entry) => {
-                const estValue = entry.billable ? (entry.durationSeconds / 3600) * entry.hourlyRate : 0;
-                return (
-                  <tr key={entry.id} className="hover:bg-zinc-50/80 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-zinc-900">{entry.projectTitle}</div>
-                      <div className="text-[10px] text-zinc-500">{entry.clientName}</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-800 font-medium text-[11px]">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#8c7456]" />
-                        {entry.stageName}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-zinc-700 max-w-xs truncate" title={entry.description}>
-                      {entry.description}
-                    </td>
-                    <td className="py-3.5 px-4 text-zinc-500">
-                      <div>{new Date(entry.date + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
-                      <div className="text-[10px] text-zinc-400">{entry.startTime} - {entry.endTime}</div>
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-mono font-bold text-zinc-900">
-                      {formatTime(entry.durationSeconds)}
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-mono font-extrabold text-emerald-700">
-                      {entry.billable ? `R$ ${estValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteEntry(entry.id)}
-                        className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
-                        title="Excluir registro"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+      {/* SUB-TAB 1: ENTRIES HISTORY */}
+      {activeSubTab === 'entries' && (
+        <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-2xs overflow-hidden">
+          <div className="p-5 border-b border-zinc-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-serif font-bold text-zinc-900">Histórico de Tempo Registrado</h2>
+              <p className="text-xs text-zinc-500">Todas as horas apontadas em projetos e etapas do escritório por responsável.</p>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <Calendar className="w-4 h-4 text-[#8c7456]" />
+              <span>Total de registros: {timeEntries.length}</span>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#faf7f2] text-zinc-500 uppercase font-semibold border-b border-zinc-200">
+                <tr>
+                  <th className="py-3 px-4">Projeto & Cliente</th>
+                  <th className="py-3 px-4">Etapa do Cronograma</th>
+                  <th className="py-3 px-4">Responsável</th>
+                  <th className="py-3 px-4">Descrição da Atividade</th>
+                  <th className="py-3 px-4">Data & Horário</th>
+                  <th className="py-3 px-4 text-center">Duração</th>
+                  <th className="py-3 px-4 text-right">Valor Est.</th>
+                  <th className="py-3 px-4 text-center">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100">
+                {timeEntries.map((entry) => {
+                  const estValue = entry.billable ? (entry.durationSeconds / 3600) * entry.hourlyRate : 0;
+                  return (
+                    <tr key={entry.id} className="hover:bg-zinc-50/80 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-zinc-900">{entry.projectTitle}</div>
+                        <div className="text-[10px] text-zinc-500">{entry.clientName}</div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-800 font-medium text-[11px]">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#8c7456]" />
+                          {entry.stageName}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#faf7f2] text-[#8c7456] font-semibold text-[11px]">
+                          <User className="w-3 h-3" />
+                          {entry.responsibleName || currentUserName}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-zinc-700 max-w-xs truncate" title={entry.description}>
+                        {entry.description}
+                      </td>
+                      <td className="py-3.5 px-4 text-zinc-500">
+                        <div>{new Date(entry.date + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
+                        <div className="text-[10px] text-zinc-400">{entry.startTime} - {entry.endTime}</div>
+                      </td>
+                      <td className="py-3.5 px-4 text-center font-mono font-bold text-zinc-900">
+                        {formatTime(entry.durationSeconds)}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono font-extrabold text-emerald-700">
+                        {entry.billable ? `R$ ${estValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteEntry(entry.id)}
+                          className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+                          title="Excluir registro"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {timeEntries.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="text-center py-12 text-zinc-400">
+                      Nenhum registro de tempo efetuado ainda. Inicie o cronômetro acima para registrar suas horas!
                     </td>
                   </tr>
-                );
-              })}
-              {timeEntries.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="text-center py-12 text-zinc-400">
-                    Nenhum registro de tempo efetuado ainda. Inicie o cronômetro acima para registrar suas horas!
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* SUB-TAB 2: REPORT & SCHEDULE */}
+      {activeSubTab === 'report' && (
+        <div className="space-y-6">
+          {/* Filter Bar */}
+          <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-xs font-bold text-zinc-700">
+              <CalendarDays className="w-4 h-4 text-[#8c7456]" />
+              <span>Período do Relatório:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {[
+                { id: 'today', label: 'Hoje' },
+                { id: 'week', label: 'Últimos 7 dias' },
+                { id: 'month', label: 'Últimos 30 dias' },
+                { id: 'all', label: 'Todo o Período' }
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setReportDateFilter(f.id as any)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    reportDateFilter === f.id
+                      ? 'bg-[#8c7456] text-white shadow-sm'
+                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Report Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-2xs">
+              <span className="text-xs uppercase tracking-wider font-bold text-zinc-400 block mb-1">Total de Horas no Período</span>
+              <div className="text-2xl font-serif font-extrabold text-zinc-900 font-mono">
+                {(reportTotals.totalSeconds / 3600).toFixed(1)}h
+              </div>
+              <span className="text-[11px] text-zinc-500 mt-1 block">
+                {filteredReportEntries.length} apontamentos registrados
+              </span>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-2xs">
+              <span className="text-xs uppercase tracking-wider font-bold text-emerald-600 block mb-1">Horas Faturáveis</span>
+              <div className="text-2xl font-serif font-extrabold text-emerald-800 font-mono">
+                {(reportTotals.billableSeconds / 3600).toFixed(1)}h
+              </div>
+              <span className="text-[11px] text-emerald-600 mt-1 block">
+                {Math.round((reportTotals.billableSeconds / (reportTotals.totalSeconds || 1)) * 100)}% do total trabalhado
+              </span>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-2xs">
+              <span className="text-xs uppercase tracking-wider font-bold text-[#8c7456] block mb-1">Valor Estimado (Faturável)</span>
+              <div className="text-2xl font-serif font-extrabold text-[#8c7456] font-mono">
+                R$ {reportTotals.totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <span className="text-[11px] text-zinc-500 mt-1 block">
+                Baseado nos honorários por hora configurados
+              </span>
+            </div>
+          </div>
+
+          {/* Breakdown by Project & Responsible */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* By Project */}
+            <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xs space-y-4">
+              <h3 className="text-base font-serif font-bold text-zinc-900 flex items-center gap-2">
+                <FolderOpen className="w-4 h-4 text-[#8c7456]" />
+                <span>Distribuição por Projeto</span>
+              </h3>
+              <div className="space-y-3">
+                {reportTotals.byProject.map((proj, idx) => {
+                  const hours = (proj.seconds / 3600).toFixed(1);
+                  const percent = reportTotals.totalSeconds ? Math.round((proj.seconds / reportTotals.totalSeconds) * 100) : 0;
+                  return (
+                    <div key={idx} className="bg-zinc-50 p-3.5 rounded-xl border border-zinc-200 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <div>
+                          <span className="font-bold text-zinc-900 block">{proj.title}</span>
+                          <span className="text-[10px] text-zinc-500">{proj.client}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-mono font-bold text-zinc-900">{hours}h</span>
+                          <span className="text-[10px] text-emerald-700 block font-semibold">R$ {proj.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-zinc-200 h-2 rounded-full overflow-hidden">
+                        <div className="bg-[#8c7456] h-full rounded-full" style={{ width: `${Math.max(5, percent)}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                {reportTotals.byProject.length === 0 && (
+                  <p className="text-center py-6 text-xs text-zinc-400">Nenhum dado no período selecionado.</p>
+                )}
+              </div>
+            </div>
+
+            {/* By Responsible Person */}
+            <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xs space-y-4">
+              <h3 className="text-base font-serif font-bold text-zinc-900 flex items-center gap-2">
+                <User className="w-4 h-4 text-[#8c7456]" />
+                <span>Distribuição por Responsável (Equipe)</span>
+              </h3>
+              <div className="space-y-3">
+                {reportTotals.byPerson.map(([person, data], idx) => {
+                  const hours = (data.seconds / 3600).toFixed(1);
+                  return (
+                    <div key={idx} className="bg-zinc-50 p-4 rounded-xl border border-zinc-200 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-[#faf7f2] border border-[#e2d2bd] text-[#8c7456] flex items-center justify-center font-bold text-xs">
+                          {person.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <span className="font-bold text-zinc-900 text-xs block">{person}</span>
+                          <span className="text-[11px] text-zinc-500">{data.count} apontamentos registrados</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-mono font-extrabold text-sm text-zinc-900">{hours}h</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {reportTotals.byPerson.length === 0 && (
+                  <p className="text-center py-6 text-xs text-zinc-400">Nenhum registro de equipe no período.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
