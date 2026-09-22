@@ -2605,15 +2605,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const activeUid = targetUid || (isOwner ? CANONICAL_OWNER_UID : (user?.uid || 'guest'));
     if (activeUid) {
+      // Filter out deleted projects before syncing
+      const activeProjects = updatedArch.filter(p => !p.deletedAt);
+      
       // Strip any undefined fields so Firestore setDoc never throws unsupported field value error
       const cleanPayload = JSON.parse(JSON.stringify({
-        architectureProjects: updatedArch,
+        architectureProjects: activeProjects,
         ...extraPayload,
         updatedAt: new Date().toISOString()
       }));
 
       const workspaceDocRef = doc(db, 'users', activeUid, 'data', 'workspace');
-      console.log('Syncing architecture projects to Firestore:', activeUid);
+      console.log('Syncing active architecture projects to Firestore:', activeUid);
       setDoc(workspaceDocRef, cleanPayload, { merge: true }).catch(err => console.error('Firestore sync error:', err));
 
       if (isOwner) {
