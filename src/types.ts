@@ -428,6 +428,7 @@ export interface ArchitectureProject {
   closingDate?: string;
   stages?: ProjectWorkflowStage[];
   linkedClients?: ProjectLinkedClient[];
+  deletedAt?: string;
   memorialItems?: MemorialItem[];
 }
 

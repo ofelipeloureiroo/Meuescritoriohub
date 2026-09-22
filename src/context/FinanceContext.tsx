@@ -368,7 +368,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
       const parsed = JSON.parse(savedUserProjects);
       if (Array.isArray(parsed)) {
         parsed.forEach((p: any) => {
-          if (p && p.id && !isDemoProject(p)) {
+          if (p && p.id && !isDemoProject(p) && !p.deletedAt) {
             recoveredProjectsMap.set(p.id, p);
           }
         });
@@ -386,7 +386,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
             parsed.forEach((p: any) => {
-              if (p && p.id && !isDemoProject(p) && !recoveredProjectsMap.has(p.id)) {
+              if (p && p.id && !isDemoProject(p) && !p.deletedAt && !recoveredProjectsMap.has(p.id)) {
                 recoveredProjectsMap.set(p.id, p);
               }
             });
@@ -420,7 +420,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
             parsed.forEach((p: any) => {
-              if (p && p.id && !isDemoProject(p)) {
+              if (p && p.id && !isDemoProject(p) && !p.deletedAt) {
                 if (isLaine || isOwnerUid) {
                   if (!recoveredProjectsMap.has(p.id)) {
                     recoveredProjectsMap.set(p.id, p);
@@ -444,7 +444,7 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
               const parsed = JSON.parse(raw);
               if (Array.isArray(parsed)) {
                 parsed.forEach((p: any) => {
-                  if (p && p.id && !isDemoProject(p)) {
+                  if (p && p.id && !isDemoProject(p) && !p.deletedAt) {
                     if (isLaine || isOwnerUid) {
                       if (!recoveredProjectsMap.has(p.id)) {
                         recoveredProjectsMap.set(p.id, p);
@@ -1644,16 +1644,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
               });
 
               const merged = Array.from(map.values());
-              // Remove projects not present in incoming data if they were marked as deleted locally
-              // This is a simplified fix; ideally Firestore should manage the source of truth better.
-              // We only remove if the project was NOT in cleanIncoming but was present in local map
-              const finalMerged = merged.filter(p => {
-                // If it was in incoming, keep it
-                const inIncoming = cleanIncoming.some((inc: any) => inc.id === p.id);
-                if (inIncoming) return true;
-                // If not in incoming, it means it was deleted on the server, so we should remove it locally
-                return false;
-              });
+              // Keep only projects that are not marked as deleted
+              const finalMerged = merged.filter(p => !p.deletedAt);
 
               safeSetItem('architecture_projects', finalMerged);
 
@@ -2680,8 +2672,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deleteArchitectureProject = (id: string) => {
     console.log('Attempting to delete project:', id);
     recordLocalMutation();
-    const updatedArchProjects = architectureProjects.filter((p) => p.id !== id);
-    console.log('Projects after filter:', updatedArchProjects.length);
+    const updatedArchProjects = architectureProjects.map((p) => 
+      p.id === id ? { ...p, deletedAt: new Date().toISOString() } : p
+    );
+    console.log('Projects marked as deleted:', id);
 
     const updatedMilestones = projectMilestones.filter((m) => m.projectId !== id);
     setProjectMilestones(updatedMilestones);
@@ -2702,7 +2696,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Update projects count for remaining clients
     const updatedClients = clients.map((c) => {
       const remainingProjects = updatedArchProjects.filter(
-        (p) => p.clientId === c.id || (p.clientName && p.clientName.trim().toLowerCase() === c.name.trim().toLowerCase())
+        (p) => (p.clientId === c.id || (p.clientName && p.clientName.trim().toLowerCase() === c.name.trim().toLowerCase())) && !p.deletedAt
       );
       return {
         ...c,
