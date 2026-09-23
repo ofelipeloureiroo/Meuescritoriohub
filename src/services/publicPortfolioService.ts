@@ -137,6 +137,77 @@ export function buildPublicPortfolioData(
   };
 }
 
+export function resolveLocalProfileAndProjects(): {
+  profile: Partial<ArchitectProfile>;
+  projects: ArchitectureProject[];
+  clientsCount: number;
+} {
+  let profile: Partial<ArchitectProfile> = {};
+  let projects: ArchitectureProject[] = [];
+  let clientsCount = 0;
+
+  const profileKeys = [
+    'office_persistent_profile',
+    'office_active_profile',
+    'office_v2_lfquadrosdecorativos_profile',
+    'profile',
+    'architectProfile',
+  ];
+
+  for (const key of profileKeys) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && (parsed.name || parsed.title || parsed.specialty || parsed.photoUrl)) {
+          profile = { ...profile, ...parsed };
+          break;
+        }
+      }
+    } catch {}
+  }
+
+  const projectKeys = [
+    'office_persistent_architectureProjects',
+    'office_v2_lfquadrosdecorativos_architectureProjects',
+    'architectureProjects',
+  ];
+
+  for (const key of projectKeys) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          projects = parsed;
+          break;
+        }
+      }
+    } catch {}
+  }
+
+  const clientKeys = [
+    'office_persistent_clients',
+    'office_v2_lfquadrosdecorativos_clients',
+    'clients',
+  ];
+
+  for (const key of clientKeys) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          clientsCount = parsed.length;
+          break;
+        }
+      }
+    } catch {}
+  }
+
+  return { profile, projects, clientsCount };
+}
+
 export async function publishPortfolioToFirestore(portfolioData: PublicPortfolioData): Promise<boolean> {
   try {
     if (!portfolioData.userId) return false;
@@ -160,50 +231,62 @@ export async function publishPortfolioToFirestore(portfolioData: PublicPortfolio
   }
 }
 
-export async function fetchPublicPortfolio(userIdOrSlug: string): Promise<PublicPortfolioData | null> {
+export async function fetchPublicPortfolio(userIdOrSlug?: string | null): Promise<PublicPortfolioData | null> {
   try {
     const cleanId = (userIdOrSlug || '').trim();
-    if (!cleanId) return null;
 
-    // 1. Try local cache first for instant load
+    // 1. Try local cache by specific ID
+    if (cleanId) {
+      try {
+        const cached = localStorage.getItem(`${LOCAL_STORAGE_PORTFOLIO_KEY_PREFIX}${cleanId}`);
+        if (cached) {
+          return JSON.parse(cached);
+        }
+      } catch {}
+
+      // 2. Try Firestore by Doc ID (User ID)
+      try {
+        const docRef = doc(db, 'public_portfolios', cleanId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data() as PublicPortfolioData;
+          try {
+            localStorage.setItem(`${LOCAL_STORAGE_PORTFOLIO_KEY_PREFIX}${cleanId}`, JSON.stringify(data));
+          } catch {}
+          return data;
+        }
+      } catch (err) {
+        console.warn('Firestore fetch portfolio warning:', err);
+      }
+    }
+
+    // 3. Fallback: check general last published portfolio in localStorage
     try {
-      const cached = localStorage.getItem(`${LOCAL_STORAGE_PORTFOLIO_KEY_PREFIX}${cleanId}`) ||
-                     localStorage.getItem('last_published_public_portfolio');
-      if (cached) {
-        const parsed: PublicPortfolioData = JSON.parse(cached);
-        if (parsed.userId === cleanId || parsed.slug === cleanId || cleanId === 'demo') {
+      const last = localStorage.getItem('last_published_public_portfolio');
+      if (last) {
+        const parsed = JSON.parse(last);
+        if (parsed && (parsed.officeName || (parsed.projects && parsed.projects.length > 0))) {
           return parsed;
         }
       }
     } catch {}
 
-    // 2. Try Firestore by Doc ID (User ID)
-    const docRef = doc(db, 'public_portfolios', cleanId);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data() as PublicPortfolioData;
-      try {
-        localStorage.setItem(`${LOCAL_STORAGE_PORTFOLIO_KEY_PREFIX}${cleanId}`, JSON.stringify(data));
-      } catch {}
-      return data;
+    // 4. Fallback: construct from local storage persistence keys
+    const local = resolveLocalProfileAndProjects();
+    if (local.profile && (local.profile.name || local.profile.photoUrl || local.projects.length > 0)) {
+      const generated = buildPublicPortfolioData(
+        cleanId || 'preview',
+        local.profile,
+        local.projects,
+        local.clientsCount
+      );
+      return generated;
     }
-
-    // Fallback: check general last published portfolio
-    try {
-      const last = localStorage.getItem('last_published_public_portfolio');
-      if (last) {
-        return JSON.parse(last);
-      }
-    } catch {}
 
     return null;
   } catch (error) {
     console.error('Error fetching public portfolio:', error);
-    // Fallback to local cache
-    try {
-      const last = localStorage.getItem('last_published_public_portfolio');
-      if (last) return JSON.parse(last);
-    } catch {}
-    return null;
+    const local = resolveLocalProfileAndProjects();
+    return buildPublicPortfolioData('preview', local.profile, local.projects, local.clientsCount);
   }
 }
