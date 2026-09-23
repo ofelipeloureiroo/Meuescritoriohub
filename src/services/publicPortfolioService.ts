@@ -56,18 +56,19 @@ const LOCAL_STORAGE_PORTFOLIO_KEY_PREFIX = 'public_portfolio_data_';
 
 export function buildPublicPortfolioData(
   userId: string,
-  profile: ArchitectProfile,
-  projects: ArchitectureProject[],
+  profile?: Partial<ArchitectProfile> | null,
+  projects?: ArchitectureProject[] | null,
   clientsCount: number = 0
 ): PublicPortfolioData {
-  const nicheKey = profile.niche || 'arquitetura';
-  const nicheConfig = NICHES[nicheKey] || NICHES.arquitetura;
+  const safeProfile = profile || {};
+  const nicheKey = (safeProfile.niche || 'arquitetura') as string;
+  const nicheConfig = NICHES[nicheKey as keyof typeof NICHES] || NICHES.arquitetura;
 
   // Filter and sanitize projects: ONLY non-sensitive visual and description info
   const publicProjects: PublicPortfolioProject[] = (projects || [])
-    .filter((p) => !p.deletedAt && (p.coverImage || (p.images && p.images.length > 0) || p.title))
+    .filter((p) => p && !p.deletedAt && (p.coverImage || (p.images && p.images.length > 0) || p.title))
     .map((p) => {
-      const catOption = nicheConfig.categories?.find((c) => c.value === p.category);
+      const catOption = nicheConfig?.categories?.find((c) => (c as any).value === p.category || (c as any).id === p.category);
       let year = '';
       if (p.deliveryDate) {
         year = p.deliveryDate.substring(0, 4);
@@ -76,11 +77,11 @@ export function buildPublicPortfolioData(
       }
 
       return {
-        id: p.id,
+        id: p.id || Math.random().toString(),
         title: p.title || 'Projeto',
         category: p.category || 'geral',
         categoryLabel: catOption?.label || p.category || 'Projeto',
-        location: p.location || profile.location || '',
+        location: p.location || safeProfile.location || '',
         state: p.state || '',
         coverImage: p.coverImage || (p.images && p.images[0]) || '',
         images: Array.isArray(p.images) ? p.images : [],
@@ -97,7 +98,7 @@ export function buildPublicPortfolioData(
 
   const totalM2 = publicProjects.reduce((acc, p) => acc + (p.areaM2 || 0), 0);
 
-  const cleanSlug = (profile.name || 'portfolio')
+  const cleanSlug = (safeProfile.name || 'portfolio')
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -106,29 +107,29 @@ export function buildPublicPortfolioData(
     .replace(/^-|-$/g, '');
 
   return {
-    userId,
+    userId: userId || 'preview',
     slug: cleanSlug || 'studio',
     updatedAt: new Date().toISOString(),
-    officeName: profile.name || 'Meu Escritório',
-    ownerName: profile.ownerName || '',
-    title: profile.title || 'Estúdio Profissional',
-    photoUrl: profile.photoUrl || '',
-    logoUrl: profile.logoUrl || '',
-    location: profile.location || 'Brasil • Atendimento Nacional',
-    specialty: profile.specialty || 'Design, Projetos e Criação',
-    tagline: profile.tagline || 'Soluções personalizadas e de alto padrão.',
-    description: profile.description || 'Atendimento profissional focado em excelência e qualidade.',
-    instagramHandle: profile.instagramHandle || '',
-    instagramUrl: profile.instagramUrl || '',
-    whatsapp: profile.whatsapp || profile.phone || '',
-    email: profile.email || '',
-    websiteUrl: profile.websiteUrl || '',
-    rating: profile.rating || 5.0,
-    followersCount: profile.followersCount || '',
+    officeName: safeProfile.name || 'Meu Escritório',
+    ownerName: safeProfile.ownerName || '',
+    title: safeProfile.title || 'Estúdio Profissional',
+    photoUrl: safeProfile.photoUrl || '',
+    logoUrl: safeProfile.logoUrl || '',
+    location: safeProfile.location || 'Brasil • Atendimento Nacional',
+    specialty: safeProfile.specialty || 'Design, Projetos e Criação',
+    tagline: safeProfile.tagline || 'Soluções personalizadas e de alto padrão.',
+    description: safeProfile.description || 'Atendimento profissional focado em excelência e qualidade.',
+    instagramHandle: safeProfile.instagramHandle || '',
+    instagramUrl: safeProfile.instagramUrl || '',
+    whatsapp: safeProfile.whatsapp || safeProfile.phone || '',
+    email: safeProfile.email || '',
+    websiteUrl: safeProfile.websiteUrl || '',
+    rating: safeProfile.rating || 5.0,
+    followersCount: safeProfile.followersCount || '',
     niche: nicheKey,
-    nicheLabel: nicheConfig.label || 'Design & Arquitetura',
-    themeColor: profile.themeColor || 'gold',
-    bgTheme: profile.bgTheme || 'light_cream',
+    nicheLabel: nicheConfig?.label || 'Design & Arquitetura',
+    themeColor: safeProfile.themeColor || 'gold',
+    bgTheme: safeProfile.bgTheme || 'light_cream',
     projectsCount: publicProjects.length,
     clientsCount: Math.max(clientsCount, publicProjects.length),
     totalM2: totalM2 > 0 ? totalM2 : undefined,

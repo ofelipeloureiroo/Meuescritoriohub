@@ -25,6 +25,7 @@ import {
   Plus,
   Search,
   Send,
+  Share2,
   Sparkles,
   Star,
   Trash2,
