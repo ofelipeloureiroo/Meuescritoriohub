@@ -71,6 +71,7 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
     architectureProjects,
     clients,
     projectInstallments,
+    workContracts,
     updateTransaction,
     deleteTransaction,
     updateProjectInstallment,
@@ -1226,15 +1227,65 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {architectureProjects.map((proj) => {
-                  const projTxs = transactions.filter((t) => t.projectId === proj.id);
-                  const projIncome = projTxs
-                    .filter((t) => t.type === 'income' && t.status === 'completed')
+                  const projTitleNorm = (proj.title || (proj as any).name || '').trim().toLowerCase();
+                  const projClientNorm = (proj.clientName || '').trim().toLowerCase();
+
+                  // 1. Transactions linked to project (by projectId, projectName or clientName)
+                  const projTxs = (transactions || []).filter((t) => {
+                    if (t.projectId && t.projectId === proj.id) return true;
+                    if (projTitleNorm && t.projectName && t.projectName.trim().toLowerCase() === projTitleNorm) return true;
+                    if (projClientNorm && t.clientName && t.clientName.trim().toLowerCase() === projClientNorm) return true;
+                    return false;
+                  });
+
+                  const txIncome = projTxs
+                    .filter((t) => t.type === 'income' && (t.status === 'completed' || !t.status))
                     .reduce((sum, t) => sum + t.amount, 0);
-                  const projExpenses = projTxs
-                    .filter((t) => t.type === 'expense' && t.status === 'completed')
+
+                  const txExpenses = projTxs
+                    .filter((t) => t.type === 'expense' && (t.status === 'completed' || !t.status))
                     .reduce((sum, t) => sum + t.amount, 0);
+
+                  // 2. Installments linked to project
+                  const instIncome = (projectInstallments || [])
+                    .filter(
+                      (inst) =>
+                        (inst.projectId === proj.id || (projTitleNorm && inst.projectName?.trim().toLowerCase() === projTitleNorm)) &&
+                        (inst.status === 'completed' || inst.status === 'paid')
+                    )
+                    .reduce((sum, inst) => sum + inst.amount, 0);
+
+                  // 3. Contracts linked to project
+                  const contractIncome = (workContracts || [])
+                    .filter(
+                      (wc) =>
+                        wc.projectId === proj.id ||
+                        (projTitleNorm && wc.projectTitle?.trim().toLowerCase() === projTitleNorm) ||
+                        (projClientNorm && wc.clientName?.trim().toLowerCase() === projClientNorm)
+                    )
+                    .reduce((sum, wc) => sum + (wc.status === 'paid' ? wc.totalAmount : (wc.downPaymentAmount || wc.totalAmount || 0)), 0);
+
+                  // 4. Fallback to explicit project honorarios or paidAmount
+                  const directProjectRevenue = Math.max(
+                    proj.paidAmount || 0,
+                    proj.honorarios || 0,
+                    (proj as any).totalValue || 0
+                  );
+
+                  const projIncome = Math.max(txIncome, instIncome, contractIncome, directProjectRevenue);
+                  const projExpenses = txExpenses > 0 ? txExpenses : (proj.costEstimate || (proj as any).internalCostEstimate || 0);
                   const projMargin = projIncome - projExpenses;
-                  const marginPct = projIncome > 0 ? Math.round((projMargin / projIncome) * 100) : 0;
+                  const marginPct = projIncome > 0 ? Math.round((projMargin / projIncome) * 100) : (proj.marginPercent || 0);
+
+                  // Status badge format
+                  const statusMap: Record<string, string> = {
+                    estudo_preliminar: 'Estudo Preliminar',
+                    anteprojeto: 'Anteprojeto',
+                    executivo: 'Executivo',
+                    obra: 'Em Obra',
+                    entregue: 'Entregue',
+                  };
+                  const statusLabel = statusMap[proj.status] || proj.status || 'Em andamento';
 
                   return (
                     <div
@@ -1243,13 +1294,13 @@ export const BanksAndCashTab: React.FC<BanksAndCashTabProps> = ({
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <h4 className="text-sm font-bold text-[#1a1614]">{proj.name}</h4>
+                          <h4 className="text-sm font-bold text-[#1a1614]">{proj.title || (proj as any).name || 'Projeto sem Título'}</h4>
                           <span className="text-xs text-[#73655c]">
                             {proj.clientName || 'Cliente não associado'}
                           </span>
                         </div>
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#f5efe8] text-[#8c6b48]">
-                          {proj.status || 'Em andamento'}
+                          {statusLabel}
                         </span>
                       </div>
 

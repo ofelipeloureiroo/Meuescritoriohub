@@ -80,36 +80,54 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
 
   // Helper to accurately calculate how many projects are linked to a client
   const getClientProjectsCount = (client: Client): number => {
+    if (!client) return 0;
     const normName = client.name?.trim().toLowerCase();
+    const clientId = client.id;
+
+    // 1. Direct Architecture Projects (Active)
+    const archMatches = (architectureProjects || []).filter(
+      (p) =>
+        p &&
+        !p.deletedAt &&
+        (p.clientId === clientId || (normName && p.clientName && p.clientName.trim().toLowerCase() === normName))
+    );
+
+    // 2. Direct Freelance Projects
+    const freelaMatches = (freelanceProjects || []).filter(
+      (p) =>
+        p &&
+        (p.clientId === clientId || (normName && p.clientName && p.clientName.trim().toLowerCase() === normName))
+    );
 
     const uniqueProjectKeys = new Set<string>();
-
-    (architectureProjects || []).forEach((p) => {
-      if (p.clientId === client.id || (normName && p.clientName && p.clientName.trim().toLowerCase() === normName)) {
-        uniqueProjectKeys.add(p.id || `title:${p.title.trim().toLowerCase()}`);
-      }
+    archMatches.forEach((p) => {
+      const key = p.id || (p.title ? `title:${p.title.trim().toLowerCase()}` : undefined);
+      if (key) uniqueProjectKeys.add(key);
     });
 
-    (freelanceProjects || []).forEach((p) => {
-      if (p.clientId === client.id || (normName && p.clientName && p.clientName.trim().toLowerCase() === normName)) {
-        uniqueProjectKeys.add(p.id || `title:${p.title.trim().toLowerCase()}`);
-      }
-    });
-
-    (workContracts || []).forEach((wc) => {
-      if (wc.clientId === client.id || (normName && wc.clientName && wc.clientName.trim().toLowerCase() === normName)) {
-        if (wc.projectId) {
-          uniqueProjectKeys.add(wc.projectId);
-        } else if (wc.projectTitle) {
-          uniqueProjectKeys.add(`title:${wc.projectTitle.trim().toLowerCase()}`);
-        } else {
-          uniqueProjectKeys.add(wc.id);
-        }
-      }
+    freelaMatches.forEach((p) => {
+      const key = p.id || (p.title ? `title:${p.title.trim().toLowerCase()}` : undefined);
+      if (key) uniqueProjectKeys.add(key);
     });
 
     if (uniqueProjectKeys.size > 0) {
       return uniqueProjectKeys.size;
+    }
+
+    // 3. Fallback to unique contracts that have a distinct projectTitle or projectId
+    const contractProjectKeys = new Set<string>();
+    (workContracts || []).forEach((wc) => {
+      if (wc && (wc.clientId === clientId || (normName && wc.clientName && wc.clientName.trim().toLowerCase() === normName))) {
+        if (wc.projectId) {
+          contractProjectKeys.add(wc.projectId);
+        } else if (wc.projectTitle && wc.projectTitle.trim().length > 0) {
+          contractProjectKeys.add(`title:${wc.projectTitle.trim().toLowerCase()}`);
+        }
+      }
+    });
+
+    if (contractProjectKeys.size > 0) {
+      return contractProjectKeys.size;
     }
 
     if (typeof client.projectsCount === 'number' && client.projectsCount > 0) {
@@ -422,6 +440,29 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
     return clients.find((c) => c.id === viewingClient.id) || viewingClient;
   }, [clients, viewingClient]);
 
+  const clientArchProjects = useMemo(() => {
+    if (!activeViewingClient) return [];
+    const normName = activeViewingClient.name?.trim().toLowerCase();
+    return (architectureProjects || []).filter(
+      (p) =>
+        p &&
+        !p.deletedAt &&
+        (p.clientId === activeViewingClient.id ||
+          (normName && p.clientName && p.clientName.trim().toLowerCase() === normName))
+    );
+  }, [architectureProjects, activeViewingClient]);
+
+  const clientFreelaProjects = useMemo(() => {
+    if (!activeViewingClient) return [];
+    const normName = activeViewingClient.name?.trim().toLowerCase();
+    return (freelanceProjects || []).filter(
+      (p) =>
+        p &&
+        (p.clientId === activeViewingClient.id ||
+          (normName && p.clientName && p.clientName.trim().toLowerCase() === normName))
+    );
+  }, [freelanceProjects, activeViewingClient]);
+
   const clientContracts = useMemo(() => {
     if (!activeViewingClient) return [];
     return workContracts.filter(
@@ -638,7 +679,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                   PROJETOS DO CLIENTE ({activeViewingClient ? getClientProjectsCount(activeViewingClient) : 0})
                 </span>
 
-                {clientContracts.length === 0 ? (
+                {clientArchProjects.length === 0 && clientFreelaProjects.length === 0 && clientContracts.length === 0 ? (
                   <div className="border border-zinc-100 rounded-2xl p-6 text-center space-y-3">
                     <p className="text-xs text-zinc-400 font-medium">
                       Nenhum projeto ou contrato registrado para este cliente.
@@ -656,29 +697,85 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                     </button>
                   </div>
                 ) : (
-                  clientContracts.map((c) => (
-                    <div
-                      key={c.id}
-                      onClick={() => {
-                        setSelectedContract(c);
-                        setIsContractModalOpen(true);
-                      }}
-                      className="border border-zinc-100 hover:border-zinc-300 rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                        <div>
-                          <h4 className="font-bold text-zinc-900 text-sm">{c.projectTitle || c.title}</h4>
-                          <p className="text-xs text-zinc-400">
-                            {c.status === 'completed' || c.status === 'paid' ? 'Concluído' : 'Em Execução'} -- {c.title}
-                          </p>
+                  <div className="space-y-2.5">
+                    {/* Architecture Projects */}
+                    {clientArchProjects.map((p) => {
+                      const statusMap: Record<string, string> = {
+                        estudo_preliminar: 'Estudo Preliminar',
+                        anteprojeto: 'Anteprojeto',
+                        executivo: 'Executivo',
+                        obra: 'Em Obra',
+                        entregue: 'Entregue',
+                      };
+                      return (
+                        <div
+                          key={`arch-${p.id}`}
+                          className="border border-zinc-100 hover:border-[#c8a97e]/60 rounded-2xl p-4 flex items-center justify-between transition-all bg-white"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-2.5 h-2.5 rounded-full bg-[#c8a97e] shrink-0" />
+                            <div>
+                              <h4 className="font-bold text-zinc-900 text-sm">{p.title || (p as any).name || 'Projeto de Arquitetura'}</h4>
+                              <p className="text-xs text-zinc-400">
+                                {statusMap[p.status] || p.status || 'Em andamento'} {p.category ? `• ${p.category}` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="font-extrabold text-zinc-900 text-sm">
+                            {formatCurrency(p.honorarios || p.paidAmount || 0)}
+                          </span>
                         </div>
+                      );
+                    })}
+
+                    {/* Freelance Projects */}
+                    {clientFreelaProjects.map((p) => (
+                      <div
+                        key={`freela-${p.id}`}
+                        className="border border-zinc-100 hover:border-zinc-300 rounded-2xl p-4 flex items-center justify-between transition-all bg-white"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
+                          <div>
+                            <h4 className="font-bold text-zinc-900 text-sm">{p.title}</h4>
+                            <p className="text-xs text-zinc-400">
+                              {p.status === 'delivered' || p.status === 'paid' ? 'Entregue' : 'Em andamento'} {p.serviceType ? `• ${p.serviceType}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="font-extrabold text-zinc-900 text-sm">
+                          {formatCurrency(p.totalValue || 0)}
+                        </span>
                       </div>
-                      <span className="font-extrabold text-zinc-900 text-sm">
-                        {formatCurrency(c.totalAmount)}
-                      </span>
-                    </div>
-                  ))
+                    ))}
+
+                    {/* Contracts (only if not already duplicated by projectTitle) */}
+                    {clientContracts
+                      .filter((c) => !clientArchProjects.some((ap) => ap.title && c.projectTitle && ap.title.toLowerCase() === c.projectTitle.toLowerCase()))
+                      .map((c) => (
+                        <div
+                          key={`contract-${c.id}`}
+                          onClick={() => {
+                            setSelectedContract(c);
+                            setIsContractModalOpen(true);
+                          }}
+                          className="border border-zinc-100 hover:border-zinc-300 rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all bg-white"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                            <div>
+                              <h4 className="font-bold text-zinc-900 text-sm">{c.projectTitle || c.title}</h4>
+                              <p className="text-xs text-zinc-400">
+                                {c.status === 'completed' || c.status === 'paid' ? 'Concluído' : 'Em Execução'} -- {c.title}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="font-extrabold text-zinc-900 text-sm">
+                            {formatCurrency(c.totalAmount)}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
                 )}
               </div>
             </div>
