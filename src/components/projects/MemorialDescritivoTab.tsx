@@ -533,7 +533,13 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     setFormDescription(option.description || '');
     setFormPrice(option.price || '');
     setFormStore(option.store || '');
-    setFormUrl(option.url || '');
+
+    // Ensure link is active and valid
+    let finalUrl = option.url || '';
+    if (!finalUrl || finalUrl.includes('mercadolivre.com.br/busca/')) {
+      finalUrl = `https://www.google.com/search?q=${encodeURIComponent(option.title || searchQueryIA || 'produto')}&tbm=shop`;
+    }
+    setFormUrl(finalUrl);
 
     // Set product photo from the search option or uploaded image
     const chosenImage = option.imageUrl || option.image || imageUploadIA || '';
@@ -1314,18 +1320,17 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-end gap-2 pt-1 border-t border-zinc-50">
-                          {opt.url && (
-                            <a
-                              href={opt.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] text-zinc-500 hover:text-zinc-800 underline underline-offset-2 flex items-center gap-1 mr-auto"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              <span>Ver Loja</span>
-                            </a>
-                          )}
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-100">
+                          <a
+                            href={opt.url || `https://www.google.com/search?q=${encodeURIComponent(opt.title)}&tbm=shop`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center gap-1 transition-colors"
+                            title="Abrir página de compra do produto"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Abrir Link de Compra</span>
+                          </a>
                           <button
                             type="button"
                             onClick={() => handleSelectIAShowcase(opt)}
@@ -1495,16 +1500,46 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
 
                 {/* Form Row 5: Store/Product Purchase URL */}
                 <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
-                    Link de Compra / URL do Fornecedor
-                  </label>
-                  <input
-                    type="url"
-                    value={formUrl}
-                    onChange={(e) => setFormUrl(e.target.value)}
-                    placeholder="Ex: https://www.americanas.com.br/produto/..."
-                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                      Link de Compra / URL do Fornecedor
+                    </label>
+                    {formTitle && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const shoppingUrl = `https://www.google.com/search?q=${encodeURIComponent(formTitle)}&tbm=shop`;
+                          setFormUrl(shoppingUrl);
+                          showToast("🔗 Link do Google Shopping gerado para o produto!");
+                        }}
+                        className="text-[10px] text-[#8c7456] hover:underline font-bold cursor-pointer flex items-center gap-1"
+                      >
+                        <Search className="w-3 h-3" />
+                        <span>Gerar Link Google Shopping</span>
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="url"
+                      value={formUrl}
+                      onChange={(e) => setFormUrl(e.target.value)}
+                      placeholder="Ex: https://www.google.com/search?q=Geladeira+Inox&tbm=shop"
+                      className="flex-1 px-3 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
+                    />
+                    {formUrl && (
+                      <a
+                        href={formUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-bold flex items-center gap-1 shrink-0 transition-colors"
+                        title="Testar e abrir link em nova aba"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Testar Link</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
 
                 {/* Form Row 6: Internal notes */}

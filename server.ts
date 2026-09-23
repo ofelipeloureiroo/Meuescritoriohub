@@ -4244,6 +4244,23 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       }
     }
 
+    // Helper to ensure search links are always valid and active
+    const sanitizeProductUrl = (rawUrl: string, itemTitle: string): string => {
+      const cleanTitle = (itemTitle || 'produto').trim();
+      const encodedTitle = encodeURIComponent(cleanTitle);
+
+      if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.startsWith('http')) {
+        return `https://www.google.com/search?q=${encodedTitle}&tbm=shop`;
+      }
+
+      // Fix Mercado Livre search URLs (/busca/...) which return 404
+      if (rawUrl.includes('mercadolivre.com.br/busca/') || rawUrl.includes('mercadolivre.com.br/busca?')) {
+        return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
+      }
+
+      return rawUrl;
+    };
+
     // If query is empty, try extracting a hint from the uploaded image's file name (e.g. geladeira-electrolux.jpg)
     if (!extractedQuery && imageFileName && typeof imageFileName === "string") {
       const cleanFileName = imageFileName
@@ -4251,7 +4268,8 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         .replace(/[-_.]+/g, " ")
         .replace(/\b(image|img|foto|screenshot|captura|whatsapp|download|unnamed|arquivo)\b/gi, "")
         .trim();
-      if (cleanFileName.length >= 3) {
+      const hasLetters = /[a-zA-ZáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]/.test(cleanFileName);
+      if (cleanFileName.length >= 3 && hasLetters) {
         console.log("[Gemini Search] Extracted query hint from imageFileName:", cleanFileName);
         extractedQuery = cleanFileName;
       }
@@ -4304,10 +4322,9 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
                   }
                 },
                 {
-                  text: "Analise a imagem deste produto de arquitetura, interiores, construção, decoração ou eletrodoméstico (exemplo: geladeira, refrigerador, cooktop, forno, chuveiro, cuba, torneira, etc). " +
-                    "Identifique o tipo exato de produto, cor, material e estilo. " +
-                    "Retorne APENAS um termo de busca objetivo (máximo 6 palavras) para encontrar produtos semelhantes à venda no Google Shopping Brasil. " +
-                    "Não use pontuação ou explicações. Exemplo: 'Geladeira frost free inox' ou 'Chuveiro preto fosco deca'."
+                  text: "Analise a imagem deste produto de arquitetura, interiores, construção, decoração ou eletrodoméstico (exemplo: geladeira, refrigerador, cooktop, forno, chuveiro, cuba, torneira, TV, etc). " +
+                    "Identifique o NOME REAL E ESPECÍFICO do produto em português (exemplo: 'Geladeira Frost Free Inox 440L', 'Smart TV 55 4K', 'Chuveiro Deca Acqua Plus Cromado'). " +
+                    "CRÍTICO: NUNCA retorne códigos numéricos soltos, dimensões puras (como '293350 1000 1000') ou nomes de arquivo. Retorne um nome de produto claro em português para buscar ofertas no Google Shopping Brasil."
                 }
               ]
             }
@@ -4466,8 +4483,12 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         if (!finalImg || typeof finalImg !== 'string' || !finalImg.startsWith('http')) {
           finalImg = fallbackImageForProduct(item);
         }
+
+        const finalUrl = sanitizeProductUrl(item.url, item.title || extractedQuery || formProductName || 'produto');
+
         return {
           ...item,
+          url: finalUrl,
           imageUrl: finalImg
         };
       });
