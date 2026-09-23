@@ -59,14 +59,6 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
     updateProjectInstallment,
     deleteProjectMilestone,
     toggleProjectMilestone,
-    dueSoonInstallments,
-    overdueInstallments,
-    pendingInstallments,
-    totalPendingInstallmentsAmount,
-    totalPaidInstallmentsAmount,
-    dueSoonMilestones,
-    overdueMilestones,
-    ongoingArchitectureProjects,
     architectProfile,
     updateProjectStatus,
     addConstructionReport,
@@ -75,6 +67,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
 
   const [activeSubTab, setActiveSubTab] = useState<SubTabType>('ongoing');
   const [searchTerm, setSearchTerm] = useState('');
+  const [projectStatusFilter, setProjectStatusFilter] = useState<'all' | 'ongoing' | 'delivered'>('all');
   const [installmentFilter, setInstallmentFilter] = useState<'all' | 'due_soon' | 'overdue' | 'paid'>('all');
   const [milestoneFilter, setMilestoneFilter] = useState<'all' | 'due_soon' | 'overdue' | 'completed'>('all');
   const [contractFilter, setContractFilter] = useState<'all' | 'signed' | 'awaiting_payment' | 'paid' | 'completed' | 'draft'>('all');
@@ -112,6 +105,156 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
+  // Unified Installments combining explicit projectInstallments, workContracts, and project honorarios
+  const allUnifiedInstallments = useMemo(() => {
+    const list: ProjectInstallment[] = [...projectInstallments];
+
+    (workContracts || []).forEach((contract) => {
+      const hasRealInst = projectInstallments.some(
+        (i) => (contract.projectId && i.projectId === contract.projectId) ||
+               (contract.projectTitle && i.projectTitle && i.projectTitle.trim().toLowerCase() === contract.projectTitle.trim().toLowerCase())
+      );
+      if (!hasRealInst && contract.totalAmount > 0) {
+        const isPaid = contract.status === 'completed' || contract.status === 'paid';
+        const isOverdue = contract.status === 'awaiting_payment' && !!contract.deadline && contract.deadline < todayStr;
+
+        list.push({
+          id: `synth-contract-${contract.id}`,
+          projectId: contract.projectId || '',
+          projectTitle: contract.projectTitle || contract.title || 'Projeto',
+          clientName: contract.clientName || 'Cliente',
+          installmentNumber: 1,
+          totalInstallments: 1,
+          amount: contract.totalAmount,
+          dueDate: contract.deadline || todayStr,
+          status: isPaid ? 'paid' : isOverdue ? 'overdue' : 'pending',
+          paidAmount: isPaid ? contract.totalAmount : 0,
+          description: 'Contrato de Serviços (Honorários Integrais)',
+          createdAt: todayStr,
+        });
+      }
+    });
+
+    (architectureProjects || []).forEach((proj) => {
+      const hasInst = list.some(
+        (i) => (i.projectId && i.projectId === proj.id) ||
+               (i.projectTitle && proj.title && i.projectTitle.trim().toLowerCase() === proj.title.trim().toLowerCase())
+      );
+      if (!hasInst && proj.honorarios && proj.honorarios > 0) {
+        const isDone = proj.status === 'entregue' || proj.status === 'concluido';
+        list.push({
+          id: `synth-proj-${proj.id}`,
+          projectId: proj.id,
+          projectTitle: proj.title,
+          clientName: proj.clientName,
+          installmentNumber: 1,
+          totalInstallments: 1,
+          amount: proj.honorarios,
+          dueDate: proj.deliveryDate || todayStr,
+          status: isDone ? 'paid' : 'pending',
+          paidAmount: isDone ? proj.honorarios : (proj.paidAmount || 0),
+          description: 'Honorários de Projeto Técnico',
+          createdAt: todayStr,
+        });
+      }
+    });
+
+    return list;
+  }, [projectInstallments, workContracts, architectureProjects, todayStr]);
+
+  // Unified Milestones combining explicit projectMilestones, workflow stages, and project delivery dates
+  const allUnifiedMilestones = useMemo(() => {
+    const list: ProjectMilestone[] = [...projectMilestones];
+
+    (architectureProjects || []).forEach((proj) => {
+      if (proj.stages && proj.stages.length > 0) {
+        proj.stages.forEach((stg, idx) => {
+          const exists = projectMilestones.some(
+            (m) => (m.projectId === proj.id || (m.projectTitle && proj.title && m.projectTitle.trim().toLowerCase() === proj.title.trim().toLowerCase())) &&
+                   m.title.toLowerCase().includes(stg.name.toLowerCase())
+          );
+          if (!exists) {
+            const isDone = stg.status === 'completed' || proj.status === 'entregue' || proj.status === 'concluido' || (stg.tasks && stg.tasks.length > 0 && stg.tasks.every((t) => t.status === 'completed'));
+            list.push({
+              id: `synth-stg-${proj.id}-${stg.id || idx}`,
+              projectId: proj.id,
+              projectTitle: proj.title,
+              clientName: proj.clientName,
+              title: `Etapa: ${stg.name}`,
+              stage: stg.name,
+              dueDate: stg.dueDate || proj.deliveryDate || todayStr,
+              completed: isDone,
+              priority: 'media',
+              createdAt: todayStr,
+            });
+          }
+        });
+      } else {
+        const exists = projectMilestones.some(
+          (m) => m.projectId === proj.id || (m.projectTitle && proj.title && m.projectTitle.trim().toLowerCase() === proj.title.trim().toLowerCase())
+        );
+        if (!exists) {
+          const isDone = proj.status === 'entregue' || proj.status === 'concluido';
+          list.push({
+            id: `synth-proj-ms-${proj.id}`,
+            projectId: proj.id,
+            projectTitle: proj.title,
+            clientName: proj.clientName,
+            title: 'Entrega Final do Projeto',
+            stage: 'Entrega Final',
+            dueDate: proj.deliveryDate || todayStr,
+            completed: isDone,
+            priority: 'alta',
+            createdAt: todayStr,
+          });
+        }
+      }
+    });
+
+    return list;
+  }, [projectMilestones, architectureProjects, todayStr]);
+
+  // KPI Calculations
+  const totalPendingInstallmentsAmount = useMemo(() => {
+    return allUnifiedInstallments.filter((i) => i.status !== 'paid').reduce((sum, i) => sum + (i.amount || 0), 0);
+  }, [allUnifiedInstallments]);
+
+  const totalPaidInstallmentsAmount = useMemo(() => {
+    return allUnifiedInstallments.filter((i) => i.status === 'paid').reduce((sum, i) => sum + (i.paidAmount || i.amount || 0), 0);
+  }, [allUnifiedInstallments]);
+
+  const dueSoonInstallments = useMemo(() => {
+    return allUnifiedInstallments.filter((i) => {
+      if (i.status === 'paid') return false;
+      const diff = getDaysDiff(i.dueDate);
+      return diff >= 0 && diff <= 7;
+    });
+  }, [allUnifiedInstallments, todayStr]);
+
+  const overdueInstallments = useMemo(() => {
+    return allUnifiedInstallments.filter((i) => {
+      if (i.status === 'paid') return false;
+      if (i.status === 'overdue') return true;
+      return i.dueDate < todayStr;
+    });
+  }, [allUnifiedInstallments, todayStr]);
+
+  const pendingInstallments = useMemo(() => {
+    return allUnifiedInstallments.filter((i) => i.status !== 'paid');
+  }, [allUnifiedInstallments]);
+
+  const dueSoonMilestones = useMemo(() => {
+    return allUnifiedMilestones.filter((m) => {
+      if (m.completed) return false;
+      const diff = getDaysDiff(m.dueDate);
+      return diff >= 0 && diff <= 7;
+    });
+  }, [allUnifiedMilestones, todayStr]);
+
+  const overdueMilestones = useMemo(() => {
+    return allUnifiedMilestones.filter((m) => !m.completed && m.dueDate < todayStr);
+  }, [allUnifiedMilestones, todayStr]);
+
   const getStageBadge = (stage: string) => {
     switch (stage) {
       case 'briefing':
@@ -125,6 +268,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
       case 'obra':
         return { label: 'Acompanhamento de Obra', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30' };
       case 'entregue':
+      case 'concluido':
         return { label: 'Entregue / Concluído', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30' };
       default:
         return { label: stage, color: 'bg-[var(--bg-card-secondary)] text-[var(--text-muted)] border-[var(--border-color)]' };
@@ -147,7 +291,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
 
   // Filtered lists
   const filteredInstallments = useMemo(() => {
-    return projectInstallments.filter((inst) => {
+    return allUnifiedInstallments.filter((inst) => {
       const matchesSearch =
         inst.projectTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
         inst.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -166,10 +310,10 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
       }
       return true;
     });
-  }, [projectInstallments, searchTerm, installmentFilter, todayStr]);
+  }, [allUnifiedInstallments, searchTerm, installmentFilter, todayStr]);
 
   const filteredMilestones = useMemo(() => {
-    return projectMilestones.filter((ms) => {
+    return allUnifiedMilestones.filter((ms) => {
       const matchesSearch =
         ms.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ms.projectTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -188,7 +332,22 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
       }
       return true;
     });
-  }, [projectMilestones, searchTerm, milestoneFilter, todayStr]);
+  }, [allUnifiedMilestones, searchTerm, milestoneFilter, todayStr]);
+
+  const displayProjects = useMemo(() => {
+    return (architectureProjects || []).filter((p) => {
+      const matchesSearch =
+        p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.location && p.location.toLowerCase().includes(searchTerm.toLowerCase()));
+      if (!matchesSearch) return false;
+
+      const isDelivered = p.status === 'entregue' || p.status === 'concluido';
+      if (projectStatusFilter === 'ongoing') return !isDelivered;
+      if (projectStatusFilter === 'delivered') return isDelivered;
+      return true;
+    });
+  }, [architectureProjects, searchTerm, projectStatusFilter]);
 
   const getContractEffectiveStatus = (contract: WorkContract) => {
     if (contract.status === 'completed') return 'completed';
@@ -218,7 +377,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
       if (contractFilter === 'awaiting_payment') return effStatus === 'awaiting_payment';
       if (contractFilter === 'paid') return effStatus === 'paid';
       if (contractFilter === 'completed') return effStatus === 'completed';
-      if (contractFilter === 'draft') return effStatus === 'draft' || effStatus === 'sent';
+      if (contractFilter === 'draft') return effStatus === 'draft' || effStatus === 'sent_for_signature';
       return true;
     });
   }, [workContracts, searchTerm, contractFilter, architectureProjects]);
@@ -256,6 +415,8 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
     setNewMilestoneModalOpen(true);
   };
 
+  const activeProjectsCount = (architectureProjects || []).filter((p) => p.status !== 'entregue' && p.status !== 'concluido').length;
+
   return (
     <div className="space-y-7 pb-16">
       {/* Top Header & Title */}
@@ -273,7 +434,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
               Gestão de Projetos & Cobrança
             </span>
             <span className="text-xs text-[var(--text-muted)]">
-              • {ongoingArchitectureProjects.length} Projetos Ativos
+              • {activeProjectsCount} Projetos Ativos
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[var(--text-main)] tracking-tight">
@@ -323,7 +484,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
             <Building2 className="w-4 h-4 text-[var(--theme-primary)]" />
           </div>
           <div className="text-2xl font-serif font-bold text-[var(--text-main)]">
-            {ongoingArchitectureProjects.length}
+            {activeProjectsCount}
           </div>
           <div className="text-[11px] text-[var(--text-muted)] mt-1">
             {architectureProjects.length} projetos no total
@@ -549,8 +710,8 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
           >
             <Building2 className="w-4 h-4" />
             <span>Projetos em Andamento</span>
-            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-[var(--bg-card)] text-[var(--text-muted)]">
-              {ongoingArchitectureProjects.length}
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-[var(--bg-card)] text-[var(--text-muted)] font-bold">
+              {architectureProjects.length}
             </span>
           </button>
 
@@ -622,8 +783,8 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
           >
             <Clock className="w-4 h-4" />
             <span>Prazos & Entregas</span>
-            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-[var(--bg-card)] text-[var(--text-muted)]">
-              {projectMilestones.filter((m) => !m.completed).length}
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-[var(--bg-card)] text-[var(--text-muted)] font-bold">
+              {allUnifiedMilestones.filter((m) => !m.completed).length}
             </span>
           </button>
 
@@ -653,29 +814,75 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
         </div>
       </div>
 
-      {/* VIEW 1: PROJETOS EM ANDAMENTO */}
+      {/* VIEW 1: PROJETOS EM ANDAMENTO E ENTREGUES */}
       {activeSubTab === 'ongoing' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {ongoingArchitectureProjects.map((project) => {
-              const projectInsts = projectInstallments.filter(
-                (i) => i.projectId === project.id || i.projectTitle === project.title
-              );
-              const projectMs = projectMilestones.filter(
-                (m) => m.projectId === project.id || m.projectTitle === project.title
-              );
+          {/* Status Filter Pills */}
+          <div className="flex items-center gap-2 bg-[var(--bg-card)] p-1.5 rounded-xl border border-[var(--border-color)] w-fit">
+            <button
+              onClick={() => setProjectStatusFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                projectStatusFilter === 'all'
+                  ? 'bg-[var(--theme-primary)] text-black shadow-xs font-bold'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+              }`}
+            >
+              Todos ({architectureProjects.length})
+            </button>
+            <button
+              onClick={() => setProjectStatusFilter('ongoing')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                projectStatusFilter === 'ongoing'
+                  ? 'bg-[var(--theme-primary)] text-black shadow-xs font-bold'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+              }`}
+            >
+              Em Andamento ({(architectureProjects || []).filter((p) => p.status !== 'entregue' && p.status !== 'concluido').length})
+            </button>
+            <button
+              onClick={() => setProjectStatusFilter('delivered')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                projectStatusFilter === 'delivered'
+                  ? 'bg-emerald-500 text-white shadow-xs font-bold'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+              }`}
+            >
+              Concluídos & Entregues ({(architectureProjects || []).filter((p) => p.status === 'entregue' || p.status === 'concluido').length})
+            </button>
+          </div>
 
-              const totalHonorarios = project.honorarios || 0;
-              const paidAmount = project.paidAmount || 0;
-              const pendingAmount = Math.max(0, totalHonorarios - paidAmount);
-              const progressPct = totalHonorarios > 0 ? Math.min(100, Math.round((paidAmount / totalHonorarios) * 100)) : 0;
-              const stageInfo = getStageBadge(project.status);
+          {displayProjects.length === 0 ? (
+            <div className="p-12 text-center bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)]">
+              <Building2 className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-3 opacity-40" />
+              <h3 className="text-base font-serif font-bold text-[var(--text-main)]">Nenhum projeto encontrado</h3>
+              <p className="text-xs text-[var(--text-muted)] mt-1 max-w-md mx-auto">
+                Não foram encontrados projetos para o filtro selecionado. Alterne entre os filtros acima ou cadastre um novo projeto.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {displayProjects.map((project) => {
+                const isProjectDelivered = project.status === 'entregue' || project.status === 'concluido';
+                const projectInsts = allUnifiedInstallments.filter(
+                  (i) => i.projectId === project.id || (i.projectTitle && project.title && i.projectTitle.trim().toLowerCase() === project.title.trim().toLowerCase())
+                );
+                const projectMs = allUnifiedMilestones.filter(
+                  (m) => m.projectId === project.id || (m.projectTitle && project.title && m.projectTitle.trim().toLowerCase() === project.title.trim().toLowerCase())
+                );
 
-              return (
-                <div
-                  key={project.id}
-                  className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] overflow-hidden shadow-xl hover:border-[var(--theme-primary)]/40 transition-all flex flex-col justify-between group"
-                >
+                const totalHonorarios = project.honorarios || 0;
+                const paidAmount = isProjectDelivered
+                  ? totalHonorarios || project.paidAmount || 0
+                  : project.paidAmount || 0;
+                const pendingAmount = Math.max(0, totalHonorarios - paidAmount);
+                const progressPct = totalHonorarios > 0 ? Math.min(100, Math.round((paidAmount / totalHonorarios) * 100)) : (isProjectDelivered ? 100 : 0);
+                const stageInfo = getStageBadge(project.status);
+
+                return (
+                  <div
+                    key={project.id}
+                    className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] overflow-hidden shadow-xl hover:border-[var(--theme-primary)]/40 transition-all flex flex-col justify-between group"
+                  >
                   <div>
                     {/* Project Top Bar */}
                     <div className="p-5 border-b border-[var(--border-color)] bg-[var(--bg-card-secondary)]/60">
@@ -979,8 +1186,9 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
               );
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
+    )}
 
       {/* VIEW 2: COBRANÇAS & PARCELAS */}
       {activeSubTab === 'installments' && (
@@ -1000,7 +1208,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                       : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
                   }`}
                 >
-                  Todas ({projectInstallments.length})
+                  Todas ({allUnifiedInstallments.length})
                 </button>
                 <button
                   onClick={() => setInstallmentFilter('due_soon')}
@@ -1030,7 +1238,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                       : 'text-emerald-500 hover:text-emerald-400 dark:text-emerald-300 dark:hover:text-emerald-200'
                   }`}
                 >
-                  Pagas ({projectInstallments.filter((i) => i.status === 'paid').length})
+                  Pagas ({allUnifiedInstallments.filter((i) => i.status === 'paid').length})
                 </button>
               </div>
             </div>
@@ -1359,7 +1567,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                       : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
                   }`}
                 >
-                  Todos ({projectMilestones.length})
+                  Todos ({allUnifiedMilestones.length})
                 </button>
                 <button
                   onClick={() => setMilestoneFilter('due_soon')}
@@ -1389,7 +1597,7 @@ export const DeadlinesAndInstallmentsTab: React.FC<DeadlinesAndInstallmentsTabPr
                       : 'text-emerald-500 hover:text-emerald-400 dark:text-emerald-300 dark:hover:text-emerald-200'
                   }`}
                 >
-                  Concluídos ({projectMilestones.filter((m) => m.completed).length})
+                  Concluídos ({allUnifiedMilestones.filter((m) => m.completed).length})
                 </button>
               </div>
             </div>
