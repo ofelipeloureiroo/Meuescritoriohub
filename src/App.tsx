@@ -36,6 +36,7 @@ import { ExpressConsultingTab } from './components/projects/ExpressConsultingTab
 import { TimeTrackerTab } from './components/projects/TimeTrackerTab';
 import { WhatsAppCenterTab } from './components/whatsapp/WhatsAppCenterTab';
 import { PublicConsultoriaPage } from './components/projects/PublicConsultoriaPage';
+import { PublicPortfolioPage } from './components/portfolio/PublicPortfolioPage';
 import { NewTransactionModal } from './components/modals/NewTransactionModal';
 import { TransactionStructure } from './types';
 import { AmortizationModal } from './components/modals/AmortizationModal';
@@ -310,6 +311,12 @@ export default function App() {
             {/* Public Presentation Link for Express Consulting */}
             <Route path="/consultoria/:consultationId" element={<PublicConsultoriaPage />} />
             <Route path="/consultoria" element={<PublicConsultoriaPage />} />
+
+            {/* Public Portfolio & Mini Landing Page (Zero Financials, Conversion Focused) */}
+            <Route path="/portfolio/:userId" element={<PublicPortfolioPage />} />
+            <Route path="/portfolio" element={<PublicPortfolioPage />} />
+            <Route path="/p/:userId" element={<PublicPortfolioPage />} />
+            <Route path="/portifolio" element={<Navigate to="/portfolio" replace />} />
 
             {/* Client Portal Routes (Dedicated Client Login & Real-time Isolated Dashboard) */}
             <Route path="/cliente/login" element={<ClientLogin />} />

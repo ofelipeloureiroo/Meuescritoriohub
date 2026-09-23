@@ -43,6 +43,7 @@ import { compressImage } from '../../utils/imageCompressor';
 import { AddProjectModal } from '../modals/AddProjectModal';
 import { EditProfileModal } from '../modals/EditProfileModal';
 import { ProjectDetailModal } from '../modals/ProjectDetailModal';
+import { SharePortfolioModal } from '../modals/SharePortfolioModal';
 import { ProjectWorkspaceView } from '../projects/ProjectWorkspaceView';
 
 interface HomeProjectsTabProps {
@@ -102,6 +103,7 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<ArchitectureProject | null>(null);
   const [selectedProjectForDetail, setSelectedProjectForDetail] = useState<ArchitectureProject | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<ArchitectureProject | null>(null);
@@ -372,6 +374,18 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
 
           {/* Quick Actions Buttons */}
           <div className="flex flex-row sm:flex-col gap-3 w-full lg:w-auto justify-center sm:justify-end">
+            {shouldShowPortfolio && (
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(true)}
+                className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-[var(--theme-primary)]/20 to-amber-500/15 hover:brightness-125 text-[var(--theme-primary)] font-bold text-xs flex items-center justify-center gap-2 border border-[var(--theme-primary)]/40 shadow-md transition-all active:scale-95 cursor-pointer"
+                title="Compartilhar mini landing page do portfólio com clientes"
+              >
+                <Share2 className="w-4 h-4 stroke-[2.5]" />
+                <span>Compartilhar Portfólio</span>
+              </button>
+            )}
+
             {canManageProjects && (
               shouldShowPortfolio ? (
                 <button
@@ -892,6 +906,17 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                 ))}
               </select>
 
+              {/* Share Portfolio button */}
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(true)}
+                className="px-3 py-2 rounded-xl bg-[var(--theme-primary)]/15 hover:bg-[var(--theme-primary)]/25 text-xs text-[var(--theme-primary)] font-bold border border-[var(--theme-primary)]/30 transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer shadow-xs"
+                title="Compartilhar portfólio como mini landing page"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Compartilhar</span>
+              </button>
+
               {/* Hide Portfolio button */}
               <button
                 type="button"
@@ -1217,6 +1242,11 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
       <EditProfileModal
         isOpen={isEditProfileModalOpen}
         onClose={() => setIsEditProfileModalOpen(false)}
+      />
+
+      <SharePortfolioModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
       />
     </div>
   );

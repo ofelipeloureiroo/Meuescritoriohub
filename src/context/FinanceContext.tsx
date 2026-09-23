@@ -54,6 +54,7 @@ import { applyThemeToDocument, NICHES, THEMES } from '../utils/theme';
 import { getNicheSampleProjects } from '../utils/nicheSampleData';
 import { DEFAULT_PROJECT_TEMPLATES, normalizeTemplateStages, convertTemplateToWorkflowStages, isProjectWorkflowCompleted, normalizeWorkflowStageStatus } from '../data/defaultProjectTemplates';
 import { deleteClientPortalsForClient, deleteProjectFromPortals, buildClientPortalAccess, saveClientPortalAccess } from '../services/clientPortalService';
+import { buildPublicPortfolioData, publishPortfolioToFirestore } from '../services/publicPortfolioService';
 import { deleteGoogleEvent, deleteGoogleTask, addDeletedGcalId, addDeletedGtaskId } from '../services/googleCalendarService';
 
 interface FinanceContextType {
@@ -2049,6 +2050,26 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, 400);
     return () => clearTimeout(timer);
   }, [clients, architectureProjects, architectProfile, projectMilestones]);
+
+  // Auto-sync public portfolio (Mini Landing Page) to Firestore public_portfolios collection & local storage
+  useEffect(() => {
+    const activeUid = targetUid || user?.uid || 'preview';
+    if (!activeUid) return;
+    const timer = setTimeout(() => {
+      try {
+        const portfolioData = buildPublicPortfolioData(
+          activeUid,
+          architectProfile,
+          architectureProjects,
+          clients?.length || 0
+        );
+        publishPortfolioToFirestore(portfolioData).catch(() => {});
+      } catch (e) {
+        console.warn('Auto sync public portfolio warning:', e);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [targetUid, user?.uid, architectProfile, architectureProjects, clients?.length]);
 
   // Local Storage Multi-Key Persistence Helper
   const persistProfileLocally = (updated: ArchitectProfile) => {
