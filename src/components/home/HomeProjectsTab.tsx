@@ -386,75 +386,6 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                 <span>Compartilhar Portfólio</span>
               </button>
             )}
-
-            {canManageProjects && (
-              shouldShowPortfolio ? (
-                <button
-                  onClick={() => {
-                    setEditingProject(null);
-                    setIsAddModalOpen(true);
-                  }}
-                  className="flex-1 sm:flex-initial px-5 py-3 rounded-xl text-black font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer hover:brightness-110"
-                  style={{
-                    backgroundColor: 'var(--theme-primary)',
-                  }}
-                >
-                  <FolderPlus className="w-4 h-4 stroke-[2.5]" />
-                  <span>+ Novo(a) {currentNiche.formConfig.itemLabel}</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => onNavigateTab('freelance')}
-                  className="flex-1 sm:flex-initial px-5 py-3 rounded-xl text-black font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer hover:brightness-110"
-                  style={{
-                    backgroundColor: 'var(--theme-primary)',
-                  }}
-                >
-                  <Plus className="w-4 h-4 stroke-[2.5]" />
-                  <span>+ Novo Contrato / Cliente</span>
-                </button>
-              )
-            )}
-
-            {canViewDeadlines && (
-              <button
-                onClick={() => onNavigateTab('deadlines')}
-                className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] font-semibold text-xs flex items-center justify-center gap-2 border border-[var(--border-color)] hover:border-[var(--theme-primary)]/50 transition-all cursor-pointer"
-              >
-                <Clock className="w-4 h-4" style={{ color: 'var(--theme-accent)' }} />
-                <span>Prazos & Cobranças</span>
-                {(dueSoonInstallments.length > 0 || overdueInstallments.length > 0) && (
-                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-bold">
-                    {dueSoonInstallments.length + overdueInstallments.length}
-                  </span>
-                )}
-              </button>
-            )}
-
-            {canViewFinance && (
-              <button
-                onClick={() => onNavigateTab('overview')}
-                className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-[var(--bg-card-secondary)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] font-semibold text-xs flex items-center justify-center gap-2 border border-[var(--border-color)] transition-colors cursor-pointer"
-              >
-                <TrendingUp className="w-4 h-4" style={{ color: 'var(--theme-primary)' }} />
-                <span>Painel Financeiro Geral</span>
-              </button>
-            )}
-
-            {!canManageProjects && !canViewDeadlines && !canViewFinance && (
-              <a
-                href={buildInstagramUrl(architectProfile.instagramHandle, architectProfile.instagramUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 sm:flex-initial px-5 py-3 rounded-xl text-black font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer hover:brightness-110"
-                style={{
-                  backgroundColor: 'var(--theme-primary)',
-                }}
-              >
-                <Instagram className="w-4 h-4" />
-                <span>Entrar em Contato</span>
-              </a>
-            )}
           </div>
         </div>
 
@@ -917,6 +848,21 @@ export const HomeProjectsTab: React.FC<HomeProjectsTabProps> = ({
                 <Share2 className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Compartilhar</span>
               </button>
+
+              {canManageProjects && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingProject(null);
+                    setIsAddModalOpen(true);
+                  }}
+                  className="px-3.5 py-2 rounded-xl text-black font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer hover:brightness-110 whitespace-nowrap"
+                  style={{ backgroundColor: 'var(--theme-primary)' }}
+                >
+                  <FolderPlus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>+ Adicionar Projeto</span>
+                </button>
+              )}
 
               {/* Hide Portfolio button */}
               <button
