@@ -3,11 +3,16 @@ import {
   Calendar,
   Check,
   ChevronDown,
+  FileSignature,
   Layers,
   Link2,
+  Mail,
+  MapPin,
+  Phone,
   Plus,
   Search,
   User,
+  Users,
   X,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
@@ -46,8 +51,14 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
     ? officeSettings.projectTemplates
     : [];
 
-  const [clientMode, setClientMode] = useState<'new' | 'select'>('new');
+  const [clientMode, setClientMode] = useState<'new' | 'select'>('select');
   const [newClientName, setNewClientName] = useState('');
+  const [newClientEmail, setNewClientEmail] = useState('');
+  const [newClientPhone, setNewClientPhone] = useState('');
+  const [newClientDocument, setNewClientDocument] = useState('');
+  const [newClientCity, setNewClientCity] = useState('');
+  const [newClientState, setNewClientState] = useState('');
+
   const [selectedClientId, setSelectedClientId] = useState(defaultClientId || '');
   const [linkedLeadId, setLinkedLeadId] = useState('');
   const [projectName, setProjectName] = useState('');
@@ -75,19 +86,32 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
   // Sync selected client and default project name
   useEffect(() => {
     if (isOpen) {
-      setClientMode('new');
-      setNewClientName('');
+      const hasClients = (clients || []).length > 0;
       const activeClient = clients.find((c) => c.id === defaultClientId);
+
       if (activeClient) {
         setSelectedClientId(activeClient.id);
         setClientMode('select');
+        setProjectName(`Projeto - ${activeClient.name}`);
+      } else if (hasClients) {
+        setSelectedClientId(clients[0].id);
+        setClientMode('select');
+        setProjectName(`Projeto - ${clients[0].name}`);
       } else {
-        setSelectedClientId(clients[0]?.id || '');
+        setSelectedClientId('');
+        setClientMode('new');
+        setProjectName('');
       }
+
+      setNewClientName('');
+      setNewClientEmail('');
+      setNewClientPhone('');
+      setNewClientDocument('');
+      setNewClientCity('');
+      setNewClientState('');
       setLinkedLeadId('');
-      setProjectName('');
       setIdentityColor('#3b82f6');
-      setProjectType('');
+      setProjectType('Projeto de Arquitetura');
       setStatus('Proposta');
       setStageTemplate('Sem template — iniciar projeto em branco');
       setAcquisitionChannel('');
@@ -117,14 +141,14 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
   const handleClientChange = (clientId: string) => {
     setSelectedClientId(clientId);
     const cli = clients.find((c) => c.id === clientId);
-    if (cli && !projectName) {
-      setProjectName(cli.name);
+    if (cli) {
+      setProjectName(`Projeto - ${cli.name}`);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('handleSubmit: Starting project creation...');
+    console.log('handleSubmit: Starting project & contract creation...');
 
     try {
       let finalClient = selectedClient;
@@ -134,8 +158,14 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
         const newCli = {
           id: `cli-${Date.now()}`,
           name: clientName,
-          type: 'Pessoa Física',
-          clientProfile: 'Médio',
+          email: newClientEmail.trim() || undefined,
+          phone: newClientPhone.trim() || undefined,
+          whatsapp: newClientPhone.trim() || undefined,
+          document: newClientDocument.trim() || undefined,
+          city: newClientCity.trim() || undefined,
+          state: newClientState.trim() || undefined,
+          type: 'Pessoa Física' as const,
+          clientProfile: 'Médio' as const,
           status: 'Ativo' as const,
           createdAt: new Date().toISOString(),
         };
@@ -196,6 +226,7 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
       // Also register in Architecture Projects
       addArchitectureProject({
         title: projectName || 'Novo Projeto',
+        clientId: finalClient.id,
         clientName: finalClient.name,
         category: 'residencial',
         location: finalClient.city ? `${finalClient.city}, ${finalClient.state || 'RJ'}` : 'Rio de Janeiro, RJ',
@@ -223,10 +254,20 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
       <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl border border-zinc-200 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-100">
-          <h3 className="font-extrabold text-lg text-zinc-900 tracking-tight">
-            Novo Projeto
-          </h3>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-100 bg-gradient-to-r from-[#faf6f0] to-white">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#c8a97e]/15 text-[#a38253] flex items-center justify-center border border-[#c8a97e]/30 shrink-0">
+              <FileSignature className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-lg text-zinc-900 tracking-tight">
+                Gerar Novo Contrato
+              </h3>
+              <p className="text-xs text-zinc-500">
+                Selecione o cliente e configure os dados financeiros e etapas do contrato.
+              </p>
+            </div>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -237,130 +278,249 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[82vh] overflow-y-auto">
-          {/* Card 1: Cliente */}
-          <div className="bg-[#faf6f0] border border-[#f0eae1] rounded-2xl p-4 space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-[#3d342f]">
-              <div className="flex items-center gap-1.5">
-                <User className="w-4 h-4 text-zinc-500" />
-                <span>Cliente</span>
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+          {/* Card 1: Seleção de Cliente */}
+          <div className="bg-[#faf6f0]/60 border border-[#f0eae1] rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#3d342f]">
+                <User className="w-4 h-4 text-[#a38253]" />
+                <span>Cliente do Contrato</span>
               </div>
-              <span className="text-[11px] font-normal text-zinc-400">
-                Todo projeto precisa de um cliente
+              <span className="text-[11px] font-medium text-zinc-400">
+                {clients.length} cliente{clients.length === 1 ? '' : 's'} cadastrado{clients.length === 1 ? '' : 's'}
               </span>
             </div>
 
-            {clientMode === 'new' ? (
-              <div className="space-y-1">
-                <div className="bg-white border border-zinc-200 rounded-xl p-2.5 flex items-center gap-2 shadow-2xs">
-                  <User className="w-4 h-4 text-zinc-400 shrink-0 ml-1" />
-                  <input
-                    type="text"
-                    placeholder="Nome do novo cliente"
-                    value={newClientName}
-                    onChange={(e) => setNewClientName(e.target.value)}
-                    className="w-full text-xs font-medium text-zinc-800 bg-transparent focus:outline-none placeholder:text-zinc-400"
-                  />
-                  {newClientName && (
+            {/* Client Mode Switcher Tabs */}
+            <div className="flex p-1 bg-zinc-200/60 rounded-xl gap-1">
+              <button
+                type="button"
+                onClick={() => setClientMode('select')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  clientMode === 'select'
+                    ? 'bg-white text-zinc-900 shadow-xs'
+                    : 'text-zinc-600 hover:text-zinc-900'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5 text-[#a38253]" />
+                <span>Cliente Existente {clients.length > 0 ? `(${clients.length})` : ''}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setClientMode('new')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  clientMode === 'new'
+                    ? 'bg-white text-zinc-900 shadow-xs'
+                    : 'text-zinc-600 hover:text-zinc-900'
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                <span>+ Cadastrar Novo Cliente</span>
+              </button>
+            </div>
+
+            {clientMode === 'select' ? (
+              <div className="space-y-3">
+                {clients.length === 0 ? (
+                  <div className="bg-white border border-dashed border-zinc-300 rounded-xl p-4 text-center space-y-2">
+                    <p className="text-xs text-zinc-500">
+                      Você ainda não possui clientes cadastrados no escritório.
+                    </p>
                     <button
                       type="button"
-                      onClick={() => setNewClientName('')}
-                      className="p-1 rounded-full hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors cursor-pointer"
+                      onClick={() => setClientMode('new')}
+                      className="px-3.5 py-1.5 rounded-lg bg-[#c8a97e] text-white text-xs font-bold shadow-xs hover:bg-[#b8986d] transition-colors"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      Cadastrar Primeiro Cliente
                     </button>
-                  )}
-                  {clients.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setClientMode('select')}
-                      className="text-[11px] text-[#c8a97e] font-bold hover:underline shrink-0 px-2"
-                    >
-                      Selecionar existente
-                    </button>
-                  )}
-                </div>
-                <p className="text-[11px] text-zinc-400 font-normal pl-1">
-                  Um novo registro de cliente será criado ao salvar.
-                </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="bg-white border border-zinc-200 rounded-xl p-2.5 flex items-center gap-3 shadow-2xs">
+                      <div className="w-8 h-8 rounded-full bg-[#faf6f0] border border-[#f0eae1] flex items-center justify-center font-extrabold text-[#a38253] text-xs shrink-0">
+                        {selectedClient?.name ? selectedClient.name.charAt(0).toUpperCase() : 'C'}
+                      </div>
+
+                      <select
+                        value={selectedClientId}
+                        onChange={(e) => handleClientChange(e.target.value)}
+                        className="w-full font-bold text-xs text-zinc-900 bg-transparent border-none focus:outline-none cursor-pointer py-1"
+                      >
+                        {clients.map((cli) => (
+                          <option key={cli.id} value={cli.id}>
+                            {cli.name} {cli.company ? `(${cli.company})` : ''} {cli.city ? `• ${cli.city}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {selectedClient && (
+                      <div className="bg-white/80 border border-zinc-200/70 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-zinc-600">
+                        <div className="flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                          <span className="font-semibold text-zinc-800 truncate">{selectedClient.name}</span>
+                        </div>
+                        {(selectedClient.phone || (selectedClient as any).whatsapp) && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>{selectedClient.phone || (selectedClient as any).whatsapp}</span>
+                          </div>
+                        )}
+                        {selectedClient.email && (
+                          <div className="flex items-center gap-1.5">
+                            <Mail className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                            <span className="truncate">{selectedClient.email}</span>
+                          </div>
+                        )}
+                        {selectedClient.city && (
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                            <span>{selectedClient.city}{selectedClient.state ? `, ${selectedClient.state}` : ''}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             ) : (
-              <div className="space-y-1">
-                <div className="bg-white border border-zinc-200 rounded-xl p-2.5 flex items-center gap-3 shadow-2xs">
-                  <div className="w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center font-bold text-zinc-700 text-xs shrink-0">
-                    {selectedClient?.name ? selectedClient.name.charAt(0).toUpperCase() : 'C'}
+              <div className="space-y-3 bg-white p-4 rounded-xl border border-zinc-200">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-800">Nome do Novo Cliente *</label>
+                  <div className="border border-zinc-200 rounded-xl p-2.5 flex items-center gap-2">
+                    <User className="w-4 h-4 text-zinc-400 shrink-0" />
+                    <input
+                      type="text"
+                      required={clientMode === 'new'}
+                      placeholder="Ex: Lucas Holanda, Mariana Costa..."
+                      value={newClientName}
+                      onChange={(e) => {
+                        setNewClientName(e.target.value);
+                        if (!projectName || projectName.startsWith('Projeto - ')) {
+                          setProjectName(`Projeto - ${e.target.value}`);
+                        }
+                      }}
+                      className="w-full text-xs font-medium text-zinc-800 bg-transparent focus:outline-none placeholder:text-zinc-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-zinc-700">WhatsApp / Telefone</label>
+                    <div className="border border-zinc-200 rounded-xl p-2.5 flex items-center gap-2">
+                      <Phone className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                      <input
+                        type="text"
+                        placeholder="(11) 99999-9999"
+                        value={newClientPhone}
+                        onChange={(e) => setNewClientPhone(e.target.value)}
+                        className="w-full text-xs text-zinc-800 bg-transparent focus:outline-none placeholder:text-zinc-400"
+                      />
+                    </div>
                   </div>
 
-                  <select
-                    value={selectedClientId}
-                    onChange={(e) => handleClientChange(e.target.value)}
-                    className="w-full font-bold text-xs text-zinc-900 bg-transparent border-none focus:outline-none cursor-pointer"
-                  >
-                    {clients.map((cli) => (
-                      <option key={cli.id} value={cli.id}>
-                        {cli.name} {cli.company ? `(${cli.company})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-zinc-700">Email</label>
+                    <div className="border border-zinc-200 rounded-xl p-2.5 flex items-center gap-2">
+                      <Mail className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                      <input
+                        type="email"
+                        placeholder="cliente@email.com"
+                        value={newClientEmail}
+                        onChange={(e) => setNewClientEmail(e.target.value)}
+                        className="w-full text-xs text-zinc-800 bg-transparent focus:outline-none placeholder:text-zinc-400"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setClientMode('new')}
-                    className="text-[11px] text-[#c8a97e] font-bold hover:underline shrink-0 px-2"
-                  >
-                    Novo cliente
-                  </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-zinc-700">CPF / CNPJ</label>
+                    <input
+                      type="text"
+                      placeholder="000.000.000-00"
+                      value={newClientDocument}
+                      onChange={(e) => setNewClientDocument(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-800 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-zinc-700">Cidade / UF</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Cidade"
+                        value={newClientCity}
+                        onChange={(e) => setNewClientCity(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-800 focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        placeholder="UF"
+                        maxLength={2}
+                        value={newClientState}
+                        onChange={(e) => setNewClientState(e.target.value.toUpperCase())}
+                        className="w-14 px-2 py-2 text-center rounded-xl border border-zinc-200 text-xs text-zinc-800 focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Card 2: Vincular Lead */}
-          <div className="border border-zinc-200/90 rounded-2xl p-4 space-y-2 bg-white">
-            <div className="flex items-center justify-between text-xs font-bold text-zinc-800">
-              <div className="flex items-center gap-1.5">
-                <Link2 className="w-4 h-4 text-zinc-500" />
-                <span>Vincular Lead</span>
+          {/* Card 2: Vincular Lead (Opcional) */}
+          {clients.length > 0 && (
+            <div className="border border-zinc-200/90 rounded-2xl p-4 space-y-2 bg-white">
+              <div className="flex items-center justify-between text-xs font-bold text-zinc-800">
+                <div className="flex items-center gap-1.5">
+                  <Link2 className="w-4 h-4 text-zinc-500" />
+                  <span>Vincular Lead do Funil (Opcional)</span>
+                </div>
+                <span className="text-[11px] font-normal text-zinc-400">
+                  Preenche dados automaticamente
+                </span>
               </div>
-              <span className="text-[11px] font-normal text-zinc-400">
-                Opcional — preenche dados automaticamente
-              </span>
-            </div>
 
-            <div className="relative">
-              <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <select
-                value={linkedLeadId}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setLinkedLeadId(val);
-                  const lead = clients.find((c) => c.id === val);
-                  if (lead) {
-                    setSelectedClientId(lead.id);
-                    setProjectName(lead.name);
-                    if (lead.originChannel) setAcquisitionChannel(lead.originChannel);
-                  }
-                }}
-                className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-700 focus:outline-none focus:border-[#c8a97e] appearance-none bg-white cursor-pointer"
-              >
-                <option value="">Buscar lead para vincular...</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.city || 'Lead'})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <div className="relative">
+                <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <select
+                  value={linkedLeadId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLinkedLeadId(val);
+                    const lead = clients.find((c) => c.id === val);
+                    if (lead) {
+                      setSelectedClientId(lead.id);
+                      setClientMode('select');
+                      setProjectName(`Projeto - ${lead.name}`);
+                      if (lead.originChannel) setAcquisitionChannel(lead.originChannel);
+                    }
+                  }}
+                  className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-700 focus:outline-none focus:border-[#c8a97e] appearance-none bg-white cursor-pointer"
+                >
+                  <option value="">Buscar cliente/lead para vincular...</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.city || 'Cliente'})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Field 3: Nome do Projeto * */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-zinc-800">Nome do Projeto *</label>
+            <label className="text-xs font-bold text-zinc-800">Título do Contrato / Nome do Projeto *</label>
             <input
               type="text"
               required
-              placeholder="Ex: Reforma Apartamento, Casa de Praia, etc."
+              placeholder="Ex: Reforma Apartamento 102, Casa de Praia, etc."
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 text-xs font-medium text-zinc-900 focus:outline-none focus:border-[#c8a97e]"
@@ -401,12 +561,12 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
                 onChange={(e) => setProjectType(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-800 focus:outline-none focus:border-[#c8a97e] bg-white cursor-pointer"
               >
-                <option value="">Selecione...</option>
                 <option value="Projeto de Arquitetura">Projeto de Arquitetura</option>
                 <option value="Projeto de Interiores">Projeto de Interiores</option>
                 <option value="Consultoria">Consultoria</option>
                 <option value="Decoração">Decoração</option>
                 <option value="Quadros & Arte">Quadros & Arte</option>
+                <option value="Execução de Obra">Execução de Obra</option>
                 <option value="Outro">Outro</option>
               </select>
             </div>
@@ -651,10 +811,10 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
 
             {/* Observações */}
             <div className="space-y-1">
-              <label className="text-xs font-bold text-zinc-800">Observações</label>
+              <label className="text-xs font-bold text-zinc-800">Observações / Escopo</label>
               <textarea
                 rows={3}
-                placeholder="Detalhes adicionais, escopo ou particularidades do projeto..."
+                placeholder="Detalhes adicionais, escopo ou particularidades do contrato..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-800 focus:outline-none focus:border-[#c8a97e] resize-none"
@@ -673,9 +833,10 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-[#c8a97e] hover:bg-[#b8986d] text-white font-bold text-xs shadow-2xs transition-all cursor-pointer"
+              className="px-6 py-2.5 rounded-xl bg-[#c8a97e] hover:bg-[#b8986d] text-white font-bold text-xs shadow-2xs transition-all cursor-pointer flex items-center gap-2"
             >
-              Criar Projeto
+              <FileSignature className="w-4 h-4" />
+              <span>Gerar Contrato & Projeto</span>
             </button>
           </div>
         </form>
@@ -683,3 +844,4 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
     </div>
   );
 };
+
