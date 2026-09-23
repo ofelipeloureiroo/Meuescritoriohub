@@ -147,28 +147,58 @@ const CATEGORIES = [
   },
 ];
 
-const ALL_QUICK_ACTIONS = Array.from(
-  new Map(
-    CATEGORIES.flatMap(cat => cat.tabs)
-      .filter(tab => tab.id !== 'settings')
-      .map(tab => {
-        const info = TAB_TITLES[tab.id] || { label: tab.label, icon: Building2 };
-        const shortLabel = tab.id === 'leads' ? 'Leads' :
-                           tab.id === 'whatsapp_center' ? 'WhatsApp' :
-                           tab.id === 'consultoria_expressa' ? 'Consultoria' :
-                           tab.label;
-        return [
-          tab.id,
-          {
-            id: tab.id,
-            label: info.label,
-            shortLabel,
-            icon: info.icon,
-          }
-        ];
-      })
-  ).values()
-);
+const QUICK_ACTION_ORDER = [
+  'dashboard',
+  'today',
+  'actions',
+  'time_tracker',
+  'projects',
+  'leads',
+  'consultoria_expressa',
+  'suppliers',
+  'team',
+  'whatsapp_center',
+  'freelance',
+  'portal_cliente',
+  'banks',
+  'deadlines',
+  'listas',
+  'goals',
+  'budget',
+  'instagram',
+  'home',
+];
+
+const ALL_QUICK_ACTIONS = QUICK_ACTION_ORDER.map((id) => {
+  const info = TAB_TITLES[id] || { label: id, icon: Building2 };
+  const shortLabel =
+    id === 'dashboard' ? 'Painel' :
+    id === 'today' ? 'Meu Dia & Agenda' :
+    id === 'actions' ? 'Central de Ações' :
+    id === 'time_tracker' ? 'Rastreador de Tempo' :
+    id === 'projects' ? 'Gestão de Projetos' :
+    id === 'leads' ? 'Leads' :
+    id === 'consultoria_expressa' ? 'Consultoria' :
+    id === 'suppliers' ? 'Fornecedores' :
+    id === 'team' ? 'Equipe' :
+    id === 'whatsapp_center' ? 'WhatsApp' :
+    id === 'freelance' ? 'Clientes & Contratos' :
+    id === 'portal_cliente' ? 'Site do Cliente' :
+    id === 'banks' ? 'Financeiro & Bancos' :
+    id === 'deadlines' ? 'Recebimentos & Prazos' :
+    id === 'listas' ? 'Listas & Tarefas' :
+    id === 'goals' ? 'Metas & Objetivos' :
+    id === 'budget' ? 'Orçamento' :
+    id === 'instagram' ? 'Instagram' :
+    id === 'home' ? 'Portfólio' : info.label;
+
+  return {
+    id,
+    label: info.label,
+    shortLabel,
+    icon: info.icon,
+  };
+});
 
 const DESKTOP_QUICK_ACTIONS = [
   { id: 'dashboard', label: 'Painel do Escritório', icon: LayoutDashboard },

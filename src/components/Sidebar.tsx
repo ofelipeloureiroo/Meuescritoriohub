@@ -22,6 +22,7 @@ import {
   Wallet,
   X,
   ChevronRight,
+  ChevronDown,
   Headphones,
   DollarSign,
   ListChecks,
@@ -31,6 +32,8 @@ import {
   Sun,
   Moon,
   Timer,
+  Pin,
+  PinOff,
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
@@ -411,339 +414,348 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const currentBgKey = (architectProfile?.bgTheme || (localStorage.getItem('app_bg_theme') as BgThemeId) || 'light_cream');
   const isLight = !BG_THEMES[currentBgKey]?.isDark;
 
-  const desktopSidebarContent = (
-    <div className="flex flex-col h-full bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] text-[var(--text-main)] select-none transition-all duration-300 items-center py-6 justify-between">
-      {/* Top Brand / Photo + Início Fixo + Mais Usados */}
-      <div className="flex flex-col items-center gap-5 w-full px-2">
-        <button
-          onClick={() => handleNavClick('dashboard')}
-          className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center shadow-md bg-[var(--theme-primary)] text-black shrink-0 hover:opacity-90 transition-all border border-[var(--theme-primary)]/40 relative group cursor-pointer"
-          title="Ir para Painel do Escritório"
-        >
-          {architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL ? (
-            <img
-              src={architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL}
-              alt="Logo"
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <Building2 className="w-5 h-5 text-black" />
-          )}
-          {/* Online Dot */}
-          <span className="absolute bottom-[-1px] right-[-1px] w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[var(--bg-sidebar)]" />
-        </button>
+  // Hover & Pin States for Desktop Collapsible Sidebar
+  const [isHovered, setIsHovered] = useState(false);
+  const [isPinned, setIsPinned] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('sidebar_is_pinned');
+      if (saved !== null) return saved === 'true';
+    } catch {}
+    return false;
+  });
 
-        {/* Divider */}
-        <div className="w-8 h-px bg-[var(--border-color)]" />
+  const togglePin = () => {
+    setIsPinned((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('sidebar_is_pinned', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
-        {/* Navigation Stack: Início (Fixo) + Mais Usados */}
-        <div className="flex flex-col gap-1.5 w-full items-center overflow-y-auto overflow-x-hidden max-h-[calc(100vh-230px)] py-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {/* 1. Início (Fixo no topo) */}
-          <button
-            onClick={() => handleNavClick('dashboard')}
-            className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-150 cursor-pointer relative group border shrink-0 ${
-              activeTab === 'dashboard'
-                ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)] shadow-xs'
-                : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
-            }`}
-            title="Início"
-          >
-            <Home
-              className="w-5 h-5 shrink-0 transition-colors"
-              style={{
-                color: activeTab === 'dashboard' ? 'var(--theme-primary)' : 'var(--text-muted)',
-              }}
-            />
-            
-            {/* Tooltip on hover */}
-            <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-950 text-white text-[11px] font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap shadow-md z-50 pointer-events-none">
-              Início
-            </div>
-          </button>
-
-          {/* Divider separating Início from Most Used */}
-          <div className="w-6 h-px bg-[var(--border-color)]/70 my-0.5 shrink-0" />
-
-          {/* 2. O restante dos ícones: Mais Usados */}
-          {mostUsedTabs.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              activeTab === item.id ||
-              (item.id === 'banks' && ['financeiro', 'recebimentos', 'listas'].includes(activeTab)) ||
-              (item.id === 'projects' && ['projects', 'consultoria_expressa'].includes(activeTab));
-
-            let hasAlert = false;
-            if (item.id === 'banks' && totalDeadlinesAlerts > 0) hasAlert = true;
-            if (item.id === 'deadlines' && totalDeadlinesAlerts > 0) hasAlert = true;
-            if (item.id === 'projects' && ongoingArchitectureProjects.length > 0) hasAlert = true;
-            if (item.id === 'actions' && (dueSoonMilestones.length > 0 || overdueMilestones.length > 0)) hasAlert = true;
-
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.id)}
-                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-150 cursor-pointer relative group border shrink-0 ${
-                  isActive
-                    ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)] shadow-xs'
-                    : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                }`}
-                title={item.label}
-              >
-                <Icon
-                  className="w-5 h-5 shrink-0 transition-colors"
-                  style={{
-                    color: isActive ? 'var(--theme-primary)' : 'var(--text-muted)',
-                  }}
-                />
-                
-                {/* Red dot badge for alerts */}
-                {hasAlert && (
-                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-amber-500 rounded-full ring-2 ring-[var(--bg-sidebar)]" />
-                )}
-
-                {/* Tooltip on hover */}
-                <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-950 text-white text-[11px] font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap shadow-md z-50 pointer-events-none">
-                  {item.label}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Bottom Profile / Theme */}
-      <div className="flex flex-col items-center gap-4 w-full px-2">
-        {/* Simple Theme Toggle Icon */}
-        <button
-          onClick={() => changeBgTheme(isLight ? 'dark_warm' : 'light_cream')}
-          className="w-10 h-10 rounded-xl flex items-center justify-center bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer group relative"
-        >
-          {isLight ? <Moon className="w-4.5 h-4.5" /> : <Sun className="w-4.5 h-4.5" />}
-          
-          <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-950 text-white text-[11px] font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap shadow-md z-50 pointer-events-none">
-            {isLight ? 'Modo Escuro' : 'Modo Claro'}
-          </div>
-        </button>
-
-        {/* Settings Shortcut */}
-        <button
-          onClick={() => handleNavClick('settings')}
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer group relative border ${
-            activeTab === 'settings'
-              ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)]'
-              : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
-          }`}
-        >
-          <Settings className="w-4.5 h-4.5" />
-          
-          <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-950 text-white text-[11px] font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap shadow-md z-50 pointer-events-none">
-            Configurações
-          </div>
-        </button>
-      </div>
-    </div>
-  );
-
-  const sidebarContent = (
-    <div className="flex flex-col h-full bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] text-[var(--text-main)] select-none transition-all duration-300">
-      {/* Brand Header */}
-      <div className="p-4 border-b border-[var(--border-color)] flex items-center justify-between">
-        <button
-          onClick={() => handleNavClick('today')}
-          className="flex items-center gap-3 text-left group cursor-pointer hover:opacity-95 transition-opacity"
-          title="Ir para Meu Dia & Agenda"
-        >
-          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shadow-md bg-[var(--theme-primary)] text-black shrink-0 group-hover:opacity-90 transition-all border border-[var(--theme-primary)]/40">
-            {architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL ? (
-              <img
-                src={architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL}
-                alt="Logo / Foto"
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <Building2 className="w-5 h-5 text-black" />
-            )}
-          </div>
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span
-                className="font-serif font-bold text-sm tracking-wider text-[var(--text-main)] uppercase leading-none truncate max-w-[150px]"
-                title={architectProfile?.name || profile?.companyName || 'Meu Negócio'}
-              >
-                {architectProfile?.name || profile?.companyName || 'MEU ESCRITÓRIO'}
-              </span>
-              <span className="text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.2 rounded-md bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)] shrink-0">
-                ONLINE
-              </span>
-            </div>
-            <span 
-              className="text-[10px] text-[var(--text-muted)] tracking-wide mt-0.5 truncate max-w-[160px]"
-              title={architectProfile?.ownerName ? `${architectProfile.ownerName}${architectProfile.title ? ` • ${architectProfile.title}` : ''}` : (architectProfile?.title || 'Gestão & Negócios')}
-            >
-              {architectProfile?.ownerName ? `${architectProfile.ownerName}${architectProfile.title ? ` • ${architectProfile.title}` : ''}` : (architectProfile?.title || 'Gestão & Negócios')}
-            </span>
-          </div>
-        </button>
-
-        {setIsMobileOpen && (
-          <button
-            onClick={() => setIsMobileOpen(false)}
-            className="lg:hidden p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
-      </div>
-
-      {/* Navigation Links Scrollable */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 scrollbar-thin scrollbar-thumb-[var(--border-color)] scrollbar-track-transparent">
-        {/* Standalone Dashboard Item (Above Comercial & Produtividade, without group header) */}
-        {(!isCollaborator || !permissions || permissions.health !== false) && (
-          <div className="space-y-0.5">
-            <button
-              onClick={() => handleNavClick('dashboard')}
-              className={`w-full flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer text-left border ${
-                activeTab === 'dashboard'
-                  ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)] font-bold shadow-xs'
-                  : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
-              }`}
-            >
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <LayoutDashboard
-                  className="w-4 h-4 shrink-0 transition-colors"
-                  style={{
-                    color: activeTab === 'dashboard' ? 'var(--theme-primary)' : 'var(--text-muted)',
-                  }}
-                />
-                <span className="truncate text-xs">Painel do Escritório</span>
-              </div>
-            </button>
-          </div>
-        )}
-
-        {navGroups.map((group, groupIdx) => {
-          const visibleItems = group.items.filter((item) => item.visible);
-          if (visibleItems.length === 0) return null;
-
-          return (
-            <div key={groupIdx} className="space-y-1">
-              <h4 className="px-3 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] opacity-80">
-                {group.title}
-              </h4>
-              <div className="space-y-0.5">
-                {visibleItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive =
-                    activeTab === item.id ||
-                    (item.id === 'banks' && activeTab === 'financeiro') ||
-                    (item.id === 'deadlines' && activeTab === 'recebimentos') ||
-                    (item.id === 'actions' && activeTab === 'listas');
-
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleNavClick(item.id)}
-                      className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer text-left border ${
-                        isActive
-                          ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)] font-semibold shadow-xs'
-                          : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <Icon
-                          className="w-4 h-4 shrink-0 transition-colors"
-                          style={{
-                            color: isActive ? 'var(--theme-primary)' : 'var(--text-muted)',
-                          }}
-                        />
-                        <span className="truncate text-xs">{item.label}</span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {item.badge && (
-                          <span
-                            className="px-1.5 py-0.5 rounded-full text-[9px] font-bold border leading-none shrink-0"
-                            style={
-                              item.alertBadge
-                                ? {
-                                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-                                    color: '#fcd34d',
-                                    borderColor: 'rgba(245, 158, 11, 0.4)',
-                                  }
-                                : isActive
-                                ? {
-                                    backgroundColor: 'var(--theme-badge-bg)',
-                                    color: 'var(--theme-badge-text)',
-                                    borderColor: 'var(--theme-badge-border)',
-                                  }
-                                : {
-                                    backgroundColor: 'var(--bg-input)',
-                                    color: 'var(--text-muted)',
-                                    borderColor: 'var(--border-subtle)',
-                                  }
-                            }
-                          >
-                            {item.badge}
-                          </span>
-                        )}
-
-                        {item.hasChevron && (
-                          <ChevronRight
-                            className={`w-3.5 h-3.5 shrink-0 transition-transform ${
-                              isActive ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]'
-                            }`}
-                          />
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Segmented Theme Toggle Footer */}
-      <div className="p-3.5 border-t border-[var(--border-color)] bg-[var(--bg-card-secondary)]/30 flex flex-col gap-2 shrink-0">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Aparência</span>
-        </div>
-        <div className="grid grid-cols-2 p-1 bg-[var(--bg-input)] rounded-xl border border-[var(--border-color)]">
-          <button
-            onClick={() => changeBgTheme('dark_warm')}
-            className={`flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold rounded-lg transition-all duration-150 cursor-pointer ${
-              !isLight
-                ? 'bg-[var(--bg-card-hover)] text-[var(--theme-primary)] shadow-xs'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-            }`}
-          >
-            <Moon className="w-3.5 h-3.5" />
-            <span>Escuro</span>
-          </button>
-          <button
-            onClick={() => changeBgTheme('light_cream')}
-            className={`flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold rounded-lg transition-all duration-150 cursor-pointer ${
-              isLight
-                ? 'bg-[var(--bg-card-hover)] text-[var(--theme-primary)] shadow-xs'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-            }`}
-          >
-            <Sun className="w-3.5 h-3.5" />
-            <span>Claro</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  const isExpanded = isHovered || isPinned;
 
   return (
     <>
-      {/* Desktop Sticky Sidebar */}
-      <aside className="hidden lg:block w-20 shrink-0 h-screen sticky top-0 z-30 shadow-xl">
-        {desktopSidebarContent}
+      {/* Desktop Collapsible Hover Sidebar */}
+      <aside
+        className={`hidden lg:block shrink-0 h-screen sticky top-0 z-40 transition-all duration-300 ${
+          isPinned ? 'w-[272px]' : 'w-[72px]'
+        }`}
+      >
+        <div
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className={`h-full bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] text-[var(--text-main)] select-none flex flex-col justify-between transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden ${
+            isPinned
+              ? 'w-[272px]'
+              : isHovered
+              ? 'w-[272px] absolute left-0 top-0 bottom-0 shadow-2xl shadow-black/60 z-50 border-r border-[var(--theme-primary)]/30'
+              : 'w-[72px]'
+          }`}
+        >
+          {/* Top Brand Header */}
+          <div className="p-3.5 border-b border-[var(--border-color)] flex items-center justify-between shrink-0 h-[68px]">
+            <button
+              onClick={() => handleNavClick('dashboard')}
+              className="flex items-center gap-3 text-left group cursor-pointer hover:opacity-95 transition-opacity min-w-0"
+              title="Ir para Painel do Escritório"
+            >
+              <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shadow-md bg-[var(--theme-primary)] text-black shrink-0 border border-[var(--theme-primary)]/40 relative">
+                {architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL ? (
+                  <img
+                    src={architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL}
+                    alt="Logo / Foto"
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <Building2 className="w-5 h-5 text-black" />
+                )}
+                <span className="absolute bottom-[-1px] right-[-1px] w-3 h-3 bg-emerald-500 rounded-full border-2 border-[var(--bg-sidebar)]" />
+              </div>
+
+              {/* Title & Badge (Visible when Expanded) */}
+              <div
+                className={`flex flex-col min-w-0 transition-all duration-200 ${
+                  isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 pointer-events-none hidden'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span
+                    className="font-serif font-bold text-xs tracking-wider text-[var(--text-main)] uppercase leading-none truncate max-w-[140px]"
+                    title={architectProfile?.name || profile?.companyName || 'Meu Negócio'}
+                  >
+                    {architectProfile?.name || profile?.companyName || 'MEU ESCRITÓRIO'}
+                  </span>
+                  <span className="text-[8px] font-extrabold uppercase tracking-widest px-1.5 py-0.2 rounded-md bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)] shrink-0">
+                    ONLINE
+                  </span>
+                </div>
+                <span
+                  className="text-[10px] text-[var(--text-muted)] tracking-wide mt-0.5 truncate max-w-[150px]"
+                  title={
+                    architectProfile?.ownerName
+                      ? `${architectProfile.ownerName}${
+                          architectProfile.title ? ` • ${architectProfile.title}` : ''
+                        }`
+                      : architectProfile?.title || 'Gestão & Negócios'
+                  }
+                >
+                  {architectProfile?.ownerName
+                    ? `${architectProfile.ownerName}${
+                        architectProfile.title ? ` • ${architectProfile.title}` : ''
+                      }`
+                    : architectProfile?.title || 'Gestão & Negócios'}
+                </span>
+              </div>
+            </button>
+
+            {/* Pin Toggle Button (Visible when Expanded) */}
+            {isExpanded && (
+              <button
+                type="button"
+                onClick={togglePin}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  isPinned
+                    ? 'bg-[rgba(var(--theme-primary-rgb),0.2)] text-[var(--theme-primary)] border border-[var(--theme-primary)]/40'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
+                }`}
+                title={isPinned ? 'Desfixar menu (recolher ao sair do mouse)' : 'Fixar menu aberto'}
+              >
+                {isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+              </button>
+            )}
+          </div>
+
+          {/* Navigation Links Scrollable */}
+          <div className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {/* Standalone Dashboard Link */}
+            {(!isCollaborator || !permissions || permissions.health !== false) && (
+              <div>
+                <button
+                  onClick={() => handleNavClick('dashboard')}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer text-left border relative group ${
+                    activeTab === 'dashboard'
+                      ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)] font-bold shadow-xs'
+                      : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  }`}
+                  title={!isExpanded ? 'Painel do Escritório' : undefined}
+                >
+                  <Home
+                    className="w-5 h-5 shrink-0 transition-colors"
+                    style={{
+                      color: activeTab === 'dashboard' ? 'var(--theme-primary)' : 'var(--text-muted)',
+                    }}
+                  />
+                  <span
+                    className={`truncate text-xs transition-opacity duration-200 ${
+                      isExpanded ? 'opacity-100' : 'opacity-0 hidden'
+                    }`}
+                  >
+                    Painel do Escritório
+                  </span>
+
+                  {!isExpanded && (
+                    <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-950 text-white text-[11px] font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap shadow-md z-50 pointer-events-none">
+                      Painel do Escritório
+                    </div>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Navigation Groups */}
+            {navGroups.map((group, groupIdx) => {
+              const visibleItems = group.items.filter((item) => item.visible);
+              if (visibleItems.length === 0) return null;
+
+              return (
+                <div key={groupIdx} className="space-y-1">
+                  {/* Category Title (Expanded Only) */}
+                  {isExpanded && (
+                    <h4 className="px-2.5 pt-1 text-[9.5px] font-bold uppercase tracking-wider text-[var(--text-muted)] opacity-80 truncate">
+                      {group.title}
+                    </h4>
+                  )}
+
+                  {/* Group Items */}
+                  <div className="space-y-0.5">
+                    {visibleItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive =
+                        activeTab === item.id ||
+                        (item.id === 'banks' && activeTab === 'financeiro') ||
+                        (item.id === 'deadlines' && activeTab === 'recebimentos') ||
+                        (item.id === 'actions' && activeTab === 'listas');
+
+                      let hasAlert = false;
+                      if (item.id === 'banks' && totalDeadlinesAlerts > 0) hasAlert = true;
+                      if (item.id === 'deadlines' && totalDeadlinesAlerts > 0) hasAlert = true;
+                      if (item.id === 'projects' && ongoingArchitectureProjects.length > 0) hasAlert = true;
+
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => handleNavClick(item.id)}
+                          className={`w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer text-left border relative group ${
+                            isActive
+                              ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)] font-semibold shadow-xs'
+                              : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                          }`}
+                          title={!isExpanded ? item.label : undefined}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className="relative shrink-0">
+                              <Icon
+                                className="w-4.5 h-4.5 shrink-0 transition-colors"
+                                style={{
+                                  color: isActive ? 'var(--theme-primary)' : 'var(--text-muted)',
+                                }}
+                              />
+                              {!isExpanded && hasAlert && (
+                                <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full ring-2 ring-[var(--bg-sidebar)]" />
+                              )}
+                            </div>
+
+                            <span
+                              className={`truncate text-xs transition-opacity duration-200 ${
+                                isExpanded ? 'opacity-100' : 'opacity-0 hidden'
+                              }`}
+                            >
+                              {item.label}
+                            </span>
+                          </div>
+
+                          {/* Badge / Chevron (Visible when Expanded) */}
+                          {isExpanded && (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {item.badge && (
+                                <span
+                                  className="px-1.5 py-0.5 rounded-full text-[9px] font-bold border leading-none shrink-0"
+                                  style={
+                                    item.alertBadge
+                                      ? {
+                                          backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                                          color: '#fcd34d',
+                                          borderColor: 'rgba(245, 158, 11, 0.4)',
+                                        }
+                                      : isActive
+                                      ? {
+                                          backgroundColor: 'var(--theme-badge-bg)',
+                                          color: 'var(--theme-badge-text)',
+                                          borderColor: 'var(--theme-badge-border)',
+                                        }
+                                      : {
+                                          backgroundColor: 'var(--bg-input)',
+                                          color: 'var(--text-muted)',
+                                          borderColor: 'var(--border-subtle)',
+                                        }
+                                  }
+                                >
+                                  {item.badge}
+                                </span>
+                              )}
+
+                              {item.hasChevron && (
+                                <ChevronRight
+                                  className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                                    isActive
+                                      ? 'text-[var(--theme-primary)]'
+                                      : 'text-[var(--text-muted)]'
+                                  }`}
+                                />
+                              )}
+                            </div>
+                          )}
+
+                          {/* Tooltip on Collapsed Hover */}
+                          {!isExpanded && (
+                            <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-950 text-white text-[11px] font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap shadow-md z-50 pointer-events-none">
+                              {item.label}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Footer Area */}
+          <div className="p-3 border-t border-[var(--border-color)] bg-[var(--bg-card-secondary)]/30 flex flex-col gap-2 shrink-0">
+            {isExpanded ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+                    Aparência
+                  </span>
+                  <button
+                    onClick={() => handleNavClick('settings')}
+                    className="text-[10px] font-bold text-[var(--theme-primary)] hover:underline flex items-center gap-1"
+                  >
+                    <Settings className="w-3 h-3" /> Configs
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 p-1 bg-[var(--bg-input)] rounded-xl border border-[var(--border-color)]">
+                  <button
+                    onClick={() => changeBgTheme('dark_warm')}
+                    className={`flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-bold rounded-lg transition-all duration-150 cursor-pointer ${
+                      !isLight
+                        ? 'bg-[var(--bg-card-hover)] text-[var(--theme-primary)] shadow-xs'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                    }`}
+                  >
+                    <Moon className="w-3.5 h-3.5" />
+                    <span>Escuro</span>
+                  </button>
+                  <button
+                    onClick={() => changeBgTheme('light_cream')}
+                    className={`flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-bold rounded-lg transition-all duration-150 cursor-pointer ${
+                      isLight
+                        ? 'bg-[var(--bg-card-hover)] text-[var(--theme-primary)] shadow-xs'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                    }`}
+                  >
+                    <Sun className="w-3.5 h-3.5" />
+                    <span>Claro</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  onClick={() => changeBgTheme(isLight ? 'dark_warm' : 'light_cream')}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer group relative"
+                  title="Alternar Tema"
+                >
+                  {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                  <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-950 text-white text-[11px] font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap shadow-md z-50 pointer-events-none">
+                    {isLight ? 'Modo Escuro' : 'Modo Claro'}
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleNavClick('settings')}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer group relative border ${
+                    activeTab === 'settings'
+                      ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)]'
+                      : 'bg-transparent border-transparent hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  }`}
+                  title="Configurações"
+                >
+                  <Settings className="w-4 h-4" />
+                  <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-950 text-white text-[11px] font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap shadow-md z-50 pointer-events-none">
+                    Configurações
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </aside>
 
       {/* Mobile Drawer Sidebar */}
@@ -753,8 +765,84 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="fixed inset-0 bg-black/70 backdrop-blur-xs"
             onClick={() => setIsMobileOpen?.(false)}
           />
-          <div className="relative w-72 max-w-[85vw] h-full shadow-2xl z-10 animate-in slide-in-from-left duration-200">
-            {sidebarContent}
+          <div className="relative w-72 max-w-[85vw] h-full bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] text-[var(--text-main)] shadow-2xl z-10 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-left duration-200">
+            {/* Mobile Header */}
+            <div className="p-4 border-b border-[var(--border-color)] flex items-center justify-between">
+              <button
+                onClick={() => handleNavClick('dashboard')}
+                className="flex items-center gap-3 text-left group"
+              >
+                <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shadow-md bg-[var(--theme-primary)] text-black shrink-0">
+                  {architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL ? (
+                    <img
+                      src={architectProfile?.photoUrl || profile?.photoUrl || user?.photoURL}
+                      alt="Logo"
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <Building2 className="w-5 h-5 text-black" />
+                  )}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-serif font-bold text-sm text-[var(--text-main)] uppercase truncate">
+                    {architectProfile?.name || profile?.companyName || 'MEU ESCRITÓRIO'}
+                  </span>
+                  <span className="text-[10px] text-[var(--text-muted)]">ONLINE</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setIsMobileOpen?.(false)}
+                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mobile Navigation */}
+            <div className="flex-1 p-3 space-y-4">
+              {navGroups.map((group, groupIdx) => {
+                const visibleItems = group.items.filter((item) => item.visible);
+                if (visibleItems.length === 0) return null;
+
+                return (
+                  <div key={groupIdx} className="space-y-1">
+                    <h4 className="px-2 text-[10px] font-bold uppercase text-[var(--text-muted)]">
+                      {group.title}
+                    </h4>
+                    <div className="space-y-0.5">
+                      {visibleItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = activeTab === item.id;
+
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => handleNavClick(item.id)}
+                            className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-xs font-medium border ${
+                              isActive
+                                ? 'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[rgba(var(--theme-primary-rgb),0.45)] text-[var(--theme-primary)] font-semibold'
+                                : 'bg-transparent border-transparent text-[var(--text-muted)]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Icon className="w-4 h-4" />
+                              <span>{item.label}</span>
+                            </div>
+                            {item.badge && (
+                              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold border">
+                                {item.badge}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
