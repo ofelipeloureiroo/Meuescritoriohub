@@ -40,10 +40,12 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import { NICHES } from '../../utils/theme';
 import { AddProjectModal } from '../modals/AddProjectModal';
 import { NewContractModal } from '../contracts/NewContractModal';
+import { WorkContractModal } from '../contracts/WorkContractModal';
 import { ProjectDetailModal } from '../modals/ProjectDetailModal';
 import { ProjectWorkspaceView } from '../projects/ProjectWorkspaceView';
 import { ProjectTasksTab } from '../projects/ProjectTasksTab';
 import { OfficeClientPortalManagerModal } from '../portal/OfficeClientPortalManagerModal';
+import { WorkContract } from '../../types';
 
 interface ProjectsManagementTabProps {
   onNavigateTab: (tab: string) => void;
@@ -67,6 +69,7 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
     deleteProjectInstallment,
     bankAccounts,
     officeSettings,
+    workContracts,
   } = useFinance();
 
   const [activeSubTab, setActiveSubTab] = useState<'visao_geral' | 'central_atrasos' | 'tarefas_escritorio'>('visao_geral');
@@ -78,6 +81,8 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isNewContractModalOpen, setIsNewContractModalOpen] = useState(false);
+  const [selectedContractForModal, setSelectedContractForModal] = useState<WorkContract | null>(null);
+  const [isWorkContractModalOpen, setIsWorkContractModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<ArchitectureProject | null>(null);
   const [selectedProjectForDetail, setSelectedProjectForDetail] = useState<ArchitectureProject | null>(null);
   const [selectedProjectForPortal, setSelectedProjectForPortal] = useState<ArchitectureProject | null>(null);
@@ -584,6 +589,52 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                         </>
                       )}
                     </div>
+
+                    {/* Linked Contract Badge */}
+                    {(() => {
+                      const linkedContract = workContracts.find(
+                        (c) => (c.projectId && c.projectId === p.id) ||
+                               (c.projectTitle && p.title && c.projectTitle.trim().toLowerCase() === p.title.trim().toLowerCase())
+                      );
+
+                      return (
+                        <div className="flex items-center gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
+                          {linkedContract ? (
+                            <button
+                              onClick={() => {
+                                setSelectedContractForModal(linkedContract);
+                                setIsWorkContractModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border transition-colors cursor-pointer bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 shadow-2xs"
+                              title="Abrir Contrato de Trabalho Vinculado"
+                            >
+                              <FileText className="w-3 h-3 text-amber-700" />
+                              <span>
+                                Contrato:{' '}
+                                {linkedContract.status === 'signed'
+                                  ? 'Assinado ✓'
+                                  : linkedContract.status === 'completed'
+                                  ? 'Pago & Entregue ✓'
+                                  : linkedContract.status === 'awaiting_payment'
+                                  ? 'Aguardando Pgto'
+                                  : linkedContract.status === 'paid'
+                                  ? 'Pago & Execução'
+                                  : 'Minuta'}
+                              </span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setIsNewContractModalOpen(true)}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border border-dashed border-stone-300 text-stone-600 hover:text-stone-900 hover:border-stone-400 bg-stone-50 cursor-pointer"
+                              title="Gerar ou vincular contrato a este projeto"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span>Vincular Contrato</span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="flex items-center gap-2.5 shrink-0" onClick={e => e.stopPropagation()}>
@@ -1135,6 +1186,15 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
       <NewContractModal
         isOpen={isNewContractModalOpen}
         onClose={() => setIsNewContractModalOpen(false)}
+      />
+
+      <WorkContractModal
+        isOpen={isWorkContractModalOpen}
+        onClose={() => {
+          setIsWorkContractModalOpen(false);
+          setSelectedContractForModal(null);
+        }}
+        contract={selectedContractForModal}
       />
 
       <AddProjectModal

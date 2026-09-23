@@ -135,33 +135,28 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
-      <div className="bg-[#1a1614] border border-[#3d342f] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white border border-stone-200 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#3d342f] bg-[#14110f]/80">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 bg-stone-50/80">
           <div className="flex items-center gap-3">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm"
-              style={{
-                backgroundColor: 'var(--theme-badge-bg)',
-                color: 'var(--theme-badge-text)',
-                border: '1px solid var(--theme-badge-border)',
-              }}
+              className="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm bg-amber-500/15 text-amber-700 border border-amber-500/30"
             >
-              <PenTool className="w-4 h-4" />
+              <PenTool className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-serif font-bold text-base text-[#fcf8f5]">
+              <h3 className="font-serif font-bold text-base text-stone-900">
                 Assinatura Digital do Contrato
               </h3>
-              <p className="text-xs text-[#a89c93]">
+              <p className="text-xs text-stone-500">
                 {contract.title} • {contract.clientName}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-[#a89c93] hover:text-[#fcf8f5] p-1.5 rounded-lg hover:bg-[#241e1b] transition-colors cursor-pointer"
+            className="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -170,29 +165,29 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
         {/* Content */}
         <form onSubmit={handleConfirmSignature} className="p-6 space-y-5">
           {errorMsg && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-300">
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">
               {errorMsg}
             </div>
           )}
 
           {/* Contract Summary Pill */}
-          <div className="p-3.5 bg-[#14110f] border border-[#2b2420] rounded-xl flex items-center justify-between text-xs">
+          <div className="p-3.5 bg-stone-50 border border-stone-200 rounded-2xl flex items-center justify-between text-xs">
             <div>
-              <span className="text-[#a89c93] block">Valor Contratado:</span>
-              <strong className="text-emerald-400 font-serif text-sm">
+              <span className="text-stone-500 block">Valor Contratado:</span>
+              <strong className="text-emerald-600 font-serif text-sm">
                 {formatCurrency(contract.totalAmount)}
               </strong>
             </div>
             <div className="text-right">
-              <span className="text-[#a89c93] block">Condição de Pagamento:</span>
-              <span className="text-[#fcf8f5] font-medium">{contract.paymentTerms}</span>
+              <span className="text-stone-500 block">Condição de Pagamento:</span>
+              <span className="text-stone-800 font-medium">{contract.paymentTerms || 'Conforme acordado'}</span>
             </div>
           </div>
 
           {/* Signer Data */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-[#a89c93] mb-1">
+              <label className="block text-xs font-semibold text-stone-700 mb-1">
                 Nome Completo do Signatário / Cliente *
               </label>
               <input
@@ -201,12 +196,12 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                 value={signerName}
                 onChange={(e) => setSignerName(e.target.value)}
                 placeholder="Ex: Mariana Silveira"
-                className="w-full bg-[#14110f] border border-[#3d342f] rounded-xl px-3 py-2 text-sm text-[#fcf8f5] placeholder-[#6b5d54] focus:outline-none focus:border-[var(--theme-primary)]"
+                className="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#a89c93] mb-1">
+              <label className="block text-xs font-semibold text-stone-700 mb-1">
                 CPF ou CNPJ
               </label>
               <input
@@ -214,12 +209,12 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                 value={signerDocument}
                 onChange={(e) => setSignerDocument(e.target.value)}
                 placeholder="000.000.000-00"
-                className="w-full bg-[#14110f] border border-[#3d342f] rounded-xl px-3 py-2 text-sm text-[#fcf8f5] placeholder-[#6b5d54] focus:outline-none focus:border-[var(--theme-primary)]"
+                className="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#a89c93] mb-1">
+              <label className="block text-xs font-semibold text-stone-700 mb-1">
                 Email de Notificação
               </label>
               <input
@@ -227,24 +222,24 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                 value={signerEmail}
                 onChange={(e) => setSignerEmail(e.target.value)}
                 placeholder="cliente@email.com"
-                className="w-full bg-[#14110f] border border-[#3d342f] rounded-xl px-3 py-2 text-sm text-[#fcf8f5] placeholder-[#6b5d54] focus:outline-none focus:border-[var(--theme-primary)]"
+                className="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-500"
               />
             </div>
           </div>
 
           {/* Signature Method Toggle */}
           <div>
-            <label className="block text-xs font-medium text-[#a89c93] mb-1.5">
+            <label className="block text-xs font-semibold text-stone-700 mb-1.5">
               Método de Assinatura
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setSignMethod('drawn')}
-                className={`py-2 px-3 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
                   signMethod === 'drawn'
-                    ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border-[var(--theme-primary)] shadow-sm'
-                    : 'bg-[#14110f] text-[#a89c93] border-[#3d342f] hover:text-[#fcf8f5]'
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                    : 'bg-stone-50 text-stone-700 border-stone-300 hover:bg-stone-100'
                 }`}
               >
                 <PenTool className="w-3.5 h-3.5" />
@@ -254,10 +249,10 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
               <button
                 type="button"
                 onClick={() => setSignMethod('typed')}
-                className={`py-2 px-3 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
                   signMethod === 'typed'
-                    ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border-[var(--theme-primary)] shadow-sm'
-                    : 'bg-[#14110f] text-[#a89c93] border-[#3d342f] hover:text-[#fcf8f5]'
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                    : 'bg-stone-50 text-stone-700 border-stone-300 hover:bg-stone-100'
                 }`}
               >
                 <Type className="w-3.5 h-3.5" />
@@ -270,18 +265,18 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
           {signMethod === 'drawn' ? (
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] text-[#a89c93]">
+                <span className="text-[11px] text-stone-500">
                   Desenhe sua assinatura ou rubrica no quadro abaixo:
                 </span>
                 <button
                   type="button"
                   onClick={clearCanvas}
-                  className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer"
+                  className="text-[11px] text-amber-700 hover:text-amber-800 font-bold flex items-center gap-1 cursor-pointer"
                 >
                   <Eraser className="w-3 h-3" /> Limpar
                 </button>
               </div>
-              <div className="relative bg-[#12100e] border border-[#3d342f] rounded-xl overflow-hidden touch-none">
+              <div className="relative bg-stone-50 border-2 border-dashed border-stone-300 rounded-2xl overflow-hidden touch-none">
                 <canvas
                   ref={canvasRef}
                   width={440}
@@ -293,59 +288,58 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                   onTouchStart={startDrawing}
                   onTouchMove={draw}
                   onTouchEnd={stopDrawing}
-                  className="w-full h-32 cursor-crosshair block"
+                  className="w-full h-32 cursor-crosshair block bg-white"
                 />
                 {!hasDrawn && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-xs text-[#6b5d54]">
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-xs text-stone-400 font-medium">
                     Clique e arraste ou deslize o dedo para assinar
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            <div className="p-4 bg-[#14110f] border border-[#3d342f] rounded-xl text-center">
-              <span className="text-[11px] text-[#a89c93] block mb-2">Prévia da Assinatura Digital:</span>
-              <p className="font-serif italic text-2xl text-[var(--theme-primary)] tracking-wider">
+            <div className="p-4 bg-stone-50 border border-stone-200 rounded-2xl text-center">
+              <span className="text-[11px] text-stone-500 block mb-2 font-medium">Prévia da Assinatura Digital:</span>
+              <p className="font-serif italic text-2xl text-amber-700 tracking-wider">
                 {signerName || 'Seu Nome Aqui'}
               </p>
-              <span className="text-[10px] text-[#6b5d54] block mt-1">
+              <span className="text-[10px] text-stone-400 block mt-1 font-mono">
                 Autenticado digitalmente por ICP-Brasil / Padrão MP 2.200-2/2001
               </span>
             </div>
           )}
 
           {/* Legal Compliance & Agreement */}
-          <div className="p-3 bg-[#14110f]/70 border border-[#2b2420] rounded-xl flex items-start gap-2.5">
+          <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl flex items-start gap-2.5">
             <input
               type="checkbox"
               id="agree-contract-terms"
               checked={agreedTerms}
               onChange={(e) => setAgreedTerms(e.target.checked)}
-              className="mt-0.5 rounded border-[#3d342f] text-[var(--theme-primary)] focus:ring-0 cursor-pointer"
+              className="mt-0.5 rounded border-stone-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
             />
-            <label htmlFor="agree-contract-terms" className="text-[11px] text-[#a89c93] leading-relaxed cursor-pointer select-none">
+            <label htmlFor="agree-contract-terms" className="text-[11px] text-stone-600 leading-relaxed cursor-pointer select-none">
               Declaro que li e concordo com todas as cláusulas, escopo, prazos e condições financeiras estipuladas neste Contrato de Prestação de Serviços de Trabalho.
             </label>
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] text-emerald-400/90">
-            <ShieldCheck className="w-4 h-4 shrink-0" />
+          <div className="flex items-center gap-2 text-[11px] text-emerald-700 font-medium">
+            <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-600" />
             <span>Assinatura protegida com carimbo temporal e hash criptográfico de validação.</span>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#3d342f]">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-[#3d342f] text-sm text-[#a89c93] hover:text-[#fcf8f5] transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-xl border border-stone-300 text-xs font-semibold text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl text-sm font-bold text-[#12100e] flex items-center gap-2 cursor-pointer shadow-lg hover:brightness-110 active:scale-95 transition-all"
-              style={{ backgroundColor: 'var(--theme-primary)' }}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 flex items-center gap-2 cursor-pointer shadow-md active:scale-95 transition-all"
             >
               <FileCheck className="w-4 h-4" />
               <span>Confirmar Assinatura do Contrato</span>
