@@ -52,7 +52,7 @@ import {
 } from '../types';
 import { applyThemeToDocument, NICHES, THEMES } from '../utils/theme';
 import { getNicheSampleProjects } from '../utils/nicheSampleData';
-import { DEFAULT_PROJECT_TEMPLATES, normalizeTemplateStages, convertTemplateToWorkflowStages } from '../data/defaultProjectTemplates';
+import { DEFAULT_PROJECT_TEMPLATES, normalizeTemplateStages, convertTemplateToWorkflowStages, isProjectWorkflowCompleted, normalizeWorkflowStageStatus } from '../data/defaultProjectTemplates';
 import { deleteClientPortalsForClient, deleteProjectFromPortals, buildClientPortalAccess, saveClientPortalAccess } from '../services/clientPortalService';
 import { deleteGoogleEvent, deleteGoogleTask, addDeletedGcalId, addDeletedGtaskId } from '../services/googleCalendarService';
 
@@ -511,7 +511,20 @@ export function recoverProjectsForUser(targetUid?: string, userEmail?: string, p
     recoveredProjectsMap.set(recoveredLaineProject.id, recoveredLaineProject);
   }
 
-  const result = Array.from(recoveredProjectsMap.values());
+  const rawResult = Array.from(recoveredProjectsMap.values());
+  const result = rawResult.map((proj) => {
+    if (proj.stages && proj.stages.length > 0) {
+      const normalizedStages = proj.stages.map(normalizeWorkflowStageStatus);
+      const isFinished = isProjectWorkflowCompleted(normalizedStages);
+      const finalStatus = isFinished ? 'entregue' : proj.status;
+      return {
+        ...proj,
+        stages: normalizedStages,
+        status: finalStatus,
+      };
+    }
+    return proj;
+  });
   if (targetUid && result.length > 0) {
     try {
       localStorage.setItem(`office_v2_${targetUid}_architecture_projects`, JSON.stringify(result));
@@ -2835,17 +2848,39 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const cleanId = (id || '').trim();
     let foundMatch = false;
 
+    let calculatedFields = { ...updatedFields };
+
+    if (calculatedFields.stages && calculatedFields.stages.length > 0) {
+      const normalizedStages = calculatedFields.stages.map(normalizeWorkflowStageStatus);
+      calculatedFields.stages = normalizedStages;
+
+      const isCompleted = isProjectWorkflowCompleted(normalizedStages);
+      if (isCompleted && (!calculatedFields.status || calculatedFields.status === 'em_andamento' || calculatedFields.status === 'estudo_preliminar')) {
+        calculatedFields.status = 'entregue';
+      }
+    }
+
     const updatedArch = architectureProjects.map((p) => {
-      if (p.id === cleanId || p.id.trim() === cleanId || (p.title && updatedFields.title && p.title.trim().toLowerCase() === updatedFields.title.trim().toLowerCase())) {
+      if (p.id === cleanId || p.id.trim() === cleanId || (p.title && calculatedFields.title && p.title.trim().toLowerCase() === calculatedFields.title.trim().toLowerCase())) {
         foundMatch = true;
-        return { ...p, ...updatedFields, updatedAt: now };
+        const mergedStages = calculatedFields.stages || p.stages;
+        let finalStatus = calculatedFields.status || p.status;
+        if (mergedStages && mergedStages.length > 0) {
+          const isCompleted = isProjectWorkflowCompleted(mergedStages);
+          if (isCompleted) {
+            finalStatus = 'entregue';
+          } else if (p.status === 'entregue' && calculatedFields.status === undefined) {
+            finalStatus = 'executivo';
+          }
+        }
+        return { ...p, ...calculatedFields, status: finalStatus, updatedAt: now };
       }
       return p;
     });
 
     const finalArch = foundMatch
       ? updatedArch
-      : [...architectureProjects, { id: cleanId, title: 'Projeto', clientName: 'Cliente', status: 'estudo_preliminar', coverImage: '', images: [], ...updatedFields, updatedAt: now } as ArchitectureProject];
+      : [...architectureProjects, { id: cleanId, title: 'Projeto', clientName: 'Cliente', status: 'estudo_preliminar', coverImage: '', images: [], ...calculatedFields, updatedAt: now } as ArchitectureProject];
 
     persistArchitectureProjects(finalArch);
 

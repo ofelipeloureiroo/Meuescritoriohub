@@ -35,7 +35,7 @@ import {
 import { useFinance } from '../../context/FinanceContext';
 import { ArchitectureProject, ProjectInstallment, ProjectMilestone } from '../../types';
 import { DEFAULT_PROJECT_STAGES } from '../../data/defaultProjectStages';
-import { DEFAULT_PROJECT_TEMPLATES, convertTemplateToWorkflowStages } from '../../data/defaultProjectTemplates';
+import { DEFAULT_PROJECT_TEMPLATES, convertTemplateToWorkflowStages, isProjectWorkflowCompleted } from '../../data/defaultProjectTemplates';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { NICHES } from '../../utils/theme';
 import { AddProjectModal } from '../modals/AddProjectModal';
@@ -117,12 +117,12 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
 
   // Projects categorization
   const activeProjects = architectureProjects.filter(
-    (p) => p.status !== 'entregue' && p.status !== 'concluido' && p.status !== 'cancelado'
+    (p) => !isProjectWorkflowCompleted(p.stages) && p.status !== 'entregue' && p.status !== 'concluido' && p.status !== 'cancelado'
   );
   const activeProjectsCount = activeProjects.length;
 
   const completedProjects = architectureProjects.filter(
-    (p) => p.status === 'entregue' || p.status === 'concluido'
+    (p) => isProjectWorkflowCompleted(p.stages) || p.status === 'entregue' || p.status === 'concluido'
   );
   const completedProjectsCount = completedProjects.length;
 
@@ -546,7 +546,10 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
               ? Math.round((completedCount / totalItems) * 100) 
               : 0;
 
-            const stageLabel = statusOptions.find(o => o.value === p.status)?.label || p.status;
+            const isProjectCompleted = isProjectWorkflowCompleted(pStages) || p.status === 'entregue' || p.status === 'concluido';
+            const stageLabel = isProjectCompleted
+              ? 'Concluído & Entregue'
+              : (statusOptions.find(o => o.value === p.status)?.label || p.status);
 
             return (
               <div
@@ -908,7 +911,13 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                     <span className="font-bold text-[var(--text-main)]">{formatCurrency(p.honorarios || 0)}</span>
                   </div>
                   <div className="text-[10px] text-[var(--text-muted)] font-medium italic">
-                    Etapa Atual: <span className="text-[var(--theme-primary)] font-bold">{stageLabel}</span>
+                    Etapa Atual: {isProjectCompleted ? (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md not-italic">
+                        Concluído & Entregue
+                      </span>
+                    ) : (
+                      <span className="text-[var(--theme-primary)] font-bold">{stageLabel}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1111,7 +1120,11 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
               project={currentProject}
               stages={projectStages}
               onUpdateStages={(newStages) => {
-                updateArchitectureProject(currentProject.id, { stages: newStages });
+                const isFinished = isProjectWorkflowCompleted(newStages);
+                updateArchitectureProject(currentProject.id, {
+                  stages: newStages,
+                  ...(isFinished ? { status: 'entregue' } : (currentProject.status === 'entregue' ? { status: 'executivo' } : {})),
+                });
               }}
             />
           </div>

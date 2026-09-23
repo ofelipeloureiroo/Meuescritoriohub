@@ -44,6 +44,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
 import { formatDate } from '../../utils/formatters';
+import { normalizeWorkflowStageStatus } from '../../data/defaultProjectTemplates';
 
 interface ProjectTasksTabProps {
   project: ArchitectureProject;
@@ -468,7 +469,7 @@ export const ProjectTasksTab: React.FC<ProjectTasksTabProps> = ({
       }));
     }
 
-    onUpdateStages(updatedStages);
+    onUpdateStages(updatedStages.map(normalizeWorkflowStageStatus));
     setIsEditModalOpen(false);
     setEditingTask(null);
   };
@@ -485,7 +486,7 @@ export const ProjectTasksTab: React.FC<ProjectTasksTabProps> = ({
       }
       return stg;
     });
-    onUpdateStages(updatedStages);
+    onUpdateStages(updatedStages.map(normalizeWorkflowStageStatus));
   };
 
   // Fast Status Change from Table
@@ -497,32 +498,33 @@ export const ProjectTasksTab: React.FC<ProjectTasksTabProps> = ({
     const currentUserName = user?.displayName || 'Arquiteto';
     const updatedStages = stages.map((stg) => {
       if (stg.id === stageId) {
+        const updatedTasks = stg.tasks.map((t) => {
+          if (t.id === task.id) {
+            return {
+              ...t,
+              status: newStatus,
+              editHistory: [
+                {
+                  id: `log_${Date.now()}`,
+                  userName: currentUserName,
+                  timestamp: Date.now(),
+                  action: 'status_changed',
+                  description: `Alterou status para "${newStatus === 'completed' ? 'Concluído' : newStatus === 'in_progress' ? 'Em andamento' : 'Planejado'}"`,
+                },
+                ...(t.editHistory || []),
+              ],
+            };
+          }
+          return t;
+        });
         return {
           ...stg,
-          tasks: stg.tasks.map((t) => {
-            if (t.id === task.id) {
-              return {
-                ...t,
-                status: newStatus,
-                editHistory: [
-                  {
-                    id: `log_${Date.now()}`,
-                    userName: currentUserName,
-                    timestamp: Date.now(),
-                    action: 'status_changed',
-                    description: `Alterou status para "${newStatus === 'completed' ? 'Concluído' : newStatus === 'in_progress' ? 'Em andamento' : 'Planejado'}"`,
-                  },
-                  ...(t.editHistory || []),
-                ],
-              };
-            }
-            return t;
-          }),
+          tasks: updatedTasks,
         };
       }
       return stg;
     });
-    onUpdateStages(updatedStages);
+    onUpdateStages(updatedStages.map(normalizeWorkflowStageStatus));
   };
 
   // Stopwatch Handler: Start / Switch

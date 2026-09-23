@@ -47,7 +47,7 @@ import {
 import { useFinance } from '../../context/FinanceContext';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
 import { DEFAULT_PROJECT_STAGES } from '../../data/defaultProjectStages';
-import { convertTemplateToWorkflowStages, DEFAULT_PROJECT_TEMPLATES } from '../../data/defaultProjectTemplates';
+import { convertTemplateToWorkflowStages, DEFAULT_PROJECT_TEMPLATES, isProjectWorkflowCompleted, normalizeWorkflowStageStatus } from '../../data/defaultProjectTemplates';
 import { MemorialDescritivoTab } from './MemorialDescritivoTab';
 import { ProjectTasksTab } from './ProjectTasksTab';
 import { SiteLogTab } from './SiteLogTab';
@@ -276,9 +276,17 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
 
   // Save changes to project in context
   const handleUpdateStages = (newStages: ProjectWorkflowStage[]) => {
-    setStages(newStages);
+    const normalizedStages = newStages.map(normalizeWorkflowStageStatus);
+    setStages(normalizedStages);
+
+    const isFinished = isProjectWorkflowCompleted(normalizedStages);
+    const newStatus = isFinished
+      ? 'entregue'
+      : (liveProject.status === 'entregue' || liveProject.status === 'concluido' ? 'executivo' : liveProject.status);
+
     updateArchitectureProject(liveProject.id, {
-      stages: newStages,
+      stages: normalizedStages,
+      status: newStatus,
     });
   };
 
@@ -622,10 +630,16 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                 </div>
 
                 {/* Status badge */}
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60 text-xs font-bold">
-                  {project.status === 'entregue'
-                    ? 'Entregue'
-                    : project.status === 'obra'
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold ${
+                  liveProject.status === 'entregue' || liveProject.status === 'concluido' || isProjectWorkflowCompleted(stages)
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : liveProject.status === 'obra'
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                }`}>
+                  {liveProject.status === 'entregue' || liveProject.status === 'concluido' || isProjectWorkflowCompleted(stages)
+                    ? 'Concluído'
+                    : liveProject.status === 'obra'
                     ? 'Em Obra'
                     : 'Em Andamento'}
                 </span>
@@ -1105,7 +1119,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
 
                           <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
                             <select
-                              value={stg.status}
+                              value={isStageCompleted ? 'completed' : stg.status}
                               onChange={(e) =>
                                 setStageStatusDirectly(
                                   stg.id,

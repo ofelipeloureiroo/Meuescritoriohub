@@ -111,6 +111,33 @@ export function convertTemplateToWorkflowStages(
   });
 }
 
+export function isProjectWorkflowCompleted(stages?: ProjectWorkflowStage[]): boolean {
+  if (!stages || stages.length === 0) return false;
+  const totalTasks = stages.reduce((acc, s) => acc + (s.tasks?.length || 0), 0);
+  if (totalTasks > 0) {
+    const completedTasks = stages.reduce(
+      (acc, s) => acc + (s.tasks || []).filter((t) => t.status === 'completed').length,
+      0
+    );
+    return completedTasks === totalTasks;
+  }
+  return stages.every((s) => s.status === 'completed');
+}
+
+export function normalizeWorkflowStageStatus(stage: ProjectWorkflowStage): ProjectWorkflowStage {
+  if (!stage.tasks || stage.tasks.length === 0) return stage;
+  const allTasksCompleted = stage.tasks.every((t) => t.status === 'completed');
+  const anyTasksInProgress = stage.tasks.some(
+    (t) => t.status === 'completed' || t.status === 'in_progress'
+  );
+  const newStatus: 'not_started' | 'in_progress' | 'completed' = allTasksCompleted
+    ? 'completed'
+    : anyTasksInProgress
+    ? 'in_progress'
+    : 'not_started';
+  return { ...stage, status: newStatus };
+}
+
 export const DEFAULT_PROJECT_TEMPLATES: ProjectTemplate[] = [
   {
     id: 'tpl-1',

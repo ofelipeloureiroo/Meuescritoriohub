@@ -38,6 +38,7 @@ import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { AppAction, ArchitectureProject, Client, TeamMember } from '../../types';
+import { isProjectWorkflowCompleted } from '../../data/defaultProjectTemplates';
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
@@ -560,6 +561,9 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
   const completedTodayTasks = useMemo(() => todayTasks.filter((t) => t.status === 'completed'), [todayTasks]);
   const tasksPercentage = todayTasks.length > 0 ? Math.round((completedTodayTasks.length / todayTasks.length) * 100) : 0;
 
+  const isProjectDone = (p: ArchitectureProject) =>
+    p.status === 'entregue' || p.status === 'concluido' || isProjectWorkflowCompleted(p.stages);
+
   // 8. Filtered Projects based on pill selection
   const filteredProjects = useMemo(() => {
     const active = architectureProjects;
@@ -567,27 +571,27 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
     switch (projectFilter) {
       case 'critico':
         return active.filter((p) => {
-          if (p.status === 'entregue') return false;
+          if (isProjectDone(p)) return false;
           if (!p.deliveryDate) return false;
           const diffDays = Math.ceil((new Date(p.deliveryDate).getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
           return diffDays <= 7;
         });
       case 'ok':
         return active.filter((p) => {
-          if (p.status === 'entregue') return false;
+          if (isProjectDone(p)) return false;
           if (!p.deliveryDate) return true;
           const diffDays = Math.ceil((new Date(p.deliveryDate).getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
           return diffDays > 7;
         });
       case 'obra':
-        return active.filter((p) => p.status === 'obra' || p.category?.toLowerCase().includes('obra'));
+        return active.filter((p) => !isProjectDone(p) && (p.status === 'obra' || p.category?.toLowerCase().includes('obra')));
       case 'estudo':
-        return active.filter((p) => p.status === 'estudo_preliminar' || p.status === 'anteprojeto');
+        return active.filter((p) => !isProjectDone(p) && (p.status === 'estudo_preliminar' || p.status === 'anteprojeto'));
       case 'entregue':
-        return active.filter((p) => p.status === 'entregue');
+        return active.filter((p) => isProjectDone(p));
       case 'todos':
       default:
-        return active.filter((p) => p.status !== 'entregue');
+        return active.filter((p) => !isProjectDone(p));
     }
   }, [architectureProjects, projectFilter, todayDate]);
 
@@ -1476,21 +1480,21 @@ export const BusinessDashboardTab: React.FC<BusinessDashboardTabProps> = ({ onNa
               {/* Category Filter Pills */}
               <div className="flex flex-wrap items-center gap-2">
                 {[
-                  { id: 'todos', label: 'Todos os Ativos', count: architectureProjects.filter((p) => p.status !== 'entregue').length },
+                  { id: 'todos', label: 'Todos os Ativos', count: architectureProjects.filter((p) => !isProjectDone(p)).length },
                   { id: 'critico', label: 'Prazo Crítico (≤ 7 dias)', count: architectureProjects.filter((p) => {
-                    if (p.status === 'entregue' || !p.deliveryDate) return false;
+                    if (isProjectDone(p) || !p.deliveryDate) return false;
                     const diffDays = Math.ceil((new Date(p.deliveryDate).getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
                     return diffDays <= 7;
                   }).length },
                   { id: 'ok', label: 'Prazo OK', count: architectureProjects.filter((p) => {
-                    if (p.status === 'entregue') return false;
+                    if (isProjectDone(p)) return false;
                     if (!p.deliveryDate) return true;
                     const diffDays = Math.ceil((new Date(p.deliveryDate).getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
                     return diffDays > 7;
                   }).length },
-                  { id: 'obra', label: 'Em Fase de Obra', count: architectureProjects.filter((p) => p.status === 'obra').length },
-                  { id: 'estudo', label: 'Estudo / Anteprojeto', count: architectureProjects.filter((p) => p.status === 'estudo_preliminar' || p.status === 'anteprojeto').length },
-                  { id: 'entregue', label: 'Concluídos', count: architectureProjects.filter((p) => p.status === 'entregue').length },
+                  { id: 'obra', label: 'Em Fase de Obra', count: architectureProjects.filter((p) => !isProjectDone(p) && p.status === 'obra').length },
+                  { id: 'estudo', label: 'Estudo / Anteprojeto', count: architectureProjects.filter((p) => !isProjectDone(p) && (p.status === 'estudo_preliminar' || p.status === 'anteprojeto')).length },
+                  { id: 'entregue', label: 'Concluídos', count: architectureProjects.filter((p) => isProjectDone(p)).length },
                 ].map((pill) => (
                   <button
                     key={pill.id}
