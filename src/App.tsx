@@ -173,7 +173,7 @@ const AppContent: React.FC = () => {
 
   if (activeTab === 'consultoria_expressa') {
     return (
-      <div className="fixed inset-0 z-50 bg-[#12100e] text-[#fcf8f5] overflow-y-auto w-full h-full font-sans antialiased selection:bg-[#c58a4b]/30">
+      <div className="fixed inset-0 z-50 bg-[#faf8f5] text-[#2d2621] overflow-y-auto w-full h-full font-sans antialiased selection:bg-[#b87c3e]/30">
         <ExpressConsultingTab onExit={() => setActiveTab('projects')} />
         <SupportChatWidget />
       </div>

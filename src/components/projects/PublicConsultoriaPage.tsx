@@ -30,10 +30,10 @@ export const PublicConsultoriaPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#12100e] text-[#fcf8f5] flex items-center justify-center font-sans">
+      <div className="min-h-screen bg-[#faf8f5] text-[#2d2621] flex items-center justify-center font-sans">
         <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-2 border-[#c58a4b] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-[#a89c93]">Carregando apresentação da consultoria...</p>
+          <div className="w-10 h-10 border-2 border-[#b87c3e] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-[#786b60]">Carregando apresentação da consultoria...</p>
         </div>
       </div>
     );
@@ -45,8 +45,8 @@ export const PublicConsultoriaPage: React.FC = () => {
   const consultantName = consultation?.consultantName || 'Arquiteto';
 
   return (
-    <div className="min-h-screen bg-[#12100e] text-[#1c1917] font-sans antialiased py-6 px-3 sm:px-6 flex justify-center">
-      <div className="bg-[#f7f5f0] text-[#1c1917] w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl border border-[#3d342f] relative">
+    <div className="min-h-screen bg-[#faf8f5] text-[#1c1917] font-sans antialiased py-6 px-3 sm:px-6 flex justify-center">
+      <div className="bg-[#f7f5f0] text-[#1c1917] w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl border border-[#e5dfd8] relative">
         {/* PRESENTATION TOP SECTION (DARK HERO & IDENTIFICATION) */}
         <div className="bg-[#14110f] text-[#fcf8f5] p-6 sm:p-10 md:p-12 space-y-6 relative border-b border-[#2e2621]">
           <div className="text-center space-y-2">
