@@ -754,8 +754,8 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                   </div>
                 </div>
 
-                {/* Operational Details Grid: Sub-milestones & Installments */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-[var(--border-color)]/60">
+                {/* Operational Details: Sub-milestones & Deadlines */}
+                <div className="pt-3 border-t border-[var(--border-color)]/60">
                   
                   {/* Milestones / Deadlines section */}
                   <div className="space-y-2.5" onClick={e => e.stopPropagation()}>
@@ -846,95 +846,6 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                             </span>
                           </div>
                         ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Installments & Finances section */}
-                  <div className="space-y-2.5" onClick={e => e.stopPropagation()}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[var(--text-main)] flex items-center gap-1">
-                        <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
-                        Finanças & Cobranças
-                      </span>
-                      <button
-                        onClick={() => {
-                          setActiveAddingInstallmentProjectId(activeAddingInstallmentProjectId === p.id ? null : p.id);
-                          setNewInstallmentDesc('');
-                          setNewInstallmentAmount('');
-                        }}
-                        className="text-[10px] font-bold text-[var(--theme-primary)] hover:underline flex items-center gap-0.5 cursor-pointer"
-                      >
-                        + Adicionar
-                      </button>
-                    </div>
-
-                    {activeAddingInstallmentProjectId === p.id && (
-                      <div className="bg-[var(--bg-card-secondary)] border border-[var(--border-color)] rounded-xl p-2.5 space-y-2">
-                        <input
-                          type="text"
-                          placeholder="Descrição (ex: Parcela 2)"
-                          value={newInstallmentDesc}
-                          onChange={(e) => setNewInstallmentDesc(e.target.value)}
-                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-hidden"
-                        />
-                        <div className="grid grid-cols-2 gap-1.5">
-                          <input
-                            type="number"
-                            placeholder="Valor (R$)"
-                            value={newInstallmentAmount}
-                            onChange={(e) => setNewInstallmentAmount(e.target.value)}
-                            className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-main)] focus:outline-hidden"
-                          />
-                          <input
-                            type="date"
-                            value={newInstallmentDueDate}
-                            onChange={(e) => setNewInstallmentDueDate(e.target.value)}
-                            className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-main)] focus:outline-hidden cursor-pointer"
-                          />
-                        </div>
-                        <button
-                          onClick={() => handleAddQuickInstallment(p.id, p.clientName, p.clientPhone)}
-                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-1 rounded-lg text-[10px] transition-colors"
-                        >
-                          Confirmar Cobrança
-                        </button>
-                      </div>
-                    )}
-
-                    {projectInsts.length === 0 ? (
-                      <p className="text-[10px] text-[var(--text-muted)] italic">Nenhuma cobrança cadastrada.</p>
-                    ) : (
-                      <div className="space-y-1.5 max-h-[140px] overflow-y-auto no-scrollbar">
-                        {projectInsts.map((i) => {
-                          const isPaid = i.status === 'paid';
-                          const isOverdue = i.status === 'overdue';
-                          return (
-                            <div key={i.id} className="flex items-center justify-between gap-2 p-1.5 bg-[var(--bg-card-secondary)]/40 border border-[var(--border-color)]/40 rounded-xl text-[11px]">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-[var(--text-main)]">{formatCurrency(i.amount)}</span>
-                                <span className="text-[9px] text-[var(--text-muted)]">{i.description} • {formatDate(i.dueDate)}</span>
-                              </div>
-                              {isPaid ? (
-                                <span className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/15">
-                                  Pago
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => handleMarkInstallmentAsPaid(i.id)}
-                                  className={`text-[9px] font-bold px-2 py-1 rounded-lg transition-all border cursor-pointer active:scale-95 ${
-                                    isOverdue 
-                                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/25 hover:bg-rose-500/25' 
-                                      : 'bg-[var(--bg-card-secondary)] text-amber-600 dark:text-amber-300 border-[var(--border-color)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-secondary)]/80'
-                                  }`}
-                                  title="Marcar como Pago"
-                                >
-                                  {isOverdue ? 'Atrasado • Receber' : 'Receber'}
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })}
                       </div>
                     )}
                   </div>
