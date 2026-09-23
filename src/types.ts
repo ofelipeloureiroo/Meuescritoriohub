@@ -497,6 +497,9 @@ export interface ArchitectProfile {
   pixKey?: string;
   pixKeyType?: 'cpf' | 'cnpj' | 'email' | 'telefone' | 'aleatoria';
   bankInfo?: string;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
   niche?: NicheType;
   nicheCustomName?: string;
   themeColor?: ThemeColorId;

@@ -51,10 +51,13 @@ export const WorkContractModal: React.FC<WorkContractModalProps> = ({
   const {
     architectProfile,
     bankAccounts,
+    architectureProjects,
+    freelanceProjects,
     sendContractForSignature,
     signWorkContract,
     markContractAwaitingPayment,
     confirmContractPayment,
+    markContractCompleted,
     updateWorkContract,
     deleteWorkContract,
   } = useFinance();
@@ -78,6 +81,38 @@ export const WorkContractModal: React.FC<WorkContractModalProps> = ({
   const [editTerms, setEditTerms] = useState(contract?.paymentTerms || '');
   const [editPixKey, setEditPixKey] = useState(contract?.pixKey || architectProfile.pixKey || '');
   const [editDeadline, setEditDeadline] = useState(contract?.deadline || '');
+
+  const effectiveStatus: ContractStatus = React.useMemo(() => {
+    if (!contract) return 'draft';
+    if (contract.status === 'completed') return 'completed';
+    if (contract.status === 'cancelled') return 'cancelled';
+
+    const pTitle = contract.projectTitle?.trim().toLowerCase();
+    const pClient = contract.clientName?.trim().toLowerCase();
+    const linkedArch = architectureProjects.find((p) => {
+      if (contract.projectId && p.id === contract.projectId) return true;
+      if (pTitle && p.title && p.title.trim().toLowerCase() === pTitle) {
+        if (!pClient || !p.clientName || p.clientName.trim().toLowerCase() === pClient) return true;
+      }
+      return false;
+    });
+
+    if (linkedArch && (linkedArch.status === 'entregue' || linkedArch.completed)) {
+      return 'completed';
+    }
+
+    const linkedFreela = freelanceProjects.find((p) => {
+      if (contract.projectId && p.id === contract.projectId) return true;
+      if (pTitle && p.title && p.title.trim().toLowerCase() === pTitle) return true;
+      return false;
+    });
+
+    if (linkedFreela && (linkedFreela.status === 'delivered' || linkedFreela.status === 'completed')) {
+      return 'completed';
+    }
+
+    return contract.status;
+  }, [contract, architectureProjects, freelanceProjects]);
 
   React.useEffect(() => {
     if (contract) {
@@ -128,9 +163,9 @@ export const WorkContractModal: React.FC<WorkContractModalProps> = ({
         };
       case 'completed':
         return {
-          label: 'Concluído',
-          color: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
-          icon: Check,
+          label: 'Pago & Entregue',
+          color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold',
+          icon: CheckCircle2,
         };
       case 'cancelled':
         return {
@@ -147,7 +182,7 @@ export const WorkContractModal: React.FC<WorkContractModalProps> = ({
     }
   };
 
-  const statusInfo = getStatusBadge(contract.status);
+  const statusInfo = getStatusBadge(effectiveStatus);
   const StatusIcon = statusInfo.icon;
 
   // WhatsApp sharing message
@@ -338,12 +373,22 @@ export const WorkContractModal: React.FC<WorkContractModalProps> = ({
             <span className="text-[#6b5d54]">→</span>
             <span
               className={`px-2 py-1 rounded-lg border font-medium ${
-                contract.status === 'paid'
+                effectiveStatus === 'paid'
                   ? 'bg-teal-500/20 text-teal-300 border-teal-500/40 font-bold'
                   : 'bg-[#1a1614] text-[#a89c93] border-[#3d342f]'
               }`}
             >
               5. Pago & Execução
+            </span>
+            <span className="text-[#6b5d54]">→</span>
+            <span
+              className={`px-2 py-1 rounded-lg border font-medium ${
+                effectiveStatus === 'completed'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold'
+                  : 'bg-[#1a1614] text-[#a89c93] border-[#3d342f]'
+              }`}
+            >
+              6. Pago & Entregue
             </span>
           </div>
 
@@ -425,7 +470,7 @@ export const WorkContractModal: React.FC<WorkContractModalProps> = ({
                 </div>
               )}
 
-              {contract.status === 'signed' && (
+              {effectiveStatus === 'signed' && (
                 <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-300 shrink-0">
@@ -451,6 +496,52 @@ export const WorkContractModal: React.FC<WorkContractModalProps> = ({
                     <Clock className="w-3.5 h-3.5" />
                     <span>Avançar para Aguardando Pagamento</span>
                   </button>
+                </div>
+              )}
+
+              {effectiveStatus === 'paid' && (
+                <div className="p-4 rounded-2xl bg-teal-950/30 border border-teal-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-300 shrink-0">
+                      <CheckCircle2 className="w-5 h-5 text-teal-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-teal-200 font-serif">
+                        Contrato Pago & Em Execução
+                      </h4>
+                      <p className="text-xs text-teal-300/80">
+                        O pagamento foi confirmado e o projeto está em andamento. Quando o projeto for concluído, marque como pago e entregue.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => markContractCompleted(contract.id)}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition-colors flex items-center gap-1.5 cursor-pointer shadow-md shrink-0"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Marcar como Pago & Entregue</span>
+                  </button>
+                </div>
+              )}
+
+              {effectiveStatus === 'completed' && (
+                <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-300 shrink-0">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-emerald-200 font-serif">
+                        Projeto Entregue & Contrato Concluído ✓
+                      </h4>
+                      <p className="text-xs text-emerald-300/80">
+                        Este projeto vinculado e seu contrato estão 100% concluídos, pagos e entregues ao cliente.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold shrink-0">
+                    Pago & Entregue ✓
+                  </span>
                 </div>
               )}
 
@@ -708,11 +799,11 @@ export const WorkContractModal: React.FC<WorkContractModalProps> = ({
                 <h4 className="font-serif font-bold text-sm text-[#fcf8f5]">
                   Controle Manual do Status do Contrato
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                   <button
                     onClick={() => sendContractForSignature(contract.id)}
                     className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer transition-all ${
-                      contract.status === 'sent_for_signature'
+                      effectiveStatus === 'sent_for_signature'
                         ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
                         : 'bg-[#14110f] text-[#a89c93] border-[#2b2420] hover:text-[#fcf8f5]'
                     }`}
@@ -724,25 +815,37 @@ export const WorkContractModal: React.FC<WorkContractModalProps> = ({
                   <button
                     onClick={() => setIsSignModalOpen(true)}
                     className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer transition-all ${
-                      contract.status === 'signed'
+                      effectiveStatus === 'signed'
                         ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm'
                         : 'bg-[#14110f] text-[#a89c93] border-[#2b2420] hover:text-[#fcf8f5]'
                     }`}
                   >
                     <PenTool className="w-4 h-4" />
-                    <span>{contract.status === 'signed' ? 'Contrato Assinado ✓' : 'Assinar Digitalmente'}</span>
+                    <span>{effectiveStatus === 'signed' ? 'Contrato Assinado ✓' : 'Assinar Digitalmente'}</span>
                   </button>
 
                   <button
                     onClick={() => markContractAwaitingPayment(contract.id)}
                     className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer transition-all ${
-                      contract.status === 'awaiting_payment'
+                      effectiveStatus === 'awaiting_payment'
                         ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-sm'
                         : 'bg-[#14110f] text-[#a89c93] border-[#2b2420] hover:text-[#fcf8f5]'
                     }`}
                   >
                     <Clock className="w-4 h-4" />
                     <span>Aguardando Pagamento</span>
+                  </button>
+
+                  <button
+                    onClick={() => markContractCompleted(contract.id)}
+                    className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer transition-all ${
+                      effectiveStatus === 'completed'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm'
+                        : 'bg-[#14110f] text-[#a89c93] border-[#2b2420] hover:text-[#fcf8f5]'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{effectiveStatus === 'completed' ? 'Pago & Entregue ✓' : 'Marcar Pago & Entregue'}</span>
                   </button>
                 </div>
               </div>

@@ -161,6 +161,7 @@ interface FinanceContextType {
   signWorkContract: (contractId: string, signature: Omit<DigitalSignature, 'signedAt' | 'verificationCode'>) => void;
   markContractAwaitingPayment: (contractId: string) => void;
   confirmContractPayment: (contractId: string, bankAccountId?: string) => void;
+  markContractCompleted: (contractId: string) => void;
 
   // Actions - Goals & Budgets
   addSavingsGoal: (goal: Omit<SavingsGoal, 'id'>) => void;
@@ -2914,6 +2915,45 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         saveClientPortalAccess(portal).catch(console.error);
       }
     }
+
+    // Auto-sync contract status to 'completed' (Pago & Entregue) when project is delivered/completed
+    if (updatedProj && (updatedProj.status === 'entregue' || updatedProj.completed)) {
+      const pId = updatedProj.id;
+      const pTitle = updatedProj.title?.trim().toLowerCase();
+      const pClientName = updatedProj.clientName?.trim().toLowerCase();
+
+      setWorkContracts((prevContracts) => {
+        let hasChanges = false;
+        const synced = prevContracts.map((c) => {
+          const matchById = c.projectId && c.projectId === pId;
+          const matchByTitle = pTitle && c.projectTitle && c.projectTitle.trim().toLowerCase() === pTitle;
+          const matchByClient = (!c.clientId || c.clientId === updatedProj.clientId) && (!pClientName || !c.clientName || c.clientName.trim().toLowerCase() === pClientName);
+          
+          if ((matchById || (matchByTitle && matchByClient)) && c.status !== 'completed') {
+            hasChanges = true;
+            return {
+              ...c,
+              status: 'completed' as const,
+              updatedAt: now,
+            };
+          }
+          return c;
+        });
+
+        if (hasChanges) {
+          safeSetItem('work_contracts', synced);
+          // Also update client contract status
+          if (updatedProj.clientId) {
+            setClients((prevCli) =>
+              prevCli.map((cli) =>
+                cli.id === updatedProj.clientId ? { ...cli, contractStatus: 'completed' } : cli
+              )
+            );
+          }
+        }
+        return hasChanges ? synced : prevContracts;
+      });
+    }
   };
 
   const deleteArchitectureProject = (id: string) => {
@@ -3011,6 +3051,44 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     recordLocalMutation();
     const updatedArch = architectureProjects.map((p) => (p.id === id ? { ...p, status: newStatus } : p));
     persistArchitectureProjects(updatedArch);
+
+    if (newStatus === 'entregue') {
+      const targetProj = architectureProjects.find((p) => p.id === id);
+      const pTitle = targetProj?.title?.trim().toLowerCase();
+      const pClientName = targetProj?.clientName?.trim().toLowerCase();
+      const nowStr = new Date().toISOString();
+
+      setWorkContracts((prev) => {
+        let changed = false;
+        const mapped = prev.map((c) => {
+          const matchById = c.projectId && c.projectId === id;
+          const matchByTitle = pTitle && c.projectTitle && c.projectTitle.trim().toLowerCase() === pTitle;
+          const matchByClient = (!c.clientId || c.clientId === targetProj?.clientId) && (!pClientName || !c.clientName || c.clientName.trim().toLowerCase() === pClientName);
+
+          if ((matchById || (matchByTitle && matchByClient)) && c.status !== 'completed') {
+            changed = true;
+            return {
+              ...c,
+              status: 'completed' as const,
+              updatedAt: nowStr,
+            };
+          }
+          return c;
+        });
+
+        if (changed) {
+          safeSetItem('work_contracts', mapped);
+          if (targetProj?.clientId) {
+            setClients((prevCli) =>
+              prevCli.map((cli) =>
+                cli.id === targetProj.clientId ? { ...cli, contractStatus: 'completed' } : cli
+              )
+            );
+          }
+        }
+        return changed ? mapped : prev;
+      });
+    }
   };
 
   const addConstructionReport = (projectId: string, report: Omit<ConstructionReport, 'id'>) => {
@@ -3292,6 +3370,79 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         );
       }
     }
+  };
+
+  const markContractCompleted = (contractId: string) => {
+    recordLocalMutation();
+    const nowStr = new Date().toISOString();
+    const contract = workContracts.find((c) => c.id === contractId);
+    if (!contract) return;
+
+    setWorkContracts((prev) =>
+      prev.map((c) => {
+        if (c.id === contractId) {
+          const updated: WorkContract = {
+            ...c,
+            status: 'completed',
+            updatedAt: nowStr,
+          };
+          if (updated.clientId) {
+            setClients((clientPrev) =>
+              clientPrev.map((cli) =>
+                cli.id === updated.clientId ? { ...cli, contractStatus: 'completed' } : cli
+              )
+            );
+          }
+          return updated;
+        }
+        return c;
+      })
+    );
+
+    // Also mark linked architecture project as entregue/completed
+    const pTitle = contract.projectTitle?.trim().toLowerCase();
+    const pClientName = contract.clientName?.trim().toLowerCase();
+
+    setArchitectureProjects((prevArch) => {
+      let archChanged = false;
+      const updatedArch = prevArch.map((p) => {
+        const matchById = contract.projectId && p.id === contract.projectId;
+        const matchByTitle = pTitle && p.title && p.title.trim().toLowerCase() === pTitle;
+        const matchByClient = (!pClientName || !p.clientName || p.clientName.trim().toLowerCase() === pClientName);
+
+        if ((matchById || (matchByTitle && matchByClient)) && p.status !== 'entregue') {
+          archChanged = true;
+          return {
+            ...p,
+            status: 'entregue' as const,
+            completed: true,
+            updatedAt: nowStr,
+          };
+        }
+        return p;
+      });
+
+      if (archChanged) {
+        persistArchitectureProjects(updatedArch);
+      }
+      return archChanged ? updatedArch : prevArch;
+    });
+
+    // Also mark linked freelance project as delivered
+    setFreelanceProjects((prevFreela) =>
+      prevFreela.map((p) => {
+        const matchById = contract.projectId && p.id === contract.projectId;
+        const matchByTitle = pTitle && p.title && p.title.trim().toLowerCase() === pTitle;
+        if ((matchById || matchByTitle) && p.status !== 'delivered' && p.status !== 'completed') {
+          return {
+            ...p,
+            status: 'delivered',
+            updatedAt: nowStr,
+          };
+        }
+        return p;
+      })
+    );
   };
 
   const addSavingsGoal = (goalData: Omit<SavingsGoal, 'id'>) => {
@@ -4181,6 +4332,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         signWorkContract,
         markContractAwaitingPayment,
         confirmContractPayment,
+        markContractCompleted,
         addSavingsGoal,
         updateSavingsGoal,
         deleteSavingsGoal,

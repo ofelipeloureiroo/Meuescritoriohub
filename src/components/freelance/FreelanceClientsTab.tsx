@@ -263,10 +263,45 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
     });
   }, [clients, statusFilter, searchTerm, currentMonthNum]);
 
+  // Helper to determine effective contract status (synced with linked project delivery)
+  const getEffectiveContractStatus = (contract: WorkContract): ContractStatus => {
+    if (contract.status === 'completed') return 'completed';
+    if (contract.status === 'cancelled') return 'cancelled';
+
+    // 1. Check if linked architecture project is completed / entregue
+    const pTitle = contract.projectTitle?.trim().toLowerCase();
+    const pClient = contract.clientName?.trim().toLowerCase();
+    const linkedArch = architectureProjects.find((p) => {
+      if (contract.projectId && p.id === contract.projectId) return true;
+      if (pTitle && p.title && p.title.trim().toLowerCase() === pTitle) {
+        if (!pClient || !p.clientName || p.clientName.trim().toLowerCase() === pClient) return true;
+      }
+      return false;
+    });
+
+    if (linkedArch && (linkedArch.status === 'entregue' || linkedArch.completed)) {
+      return 'completed';
+    }
+
+    // 2. Check if linked freelance project is delivered / completed
+    const linkedFreela = freelanceProjects.find((p) => {
+      if (contract.projectId && p.id === contract.projectId) return true;
+      if (pTitle && p.title && p.title.trim().toLowerCase() === pTitle) return true;
+      return false;
+    });
+
+    if (linkedFreela && (linkedFreela.status === 'delivered' || linkedFreela.status === 'completed')) {
+      return 'completed';
+    }
+
+    return contract.status;
+  };
+
   // Filtered Contracts
   const filteredContracts = useMemo(() => {
     return workContracts.filter((c) => {
-      if (contractStatusFilter !== 'all' && c.status !== contractStatusFilter) {
+      const effectiveStatus = getEffectiveContractStatus(c);
+      if (contractStatusFilter !== 'all' && c.status !== contractStatusFilter && effectiveStatus !== contractStatusFilter) {
         return false;
       }
       if (searchTerm.trim()) {
@@ -278,7 +313,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
       }
       return true;
     });
-  }, [workContracts, contractStatusFilter, searchTerm]);
+  }, [workContracts, contractStatusFilter, searchTerm, architectureProjects, freelanceProjects]);
 
   // Contract Status Helper
   const getContractStatusBadge = (status?: ContractStatus) => {
@@ -312,6 +347,18 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
           label: 'Pago & Em Execução',
           color: 'bg-teal-100 text-teal-800 border-teal-200',
           icon: CheckCircle2,
+        };
+      case 'completed':
+        return {
+          label: 'Pago & Entregue',
+          color: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold',
+          icon: CheckCircle2,
+        };
+      case 'cancelled':
+        return {
+          label: 'Cancelado',
+          color: 'bg-rose-100 text-rose-800 border-rose-200',
+          icon: X,
         };
       default:
         return null;
@@ -1702,7 +1749,8 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
               </div>
             ) : (
               filteredContracts.map((contract) => {
-                const badge = getContractStatusBadge(contract.status);
+                const effectiveStatus = getEffectiveContractStatus(contract);
+                const badge = getContractStatusBadge(effectiveStatus);
 
                 return (
                   <div
