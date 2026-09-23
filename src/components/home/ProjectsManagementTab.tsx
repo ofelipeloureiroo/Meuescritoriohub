@@ -590,47 +590,34 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
                       )}
                     </div>
 
-                    {/* Linked Contract Badge */}
+                    {/* Linked Contract Badge (Static status indicator only, no contract action or modal triggers) */}
                     {(() => {
                       const linkedContract = workContracts.find(
                         (c) => (c.projectId && c.projectId === p.id) ||
                                (c.projectTitle && p.title && c.projectTitle.trim().toLowerCase() === p.title.trim().toLowerCase())
                       );
 
+                      if (!linkedContract) return null;
+
+                      const isSigned = linkedContract.status === 'signed' || linkedContract.status === 'paid' || linkedContract.status === 'completed';
+
                       return (
-                        <div className="flex items-center gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
-                          {linkedContract ? (
-                            <button
-                              onClick={() => {
-                                setSelectedContractForModal(linkedContract);
-                                setIsWorkContractModalOpen(true);
-                              }}
-                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border transition-colors cursor-pointer bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 shadow-2xs"
-                              title="Abrir Contrato de Trabalho Vinculado"
+                        <div className="flex items-center gap-1.5 mt-2">
+                          {isSigned ? (
+                            <span
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-300 shadow-2xs"
+                              title="Este projeto possui um contrato assinado"
                             >
-                              <FileText className="w-3 h-3 text-amber-700" />
-                              <span>
-                                Contrato:{' '}
-                                {linkedContract.status === 'signed'
-                                  ? 'Assinado ✓'
-                                  : linkedContract.status === 'completed'
-                                  ? 'Pago & Entregue ✓'
-                                  : linkedContract.status === 'awaiting_payment'
-                                  ? 'Aguardando Pgto'
-                                  : linkedContract.status === 'paid'
-                                  ? 'Pago & Execução'
-                                  : 'Minuta'}
-                              </span>
-                            </button>
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>Contrato Assinado ✓</span>
+                            </span>
                           ) : (
-                            <button
-                              onClick={() => setIsNewContractModalOpen(true)}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border border-dashed border-stone-300 text-stone-600 hover:text-stone-900 hover:border-stone-400 bg-stone-50 cursor-pointer"
-                              title="Gerar ou vincular contrato a este projeto"
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border border-stone-200 text-stone-600 bg-stone-50"
+                              title="Contrato em pauta"
                             >
-                              <Plus className="w-3 h-3" />
-                              <span>Vincular Contrato</span>
-                            </button>
+                              <span>Contrato Em Pauta</span>
+                            </span>
                           )}
                         </div>
                       );
@@ -954,12 +941,11 @@ export const ProjectsManagementTab: React.FC<ProjectsManagementTabProps> = ({
 
                 </div>
 
-                {/* Footer details: Budget vs honorarios */}
+                {/* Footer details: Category and Stage */}
                 <div className="flex items-center justify-between text-xs pt-3 border-t border-[var(--border-color)]/30 mt-auto">
-                  <div className="flex items-center gap-1 text-[var(--text-muted)]">
+                  <div className="flex items-center gap-1 text-[var(--text-muted)] text-[11px]">
                     <Building2 className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                    <span>Honorários:</span>
-                    <span className="font-bold text-[var(--text-main)]">{formatCurrency(p.honorarios || 0)}</span>
+                    <span>Categoria: <strong className="text-[var(--text-main)] font-semibold">{p.category ? p.category.toUpperCase() : 'ARQUITETURA'}</strong></span>
                   </div>
                   <div className="text-[10px] text-[var(--text-muted)] font-medium italic">
                     Etapa Atual: {isProjectCompleted ? (

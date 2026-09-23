@@ -44,8 +44,9 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
   isOpen,
   onClose,
   defaultClientId,
+  defaultProjectId,
 }) => {
-  const { clients, addWorkContract, addArchitectureProject, addClient, officeSettings } = useFinance();
+  const { clients, architectureProjects, addWorkContract, addArchitectureProject, addClient, officeSettings } = useFinance();
 
   const availableTemplates = officeSettings?.projectTemplates && officeSettings.projectTemplates.length > 0
     ? officeSettings.projectTemplates
@@ -61,6 +62,11 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
 
   const [selectedClientId, setSelectedClientId] = useState(defaultClientId || '');
   const [linkedLeadId, setLinkedLeadId] = useState('');
+
+  // Project linking mode
+  const [projectMode, setProjectMode] = useState<'existing' | 'new'>('existing');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(defaultProjectId || '');
+
   const [projectName, setProjectName] = useState('');
   const [identityColor, setIdentityColor] = useState('#3b82f6');
   const [projectType, setProjectType] = useState('');
@@ -92,15 +98,34 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
       if (activeClient) {
         setSelectedClientId(activeClient.id);
         setClientMode('select');
-        setProjectName(`Projeto - ${activeClient.name}`);
       } else if (hasClients) {
         setSelectedClientId(clients[0].id);
         setClientMode('select');
-        setProjectName(`Projeto - ${clients[0].name}`);
       } else {
         setSelectedClientId('');
         setClientMode('new');
-        setProjectName('');
+      }
+
+      // Sync project selection
+      const hasProjects = (architectureProjects || []).length > 0;
+      if (defaultProjectId && architectureProjects.some((p) => p.id === defaultProjectId)) {
+        setProjectMode('existing');
+        setSelectedProjectId(defaultProjectId);
+        const p = architectureProjects.find((proj) => proj.id === defaultProjectId);
+        if (p) {
+          setProjectName(p.title);
+          if (p.clientId) setSelectedClientId(p.clientId);
+        }
+      } else if (hasProjects) {
+        setProjectMode('existing');
+        const firstP = architectureProjects[0];
+        setSelectedProjectId(firstP.id);
+        setProjectName(firstP.title);
+        if (firstP.clientId) setSelectedClientId(firstP.clientId);
+      } else {
+        setProjectMode('new');
+        setSelectedProjectId('');
+        setProjectName(activeClient ? `Projeto - ${activeClient.name}` : '');
       }
 
       setNewClientName('');
@@ -126,7 +151,7 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
       setTags('');
       setNotes('');
     }
-  }, [isOpen, defaultClientId, clients]);
+  }, [isOpen, defaultClientId, defaultProjectId, clients, architectureProjects]);
 
   if (!isOpen) return null;
 
@@ -186,61 +211,86 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
         } as any;
       }
 
-      // Save as Work Contract
-      addWorkContract({
-        clientId: finalClient.id,
-        clientName: finalClient.name,
-        clientEmail: finalClient.email || '',
-        clientPhone: finalClient.phone || (finalClient as any).whatsapp || '',
-        clientDocument: (finalClient as any).document || '',
-        clientCity: finalClient.city || '',
-        clientState: finalClient.state || '',
-        projectTitle: projectName || 'Novo Projeto',
-        title: projectType ? `${projectType} - ${projectName}` : (projectName || 'Novo Projeto'),
-        serviceScope: notes || 'Prestação de serviços e desenvolvimento de projeto técnico.',
-        totalAmount: valNum,
-        downPaymentAmount: valNum * 0.5,
-        paymentTerms: pricingMethod,
-        deadline: expectedEndDate || closingDate || startDate,
-        status: status === 'Concluído' ? 'paid' : status === 'Aguardando Pagamento' ? 'awaiting_payment' : 'draft',
-      });
-      console.log('handleSubmit: Work contract added.');
+      // If linking to an existing project
+      if (projectMode === 'existing' && selectedProjectId) {
+        const targetProj = architectureProjects.find((p) => p.id === selectedProjectId);
+        const targetTitle = targetProj?.title || projectName || 'Projeto Existente';
 
-      // Build workflow stages from selected template
-      let initialStages: ProjectWorkflowStage[] = [];
-      if (stageTemplate && stageTemplate !== 'Sem template — iniciar projeto em branco') {
-        const foundTemplate = availableTemplates.find(
-          (t) => t.name === stageTemplate || t.id === stageTemplate
-        );
-        if (foundTemplate) {
-          initialStages = convertTemplateToWorkflowStages(foundTemplate, startDate || todayStr);
-        }
-      }
-      if (initialStages.length === 0 && stageTemplate !== 'Sem template — iniciar projeto em branco') {
-        const fallbackTpl = availableTemplates[0] || DEFAULT_PROJECT_TEMPLATES[0];
-        if (fallbackTpl) {
-          initialStages = convertTemplateToWorkflowStages(fallbackTpl, startDate || todayStr);
-        }
-      }
+        addWorkContract({
+          clientId: finalClient.id,
+          clientName: finalClient.name,
+          clientEmail: finalClient.email || '',
+          clientPhone: finalClient.phone || (finalClient as any).whatsapp || '',
+          clientDocument: (finalClient as any).document || '',
+          clientCity: finalClient.city || '',
+          clientState: finalClient.state || '',
+          projectId: selectedProjectId,
+          projectTitle: targetTitle,
+          title: projectType ? `${projectType} - ${targetTitle}` : targetTitle,
+          serviceScope: notes || 'Prestação de serviços e desenvolvimento de projeto técnico.',
+          totalAmount: valNum,
+          downPaymentAmount: valNum * 0.5,
+          paymentTerms: pricingMethod,
+          deadline: expectedEndDate || closingDate || startDate,
+          status: status === 'Concluído' ? 'paid' : status === 'Aguardando Pagamento' ? 'awaiting_payment' : 'draft',
+        });
+        console.log('handleSubmit: Work contract linked to existing project', selectedProjectId);
+      } else {
+        // Create both Work Contract and New Architecture Project
+        addWorkContract({
+          clientId: finalClient.id,
+          clientName: finalClient.name,
+          clientEmail: finalClient.email || '',
+          clientPhone: finalClient.phone || (finalClient as any).whatsapp || '',
+          clientDocument: (finalClient as any).document || '',
+          clientCity: finalClient.city || '',
+          clientState: finalClient.state || '',
+          projectTitle: projectName || 'Novo Projeto',
+          title: projectType ? `${projectType} - ${projectName}` : (projectName || 'Novo Projeto'),
+          serviceScope: notes || 'Prestação de serviços e desenvolvimento de projeto técnico.',
+          totalAmount: valNum,
+          downPaymentAmount: valNum * 0.5,
+          paymentTerms: pricingMethod,
+          deadline: expectedEndDate || closingDate || startDate,
+          status: status === 'Concluído' ? 'paid' : status === 'Aguardando Pagamento' ? 'awaiting_payment' : 'draft',
+        });
 
-      // Also register in Architecture Projects
-      addArchitectureProject({
-        title: projectName || 'Novo Projeto',
-        clientId: finalClient.id,
-        clientName: finalClient.name,
-        category: 'residencial',
-        location: finalClient.city ? `${finalClient.city}, ${finalClient.state || 'RJ'}` : 'Rio de Janeiro, RJ',
-        state: finalClient.state || 'RJ',
-        areaM2: 0,
-        honorarios: valNum,
-        status: 'estudo_preliminar',
-        coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
-        description: notes || '',
-        deliveryDate: expectedEndDate || startDate,
-        tags: tags ? tags.split(',').map((t) => t.trim()) : ['Design', 'Projeto'],
-        stages: initialStages.length > 0 ? initialStages : undefined,
-      });
-      console.log('handleSubmit: Architecture project added.');
+        // Build workflow stages from selected template
+        let initialStages: ProjectWorkflowStage[] = [];
+        if (stageTemplate && stageTemplate !== 'Sem template — iniciar projeto em branco') {
+          const foundTemplate = availableTemplates.find(
+            (t) => t.name === stageTemplate || t.id === stageTemplate
+          );
+          if (foundTemplate) {
+            initialStages = convertTemplateToWorkflowStages(foundTemplate, startDate || todayStr);
+          }
+        }
+        if (initialStages.length === 0 && stageTemplate !== 'Sem template — iniciar projeto em branco') {
+          const fallbackTpl = availableTemplates[0] || DEFAULT_PROJECT_TEMPLATES[0];
+          if (fallbackTpl) {
+            initialStages = convertTemplateToWorkflowStages(fallbackTpl, startDate || todayStr);
+          }
+        }
+
+        // Register new Architecture Project
+        addArchitectureProject({
+          title: projectName || 'Novo Projeto',
+          clientId: finalClient.id,
+          clientName: finalClient.name,
+          category: 'residencial',
+          location: finalClient.city ? `${finalClient.city}, ${finalClient.state || 'RJ'}` : 'Rio de Janeiro, RJ',
+          state: finalClient.state || 'RJ',
+          areaM2: 0,
+          honorarios: valNum,
+          status: 'estudo_preliminar',
+          coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
+          description: notes || '',
+          deliveryDate: expectedEndDate || startDate,
+          tags: tags ? tags.split(',').map((t) => t.trim()) : ['Design', 'Projeto'],
+          stages: initialStages.length > 0 ? initialStages : undefined,
+        });
+        console.log('handleSubmit: New architecture project added.');
+      }
 
     } catch (error) {
       console.error('handleSubmit: Error creating project:', error);
@@ -514,17 +564,99 @@ export const NewContractModal: React.FC<NewContractModalProps> = ({
             </div>
           )}
 
-          {/* Field 3: Nome do Projeto * */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-zinc-800">Título do Contrato / Nome do Projeto *</label>
-            <input
-              type="text"
-              required
-              placeholder="Ex: Reforma Apartamento 102, Casa de Praia, etc."
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 text-xs font-medium text-zinc-900 focus:outline-none focus:border-[#c8a97e]"
-            />
+          {/* Card: Projeto do Contrato */}
+          <div className="bg-[#faf6f0]/60 border border-[#f0eae1] rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#3d342f]">
+                <Layers className="w-4 h-4 text-[#a38253]" />
+                <span>Projeto do Escritório</span>
+              </div>
+              <span className="text-[11px] font-medium text-zinc-400">
+                {architectureProjects.length} projeto{architectureProjects.length === 1 ? '' : 's'} existente{architectureProjects.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            {/* Project Mode Switcher Tabs */}
+            <div className="flex p-1 bg-zinc-200/60 rounded-xl gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setProjectMode('existing');
+                  if (architectureProjects.length > 0) {
+                    const target = architectureProjects.find(p => p.id === selectedProjectId) || architectureProjects[0];
+                    setSelectedProjectId(target.id);
+                    setProjectName(target.title);
+                    if (target.clientId) setSelectedClientId(target.clientId);
+                  }
+                }}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  projectMode === 'existing'
+                    ? 'bg-white text-zinc-900 shadow-xs'
+                    : 'text-zinc-600 hover:text-zinc-900'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5 text-[#a38253]" />
+                <span>Vincular a Projeto Existente {architectureProjects.length > 0 ? `(${architectureProjects.length})` : ''}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setProjectMode('new');
+                  setSelectedProjectId('');
+                }}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  projectMode === 'new'
+                    ? 'bg-white text-zinc-900 shadow-xs'
+                    : 'text-zinc-600 hover:text-zinc-900'
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                <span>+ Criar Novo Projeto</span>
+              </button>
+            </div>
+
+            {projectMode === 'existing' ? (
+              architectureProjects.length === 0 ? (
+                <p className="text-xs text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200">
+                  Nenhum projeto existente encontrado. Alterne para "+ Criar Novo Projeto" para cadastrar um novo.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-800">Selecione o Projeto *</label>
+                  <select
+                    value={selectedProjectId}
+                    onChange={(e) => {
+                      const pid = e.target.value;
+                      setSelectedProjectId(pid);
+                      const p = architectureProjects.find((proj) => proj.id === pid);
+                      if (p) {
+                        setProjectName(p.title);
+                        if (p.clientId) setSelectedClientId(p.clientId);
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-xs font-bold text-zinc-900 focus:outline-none focus:border-[#c8a97e] bg-white cursor-pointer"
+                  >
+                    {architectureProjects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.title} {p.clientName ? `• ${p.clientName}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )
+            ) : (
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-800">Nome do Novo Projeto *</label>
+                <input
+                  type="text"
+                  required={projectMode === 'new'}
+                  placeholder="Ex: Reforma Apartamento 102, Casa de Praia, etc."
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 text-xs font-medium text-zinc-900 focus:outline-none focus:border-[#c8a97e]"
+                />
+              </div>
+            )}
           </div>
 
           {/* Field 4: Cor de Identidade */}
