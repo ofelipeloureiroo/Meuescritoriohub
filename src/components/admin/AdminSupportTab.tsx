@@ -48,22 +48,39 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
   const [initialMessageInput, setInitialMessageInput] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [manualEmailInput, setManualEmailInput] = useState('');
+  const [manualNameInput, setManualNameInput] = useState('');
+  const [isManualInputMode, setIsManualInputMode] = useState(false);
 
-  // Sync real-time with Firestore support_tickets collection and localStorage fallback
+  // Sync real-time with Server SSE Stream, Server REST API, Firestore onSnapshot, and localStorage
   useEffect(() => {
-    const loadTickets = () => {
-      const map = new Map<string, SupportTicket>();
+    const mergeTicketsIntoMap = (incoming: SupportTicket[], map: Map<string, SupportTicket>) => {
+      incoming.forEach(t => {
+        if (!t || !t.id) return;
+        const existing = map.get(t.id);
+        if (!existing) {
+          map.set(t.id, t);
+        } else {
+          // Merge whichever has more messages or newer updatedAt
+          const existingTime = new Date(existing.updatedAt || 0).getTime();
+          const incomingTime = new Date(t.updatedAt || 0).getTime();
+          const existingMsgCount = existing.messages?.length || 0;
+          const incomingMsgCount = t.messages?.length || 0;
 
-      // 1. Load from localStorage first
+          if (incomingMsgCount > existingMsgCount || incomingTime >= existingTime) {
+            map.set(t.id, { ...existing, ...t, messages: t.messages && t.messages.length >= existingMsgCount ? t.messages : existing.messages });
+          }
+        }
+      });
+    };
+
+    const loadLocal = (): Map<string, SupportTicket> => {
+      const map = new Map<string, SupportTicket>();
       try {
         const globalPool = localStorage.getItem('meu_escritorio_global_support_tickets');
         if (globalPool) {
           const parsedPool = JSON.parse(globalPool) as SupportTicket[];
-          if (Array.isArray(parsedPool)) {
-            parsedPool.forEach(t => {
-              if (t && t.id) map.set(t.id, t);
-            });
-          }
+          if (Array.isArray(parsedPool)) mergeTicketsIntoMap(parsedPool, map);
         }
 
         for (let i = 0; i < localStorage.length; i++) {
@@ -72,27 +89,21 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
             const val = localStorage.getItem(key);
             if (val) {
               const parsed = JSON.parse(val) as SupportTicket;
-              if (parsed && parsed.id) {
-                map.set(parsed.id, parsed);
-              }
+              if (parsed && parsed.id) map.set(parsed.id, parsed);
             }
           }
         }
-      } catch {}
 
-      // 2. Also check direct ticket list if any
-      try {
         const directList = localStorage.getItem('meu_escritorio_support_tickets_list');
         if (directList) {
           const parsedList = JSON.parse(directList) as SupportTicket[];
-          if (Array.isArray(parsedList)) {
-            parsedList.forEach(t => {
-              if (t && t.id) map.set(t.id, t);
-            });
-          }
+          if (Array.isArray(parsedList)) mergeTicketsIntoMap(parsedList, map);
         }
       } catch {}
+      return map;
+    };
 
+    const applyList = (map: Map<string, SupportTicket>) => {
       const list = Array.from(map.values());
       list.sort((a, b) => {
         if (a.status === 'waiting_admin' && b.status !== 'waiting_admin') return -1;
@@ -100,40 +111,106 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
         return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
       });
 
-      if (list.length > 0) {
-        setTickets(list);
-        setSelectedTicketId((prev) => (prev && list.some(t => t.id === prev) ? prev : list[0].id));
-      }
+      setTickets(list);
+      setSelectedTicketId((prev) => (prev && list.some(t => t.id === prev) ? prev : (list[0]?.id || '')));
     };
 
-    loadTickets();
+    // 1. Initial Local Load
+    const initialMap = loadLocal();
+    if (initialMap.size > 0) applyList(initialMap);
 
-    const handleCustomUpdate = () => loadTickets();
+    // 2. Fetch from Canonical Server API
+    const fetchFromServer = async () => {
+      try {
+        const res = await fetch('/api/support/tickets');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.tickets)) {
+            const currentMap = loadLocal();
+            mergeTicketsIntoMap(json.tickets, currentMap);
+            applyList(currentMap);
+
+            // Persist to local storage
+            try {
+              localStorage.setItem('meu_escritorio_global_support_tickets', JSON.stringify(json.tickets));
+            } catch {}
+          }
+        }
+      } catch (err) {
+        // Fallback
+      }
+    };
+    fetchFromServer();
+
+    // 3. Real-time SSE Stream
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/support/stream');
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.event === 'ticket_update' && payload.ticket) {
+            const t = payload.ticket as SupportTicket;
+            setTickets((prev) => {
+              const currentMap = new Map<string, SupportTicket>(prev.map(item => [item.id, item]));
+              currentMap.set(t.id, t);
+              const updatedList: SupportTicket[] = Array.from(currentMap.values());
+              updatedList.sort((a, b) => {
+                if (a.status === 'waiting_admin' && b.status !== 'waiting_admin') return -1;
+                if (b.status === 'waiting_admin' && a.status !== 'waiting_admin') return 1;
+                return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+              });
+              return updatedList;
+            });
+
+            try {
+              localStorage.setItem(`meu_escritorio_user_support_ticket_${t.id}`, JSON.stringify(t));
+            } catch {}
+          } else if (payload.event === 'ticket_deleted' && payload.ticket?.id) {
+            const deletedId = payload.ticket.id;
+            setTickets(prev => prev.filter(item => item.id !== deletedId));
+            setSelectedTicketId(prev => (prev === deletedId ? '' : prev));
+          }
+        } catch {}
+      };
+    } catch (e) {
+      console.warn("SSE error in AdminSupportTab:", e);
+    }
+
+    // 4. Fallback interval polling every 4 seconds
+    const pollInterval = setInterval(() => {
+      fetchFromServer();
+    }, 4000);
+
+    const handleCustomUpdate = () => {
+      const map = loadLocal();
+      if (map.size > 0) applyList(map);
+    };
     window.addEventListener('support_tickets_updated', handleCustomUpdate);
     window.addEventListener('storage', handleCustomUpdate);
 
-    const unsub = onSnapshot(collection(db, 'support_tickets'), (snapshot) => {
-      const list: SupportTicket[] = [];
-      snapshot.forEach((d) => {
-        const data = d.data() as SupportTicket;
-        list.push({ ...data, id: d.id });
-      });
-
-      if (list.length > 0) {
-        list.forEach(t => {
-          try {
-            localStorage.setItem(`meu_escritorio_user_support_ticket_${t.id}`, JSON.stringify(t));
-          } catch {}
+    // 5. Firestore onSnapshot in parallel
+    let unsub = () => {};
+    try {
+      unsub = onSnapshot(collection(db, 'support_tickets'), (snapshot) => {
+        const firestoreList: SupportTicket[] = [];
+        snapshot.forEach((d) => {
+          const data = d.data() as SupportTicket;
+          firestoreList.push({ ...data, id: d.id });
         });
-      }
 
-      loadTickets();
-    }, (err) => {
-      console.warn('Firestore onSnapshot support_tickets notice:', err);
-    });
+        if (firestoreList.length > 0) {
+          const currentMap = loadLocal();
+          mergeTicketsIntoMap(firestoreList, currentMap);
+          applyList(currentMap);
+        }
+      }, () => {});
+    } catch {}
 
     return () => {
       unsub();
+      clearInterval(pollInterval);
+      if (eventSource) eventSource.close();
       window.removeEventListener('support_tickets_updated', handleCustomUpdate);
       window.removeEventListener('storage', handleCustomUpdate);
     };
@@ -146,13 +223,29 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeTicket?.messages]);
 
-  // When admin opens a ticket with unread messages, mark as read
+  // When admin opens a ticket with unread messages, mark as read on both Server & Firestore
   useEffect(() => {
     if (activeTicket && activeTicket.unreadByAdmin > 0) {
+      const newStatus = activeTicket.status === 'waiting_admin' ? 'in_progress' : activeTicket.status;
+
+      // Server update
+      fetch(`/api/support/tickets/${activeTicket.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          unreadByAdmin: 0,
+          status: newStatus
+        })
+      }).catch(() => {});
+
+      // Firestore update
       updateDoc(doc(db, 'support_tickets', activeTicket.id), {
         unreadByAdmin: 0,
-        status: activeTicket.status === 'waiting_admin' ? 'in_progress' : activeTicket.status,
-      }).catch(console.warn);
+        status: newStatus,
+      }).catch(() => {});
+
+      // Local state update
+      setTickets(prev => prev.map(t => t.id === activeTicket.id ? { ...t, unreadByAdmin: 0, status: newStatus } : t));
     }
   }, [activeTicket?.id, activeTicket?.unreadByAdmin]);
 
@@ -194,28 +287,52 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
 
     setReplyInput('');
 
-    // Persist to localStorage & Firestore
+    // 1. Optimistic Local State & Storage
+    setTickets(prev => prev.map(t => t.id === activeTicket.id ? updatedTicket : t));
     try {
       localStorage.setItem(`meu_escritorio_user_support_ticket_${activeTicket.id}`, JSON.stringify(updatedTicket));
       window.dispatchEvent(new CustomEvent('support_tickets_updated'));
     } catch {}
 
+    // 2. Send to Canonical Server API
+    try {
+      await fetch('/api/support/tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId: activeTicket.id,
+          subscriberEmail: activeTicket.subscriberEmail,
+          subscriberName: activeTicket.subscriberName,
+          subscriberUid: activeTicket.subscriberUid,
+          subscriberPhone: activeTicket.subscriberPhone,
+          message: newMsg,
+          status: 'in_progress',
+          unreadByAdmin: 0,
+          unreadByUser: (activeTicket.unreadByUser || 0) + 1,
+        })
+      });
+    } catch (e) {
+      console.warn('Notice: Server API reply send notice:', e);
+    }
+
+    // 3. Parallel Dual-Persistence to Firestore
     try {
       await setDoc(doc(db, 'support_tickets', activeTicket.id), sanitizeFirestoreData(updatedTicket), { merge: true });
       window.dispatchEvent(new CustomEvent('support_tickets_updated'));
     } catch (e) {
-      console.warn('Error sending reply to support ticket:', e);
+      // Suppress firestore error in fallback mode
     } finally {
       setIsSending(false);
     }
   };
 
-  // Start a new conversation manually with an existing subscriber
-  const handleStartNewChatWithSubscriber = async (targetUser: UserProfile) => {
-    if (!targetUser || !targetUser.email) return;
+  // Start a new conversation manually with a subscriber (from select or manual email)
+  const handleStartNewChatWithSubscriber = async (targetUser?: UserProfile | null, directEmail?: string, directName?: string) => {
+    const rawEmail = (directEmail || targetUser?.email || '').toLowerCase().trim();
+    if (!rawEmail) return;
 
-    const cleanEmail = targetUser.email.toLowerCase().trim();
-    const docId = `ticket_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const rawName = directName || targetUser?.name || rawEmail.split('@')[0];
+    const docId = `ticket_${rawEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
     const now = new Date();
     const timeStr = now.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
     const adminDisplayName = profile?.name || currentAdminUser?.displayName || 'Carlos Felipe (Admin)';
@@ -236,10 +353,10 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
 
     const newTicket: SupportTicket = {
       id: docId,
-      subscriberUid: targetUser.uid || cleanEmail,
-      subscriberName: targetUser.name || cleanEmail.split('@')[0],
-      subscriberEmail: cleanEmail,
-      subscriberPhone: (targetUser as any).phone || '',
+      subscriberUid: targetUser?.uid || rawEmail,
+      subscriberName: rawName,
+      subscriberEmail: rawEmail,
+      subscriberPhone: (targetUser as any)?.phone || '',
       status: 'in_progress',
       unreadByAdmin: 0,
       unreadByUser: 1,
@@ -251,57 +368,107 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
       messages: [firstMsg],
     };
 
+    // 1. Optimistic Local State & Storage
+    setTickets(prev => {
+      const filtered = prev.filter(t => t.id !== docId);
+      return [newTicket, ...filtered];
+    });
+    setSelectedTicketId(docId);
+    setIsNewChatModalOpen(false);
+    setSelectedUserForNewChat(null);
+    setManualEmailInput('');
+    setManualNameInput('');
+    setInitialMessageInput('');
+
+    try {
+      localStorage.setItem(`meu_escritorio_user_support_ticket_${docId}`, JSON.stringify(newTicket));
+      window.dispatchEvent(new CustomEvent('support_tickets_updated'));
+    } catch {}
+
+    // 2. Canonical Server API
+    try {
+      await fetch('/api/support/tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId: docId,
+          subscriberEmail: rawEmail,
+          subscriberName: rawName,
+          subscriberUid: targetUser?.uid || rawEmail,
+          subscriberPhone: (targetUser as any)?.phone || '',
+          message: firstMsg,
+          status: 'in_progress',
+          unreadByAdmin: 0,
+          unreadByUser: 1,
+        })
+      });
+    } catch (e) {
+      console.warn('Notice: Server API start new chat notice:', e);
+    }
+
+    // 3. Dual-persistence: Firestore
     try {
       await setDoc(doc(db, 'support_tickets', docId), sanitizeFirestoreData(newTicket), { merge: true });
-      setSelectedTicketId(docId);
-      setIsNewChatModalOpen(false);
-      setSelectedUserForNewChat(null);
-      setInitialMessageInput('');
+      window.dispatchEvent(new CustomEvent('support_tickets_updated'));
     } catch (err) {
-      console.warn('Error starting support conversation:', err);
+      // Suppress firestore error in fallback mode
     }
   };
 
   // Change ticket status
   const handleChangeStatus = async (ticketId: string, newStatus: SupportTicket['status']) => {
+    // 1. Update local state
+    setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: newStatus, updatedAt: new Date().toISOString() } : t));
+
+    // 2. Server API
+    try {
+      await fetch(`/api/support/tickets/${ticketId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+    } catch {}
+
+    // 3. Firestore
     try {
       await updateDoc(doc(db, 'support_tickets', ticketId), {
         status: newStatus,
         updatedAt: new Date().toISOString(),
       });
-    } catch (e) {
-      console.warn('Error updating ticket status:', e);
-    }
+    } catch (e) {}
   };
 
   // Delete ticket
   const handleDeleteTicket = async (ticketId: string) => {
     if (!window.confirm('Deseja realmente excluir este atendimento de suporte?')) return;
 
+    // 1. Update local state
+    setTickets((prev) => prev.filter(t => t.id !== ticketId));
+    if (selectedTicketId === ticketId) {
+      setSelectedTicketId('');
+    }
+
+    // 2. Remove from localStorage
     try {
-      // 1. Remove from localStorage keys and global pool
-      try {
-        localStorage.removeItem(`meu_escritorio_user_support_ticket_${ticketId}`);
-        const rawPool = localStorage.getItem('meu_escritorio_global_support_tickets');
-        if (rawPool) {
-          let pool: SupportTicket[] = JSON.parse(rawPool);
-          pool = pool.filter(t => t.id !== ticketId);
-          localStorage.setItem('meu_escritorio_global_support_tickets', JSON.stringify(pool));
-        }
-      } catch {}
-
-      // 2. Delete from Firestore
-      await deleteDoc(doc(db, 'support_tickets', ticketId)).catch(() => {});
-
-      // 3. Update state & dispatch event
-      setTickets((prev) => prev.filter(t => t.id !== ticketId));
-      if (selectedTicketId === ticketId) {
-        setSelectedTicketId('');
+      localStorage.removeItem(`meu_escritorio_user_support_ticket_${ticketId}`);
+      const rawPool = localStorage.getItem('meu_escritorio_global_support_tickets');
+      if (rawPool) {
+        let pool: SupportTicket[] = JSON.parse(rawPool);
+        pool = pool.filter(t => t.id !== ticketId);
+        localStorage.setItem('meu_escritorio_global_support_tickets', JSON.stringify(pool));
       }
       window.dispatchEvent(new CustomEvent('support_tickets_updated'));
-    } catch (e) {
-      console.warn('Error deleting support ticket:', e);
-    }
+    } catch {}
+
+    // 3. Server API
+    try {
+      await fetch(`/api/support/tickets/${ticketId}`, { method: 'DELETE' });
+    } catch {}
+
+    // 4. Firestore
+    try {
+      await deleteDoc(doc(db, 'support_tickets', ticketId));
+    } catch (e) {}
   };
 
   // Filter tickets
@@ -731,29 +898,63 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
             </div>
 
             <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-zinc-700 mb-1">
-                  Selecione o Assinante:
-                </label>
-                <select
-                  value={selectedUserForNewChat?.uid || ''}
-                  onChange={(e) => {
-                    const u = users.find(x => x.uid === e.target.value);
-                    setSelectedUserForNewChat(u || null);
-                  }}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-xs font-semibold text-zinc-900 bg-zinc-50 focus:bg-white focus:outline-none focus:border-[#b5986e]"
+              <div className="flex items-center justify-between pb-1">
+                <span className="text-xs font-bold text-zinc-700">Destinatário:</span>
+                <button
+                  type="button"
+                  onClick={() => setIsManualInputMode(!isManualInputMode)}
+                  className="text-[11px] text-[#b5986e] hover:underline font-semibold"
                 >
-                  <option value="">Selecione um usuário...</option>
-                  {users.filter(u => {
-                    const em = u.email?.toLowerCase().trim() || '';
-                    return em !== 'lfquadrosdecorativos@gmail.com' && !em.includes('master_escritorio');
-                  }).map((u) => (
-                    <option key={u.uid} value={u.uid}>
-                      {u.name ? `${u.name} (${u.email})` : u.email}
-                    </option>
-                  ))}
-                </select>
+                  {isManualInputMode ? '← Selecionar da lista' : '+ Digitar e-mail manual'}
+                </button>
               </div>
+
+              {!isManualInputMode ? (
+                <div>
+                  <select
+                    value={selectedUserForNewChat?.uid || ''}
+                    onChange={(e) => {
+                      const u = users.find(x => x.uid === e.target.value);
+                      setSelectedUserForNewChat(u || null);
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-xs font-semibold text-zinc-900 bg-zinc-50 focus:bg-white focus:outline-none focus:border-[#b5986e]"
+                  >
+                    <option value="">Selecione um usuário...</option>
+                    {users.map((u) => (
+                      <option key={u.uid} value={u.uid}>
+                        {u.name ? `${u.name} (${u.email})` : u.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-600 mb-0.5">
+                      E-mail do Assinante / Usuário:
+                    </label>
+                    <input
+                      type="email"
+                      value={manualEmailInput}
+                      onChange={(e) => setManualEmailInput(e.target.value)}
+                      placeholder="ex: contato@escritorio.com"
+                      className="w-full px-3.5 py-2 rounded-xl border border-zinc-300 text-xs font-medium text-zinc-900 bg-zinc-50 focus:bg-white focus:outline-none focus:border-[#b5986e]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-600 mb-0.5">
+                      Nome / Identificação (opcional):
+                    </label>
+                    <input
+                      type="text"
+                      value={manualNameInput}
+                      onChange={(e) => setManualNameInput(e.target.value)}
+                      placeholder="ex: Laíne Paula Loureiro"
+                      className="w-full px-3.5 py-2 rounded-xl border border-zinc-300 text-xs font-medium text-zinc-900 bg-zinc-50 focus:bg-white focus:outline-none focus:border-[#b5986e]"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-zinc-700 mb-1">
@@ -775,6 +976,9 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
                 onClick={() => {
                   setIsNewChatModalOpen(false);
                   setSelectedUserForNewChat(null);
+                  setManualEmailInput('');
+                  setManualNameInput('');
+                  setIsManualInputMode(false);
                   setInitialMessageInput('');
                 }}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-zinc-600 hover:bg-zinc-100 transition-colors"
@@ -783,9 +987,11 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
               </button>
               <button
                 type="button"
-                disabled={!selectedUserForNewChat}
+                disabled={!selectedUserForNewChat && (!isManualInputMode || !manualEmailInput.trim())}
                 onClick={() => {
-                  if (selectedUserForNewChat) {
+                  if (isManualInputMode && manualEmailInput.trim()) {
+                    handleStartNewChatWithSubscriber(null, manualEmailInput.trim(), manualNameInput.trim());
+                  } else if (selectedUserForNewChat) {
                     handleStartNewChatWithSubscriber(selectedUserForNewChat);
                   }
                 }}

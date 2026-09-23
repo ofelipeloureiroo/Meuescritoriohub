@@ -1,0 +1,52 @@
+[
+  {
+    "id": "ticket_lfquadrosdecorativos_gmail_com",
+    "subscriberUid": "lfquadrosdecorativos@gmail.com",
+    "subscriberName": "Carlos Felipe (LF Quadros)",
+    "subscriberEmail": "lfquadrosdecorativos@gmail.com",
+    "subscriberPhone": "",
+    "status": "in_progress",
+    "unreadByAdmin": 0,
+    "unreadByUser": 1,
+    "lastMessage": "Olá Carlos! Mensagem recebida perfeitamente pela equipe de suporte. Estamos à disposição!",
+    "lastMessageTime": "08:07",
+    "lastMessageSender": "admin",
+    "createdAt": "2026-09-23T11:07:34.594Z",
+    "updatedAt": "2026-09-23T11:07:38.670Z",
+    "messages": [
+      {
+        "id": "welcome_1",
+        "sender": "admin",
+        "senderName": "Atendimento (Suporte)",
+        "senderEmail": "suporte@meuescritorio.online",
+        "text": "Olá, Carlos Felipe (LF Quadros)! Seja muito bem-vindo(a) ao Suporte Dedicado do Meu Escritório Online. Como podemos te ajudar hoje?",
+        "time": "08:07",
+        "date": "2026-09-23",
+        "timestamp": "2026-09-23T11:07:34.594Z",
+        "read": true
+      },
+      {
+        "id": "msg_1790161654626_kurp",
+        "sender": "user",
+        "senderName": "Carlos Felipe",
+        "senderEmail": "lfquadrosdecorativos@gmail.com",
+        "text": "Olá suporte, tudo bem? Teste de envio e recebimento de mensagens!",
+        "time": "08:07",
+        "date": "2026-09-23",
+        "timestamp": "2026-09-23T11:07:34.594Z",
+        "read": false
+      },
+      {
+        "id": "msg_1790161658670_1dyh",
+        "sender": "admin",
+        "senderName": "Atendimento (Suporte)",
+        "senderEmail": "suporte@meuescritorio.online",
+        "text": "Olá Carlos! Mensagem recebida perfeitamente pela equipe de suporte. Estamos à disposição!",
+        "time": "08:07",
+        "date": "2026-09-23",
+        "timestamp": "2026-09-23T11:07:38.670Z",
+        "read": true
+      }
+    ]
+  }
+]

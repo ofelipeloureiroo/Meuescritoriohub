@@ -47,7 +47,7 @@ export const SupportChatWidget: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Real-time Firestore sync and localStorage fallback for subscriber
+  // Real-time server SSE stream, Firestore sync, and localStorage fallback
   useEffect(() => {
     if (!ticketId) return;
 
@@ -61,7 +61,7 @@ export const SupportChatWidget: React.FC = () => {
           const rawPool = localStorage.getItem('meu_escritorio_global_support_tickets');
           if (rawPool) {
             const pool: SupportTicket[] = JSON.parse(rawPool);
-            const found = pool.find(t => t.id === ticketId);
+            const found = pool.find(t => t.id === ticketId || (t.subscriberEmail && t.subscriberEmail.toLowerCase().trim() === userEmail.toLowerCase().trim()));
             if (found) setTicketData(found);
           }
         }
@@ -70,47 +70,119 @@ export const SupportChatWidget: React.FC = () => {
 
     loadLocal();
 
+    // 1. Initial fetch from server API
+    const fetchFromServer = async () => {
+      try {
+        const res = await fetch(`/api/support/tickets/${ticketId}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.ticket) {
+            setTicketData(json.ticket);
+            try {
+              localStorage.setItem(`meu_escritorio_user_support_ticket_${ticketId}`, JSON.stringify(json.ticket));
+            } catch {}
+          }
+        }
+      } catch (e) {
+        // Fallback to local / firestore
+      }
+    };
+    fetchFromServer();
+
+    // 2. Real-time SSE Connection
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource(`/api/support/stream?ticketId=${encodeURIComponent(ticketId)}`);
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.event === 'ticket_update' && payload.ticket) {
+            const t = payload.ticket as SupportTicket;
+            if (t.id === ticketId || (t.subscriberEmail && t.subscriberEmail.toLowerCase().trim() === userEmail.toLowerCase().trim())) {
+              setTicketData(t);
+              try {
+                localStorage.setItem(`meu_escritorio_user_support_ticket_${ticketId}`, JSON.stringify(t));
+              } catch {}
+            }
+          }
+        } catch {}
+      };
+    } catch (e) {
+      console.warn("SSE connection error in SupportChatWidget:", e);
+    }
+
+    // 3. Periodic fallback poll every 5s while widget is active
+    const pollInterval = setInterval(() => {
+      fetchFromServer();
+    }, 5000);
+
     const handleUpdate = () => loadLocal();
     window.addEventListener('support_tickets_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
 
-    const docRef = doc(db, 'support_tickets', ticketId);
-    const unsub = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data() as SupportTicket;
-        setTicketData(data);
-        try {
-          localStorage.setItem(`meu_escritorio_user_support_ticket_${ticketId}`, JSON.stringify(data));
-          const rawPool = localStorage.getItem('meu_escritorio_global_support_tickets');
-          let pool: SupportTicket[] = rawPool ? JSON.parse(rawPool) : [];
-          const idx = pool.findIndex(t => t.id === ticketId);
-          if (idx >= 0) pool[idx] = data;
-          else pool.push(data);
-          localStorage.setItem('meu_escritorio_global_support_tickets', JSON.stringify(pool));
-        } catch {}
-      }
-    }, (err) => {
-      console.warn('Support ticket onSnapshot notice:', err);
-    });
+    // 4. Parallel Firestore onSnapshot
+    let unsub = () => {};
+    try {
+      const docRef = doc(db, 'support_tickets', ticketId);
+      unsub = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data() as SupportTicket;
+          setTicketData(data);
+          try {
+            localStorage.setItem(`meu_escritorio_user_support_ticket_${ticketId}`, JSON.stringify(data));
+          } catch {}
+        }
+      }, (err) => {
+        // Suppress expected firestore API permission warnings in fallback mode
+      });
+    } catch {}
 
     return () => {
       unsub();
+      clearInterval(pollInterval);
+      if (eventSource) eventSource.close();
       window.removeEventListener('support_tickets_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
-  }, [ticketId]);
+  }, [ticketId, userEmail]);
 
-  // When user opens the chat, mark unread admin messages as read
+  // When user opens the chat, mark unread admin messages as read & auto-init server ticket
   useEffect(() => {
     if (isOpen) {
       scrollToBottom();
+
+      // Ensure server ticket is initialized so admin can see subscriber right away
+      fetch('/api/support/tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId,
+          subscriberEmail: userEmail,
+          subscriberName: userName,
+          subscriberUid: userUid,
+          initialOnly: true
+        })
+      }).then(res => res.json()).then(data => {
+        if (data?.success && data?.ticket && !ticketData) {
+          setTicketData(data.ticket);
+        }
+      }).catch(() => {});
+
       if (ticketData && ticketData.unreadByUser > 0) {
+        // Mark read on server
+        fetch(`/api/support/tickets/${ticketId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ unreadByUser: 0 })
+        }).catch(() => {});
+
+        // Mark read in Firestore
         updateDoc(doc(db, 'support_tickets', ticketId), {
           unreadByUser: 0
         }).catch(() => {});
       }
     }
-  }, [isOpen, ticketData?.messages, ticketId]);
+  }, [isOpen, ticketData?.unreadByUser, ticketId, userEmail, userName, userUid]);
 
   const messagesToDisplay: SupportMessage[] = ticketData?.messages && ticketData.messages.length > 0
     ? ticketData.messages
@@ -163,6 +235,8 @@ export const SupportChatWidget: React.FC = () => {
 
     // Optimistic UI state
     setTicketData(updatedTicket);
+    setInputMessage('');
+
     try {
       localStorage.setItem(`meu_escritorio_user_support_ticket_${ticketId}`, JSON.stringify(updatedTicket));
       const rawPool = localStorage.getItem('meu_escritorio_global_support_tickets');
@@ -177,13 +251,33 @@ export const SupportChatWidget: React.FC = () => {
       window.dispatchEvent(new CustomEvent('support_tickets_updated'));
     } catch {}
 
-    setInputMessage('');
+    // 1. Send to Server API (guaranteed cross-browser / cross-device delivery)
+    try {
+      await fetch('/api/support/tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId,
+          subscriberEmail: userEmail,
+          subscriberName: userName,
+          subscriberUid: userUid,
+          subscriberPhone: (profile as any)?.phone || '',
+          message: newMsg,
+          status: 'waiting_admin',
+          unreadByAdmin: (ticketData?.unreadByAdmin || 0) + 1,
+          unreadByUser: 0,
+        })
+      });
+    } catch (err) {
+      console.warn('Notice: Server API support send error:', err);
+    }
 
+    // 2. Dual-persistence: Send to Firestore
     try {
       await setDoc(doc(db, 'support_tickets', ticketId), sanitizeFirestoreData(updatedTicket), { merge: true });
       window.dispatchEvent(new CustomEvent('support_tickets_updated'));
     } catch (err) {
-      console.warn('Error saving support message to Firestore:', err);
+      // Suppress firestore error if offline/fallback
     } finally {
       setIsSending(false);
     }

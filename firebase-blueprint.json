@@ -37,6 +37,44 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "officeUid", "clientName", "clientEmail", "status"]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Dedicated customer support conversation ticket between subscriber and platform administrator",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "subscriberUid": { "type": "string" },
+        "subscriberName": { "type": "string" },
+        "subscriberEmail": { "type": "string" },
+        "subscriberPhone": { "type": "string" },
+        "status": { "type": "string", "enum": ["waiting_admin", "in_progress", "waiting_user", "resolved"] },
+        "unreadByAdmin": { "type": "number" },
+        "unreadByUser": { "type": "number" },
+        "lastMessage": { "type": "string" },
+        "lastMessageTime": { "type": "string" },
+        "lastMessageSender": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "sender": { "type": "string", "enum": ["user", "admin"] },
+              "senderName": { "type": "string" },
+              "senderEmail": { "type": "string" },
+              "text": { "type": "string" },
+              "time": { "type": "string" },
+              "date": { "type": "string" },
+              "timestamp": { "type": "string" },
+              "read": { "type": "boolean" }
+            }
+          }
+        }
+      },
+      "required": ["id", "subscriberEmail", "status", "messages"]
     }
   },
   "firestore": {
@@ -51,6 +89,10 @@
     "/clientPortals/{portalId}": {
       "schema": "ClientPortalAccess",
       "description": "Isolated client portal documents for clients to track their projects"
+    },
+    "/support_tickets/{ticketId}": {
+      "schema": "SupportTicket",
+      "description": "Real-time support ticket communication documents between subscribers and admin"
     }
   }
 }

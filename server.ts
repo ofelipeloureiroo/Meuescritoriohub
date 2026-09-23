@@ -1601,6 +1601,347 @@ Retorne uma resposta JSON com o formato estrito:
     }
   });
 
+  // --- Canonical Real-Time Support Tickets API ---
+  const SUPPORT_TICKETS_FILE = path.join(process.cwd(), 'data', 'support_tickets.json');
+
+  const loadSupportTicketsFromFile = (): any[] => {
+    try {
+      if (fs.existsSync(SUPPORT_TICKETS_FILE)) {
+        const raw = fs.readFileSync(SUPPORT_TICKETS_FILE, 'utf-8');
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) return list;
+      }
+    } catch (e) {
+      console.warn("Error reading support tickets file:", e);
+    }
+    return [];
+  };
+
+  const saveSupportTicketsToFile = (tickets: any[]) => {
+    try {
+      const dataDir = path.join(process.cwd(), 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      fs.writeFileSync(SUPPORT_TICKETS_FILE, JSON.stringify(tickets, null, 2), 'utf-8');
+    } catch (e) {
+      console.error("Error saving support tickets file:", e);
+    }
+  };
+
+  interface SseSupportClient {
+    id: string;
+    res: express.Response;
+    ticketId?: string;
+  }
+  const sseSupportClients = new Set<SseSupportClient>();
+
+  const broadcastSupportTicket = (ticket: any, eventType: string = 'ticket_update') => {
+    const payload = JSON.stringify({ event: eventType, ticket, timestamp: new Date().toISOString() });
+    for (const client of sseSupportClients) {
+      try {
+        if (!client.ticketId || client.ticketId === ticket.id || client.ticketId === ticket.subscriberEmail) {
+          client.res.write(`data: ${payload}\n\n`);
+        }
+      } catch (err) {
+        // Client write failed
+      }
+    }
+  };
+
+  // SSE Stream for real-time support messages
+  app.get('/api/support/stream', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders?.();
+
+    const clientId = `client_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const filterTicketId = (req.query.ticketId as string || '').trim();
+
+    const clientObj: SseSupportClient = { id: clientId, res, ticketId: filterTicketId || undefined };
+    sseSupportClients.add(clientObj);
+
+    // Initial connection ping
+    res.write(`data: ${JSON.stringify({ event: 'connected', clientId })}\n\n`);
+
+    // Keep-alive heartbeat every 20 seconds
+    const interval = setInterval(() => {
+      try {
+        res.write(`data: ${JSON.stringify({ event: 'ping', time: Date.now() })}\n\n`);
+      } catch {
+        clearInterval(interval);
+      }
+    }, 20000);
+
+    req.on('close', () => {
+      clearInterval(interval);
+      sseSupportClients.delete(clientObj);
+    });
+  });
+
+  // GET all support tickets
+  app.get('/api/support/tickets', (req, res) => {
+    try {
+      const tickets = loadSupportTicketsFromFile();
+      // Sort newest update first
+      tickets.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+      res.json({ success: true, tickets });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // GET single support ticket by ID or Email
+  app.get('/api/support/tickets/:id', (req, res) => {
+    try {
+      const param = req.params.id.toLowerCase().trim();
+      const tickets = loadSupportTicketsFromFile();
+      const cleanParam = param.replace('ticket_', '');
+      
+      const found = tickets.find(t =>
+        t.id.toLowerCase() === param ||
+        t.id.toLowerCase() === `ticket_${cleanParam}` ||
+        (t.subscriberEmail && t.subscriberEmail.toLowerCase().trim() === param) ||
+        (t.subscriberUid && t.subscriberUid.toLowerCase().trim() === param)
+      );
+
+      if (found) {
+        res.json({ success: true, ticket: found });
+      } else {
+        res.status(404).json({ success: false, error: 'Ticket não encontrado' });
+      }
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // POST create ticket, initialize ticket, or send message
+  app.post('/api/support/tickets', express.json(), async (req, res) => {
+    try {
+      const {
+        ticketId,
+        subscriberEmail,
+        subscriberName,
+        subscriberUid,
+        subscriberPhone,
+        message,
+        status,
+        unreadByAdmin,
+        unreadByUser,
+        initialOnly,
+      } = req.body;
+
+      if (!subscriberEmail && !ticketId) {
+        return res.status(400).json({ success: false, error: 'E-mail do assinante ou ticketId é obrigatório' });
+      }
+
+      const cleanEmail = (subscriberEmail || '').toLowerCase().trim();
+      const effectiveId = ticketId || `ticket_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+      const dateStr = now.toISOString().split('T')[0];
+
+      const tickets = loadSupportTicketsFromFile();
+      let ticket = tickets.find(t => t.id === effectiveId || (cleanEmail && t.subscriberEmail?.toLowerCase().trim() === cleanEmail));
+
+      if (!ticket) {
+        // Create new ticket
+        const effectiveName = subscriberName || (cleanEmail ? cleanEmail.split('@')[0] : 'Assinante');
+        const defaultWelcomeMsg = {
+          id: 'welcome_1',
+          sender: 'admin',
+          senderName: 'Atendimento (Suporte)',
+          senderEmail: 'suporte@meuescritorio.online',
+          text: `Olá, ${effectiveName}! Seja muito bem-vindo(a) ao Suporte Dedicado do Meu Escritório Online. Como podemos te ajudar hoje?`,
+          time: timeStr,
+          date: dateStr,
+          timestamp: now.toISOString(),
+          read: true
+        };
+
+        const initialMessages: any[] = [defaultWelcomeMsg];
+        if (message && message.text) {
+          initialMessages.push({
+            id: message.id || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            sender: message.sender || 'user',
+            senderName: message.senderName || effectiveName,
+            senderEmail: message.senderEmail || cleanEmail,
+            text: message.text,
+            time: message.time || timeStr,
+            date: message.date || dateStr,
+            timestamp: message.timestamp || now.toISOString(),
+            read: message.sender === 'admin',
+          });
+        }
+
+        const lastMsg = message && message.text ? message.text : defaultWelcomeMsg.text;
+        const lastSender = message && message.sender ? message.sender : 'admin';
+
+        ticket = {
+          id: effectiveId,
+          subscriberUid: subscriberUid || cleanEmail,
+          subscriberName: effectiveName,
+          subscriberEmail: cleanEmail,
+          subscriberPhone: subscriberPhone || '',
+          status: status || (message?.sender === 'user' ? 'waiting_admin' : 'in_progress'),
+          unreadByAdmin: unreadByAdmin !== undefined ? unreadByAdmin : (message?.sender === 'user' ? 1 : 0),
+          unreadByUser: unreadByUser !== undefined ? unreadByUser : (message?.sender === 'admin' ? 1 : 0),
+          lastMessage: lastMsg,
+          lastMessageTime: timeStr,
+          lastMessageSender: lastSender,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+          messages: initialMessages,
+        };
+
+        tickets.unshift(ticket);
+      } else {
+        // If initialOnly is requested and ticket already exists, just return existing
+        if (initialOnly && (!message || !message.text)) {
+          return res.json({ success: true, ticket });
+        }
+
+        // Update subscriber details if provided
+        if (subscriberName && (!ticket.subscriberName || ticket.subscriberName === 'Assinante')) {
+          ticket.subscriberName = subscriberName;
+        }
+        if (subscriberPhone) ticket.subscriberPhone = subscriberPhone;
+        if (subscriberUid && !ticket.subscriberUid) ticket.subscriberUid = subscriberUid;
+
+        // If a message was sent, append it
+        if (message && message.text) {
+          const newMsg = {
+            id: message.id || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            sender: message.sender || 'user',
+            senderName: message.senderName || ticket.subscriberName,
+            senderEmail: message.senderEmail || (message.sender === 'admin' ? 'suporte@meuescritorio.online' : cleanEmail),
+            text: message.text,
+            time: message.time || timeStr,
+            date: message.date || dateStr,
+            timestamp: message.timestamp || now.toISOString(),
+            read: message.sender === 'admin',
+          };
+
+          if (!Array.isArray(ticket.messages)) {
+            ticket.messages = [];
+          }
+
+          // Deduplicate message by ID or text+sender within 3 seconds
+          const exists = ticket.messages.some((m: any) =>
+            m.id === newMsg.id ||
+            (m.text === newMsg.text && m.sender === newMsg.sender && Math.abs(new Date(m.timestamp || 0).getTime() - new Date(newMsg.timestamp).getTime()) < 4000)
+          );
+
+          if (!exists) {
+            ticket.messages.push(newMsg);
+          }
+
+          ticket.lastMessage = message.text;
+          ticket.lastMessageTime = timeStr;
+          ticket.lastMessageSender = message.sender || 'user';
+
+          if (message.sender === 'user') {
+            ticket.status = 'waiting_admin';
+            ticket.unreadByAdmin = (ticket.unreadByAdmin || 0) + 1;
+          } else {
+            ticket.status = 'in_progress';
+            ticket.unreadByUser = (ticket.unreadByUser || 0) + 1;
+            ticket.unreadByAdmin = 0;
+          }
+        }
+
+        if (status) ticket.status = status;
+        if (unreadByAdmin !== undefined) ticket.unreadByAdmin = unreadByAdmin;
+        if (unreadByUser !== undefined) ticket.unreadByUser = unreadByUser;
+
+        ticket.updatedAt = now.toISOString();
+
+        // Move to top of list
+        const idx = tickets.findIndex(t => t.id === ticket.id);
+        if (idx >= 0) {
+          tickets.splice(idx, 1);
+        }
+        tickets.unshift(ticket);
+      }
+
+      saveSupportTicketsToFile(tickets);
+      broadcastSupportTicket(ticket, 'ticket_update');
+
+      // Async sync to Firestore if possible
+      try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const dbAdmin = getFirestore();
+        dbAdmin.collection('support_tickets').doc(ticket.id).set(ticket, { merge: true }).catch(() => {});
+      } catch {}
+
+      return res.json({ success: true, ticket });
+    } catch (e: any) {
+      console.error("Error saving support ticket:", e);
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // PUT update ticket status / mark read
+  app.put('/api/support/tickets/:id', express.json(), (req, res) => {
+    try {
+      const ticketId = req.params.id;
+      const { status, unreadByAdmin, unreadByUser } = req.body;
+      const tickets = loadSupportTicketsFromFile();
+      const ticket = tickets.find(t => t.id === ticketId);
+
+      if (!ticket) {
+        return res.status(404).json({ success: false, error: 'Ticket não encontrado' });
+      }
+
+      if (status !== undefined) ticket.status = status;
+      if (unreadByAdmin !== undefined) ticket.unreadByAdmin = unreadByAdmin;
+      if (unreadByUser !== undefined) ticket.unreadByUser = unreadByUser;
+      ticket.updatedAt = new Date().toISOString();
+
+      saveSupportTicketsToFile(tickets);
+      broadcastSupportTicket(ticket, 'ticket_update');
+
+      try {
+        import('firebase-admin/firestore').then(({ getFirestore }) => {
+          const dbAdmin = getFirestore();
+          dbAdmin.collection('support_tickets').doc(ticket.id).set(ticket, { merge: true }).catch(() => {});
+        }).catch(() => {});
+      } catch {}
+
+      return res.json({ success: true, ticket });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // DELETE ticket
+  app.delete('/api/support/tickets/:id', (req, res) => {
+    try {
+      const ticketId = req.params.id;
+      let tickets = loadSupportTicketsFromFile();
+      const deletedTicket = tickets.find(t => t.id === ticketId);
+      tickets = tickets.filter(t => t.id !== ticketId);
+      saveSupportTicketsToFile(tickets);
+
+      if (deletedTicket) {
+        broadcastSupportTicket({ id: ticketId }, 'ticket_deleted');
+      }
+
+      try {
+        import('firebase-admin/firestore').then(({ getFirestore }) => {
+          const dbAdmin = getFirestore();
+          dbAdmin.collection('support_tickets').doc(ticketId).delete().catch(() => {});
+        }).catch(() => {});
+      } catch {}
+
+      return res.json({ success: true });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   // Endpoint to send boleto details directly to client via Email
   app.post('/api/send-boleto-email', async (req, res) => {
     try {
