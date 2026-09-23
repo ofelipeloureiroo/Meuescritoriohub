@@ -482,12 +482,67 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
     );
   }, [clientContracts]);
 
+  const inProgressCount = useMemo(() => {
+    let count = 0;
+    // 1. Architecture projects
+    clientArchProjects.forEach((p) => {
+      if (p.status !== 'entregue' && !p.completed) count++;
+    });
+    // 2. Freelance projects
+    clientFreelaProjects.forEach((p) => {
+      if (p.status !== 'delivered' && p.status !== 'completed' && p.status !== 'paid' && p.status !== 'cancelled') count++;
+    });
+    // 3. Contracts that are not duplicate of an architecture/freelance project
+    clientContracts
+      .filter((c) => !clientArchProjects.some((ap) => ap.title && c.projectTitle && ap.title.toLowerCase() === c.projectTitle.toLowerCase()))
+      .forEach((c) => {
+        if (c.status !== 'completed' && c.status !== 'paid' && c.status !== 'cancelled') count++;
+      });
+    return count;
+  }, [clientArchProjects, clientFreelaProjects, clientContracts]);
+
+  const completedCount = useMemo(() => {
+    let count = 0;
+    // 1. Architecture projects
+    clientArchProjects.forEach((p) => {
+      if (p.status === 'entregue' || p.completed) count++;
+    });
+    // 2. Freelance projects
+    clientFreelaProjects.forEach((p) => {
+      if (p.status === 'delivered' || p.status === 'completed' || p.status === 'paid') count++;
+    });
+    // 3. Contracts
+    clientContracts
+      .filter((c) => !clientArchProjects.some((ap) => ap.title && c.projectTitle && ap.title.toLowerCase() === c.projectTitle.toLowerCase()))
+      .forEach((c) => {
+        if (c.status === 'completed' || c.status === 'paid') count++;
+      });
+    return count;
+  }, [clientArchProjects, clientFreelaProjects, clientContracts]);
+
   const totalContractedAmount = useMemo(() => {
-    return clientContracts.reduce(
-      (sum, c) => sum + (c.totalAmount || 0),
-      0
-    );
-  }, [clientContracts]);
+    let sum = 0;
+    // 1. Architecture projects
+    clientArchProjects.forEach((p) => {
+      sum += (p.honorarios || p.paidAmount || (p as any).totalValue || (p as any).contractValue || 0);
+    });
+    // 2. Freelance projects
+    clientFreelaProjects.forEach((p) => {
+      sum += (p.totalValue || (p.hourlyRate ? p.hourlyRate * (p.totalHours || 0) : 0));
+    });
+    // 3. Non-duplicate contracts
+    clientContracts
+      .filter((c) => !clientArchProjects.some((ap) => ap.title && c.projectTitle && ap.title.toLowerCase() === c.projectTitle.toLowerCase()))
+      .forEach((c) => {
+        sum += (c.totalAmount || 0);
+      });
+
+    // 4. Fallback to client totalBilled / totalPaid if sum is 0
+    if (sum === 0 && activeViewingClient) {
+      sum = Math.max(activeViewingClient.totalBilled || 0, activeViewingClient.totalPaid || 0);
+    }
+    return sum;
+  }, [clientArchProjects, clientFreelaProjects, clientContracts, activeViewingClient]);
 
   const createdDateFormatted = activeViewingClient?.createdAt
     ? formatDate(activeViewingClient.createdAt)
@@ -575,7 +630,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                   EM ANDAMENTO
                 </span>
                 <span className="text-xl font-extrabold text-zinc-900">
-                  {activeContracts.length}
+                  {inProgressCount}
                 </span>
               </div>
             </div>
@@ -589,7 +644,7 @@ export const FreelanceClientsTab: React.FC<FreelanceClientsTabProps> = ({
                   CONCLUÍDOS
                 </span>
                 <span className="text-xl font-extrabold text-zinc-900">
-                  {completedContracts.length}
+                  {completedCount}
                 </span>
               </div>
             </div>
