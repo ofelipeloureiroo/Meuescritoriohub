@@ -3637,39 +3637,57 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     if (q.includes("geladeira") || q.includes("refrigerador") || q.includes("freezer") || q.includes("frigobar") || q.includes("side by side") || q.includes("french door") || q.includes("inverter") || q.includes("frost free")) {
       return [
         {
-          title: "Geladeira Electrolux Frost Free Inverter 440L Efficient com AutoSense Side by Side Inox",
-          description: "Tecnologia Inverter econômica, controle digital externo AutoSense que prolonga os alimentos, acabamento escovado em inox anti-manchas.",
-          price: "R$ 4.084,05",
-          store: "Loja Electrolux / Amazon BR",
-          url: "https://www.google.com.br/search?tbm=shop&q=geladeira+electrolux+side+by+side+inverter",
+          title: "Geladeira French Door 3 Portas Brastemp Inox 559L",
+          description: "Design premium French Door de 3 portas com acabamento Inox, tecnologia Frost Free e excelente capacidade de armazenamento para famílias.",
+          price: "R$ 5.999,99",
+          store: "Leroy Merlin / Brastemp",
+          url: "https://www.google.com.br/search?tbm=shop&q=Geladeira+French+Door+3+Portas+Brastemp",
           imageUrl: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
         {
-          title: "Refrigerador Samsung French Door Twin Cooling Plus 470L Inox Look",
-          description: "Sistema independente de refrigeração Twin Cooling Plus que evita mistura de odores, gaveta Easy Clean e motor Digital Inverter silencioso.",
-          price: "R$ 5.499,00",
-          store: "Fast Shop / Samsung",
-          url: "https://www.google.com.br/search?tbm=shop&q=refrigerador+samsung+french+door+twin+cooling",
+          title: "Geladeira/Refrigerador Electrolux Frost Free Side-by-Side 435L Inox",
+          description: "Tecnologia Inverter econômica, controle de temperatura externo e painel digital intuitivo.",
+          price: "R$ 5.169,06",
+          store: "Magalu / Electrolux",
+          url: "https://www.google.com.br/search?tbm=shop&q=Geladeira+Electrolux+Frost+Free+Side+by+Side+435L",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
         {
-          title: "Geladeira Brastemp Frost Free Duplex 375L Inox com Espaço Adapt",
-          description: "Prateleiras com múltiplas combinações para garrafas e potes, compartimento extra frio e painel eletrônico touch.",
-          price: "R$ 3.299,00",
-          store: "Mercado Livre / Brastemp",
-          url: "https://www.mercadolivre.com.br/busca/geladeira-brastemp-frost-free-duplex-inox",
-          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
-          category: "Eletros"
-        },
-        {
-          title: "Geladeira Electrolux Cycle Defrost 240L Branca Compacta",
-          description: "Ideal para cozinhas compactas, kitnets e áreas gourmet, gavetão transparente de legumes e baixo consumo energético A+.",
-          price: "R$ 1.687,36",
-          store: "Magazine Luiza / Amazon BR",
-          url: "https://www.google.com.br/search?tbm=shop&q=geladeira+electrolux+cycle+defrost+240l",
+          title: "Geladeira Electrolux Frost Free 2 Portas 435L Inox",
+          description: "Prateleiras adaptáveis, gavetão de hortifrúti com controle de umidade e design moderno.",
+          price: "R$ 4.299,00",
+          store: "Leroy Merlin / Americanas",
+          url: "https://www.google.com.br/search?tbm=shop&q=Geladeira+Electrolux+Frost+Free+2+Portas+435L",
           imageUrl: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: "Geladeira Electrolux Frost Free Side-by-Side 481L Inox",
+          description: "Mesa de controle sensível ao toque, dispensing de água e gelo na porta, motor inverter de alta eficiência.",
+          price: "R$ 7.371,05",
+          store: "Leroy Merlin",
+          url: "https://www.google.com.br/search?tbm=shop&q=Geladeira+Electrolux+Frost+Free+Side+by+Side+481L",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: "Geladeira Electrolux 526L Side-by-Side Inox Look",
+          description: "Ampla capacidade interna com prateleiras de vidro temperado e iluminação LED em toda a cavidade.",
+          price: "R$ 5.532,00",
+          store: "NovoLare",
+          url: "https://www.google.com.br/search?tbm=shop&q=Geladeira+Electrolux+526L+Side+by+Side",
+          imageUrl: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: "Geladeira Electrolux Side-by-Side Inox 431L",
+          description: "Economia de energia com tecnologia de refrigeração inteligente e acabamento escovado premium.",
+          price: "R$ 5.253,41",
+          store: "Magalu",
+          url: "https://www.google.com.br/search?tbm=shop&q=Geladeira+Electrolux+Side+by+Side+431L",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         }
       ];
@@ -4349,10 +4367,10 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
       if (ai && finalSearchTerm) {
         const prompt = "Você é um assistente especialista em especificações técnicas de arquitetura, design de interiores, tecnologia e eletrodomésticos no Brasil. " +
-          "Sua tarefa é encontrar ofertas reais de compra do produto solicitado usando prioritariamente o Google Shopping Brasil e resultados de lojas virtuais brasileiras (ex: Americanas, Magazine Luiza, Amazon Brasil, Mercado Livre, Leroy Merlin, Casas Bahia, Fast Shop). " +
-          `Pesquise no Google Shopping por ofertas de compra direta do seguinte produto: "${finalSearchTerm}" em lojas no Brasil. ` +
-          "Retorne obrigatoriamente um array JSON válido contendo até 6 opções de produtos reais para compra com preços atualizados em R$, loja/fornecedor, especificações, links de compra e URL direta da foto/imagem do produto quando disponível. " +
-          "Siga exatamente o formato JSON especificado.";
+          `Sua tarefa é encontrar até 6 ofertas reais de compra do produto solicitado: "${finalSearchTerm}". ` +
+          "REGRA CRÍTICA DE AFINIDADE: Retorne APENAS produtos que sejam RIGOROSAMENTE do mesmo tipo do item buscado. Exemplo: se for geladeira/refrigerador, retorne EXCLUSIVAMENTE modelos de geladeiras (French Door, Side by Side, Inverter, Duplex). NUNCA misture coifas, cubas, torneiras ou fogões em uma busca por geladeira. " +
+          "Pesquise prioritariamente no Google Shopping Brasil e em grandes lojas virtuais (Magalu, Leroy Merlin, Brastemp, Electrolux, Mercado Livre, Fast Shop, Amazon BR). " +
+          "Retorne obrigatoriamente um array JSON válido contendo até 6 opções com título detalhado, preço em R$, nome da loja/fornecedor, especificações e URL direta de compra ou busca do Google Shopping (ex: https://www.google.com/search?q=NOME_DO_PRODUTO&tbm=shop).";
 
         // Tier 1: Try Gemini with Google Grounding
         try {

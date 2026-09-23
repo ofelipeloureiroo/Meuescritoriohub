@@ -1320,24 +1320,39 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-100">
-                          <a
-                            href={opt.url || `https://www.google.com/search?q=${encodeURIComponent(opt.title)}&tbm=shop`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center gap-1 transition-colors"
-                            title="Abrir página de compra do produto"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
-                            <span>Abrir Link de Compra</span>
-                          </a>
+                        <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-zinc-100 flex-wrap">
+                          <div className="flex items-center gap-1">
+                            <a
+                              href={opt.url || `https://www.google.com/search?q=${encodeURIComponent(opt.title)}&tbm=shop`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-2 py-1.5 rounded-lg text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center gap-1 transition-colors"
+                              title="Abrir página de compra no Google Shopping"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Abrir Link</span>
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const targetUrl = opt.url || `https://www.google.com/search?q=${encodeURIComponent(opt.title)}&tbm=shop`;
+                                navigator.clipboard.writeText(targetUrl);
+                                showToast("📋 Link de compra copiado!");
+                              }}
+                              className="px-2 py-1.5 rounded-lg text-[11px] font-medium text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 transition-colors cursor-pointer"
+                              title="Copiar link do produto"
+                            >
+                              <Copy className="w-3.5 h-3.5 text-zinc-500" />
+                              <span>Copiar</span>
+                            </button>
+                          </div>
                           <button
                             type="button"
                             onClick={() => handleSelectIAShowcase(opt)}
                             className="py-1.5 px-3 rounded-xl text-[11px] font-bold bg-[#faf7f2] border border-[#e2d2bd] text-zinc-900 hover:bg-[#8c7456] hover:text-white transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
                           >
                             <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Selecionar Produto e Foto</span>
+                            <span>Selecionar Produto</span>
                           </button>
                         </div>
                       </div>
