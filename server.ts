@@ -4738,26 +4738,70 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     let extractedGroundingChunks: Array<{ uri: string; title: string }> = [];
     let finalSearchTerm = "";
 
+    // Helper to check store-specific product page patterns
+    const checkStoreProductPattern = (storeName: string, rawUrl: string): { valid: boolean; reason?: string } => {
+      const lowerStore = (storeName || '').toLowerCase();
+      const lowerUrl = (rawUrl || '').toLowerCase();
+
+      if (lowerStore.includes('magazineluiza') || lowerStore.includes('magalu') || lowerStore.includes('magazine')) {
+        if (!lowerUrl.includes('/p/') && !lowerUrl.includes('/produto/')) {
+          return { valid: false, reason: 'Magazine Luiza URL não contém o padrão de produto /p/ ou /produto/' };
+        }
+      } else if (lowerStore.includes('mercadolivre') || lowerStore.includes('mercadolibre')) {
+        if (!lowerUrl.includes('/mlb-') && !lowerUrl.includes('/p/mlb') && !lowerUrl.includes('/jm/') && !lowerUrl.includes('produto.mercadolivre.com.br')) {
+          return { valid: false, reason: 'Mercado Livre URL não contém ID de produto /MLB- ou /JM/' };
+        }
+      } else if (lowerStore.includes('casasbahia') || lowerStore.includes('casas bahia')) {
+        if (!lowerUrl.includes('/p/') && !lowerUrl.includes('/sku/')) {
+          return { valid: false, reason: 'Casas Bahia URL não contém o padrão de produto /p/' };
+        }
+      } else if (lowerStore.includes('amazon')) {
+        if (!lowerUrl.includes('/dp/') && !lowerUrl.includes('/gp/product/')) {
+          return { valid: false, reason: 'Amazon URL não contém /dp/' };
+        }
+      } else if (lowerStore.includes('leroy')) {
+        if (!lowerUrl.includes('/p/') && !/\d{5,}/.test(lowerUrl)) {
+          return { valid: false, reason: 'Leroy Merlin URL não contém padrão de produto' };
+        }
+      }
+      return { valid: true };
+    };
+
     // Helper to validate whether a URL is a real, live, direct product purchase page (and NOT a generic search page)
-    const validateDirectProductUrl = async (rawUrl?: string): Promise<{ valid: boolean; status?: number; finalUrl?: string; reason?: string }> => {
+    const validateDirectProductUrl = async (rawUrl?: string, storeName?: string): Promise<{ valid: boolean; status?: number; finalUrl?: string; reason?: string }> => {
+      console.log(`[validateDirectProductUrl] 🔍 CHAMADA OBRIGATÓRIA para URL: "${rawUrl}" (Loja: "${storeName || 'Desconhecida'}")`);
+
       if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.startsWith('http')) {
         return { valid: false, reason: 'URL vazia ou inválida' };
       }
       const lower = rawUrl.toLowerCase();
       
-      // Exclude generic search pages
+      // Exclude generic search pages & search query parameters
       if (
         lower.includes('/busca') ||
         lower.includes('/search') ||
         lower.includes('?q=') ||
         lower.includes('&q=') ||
+        lower.includes('?query=') ||
+        lower.includes('&query=') ||
         lower.includes('?k=') ||
         lower.includes('&k=') ||
-        lower.includes('lista.mercadolivre') ||
+        lower.includes('+') ||
+        lower.includes('%2b') ||
+        lower.includes('busca?') ||
+        lower.includes('search?') ||
         lower.includes('google.com') ||
         lower.includes('example.com')
       ) {
-        return { valid: false, reason: 'Página genérica de busca ou listagem' };
+        return { valid: false, reason: 'Contém termos ou parâmetros de busca genérica (/busca, /search, ?q=, + ou %2B)' };
+      }
+
+      // Check store-specific product page pattern
+      if (storeName) {
+        const patternCheck = checkStoreProductPattern(storeName, rawUrl);
+        if (!patternCheck.valid) {
+          return { valid: false, reason: patternCheck.reason };
+        }
       }
 
       try {
@@ -4780,7 +4824,10 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
             finalUrl.includes('/busca') ||
             finalUrl.includes('/search') ||
             finalUrl.includes('?q=') ||
+            finalUrl.includes('?query=') ||
             finalUrl.includes('lista.mercadolivre') ||
+            finalUrl.includes('+') ||
+            finalUrl.includes('%2b') ||
             finalUrl.includes('/404') ||
             finalUrl.includes('nao-encontrado') ||
             finalUrl.includes('sku-nao-encontrado')
@@ -5174,21 +5221,22 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         let finalValidatedUrl = "";
 
         if (candidateUrl) {
-          console.log(`[Item #${idx + 1} - ${item.store}] Testando URL candidata via HTTP GET: "${candidateUrl}"...`);
-          const httpCheck = await validateDirectProductUrl(candidateUrl);
+          console.log(`[Item #${idx + 1} - ${item.store}] Testando URL candidata via HTTP GET e Padrão de Loja: "${candidateUrl}"...`);
+          const httpCheck = await validateDirectProductUrl(candidateUrl, item.store);
           
           if (httpCheck.valid) {
             isDirect = true;
             finalValidatedUrl = candidateUrl;
-            console.log(`[Item #${idx + 1} - ${item.store}] -> URL ACEITA! Status HTTP ${httpCheck.status || 200} (link_direto: true)`);
+            console.log(`[Item #${idx + 1} - ${item.store}] -> ✅ URL ACEITA COMO DIRETA! Status HTTP ${httpCheck.status || 200} (link_direto: true)`);
           } else {
             isDirect = false;
             finalValidatedUrl = "";
-            discardReason = `Falha na requisição HTTP: ${httpCheck.reason}`;
-            console.log(`[Item #${idx + 1} - ${item.store}] -> URL DESCARTADA! ${httpCheck.reason}`);
+            discardReason = `Descartada: ${httpCheck.reason}`;
+            console.log(`[Item #${idx + 1} - ${item.store}] -> ❌ URL DESCARTADA! Motivo: ${httpCheck.reason}`);
           }
         } else {
-          console.log(`[Item #${idx + 1} - ${item.store}] -> Sem URL válida. Motivo: ${discardReason || 'Sem link disponível'}`);
+          discardReason = discardReason || 'Sem URL candidata disponível';
+          console.log(`[Item #${idx + 1} - ${item.store}] -> ❌ Sem URL válida. Motivo: ${discardReason}`);
         }
 
         return {
@@ -5199,9 +5247,21 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           category: item.category,
           link_direto: isDirect,
           url: finalValidatedUrl,
-          imageUrl: finalImg
+          imageUrl: finalImg,
+          _discardReason: discardReason // Para auditoria nos logs
         };
       }));
+
+      const acceptedCount = validatedResults.filter(r => r.link_direto).length;
+      const discardedItems = validatedResults.filter(r => !r.link_direto);
+      console.log(`\n========================================`);
+      console.log(`📊 RESUMO FINAL DA VALIDAÇÃO DE LINKS:`);
+      console.log(`- Links diretos ACEITOS: ${acceptedCount}`);
+      console.log(`- Links DESCARTADOS: ${discardedItems.length}`);
+      discardedItems.forEach((d, i) => {
+        console.log(`  #${i + 1} [${d.store}] "${d.title}": ${d._discardReason || 'Desconhecido'}`);
+      });
+      console.log(`========================================\n`);
     }
 
     return res.json({
