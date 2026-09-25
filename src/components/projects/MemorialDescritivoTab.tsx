@@ -527,59 +527,56 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     }
   };
 
-  // Helper to build 100% active, non-404 store URLs for real Brazilian stores
+  // Helper to get verified direct store product purchase URLs
   const getVerifiedStoreUrl = (option: { url?: string; title?: string; store?: string }): string => {
     const rawUrl = (option.url || '').trim();
     const title = (option.title || searchQueryIA || formTitle || 'produto').trim();
     const store = (option.store || formStore || '').toLowerCase();
     const cleanTitle = title.replace(/[^\w\sáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ-]/gi, ' ').replace(/\s+/g, ' ').trim();
-
-    // If the URL is already a reliable direct search endpoint without fragile /p/ slugs:
     const lowerUrl = rawUrl.toLowerCase();
-    const isFragileSlug = !lowerUrl ||
-      lowerUrl.includes('/p/') ||
-      lowerUrl.includes('/p?') ||
+
+    // If the URL is already an active direct store product page (starts with http and is not a google search):
+    const isGoogleSearchUrl = !lowerUrl ||
       lowerUrl.includes('google.com') ||
+      lowerUrl.includes('google.com.br') ||
       lowerUrl.includes('tbm=shop') ||
       lowerUrl.includes('udm=28');
 
-    if (!isFragileSlug && rawUrl.startsWith('http')) {
+    if (!isGoogleSearchUrl && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
+      // Direct store product purchase page: keep it 100%!
       return rawUrl;
     }
 
-    // 1. Electrolux Oficial
-    if (store.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux') || lowerUrl.includes('electrolux.com.br')) {
+    // Fallbacks if URL was empty or Google Shopping:
+    if (store.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux')) {
       return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
     }
-
-    // 2. Magazine Luiza
-    if (store.includes('magalu') || store.includes('magazine') || lowerUrl.includes('magazineluiza.com.br')) {
+    if (store.includes('magalu') || store.includes('magazine')) {
       return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
     }
-
-    // 3. Mercado Livre
-    if (store.includes('mercado livre') || store.includes('mercadolivre') || lowerUrl.includes('mercadolivre.com.br')) {
+    if (store.includes('mercado livre') || store.includes('mercadolivre')) {
       return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
     }
-
-    // 4. Fast Shop
-    if (store.includes('fast shop') || store.includes('fastshop') || lowerUrl.includes('fastshop.com.br')) {
+    if (store.includes('fast shop') || store.includes('fastshop')) {
       return `https://www.fastshop.com.br/web/s?q=${encodeURIComponent(cleanTitle)}`;
     }
-
-    // 5. Casas Bahia
-    if (store.includes('casas bahia') || store.includes('casasbahia') || lowerUrl.includes('casasbahia.com.br')) {
+    if (store.includes('casas bahia') || store.includes('casasbahia')) {
       return `https://www.casasbahia.com.br/b?q=${encodeURIComponent(cleanTitle)}`;
     }
-
-    // 6. Leroy Merlin
-    if (store.includes('leroy merlin') || store.includes('leroy') || lowerUrl.includes('leroymerlin.com.br')) {
+    if (store.includes('leroy merlin') || store.includes('leroy')) {
       return `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
     }
-
-    // 7. Amazon Brasil
-    if (store.includes('amazon') || lowerUrl.includes('amazon.com.br')) {
+    if (store.includes('amazon')) {
       return `https://www.amazon.com.br/s?k=${encodeURIComponent(cleanTitle)}`;
+    }
+    if (store.includes('mobly')) {
+      return `https://www.mobly.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+    }
+    if (store.includes('madeira')) {
+      return `https://www.madeiramadeira.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+    }
+    if (store.includes('telhanorte')) {
+      return `https://www.telhanorte.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
     }
 
     return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;

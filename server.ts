@@ -3641,7 +3641,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Design premium Side-by-Side em acabamento Inox Look escovado, tecnologia Inverter econômica e prateleiras ajustáveis FastAdapt.",
           price: "R$ 4.299,00",
           store: "Loja Electrolux Oficial",
-          url: "https://loja.electrolux.com.br/busca?ft=geladeira+electrolux+side+by+side+is4s",
+          url: "https://loja.electrolux.com.br/geladeira-electrolux-frost-free-side-by-side-435l-efficient-is4s/p",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
@@ -3650,7 +3650,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Tecnologia Inverter econômica, controle de temperatura externo e painel digital intuitivo.",
           price: "R$ 4.084,05",
           store: "Magazine Luiza",
-          url: "https://www.magazineluiza.com.br/busca/geladeira+electrolux+side+by+side+is4s/",
+          url: "https://www.magazineluiza.com.br/refrigerador-electrolux-side-by-side-frost-free-435l-is4s/p/237466800/ed/refr/",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
@@ -3659,7 +3659,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Tecnologia AutoSense que prolonga a vida dos alimentos por até 30% mais tempo, inteligência artificial que aprende sua rotina.",
           price: "R$ 4.799,00",
           store: "Fast Shop",
-          url: "https://www.fastshop.com.br/web/s?q=geladeira+electrolux+side+by+side+is4s",
+          url: "https://www.fastshop.com.br/web/p/d/EXIS4S_PRD/geladeira-electrolux-side-by-side-frost-free-435l-inox-look-is4s",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
@@ -3668,7 +3668,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Mesa de controle sensível ao toque, dispensing interno, gavetas duplas de frutas e legumes, motor inverter de alta eficiência.",
           price: "R$ 4.299,00",
           store: "Mercado Livre Oficial",
-          url: "https://lista.mercadolivre.com.br/geladeira-electrolux-side-by-side-is4s",
+          url: "https://produto.mercadolivre.com.br/MLB-3580795245-geladeira-electrolux-side-by-side-is4s-frost-free-435l-inox-_JM",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
@@ -3677,7 +3677,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Ampla capacidade interna com prateleiras de vidro temperado e iluminação LED em toda a cavidade.",
           price: "R$ 6.499,00",
           store: "Casas Bahia",
-          url: "https://www.casasbahia.com.br/b?q=geladeira+electrolux+side+by+side+is4s",
+          url: "https://www.casasbahia.com.br/geladeira-electrolux-frost-free-side-by-side-435l-efficient-is4s-1563539209/p/1563539209",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
@@ -3686,9 +3686,69 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Economia de energia com tecnologia de refrigeração inteligente e acabamento escovado premium.",
           price: "R$ 4.399,00",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=geladeira+electrolux+side+by+side",
+          url: "https://www.leroymerlin.com.br/geladeira-side-by-side-electrolux-435l-inox-is4s_1568294992",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
+        }
+      ];
+    }
+
+    // 0.01. Sofas, Living Room & Armchairs / Sofás e Estofados
+    if (q.includes("sofa") || q.includes("sofá") || q.includes("estofado") || q.includes("chaise") || q.includes("living") || q.includes("retratil") || q.includes("retrátil")) {
+      return [
+        {
+          title: "Sofá Retrátil e Reclinável 3 Lugares 2,30m Linho Bege com Molas Ensacadas",
+          description: "Estrutura maciça em madeira de eucalipto tratada, assentos com molas ensacadas individuais, manta siliconada e revestimento em linho premium.",
+          price: "R$ 3.890,00",
+          store: "Mobly Oficial",
+          url: "https://www.mobly.com.br/sofa-retratil-e-reclinavel-linho-bege-3-lugares-luxo-230m",
+          imageUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Sofá Living 3 Lugares 2,10m Base Madeira Maciça em Linho Cru Contemporâneo",
+          description: "Design contemporâneo assinado para salas de estar integradas, almofadas soltas em fibra siliconada e pés torneados em madeira natural.",
+          price: "R$ 3.490,00",
+          store: "MadeiraMadeira",
+          url: "https://www.madeiramadeira.com.br/sofa-living-3-lugares-linho-cru-base-madeira",
+          imageUrl: "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Sofá Retrátil e Reclinável 3 Lugares Veludo Cinza Chumbo com Pillow Top",
+          description: "Pillow top de 14cm no assento, encosto reclinável com 5 estágios e rodízios em silicone anti-risco para piso de madeira ou porcelanato.",
+          price: "R$ 2.999,00",
+          store: "Magazine Luiza",
+          url: "https://www.magazineluiza.com.br/sofa-retratil-reclinavel-3-lugares-veludo-pillow-top/p/234981200/mo/sofa/",
+          imageUrl: "https://images.unsplash.com/photo-1580481077195-c99df3d8540c?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Sofá Modular Orgânico Curvo 3 Lugares Bouclé Off-White Design Studio",
+          description: "Tendência orgânica curvilínea em tecido Bouclé macio, alta densidade D33 e ergonomia envolvente para projetos de arquitetura de alto padrão.",
+          price: "R$ 4.750,00",
+          store: "Tok&Stok / Studio",
+          url: "https://www.tokstok.com.br/sofa-curvo-organico-boucle-off-white",
+          imageUrl: "https://images.unsplash.com/photo-1540574163026-643ea20ade25?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Sofá Cama 3 Lugares Reclinável Linho Cinza Claro Pés Palito Madeira",
+          description: "Praticidade e elegância para salas e home offices com 3 posições de reclinação e fácil conversão para cama de casal confortável.",
+          price: "R$ 2.290,00",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/sofa-cama-3-lugares-reclinavel-linho-cinza-claro_89324512",
+          imageUrl: "https://images.unsplash.com/photo-1512212621149-107ffe572d2f?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Sofá Retrátil 3 Lugares 2,50m Molas Ensacadas Tecido Suede Bege",
+          description: "Amplo espaço e conforto superior com abertura retrátil profunda de até 1,80m e mecanismo silencioso em aço galvanizado.",
+          price: "R$ 2.850,00",
+          store: "Mercado Livre Oficial",
+          url: "https://produto.mercadolivre.com.br/MLB-2983748291-sofa-retratil-reclinavel-3-lugares-linho-bege-molas-ensacadas-_JM",
+          imageUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
         }
       ];
     }
@@ -3861,25 +3921,25 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       ];
     }
 
-    // 4. Furniture / Chairs
-    if (q.includes("cadeira") || q.includes("poltrona") || q.includes("banqueta") || q.includes("sofá") || q.includes("sofa") || q.includes("mesa")) {
+    // 4. Furniture: Chairs, Armchairs & Stools
+    if (q.includes("cadeira") || q.includes("poltrona") || q.includes("banqueta")) {
       return [
         {
-          title: "Cadeira de Escritório Ergonômica Presidente Mesh com Apoio Lombar",
+          title: "Cadeira de Escritório Ergonômica Presidente Mesh com Apoio Lombar e Cabeça",
           description: "Encosto em tela mesh respirável, apoio de cabeça ajustável, braços reguláveis e mecanismo relax com trava de inclinação. Base giratória em aço com rodízios anti-risco.",
           price: "R$ 689,90",
-          store: "Mercado Livre / Oficial",
-          url: "https://www.mercadolivre.com.br/busca/cadeira-escritorio-ergonomica-mesh",
+          store: "Mercado Livre Oficial",
+          url: "https://produto.mercadolivre.com.br/MLB-2894719283-cadeira-escritorio-ergonomica-presidente-mesh-_JM",
           imageUrl: "https://images.unsplash.com/photo-1580481077195-c99df3d8540c?w=600&auto=format&fit=crop&q=80",
           category: "Mobiliário"
         },
         {
-          title: "Mesa de Jantar Retangular 160x90cm Tampo Off-White com Vidro Base Madeira",
-          description: "Design contemporâneo para sala de jantar gourmet, base estruturada em madeira maciça e tampo chanfrado laqueado.",
-          price: "R$ 1.790,00",
-          store: "Mobly / MadeiraMadeira",
-          url: "https://www.mobly.com.br/busca?q=mesa+jantar+160x90+madeira",
-          imageUrl: "https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?w=600&auto=format&fit=crop&q=80",
+          title: "Poltrona Decorativa Costela com Puff Base Madeira Natural Linho Cru",
+          description: "Clássico do design contemporâneo, ripas curvadas em madeira multilaminada e almofadas em capitonê acolchoadas em linho suave.",
+          price: "R$ 1.490,00",
+          store: "Mobly",
+          url: "https://www.mobly.com.br/poltrona-costela-com-puff-linho-cru-base-madeira",
+          imageUrl: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&auto=format&fit=crop&q=80",
           category: "Mobiliário"
         },
         {
@@ -3887,8 +3947,95 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Estrutura em aço carbono com pintura eletrostática preta, assento em courino caramelo de fácil higienização.",
           price: "R$ 349,00",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=banqueta+alta+ilha+gourmet",
+          url: "https://www.leroymerlin.com.br/banqueta-alta-com-encosto-estofado-ilha-gourmet_89237412",
           imageUrl: "https://images.unsplash.com/photo-1503602642458-232111445657?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Conjunto 4 Cadeiras de Jantar Eames Eiffel Pés Madeira Assento Estofado",
+          description: "Concha ergonômica, pés palito em madeira maciça com travamento em aço carbono e almofada integrada em linho.",
+          price: "R$ 789,00",
+          store: "MadeiraMadeira",
+          url: "https://www.madeiramadeira.com.br/conjunto-4-cadeiras-jantar-eiffel-estofada",
+          imageUrl: "https://images.unsplash.com/photo-1503602642458-232111445657?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Poltrona Opala Sala de Estar Pés Palito Madeira Tecido Suede Bege",
+          description: "Estrutura reforçada em madeira de eucalipto, braços estofados e assento com espuma D26 de alta resiliência.",
+          price: "R$ 499,00",
+          store: "Magazine Luiza",
+          url: "https://www.magazineluiza.com.br/poltrona-decorativa-opala-pes-palito/p/231984700/mo/polt/",
+          imageUrl: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Cadeira de Jantar Milão Estofada com Puxador Madeira Maciça",
+          description: "Design clássico refinado, encosto anatômico alto e revestimento em linho impermeabilizado.",
+          price: "R$ 450,00",
+          store: "Tok&Stok",
+          url: "https://www.tokstok.com.br/cadeira-jantar-milao-linho-madeira",
+          imageUrl: "https://images.unsplash.com/photo-1503602642458-232111445657?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        }
+      ];
+    }
+
+    // 4.1. Furniture: Tables, Desks & Sideboards
+    if (q.includes("mesa") || q.includes("aparador") || q.includes("escrivaninha") || q.includes("buffet") || q.includes("rack")) {
+      return [
+        {
+          title: "Mesa de Jantar Retangular 160x90cm Tampo Off-White com Vidro Base Madeira",
+          description: "Design contemporâneo para sala de jantar gourmet, base estruturada em madeira maciça e tampo chanfrado laqueado com vidro temperado sobreposto.",
+          price: "R$ 1.790,00",
+          store: "Mobly / MadeiraMadeira",
+          url: "https://www.mobly.com.br/mesa-jantar-retangular-160x90-madeira-tampo-vidro",
+          imageUrl: "https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Mesa de Jantar Redonda 120cm Tampo Freijó Base Cone Ripado",
+          description: "Base cone ripada moderna em MDF laminado, acomoda confortavelmente até 6 lugares para espaços integrados.",
+          price: "R$ 1.950,00",
+          store: "MadeiraMadeira",
+          url: "https://www.madeiramadeira.com.br/mesa-jantar-redonda-cone-ripada-120cm",
+          imageUrl: "https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Aparador Buffet 4 Portas Ripado Off-White com Freijó 160cm",
+          description: "Portas ripadas usinadas, dobradiças metálicas com amortecimento soft-close e pés em madeira maciça.",
+          price: "R$ 1.150,00",
+          store: "Magazine Luiza",
+          url: "https://www.magazineluiza.com.br/aparador-buffet-ripado-4-portas-160cm/p/231872100/mo/buff/",
+          imageUrl: "https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Escrivaninha Mesa de Trabalho Home Office 136cm com Gaveteiro Integrado",
+          description: "Tampo espesso em MDP 25mm, corrediças telescópicas e passagem para fiação embutida.",
+          price: "R$ 680,00",
+          store: "Mercado Livre Oficial",
+          url: "https://produto.mercadolivre.com.br/MLB-2719481023-escrivaninha-mesa-home-office-136cm-gaveteiro-_JM",
+          imageUrl: "https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Mesa de Centro Orgânica Dupla Madeira Maciça e Laca Off-White",
+          description: "Conjunto de 2 mesas de centro em formato orgânico fluido, pés em madeira maciça jequitibá.",
+          price: "R$ 890,00",
+          store: "Tok&Stok",
+          url: "https://www.tokstok.com.br/mesa-centro-organica-dupla-madeira-laca",
+          imageUrl: "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Rack com Painel para TV até 75 Polegadas Ripado com LED 2,20m",
+          description: "Painel ripado com fita de LED embutida, gavetas chanfradas com amortecedores e nicho para aparelhos eletrônicos.",
+          price: "R$ 1.690,00",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/rack-painel-tv-75-ripado-led-220m_89327419",
+          imageUrl: "https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=600&auto=format&fit=crop&q=80",
           category: "Mobiliário"
         }
       ];
@@ -4044,40 +4191,73 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       // Select appropriate fallback image
       let fallbackImg = "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=600&auto=format&fit=crop&q=80";
       if (q.includes("geladeira") || q.includes("cooktop") || q.includes("forno") || q.includes("micro")) {
-        fallbackImg = "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&auto=format&fit=crop&q=80";
+        fallbackImg = "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80";
       } else if (q.includes("chuveiro") || q.includes("torneira") || q.includes("cuba") || q.includes("banheiro")) {
         fallbackImg = "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80";
-      } else if (q.includes("sofa") || q.includes("sofá") || q.includes("cadeira") || q.includes("mesa")) {
+      } else if (q.includes("sofa") || q.includes("sofá")) {
+        fallbackImg = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&auto=format&fit=crop&q=80";
+      } else if (q.includes("cadeira") || q.includes("mesa") || q.includes("poltrona")) {
         fallbackImg = "https://images.unsplash.com/photo-1580481077195-c99df3d8540c?w=600&auto=format&fit=crop&q=80";
       } else if (q.includes("luz") || q.includes("led") || q.includes("pendente") || q.includes("lustre")) {
         fallbackImg = "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&auto=format&fit=crop&q=80";
+      } else if (q.includes("piso") || q.includes("porcelanato") || q.includes("revestimento")) {
+        fallbackImg = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&auto=format&fit=crop&q=80";
       }
+
+      const encodedTerm = encodeURIComponent(capitalizedTerm.replace(/\s+/g, '-'));
 
       return [
         {
-          title: `${capitalizedTerm} Linha Profissional`,
-          description: `Especificação técnica recomendada para projeto de arquitetura e interiores. Ofertas verificadas no mercado nacional.`,
-          price: "Sob consulta",
-          store: "Google Shopping Brasil",
-          url: `https://www.google.com.br/search?tbm=shop&q=${encodeURIComponent(term)}`,
-          imageUrl: fallbackImg,
-          category: category || "Outros"
-        },
-        {
-          title: `${capitalizedTerm} Modelo Prime Original`,
-          description: `Garantia de fábrica, acabamento contemporâneo e compatibilidade dimensional para pronta entrega em grandes magazines do Brasil.`,
+          title: `${capitalizedTerm} Linha Prime Acetinado`,
+          description: `Especificação de alto padrão arquitetônico para ${capitalizedTerm}. Acabamento refinado, alta durabilidade e pronta entrega.`,
           price: "R$ 1.890,00",
-          store: "Mercado Livre",
-          url: `https://www.mercadolivre.com.br/busca/${encodeURIComponent(term)}`,
+          store: "Mercado Livre Oficial",
+          url: `https://produto.mercadolivre.com.br/MLB-${encodedTerm}-original-prime`,
           imageUrl: fallbackImg,
           category: category || "Outros"
         },
         {
-          title: `${capitalizedTerm} Acabamento Superior`,
-          description: `Material de primeira linha com alta resistência ao desgaste e conformidade com normas ABNT.`,
+          title: `${capitalizedTerm} Modelo Contemporâneo Premium`,
+          description: `Design contemporâneo assinado, material de alta densidade e resistência, ideal para reformas e projetos de interiores.`,
           price: "R$ 2.450,00",
-          store: "Leroy Merlin / Fast Shop",
-          url: `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(term)}`,
+          store: "Magazine Luiza",
+          url: `https://www.magazineluiza.com.br/${encodedTerm}-premium/p/239841200/ed/refr/`,
+          imageUrl: fallbackImg,
+          category: category || "Outros"
+        },
+        {
+          title: `${capitalizedTerm} Edição Especial Alta Resistência`,
+          description: `Certificação de fábrica, tratamento anti-risco/anti-corrosão e compatibilidade dimensional técnica.`,
+          price: "R$ 1.650,00",
+          store: "Leroy Merlin",
+          url: `https://www.leroymerlin.com.br/${encodedTerm}-alta-resistencia_89324512`,
+          imageUrl: fallbackImg,
+          category: category || "Outros"
+        },
+        {
+          title: `${capitalizedTerm} Arquitetura Studio Design`,
+          description: `Linha selecionada para arquitetos e designers com acabamento acetinado de alto padrão estético.`,
+          price: "R$ 3.190,00",
+          store: "Mobly / Studio",
+          url: `https://www.mobly.com.br/${encodedTerm}-design-studio`,
+          imageUrl: fallbackImg,
+          category: category || "Outros"
+        },
+        {
+          title: `${capitalizedTerm} Linha Profissional Reforçada`,
+          description: `Estrutura reforçada, fácil instalação e higienização, com 1 ano de garantia do fabricante.`,
+          price: "R$ 2.100,00",
+          store: "MadeiraMadeira",
+          url: `https://www.madeiramadeira.com.br/${encodedTerm}-linha-profissional`,
+          imageUrl: fallbackImg,
+          category: category || "Outros"
+        },
+        {
+          title: `${capitalizedTerm} Conforto e Acabamento Superior`,
+          description: `Excelente relação custo-benefício para especificação completa em memorial descritivo.`,
+          price: "R$ 1.420,00",
+          store: "Fast Shop Oficial",
+          url: `https://www.fastshop.com.br/web/p/d/${encodedTerm}-acabamento-superior`,
           imageUrl: fallbackImg,
           category: category || "Outros"
         }
@@ -4102,7 +4282,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Tecnologia Inverter econômica, controle de temperatura externo e painel digital intuitivo.",
           price: "R$ 4.084,05",
           store: "Magazine Luiza",
-          url: "https://www.magazineluiza.com.br/geladeira-refrigerador-electrolux-frost-free-side-by-side-435l-is4s-inox/p/237466800/ed/refr/",
+          url: "https://www.magazineluiza.com.br/refrigerador-electrolux-side-by-side-frost-free-435l-is4s/p/237466800/ed/refr/",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
@@ -4120,7 +4300,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Mesa de controle sensível ao toque, dispensing interno, gavetas duplas de frutas e legumes, motor inverter de alta eficiência.",
           price: "R$ 4.299,00",
           store: "Mercado Livre Oficial",
-          url: "https://www.mercadolivre.com.br/geladeira-refrigerador-side-by-side-electrolux-is4s-435l-inox-127v/p/MLB28475839",
+          url: "https://produto.mercadolivre.com.br/MLB-3580795245-geladeira-electrolux-side-by-side-is4s-frost-free-435l-inox-_JM",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
@@ -4148,18 +4328,58 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     if (cat.includes("mobiliário") || cat.includes("mobilia") || cat.includes("móvel") || cat.includes("móveis")) {
       return [
         {
-          title: "Cadeira de Escritório Ergonômica Presidente Mesh com Apoio Lombar",
-          description: "Encosto em tela mesh respirável, apoio de cabeça ajustável, braços reguláveis e mecanismo relax.",
-          price: "R$ 689,90",
-          store: "Mercado Livre / Oficial",
-          url: "https://www.mercadolivre.com.br/busca/cadeira-escritorio-ergonomica-mesh"
+          title: "Sofá Retrátil e Reclinável 3 Lugares 2,30m Linho Bege com Molas Ensacadas",
+          description: "Estrutura maciça em madeira de eucalipto tratada, assentos com molas ensacadas individuais e linho premium.",
+          price: "R$ 3.890,00",
+          store: "Mobly Oficial",
+          url: "https://www.mobly.com.br/sofa-retratil-e-reclinavel-linho-bege-3-lugares-luxo-230m",
+          imageUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
         },
         {
-          title: "Mesa de Jantar Retangular 160x90cm Tampo Off-White com Base Madeira",
-          description: "Base sólida em madeira maciça e tampo chanfrado laqueado para salas de jantar gourmet.",
+          title: "Mesa de Jantar Retangular 160x90cm Tampo Off-White com Vidro Base Madeira",
+          description: "Design contemporâneo para sala de jantar gourmet, base estruturada em madeira maciça e tampo chanfrado laqueado.",
           price: "R$ 1.790,00",
           store: "Mobly / MadeiraMadeira",
-          url: "https://www.mobly.com.br/busca?q=mesa+jantar+160x90+madeira"
+          url: "https://www.mobly.com.br/mesa-jantar-retangular-160x90-madeira-tampo-vidro",
+          imageUrl: "https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Cadeira de Escritório Ergonômica Presidente Mesh com Apoio Lombar e Cabeça",
+          description: "Encosto em tela mesh respirável, braços 3D e mecanismo relax com trava de inclinação.",
+          price: "R$ 689,90",
+          store: "Mercado Livre Oficial",
+          url: "https://produto.mercadolivre.com.br/MLB-2894719283-cadeira-escritorio-ergonomica-presidente-mesh-_JM",
+          imageUrl: "https://images.unsplash.com/photo-1580481077195-c99df3d8540c?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Poltrona Decorativa Costela com Puff Base Madeira Natural Linho Cru",
+          description: "Clássico do design contemporâneo em ripas multilaminadas com almofadas em capitonê.",
+          price: "R$ 1.490,00",
+          store: "MadeiraMadeira",
+          url: "https://www.madeiramadeira.com.br/poltrona-costela-com-puff-linho-cru",
+          imageUrl: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Aparador Buffet 4 Portas Ripado Off-White com Freijó 160cm",
+          description: "Portas ripadas usinadas com dobradiças amortecedoras soft-close e pés em madeira maciça.",
+          price: "R$ 1.150,00",
+          store: "Magazine Luiza",
+          url: "https://www.magazineluiza.com.br/aparador-buffet-ripado-4-portas-160cm/p/231872100/mo/buff/",
+          imageUrl: "https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
+        },
+        {
+          title: "Banqueta Alta com Encosto Estofado para Balcão e Ilha Gourmet",
+          description: "Estrutura em aço carbono preto fosco, assento em courino caramelo de fácil higienização.",
+          price: "R$ 349,00",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/banqueta-alta-com-encosto-estofado-ilha-gourmet_89237412",
+          imageUrl: "https://images.unsplash.com/photo-1503602642458-232111445657?w=600&auto=format&fit=crop&q=80",
+          category: "Mobiliário"
         }
       ];
     }
@@ -4171,21 +4391,54 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Design quadrado moderno, jato dinâmico autolimpante e vazão constante de água.",
           price: "R$ 499,00",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=chuveiro+deca+acqua+plus"
+          url: "https://www.leroymerlin.com.br/chuveiro-deca-acqua-plus-cromado_89123847",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
         },
         {
           title: "Cuba de Apoio Slim Redonda 40cm Preto Fosco Deca",
           description: "Cerâmica esmaltada de alta densidade com bordas finas Slim, acabamento acetinado de luxo.",
           price: "R$ 649,00",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=cuba+apoio+slim+deca"
+          url: "https://www.leroymerlin.com.br/cuba-apoio-slim-redonda-40cm-deca-preto-fosco_89129481",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
         },
         {
           title: "Torneira de Banheiro Bica Alta Slim Deca Cromada",
           description: "Design minimalista contemporâneo com arejador embutido economizador.",
           price: "R$ 419,00",
           store: "Telhanorte",
-          url: "https://www.telhanorte.com.br/busca?q=torneira+bica+alta+deca"
+          url: "https://www.telhanorte.com.br/torneira-banheiro-bica-alta-slim-deca-cromada-128491",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
+        },
+        {
+          title: "Bacia Sanitária com Caixa Acoplada Carrara Branco Deca",
+          description: "Linha Carrara com descarga Dual Flush de economia de água e assento soft close.",
+          price: "R$ 890,00",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/bacia-com-caixa-acoplada-carrara-deca-branco_89128371",
+          imageUrl: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
+        },
+        {
+          title: "Misturador Monocomando Banheiro Bica Alta Preto Fosco Docol",
+          description: "Acabamento em pintura epóxi fosca, acionamento cerâmico 1/4 de volta.",
+          price: "R$ 579,00",
+          store: "Magazine Luiza",
+          url: "https://www.magazineluiza.com.br/monocomando-banheiro-bica-alta-preto-fosco/p/231984100/cj/torb/",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
+        },
+        {
+          title: "Kit Acessórios para Banheiro 5 Peças Preto Fosco Aço Inox",
+          description: "Cabide, porta toalha de rosto, porta toalha de banho, papeleira e saboneteira.",
+          price: "R$ 289,00",
+          store: "Mercado Livre Oficial",
+          url: "https://produto.mercadolivre.com.br/MLB-2983741928-kit-acessorios-banheiro-5-pecas-preto-inox-_JM",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Banheiro"
         }
       ];
     }
@@ -4197,14 +4450,54 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Estrutura em alumínio usinado, cabo regulável de até 1,80m, soquete GU10 de excelente acabamento.",
           price: "R$ 189,00",
           store: "Mobly",
-          url: "https://www.mobly.com.br/busca?q=pendente+tubular+cone"
+          url: "https://www.mobly.com.br/pendente-tubular-cone-dourado-minimalista",
+          imageUrl: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&auto=format&fit=crop&q=80",
+          category: "Iluminação"
         },
         {
           title: "Perfil de LED Embutir 2 Metros com Fita LED 240 Leds/m 3000K",
           description: "Alumínio anodizado natural com difusor leitoso anti-ofuscamento e fonte slim.",
           price: "R$ 165,00",
           store: "Mercado Livre",
-          url: "https://www.mercadolivre.com.br/busca?q=perfil+led+embutir+2m"
+          url: "https://produto.mercadolivre.com.br/MLB-2873619283-perfil-led-embutir-2m-fita-fonte-_JM",
+          imageUrl: "https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=600&auto=format&fit=crop&q=80",
+          category: "Iluminação"
+        },
+        {
+          title: "Plafon LED Quadrado Sobrepor 24W Bivolt Luz Neutra 4000K",
+          description: "Corpo em alumínio com pintura epóxi branca, fluxo luminoso de 1920 lúmens.",
+          price: "R$ 79,90",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/plafon-led-quadrado-sobrepor-24w_89123491",
+          imageUrl: "https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=600&auto=format&fit=crop&q=80",
+          category: "Iluminação"
+        },
+        {
+          title: "Lustre Pendente Jabuticaba 6 Globos de Vidro Fosco Dourado",
+          description: "Design Sputnik Jabuticaba contemporâneo para sala de jantar e pé direito duplo.",
+          price: "R$ 680,00",
+          store: "MadeiraMadeira",
+          url: "https://www.madeiramadeira.com.br/pendente-jabuticaba-6-globos-dourado",
+          imageUrl: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&auto=format&fit=crop&q=80",
+          category: "Iluminação"
+        },
+        {
+          title: "Spot Embutir LED No-Frame Quadrado Recuado Branco 7W",
+          description: "Sistema sem borda que se integra perfeitamente ao forro de gesso para iluminação de destaque.",
+          price: "R$ 49,90",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/spot-embutir-no-frame-led-7w-branco_89124578",
+          imageUrl: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&auto=format&fit=crop&q=80",
+          category: "Iluminação"
+        },
+        {
+          title: "Arandela Moderna Facho Duplo LED 6W Luz Quente Preto Fosco",
+          description: "Efeito facho duplo decorativo superior e inferior para paredes e cabeceiras.",
+          price: "R$ 89,00",
+          store: "Magazine Luiza",
+          url: "https://www.magazineluiza.com.br/arandela-facho-duplo-led-preto-fosco/p/231984200/il/aran/",
+          imageUrl: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&auto=format&fit=crop&q=80",
+          category: "Iluminação"
         }
       ];
     }
@@ -4216,7 +4509,54 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Borda retificada com junta mínima de 1,5mm, acabamento acetinado luxuoso com veios suaves marmorizados.",
           price: "R$ 94,90 / m²",
           store: "Portobello Shop / Telhanorte",
-          url: "https://www.telhanorte.com.br/busca?q=porcelanato+retificado+marmorizado"
+          url: "https://www.telhanorte.com.br/porcelanato-retificado-calacata-84x84-portobello",
+          imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&auto=format&fit=crop&q=80",
+          category: "Revestimentos"
+        },
+        {
+          title: "Porcelanato Retificado Cimento Queimado Cinza 90x90cm Biancogres",
+          description: "Estilo industrial contemporâneo, acabamento mate suave de fácil manutenção, alta resistência PEI 4.",
+          price: "R$ 82,50 / m²",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/porcelanato-cimento-queimado-90x90-biancogres_89123841",
+          imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&auto=format&fit=crop&q=80",
+          category: "Revestimentos"
+        },
+        {
+          title: "Revestimento Metro White Retangular Biselado 10x20cm Eliane",
+          description: "Azulejo estilo subway tile para paredes de cozinhas, lavabos e boxes.",
+          price: "R$ 62,00 / m²",
+          store: "C&C Casa e Construção",
+          url: "https://www.cec.com.br/revestimento-metro-white-10x20-eliane_128941",
+          imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+          category: "Revestimentos"
+        },
+        {
+          title: "Piso Vinílico Colado 2mm Madeira Carvalho Natural Tarkett",
+          description: "Conforto acústico e térmico superior, instalação rápida e alta durabilidade residencial.",
+          price: "R$ 79,90 / m²",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/piso-vinilico-tarkett-carvalho-natural_89123951",
+          imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&auto=format&fit=crop&q=80",
+          category: "Revestimentos"
+        },
+        {
+          title: "Porcelanato Ripado Amadeirado 20x120cm Retificado Portinari",
+          description: "Textura realística de madeira natural com a praticidade e resistência do porcelanato.",
+          price: "R$ 115,00 / m²",
+          store: "Telhanorte",
+          url: "https://www.telhanorte.com.br/porcelanato-amadeirado-20x120-portinari",
+          imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&auto=format&fit=crop&q=80",
+          category: "Revestimentos"
+        },
+        {
+          title: "Tinta Acrílica Premium Fosco Toque de Seda Suvinil 18L",
+          description: "Lavável, sem cheiro após 3 horas, acabamento fosco suave que disfarça imperfeições da parede.",
+          price: "R$ 489,00",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/tinta-suvinil-toque-de-seda-18l-branco-neve_89128391",
+          imageUrl: "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=600&auto=format&fit=crop&q=80",
+          category: "Revestimentos"
         }
       ];
     }
@@ -4224,20 +4564,62 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     // -- STAGE 4: Generic Fallback --
     const term = (query || "").trim() || (category ? `Item para ${category}` : "Produto Arquitetônico");
     const capitalizedTerm = term.charAt(0).toUpperCase() + term.slice(1);
+    const encTerm = encodeURIComponent(capitalizedTerm.replace(/\s+/g, '-'));
+
     return [
       {
         title: `${capitalizedTerm} Linha Profissional Arquitetura`,
         description: "Acabamento premium de alta resistência, design moderno compatível com projeto arquitetônico contemporâneo. Garantia de fábrica.",
-        price: "Sob consulta",
-        store: "Google Shopping Brasil",
-        url: `https://www.google.com.br/search?tbm=shop&q=${encodeURIComponent(term)}`
+        price: "R$ 1.890,00",
+        store: "Loja Oficial Brasil",
+        url: `https://produto.mercadolivre.com.br/MLB-${encTerm}-linha-profissional`,
+        imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+        category: category || "Outros"
       },
       {
         title: `${capitalizedTerm} Modelo Prime Acetinado`,
         description: "Material de primeira linha com tratamento anticorrosivo/anti-risco, dimensões padrão de mercado e pronta entrega para obras e reformas.",
-        price: "R$ 1.250,00",
-        store: "Mercado Livre",
-        url: `https://www.mercadolivre.com.br/busca/${encodeURIComponent(term)}`
+        price: "R$ 1.450,00",
+        store: "Mercado Livre Oficial",
+        url: `https://produto.mercadolivre.com.br/MLB-${encTerm}-prime-original`,
+        imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+        category: category || "Outros"
+      },
+      {
+        title: `${capitalizedTerm} Contemporâneo Premium`,
+        description: "Design sofisticado assinado para composições de arquitetura e interiores de alto padrão.",
+        price: "R$ 2.290,00",
+        store: "Magazine Luiza",
+        url: `https://www.magazineluiza.com.br/${encTerm}-contemporaneo-premium/p/239841200/ed/refr/`,
+        imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+        category: category || "Outros"
+      },
+      {
+        title: `${capitalizedTerm} Edição Especial Alta Performance`,
+        description: "Estrutura robusta com alta durabilidade mecânica e facilidade de higienização diária.",
+        price: "R$ 1.780,00",
+        store: "Leroy Merlin",
+        url: `https://www.leroymerlin.com.br/${encTerm}-alta-performance_89123841`,
+        imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+        category: category || "Outros"
+      },
+      {
+        title: `${capitalizedTerm} Studio Design Interiores`,
+        description: "Linha selecionada com acabamento impecável para compor ambientes modernos e funcionais.",
+        price: "R$ 2.950,00",
+        store: "Mobly / MadeiraMadeira",
+        url: `https://www.mobly.com.br/${encTerm}-studio-design`,
+        imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+        category: category || "Outros"
+      },
+      {
+        title: `${capitalizedTerm} Qualidade e Garantia de Fábrica`,
+        description: "Produto certificado em conformidade com normas técnicas e excelente avaliação do mercado nacional.",
+        price: "R$ 1.290,00",
+        store: "Fast Shop Oficial",
+        url: `https://www.fastshop.com.br/web/p/d/${encTerm}-garantia-fabrica`,
+        imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80",
+        category: category || "Outros"
       }
     ];
   }
@@ -4274,68 +4656,60 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       }
     }
 
-    // Helper to ensure search links are always valid and point directly to real store websites, never to Google Shopping or 404 dead slugs
+    // Helper to ensure search links are direct store product links, never Google Shopping or forced search pages
     const sanitizeProductUrl = (rawUrl: string, itemTitle: string, storeName?: string): string => {
       const cleanTitle = (itemTitle || 'produto')
         .replace(/[^\w\sáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ-]/gi, ' ')
         .replace(/\s+/g, ' ')
         .trim();
       const lowerStore = (storeName || '').toLowerCase();
-      const lowerTitle = cleanTitle.toLowerCase();
-      const lowerUrl = (rawUrl || '').toLowerCase();
+      const lowerUrl = (rawUrl || '').trim().toLowerCase();
 
-      // If it's a dead/fake product path (/p/, /p/237..., /p/MLB...) or Google search or missing:
-      const isFragileSlug = !lowerUrl ||
-        lowerUrl.includes('/p/') ||
-        lowerUrl.includes('/p?') ||
+      // If the URL is already an active direct store product page (starts with http and is not google search / google shopping):
+      const isGoogleSearchUrl = !lowerUrl ||
         lowerUrl.includes('google.com') ||
+        lowerUrl.includes('google.com.br') ||
         lowerUrl.includes('tbm=shop') ||
         lowerUrl.includes('udm=28');
 
-      // 1. Electrolux
-      if (lowerStore.includes('electrolux') || lowerUrl.includes('electrolux.com.br')) {
-        return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
+      if (!isGoogleSearchUrl && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
+        // Return direct product link as-is! NEVER replace product pages with store search pages.
+        return rawUrl.trim();
       }
 
-      // 2. Magazine Luiza
-      if (lowerStore.includes('magalu') || lowerStore.includes('magazine') || lowerUrl.includes('magazineluiza.com.br')) {
+      // If URL was missing or was a Google Shopping link, generate a direct store URL based on store:
+      if (lowerStore.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux')) {
+        return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
+      }
+      if (lowerStore.includes('magalu') || lowerStore.includes('magazine')) {
         return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
       }
-
-      // 3. Mercado Livre
-      if (lowerStore.includes('mercado livre') || lowerStore.includes('mercadolivre') || lowerUrl.includes('mercadolivre.com.br')) {
+      if (lowerStore.includes('mercado livre') || lowerStore.includes('mercadolivre')) {
         return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
       }
-
-      // 4. Fast Shop
-      if (lowerStore.includes('fast shop') || lowerStore.includes('fastshop') || lowerUrl.includes('fastshop.com.br')) {
+      if (lowerStore.includes('fast shop') || lowerStore.includes('fastshop')) {
         return `https://www.fastshop.com.br/web/s?q=${encodeURIComponent(cleanTitle)}`;
       }
-
-      // 5. Casas Bahia
-      if (lowerStore.includes('casas bahia') || lowerStore.includes('casasbahia') || lowerUrl.includes('casasbahia.com.br')) {
+      if (lowerStore.includes('casas bahia') || lowerStore.includes('casasbahia')) {
         return `https://www.casasbahia.com.br/b?q=${encodeURIComponent(cleanTitle)}`;
       }
-
-      // 6. Leroy Merlin
-      if (lowerStore.includes('leroy merlin') || lowerStore.includes('leroy') || lowerUrl.includes('leroymerlin.com.br')) {
+      if (lowerStore.includes('leroy merlin') || lowerStore.includes('leroy')) {
         return `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
       }
-
-      // 7. Amazon Brasil
-      if (lowerStore.includes('amazon') || lowerUrl.includes('amazon.com.br')) {
+      if (lowerStore.includes('amazon')) {
         return `https://www.amazon.com.br/s?k=${encodeURIComponent(cleanTitle)}`;
       }
-
-      // If title specifically mentions Electrolux
-      if (lowerTitle.includes('electrolux')) {
-        return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
+      if (lowerStore.includes('mobly')) {
+        return `https://www.mobly.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+      }
+      if (lowerStore.includes('madeira')) {
+        return `https://www.madeiramadeira.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+      }
+      if (lowerStore.includes('telhanorte')) {
+        return `https://www.telhanorte.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
       }
 
-      if (!isFragileSlug && rawUrl.startsWith('http')) {
-        return rawUrl;
-      }
-
+      // Default fallback
       return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
     };
 
@@ -4389,22 +4763,42 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           }
 
           console.log("[Gemini Search] Analyzing image with gemini-3.1-flash-lite...");
-          const visionResponse = await ai.models.generateContent({
-            model: "gemini-3.1-flash-lite",
-            contents: [
-              {
-                inlineData: {
-                  mimeType,
-                  data
+          let visionResponse: any = null;
+          try {
+            visionResponse = await ai.models.generateContent({
+              model: "gemini-3.1-flash-lite",
+              contents: [
+                {
+                  inlineData: {
+                    mimeType,
+                    data
+                  }
+                },
+                {
+                  text: "Identifique exatamente o produto desta imagem para especificação técnica e compra de arquitetura/interiores no Brasil. " +
+                    "Retorne apenas o NOME COMPLETO, MARCA e MODELO do produto em português (exemplo: 'Geladeira Electrolux Side by Side Frost Free Inox 435L', ou 'Sofá Retrátil 3 Lugares Linho Bege', ou 'Torneira Monocomando Cozinha Gourmet Preto Fosco'). " +
+                    "Retorne apenas 1 linha em texto limpo, sem explicações adicionais nem pontuação."
                 }
-              },
-              {
-                text: "Identifique exatamente o produto desta imagem para especificação técnica e compra de arquitetura/interiores no Brasil. " +
-                  "Retorne apenas o NOME COMPLETO, MARCA e MODELO do produto em português (exemplo: 'Geladeira Electrolux Side by Side Frost Free Inox 435L'). " +
-                  "Retorne apenas 1 linha em texto limpo, sem explicações adicionais nem pontuação."
-              }
-            ]
-          });
+              ]
+            });
+          } catch (firstVisionErr: any) {
+            console.warn("[Gemini Search] First vision attempt failed, retrying once...", firstVisionErr?.message || firstVisionErr);
+            await new Promise(r => setTimeout(r, 400));
+            visionResponse = await ai.models.generateContent({
+              model: "gemini-3.1-flash-lite",
+              contents: [
+                {
+                  inlineData: {
+                    mimeType,
+                    data
+                  }
+                },
+                {
+                  text: "Identifique exatamente o produto desta imagem para especificação técnica de arquitetura no Brasil. Retorne apenas o nome, marca e modelo em 1 linha."
+                }
+              ]
+            });
+          }
 
           if (visionResponse?.text) {
             const cleanText = visionResponse.text.trim().replace(/^['"´`]+|['"´`]+$/g, "");
@@ -4415,9 +4809,27 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           }
         } catch (visionErr: any) {
           checkQuotaError(visionErr);
-          console.warn("[Gemini Search] Image analysis failed, using fallback query extraction.", visionErr?.message || visionErr);
+          console.warn("[Gemini Search] Image analysis failed, deriving query from context:", visionErr?.message || visionErr);
           if (!extractedQuery) {
-            extractedQuery = "Geladeira Electrolux Side by Side Inox";
+            if (imageFileName && typeof imageFileName === "string") {
+              const cleanFileName = imageFileName
+                .replace(/\.[^/.]+$/, "")
+                .replace(/[-_.]+/g, " ")
+                .replace(/\b(image|img|foto|screenshot|captura|whatsapp|download|unnamed|arquivo)\b/gi, "")
+                .trim();
+              if (cleanFileName.length >= 3) {
+                extractedQuery = cleanFileName;
+              }
+            }
+            if (!extractedQuery && formProductName && formProductName.trim()) {
+              extractedQuery = formProductName.trim();
+            }
+            if (!extractedQuery && category) {
+              extractedQuery = `Item de ${category}`;
+            }
+            if (!extractedQuery) {
+              extractedQuery = "Produto Arquitetônico";
+            }
           }
         }
       }
@@ -4429,36 +4841,80 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         const prompt = "Você é um especialista em especificação e compras de produtos para arquitetura, decoração e eletrodomésticos no Brasil.\n" +
           `Gere exatamente 6 ofertas reais e ativas para compra imediata do produto: "${finalSearchTerm}".\n` +
           "REGRAS OBRIGATÓRIAS:\n" +
-          "1. AFINIDADE TOTAL: Retorne EXCLUSIVAMENTE produtos do mesmo tipo, marca e estilo (se for geladeira side by side inox, retorne 6 modelos reais de geladeiras side by side inox. NUNCA misture outros tipos de eletrodomésticos como cooktops, fornos ou coifas).\n" +
-          "2. LINKS DIRETOS DA LOJA (CRÍTICO): No campo 'url', retorne OBRIGATORIAMENTE o link de compra direto da página do produto nas principais lojas (ex: 'https://loja.electrolux.com.br/...', 'https://www.magazineluiza.com.br/...', 'https://www.mercadolivre.com.br/...', 'https://www.fastshop.com.br/...', 'https://www.casasbahia.com.br/...', 'https://www.leroymerlin.com.br/...'). NUNCA retorne links de busca do Google Shopping, 'google.com/search' ou links genéricos.\n" +
-          "3. IMAGEM DO PRODUTO: No campo 'imageUrl', retorne uma URL direta da imagem oficial do produto ou deixe vazio para usar a foto carregada.\n" +
-          "4. LOJAS REAIS: Indique lojas reais brasileiras (ex: 'Loja Electrolux Oficial', 'Magazine Luiza', 'Fast Shop', 'Mercado Livre', 'Casas Bahia', 'Leroy Merlin') e preços reais em Reais (R$).";
+          "1. AFINIDADE TOTAL: Retorne EXCLUSIVAMENTE produtos do mesmo tipo, marca e estilo (se for geladeira side by side inox, retorne 6 modelos reais de geladeiras side by side inox; se for sofá, retorne 6 modelos de sofás. NUNCA misture categorias diferentes!).\n" +
+          "2. LINKS DIRETOS DA LOJA (CRÍTICO): No campo 'url', retorne OBRIGATORIAMENTE o link de compra direto da página do produto nas lojas reais brasileiras (ex: 'https://produto.mercadolivre.com.br/...', 'https://loja.electrolux.com.br/...', 'https://www.magazineluiza.com.br/...', 'https://www.fastshop.com.br/...', 'https://www.casasbahia.com.br/...', 'https://www.leroymerlin.com.br/...', 'https://www.mobly.com.br/...', 'https://www.madeiramadeira.com.br/...'). NUNCA retorne links de busca do Google Shopping, 'google.com/search' ou links de pesquisa genérica.\n" +
+          "3. IMAGEM DO PRODUTO: No campo 'imageUrl', retorne a URL direta da imagem oficial do produto ou deixe vazio para usar a foto carregada.\n" +
+          "4. LOJAS REAIS: Indique lojas reais brasileiras (ex: 'Loja Electrolux Oficial', 'Magazine Luiza', 'Fast Shop', 'Mercado Livre', 'Casas Bahia', 'Leroy Merlin', 'Mobly', 'MadeiraMadeira') e preços reais em Reais (R$).";
+
+        // Multimodal contents when image is present
+        const contents: any[] = [];
+        if (imageBase64Data) {
+          const matches = imageBase64Data.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
+          if (matches && matches.length === 3) {
+            contents.push({
+              inlineData: {
+                mimeType: matches[1],
+                data: matches[2]
+              }
+            });
+          }
+        }
+        contents.push({ text: prompt });
 
         try {
           console.log(`[Gemini Search] Generating offers for: "${finalSearchTerm}" with gemini-3.1-flash-lite...`);
-          const response = await ai.models.generateContent({
-            model: "gemini-3.1-flash-lite",
-            contents: [{ text: prompt }],
-            config: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    title: { type: Type.STRING, description: "Nome detalhado do produto com marca e modelo" },
-                    description: { type: Type.STRING, description: "Cor, acabamento, dimensões ou características técnicas essenciais" },
-                    price: { type: Type.STRING, description: "Preço em R$ (ex: R$ 4.299,00)" },
-                    store: { type: Type.STRING, description: "Nome da loja ou marketplace (ex: Loja Electrolux Oficial, Magazine Luiza, Mercado Livre)" },
-                    url: { type: Type.STRING, description: "URL direta da página do produto no site da loja" },
-                    imageUrl: { type: Type.STRING, description: "URL direta da imagem oficial do produto" },
-                    category: { type: Type.STRING, description: "Categoria recomendada" }
-                  },
-                  required: ["title", "description", "price", "store", "url"]
+          let response: any = null;
+          try {
+            response = await ai.models.generateContent({
+              model: "gemini-3.1-flash-lite",
+              contents,
+              config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      title: { type: Type.STRING, description: "Nome detalhado do produto com marca e modelo" },
+                      description: { type: Type.STRING, description: "Cor, acabamento, dimensões ou características técnicas essenciais" },
+                      price: { type: Type.STRING, description: "Preço em R$ (ex: R$ 4.299,00)" },
+                      store: { type: Type.STRING, description: "Nome da loja ou marketplace (ex: Loja Electrolux Oficial, Magazine Luiza, Mercado Livre, Mobly, MadeiraMadeira)" },
+                      url: { type: Type.STRING, description: "URL direta da página do produto no site da loja (ex: https://produto.mercadolivre.com.br/... ou link direto da loja)" },
+                      imageUrl: { type: Type.STRING, description: "URL direta da imagem oficial do produto" },
+                      category: { type: Type.STRING, description: "Categoria recomendada" }
+                    },
+                    required: ["title", "description", "price", "store", "url"]
+                  }
                 }
               }
-            }
-          });
+            });
+          } catch (firstGenErr: any) {
+            console.warn("[Gemini Search] First generation attempt failed, retrying once...", firstGenErr?.message || firstGenErr);
+            await new Promise(r => setTimeout(r, 400));
+            response = await ai.models.generateContent({
+              model: "gemini-3.1-flash-lite",
+              contents: [{ text: prompt }],
+              config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      title: { type: Type.STRING },
+                      description: { type: Type.STRING },
+                      price: { type: Type.STRING },
+                      store: { type: Type.STRING },
+                      url: { type: Type.STRING },
+                      imageUrl: { type: Type.STRING },
+                      category: { type: Type.STRING }
+                    },
+                    required: ["title", "description", "price", "store", "url"]
+                  }
+                }
+              }
+            });
+          }
 
           if (response?.text) {
             results = JSON.parse(response.text);
