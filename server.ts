@@ -4738,45 +4738,42 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     let extractedGroundingChunks: Array<{ uri: string; title: string }> = [];
     let finalSearchTerm = "";
 
-    // Helper to check store-specific product page patterns
-    const checkStoreProductPattern = (storeName: string, rawUrl: string): { valid: boolean; reason?: string } => {
+    // Helper to check store-specific product page patterns (now SOFT / SIGNAL only, not hard blocking)
+    const checkStoreProductPattern = (storeName: string, rawUrl: string): { matchesPattern: boolean; note?: string } => {
       const lowerStore = (storeName || '').toLowerCase();
       const lowerUrl = (rawUrl || '').toLowerCase();
 
+      let matches = false;
       if (lowerStore.includes('magazineluiza') || lowerStore.includes('magalu') || lowerStore.includes('magazine')) {
-        if (!lowerUrl.includes('/p/') && !lowerUrl.includes('/produto/')) {
-          return { valid: false, reason: 'Magazine Luiza URL não contém o padrão de produto /p/ ou /produto/' };
-        }
+        matches = lowerUrl.includes('/p/') || lowerUrl.includes('/produto/');
       } else if (lowerStore.includes('mercadolivre') || lowerStore.includes('mercadolibre')) {
-        if (!lowerUrl.includes('/mlb-') && !lowerUrl.includes('/p/mlb') && !lowerUrl.includes('/jm/') && !lowerUrl.includes('produto.mercadolivre.com.br')) {
-          return { valid: false, reason: 'Mercado Livre URL não contém ID de produto /MLB- ou /JM/' };
-        }
+        matches = lowerUrl.includes('/mlb-') || lowerUrl.includes('/p/mlb') || lowerUrl.includes('/jm/') || lowerUrl.includes('produto.mercadolivre.com.br');
       } else if (lowerStore.includes('casasbahia') || lowerStore.includes('casas bahia')) {
-        if (!lowerUrl.includes('/p/') && !lowerUrl.includes('/sku/')) {
-          return { valid: false, reason: 'Casas Bahia URL não contém o padrão de produto /p/' };
-        }
+        matches = lowerUrl.includes('/p/') || lowerUrl.includes('/sku/');
       } else if (lowerStore.includes('amazon')) {
-        if (!lowerUrl.includes('/dp/') && !lowerUrl.includes('/gp/product/')) {
-          return { valid: false, reason: 'Amazon URL não contém /dp/' };
-        }
+        matches = lowerUrl.includes('/dp/') || lowerUrl.includes('/gp/product/');
       } else if (lowerStore.includes('leroy')) {
-        if (!lowerUrl.includes('/p/') && !/\d{5,}/.test(lowerUrl)) {
-          return { valid: false, reason: 'Leroy Merlin URL não contém padrão de produto' };
-        }
+        matches = lowerUrl.includes('/p/') || /\d{5,}/.test(lowerUrl);
+      } else {
+        matches = lowerUrl.includes('/p/') || lowerUrl.includes('/produto/') || /\d{4,}/.test(lowerUrl);
       }
-      return { valid: true };
+
+      return { 
+        matchesPattern: matches, 
+        note: matches ? 'Compatível com padrão de produto da loja' : 'URL sem slug padrão de produto (mas aceita se passar no filtro de não-busca)' 
+      };
     };
 
     // Helper to validate whether a URL is a real, live, direct product purchase page (and NOT a generic search page)
     const validateDirectProductUrl = async (rawUrl?: string, storeName?: string): Promise<{ valid: boolean; status?: number; finalUrl?: string; reason?: string }> => {
-      console.log(`[validateDirectProductUrl] 🔍 CHAMADA OBRIGATÓRIA para URL: "${rawUrl}" (Loja: "${storeName || 'Desconhecida'}")`);
+      console.log(`[validateDirectProductUrl] 🔍 Avaliando URL: "${rawUrl}" (Loja: "${storeName || 'Desconhecida'}")`);
 
       if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.startsWith('http')) {
         return { valid: false, reason: 'URL vazia ou inválida' };
       }
       const lower = rawUrl.toLowerCase();
       
-      // Exclude generic search pages & search query parameters
+      // Exclude generic search pages & search query parameters (Definitive rule)
       if (
         lower.includes('/busca') ||
         lower.includes('/search') ||
@@ -4786,22 +4783,18 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         lower.includes('&query=') ||
         lower.includes('?k=') ||
         lower.includes('&k=') ||
-        lower.includes('+') ||
-        lower.includes('%2b') ||
         lower.includes('busca?') ||
         lower.includes('search?') ||
         lower.includes('google.com') ||
         lower.includes('example.com')
       ) {
-        return { valid: false, reason: 'Contém termos ou parâmetros de busca genérica (/busca, /search, ?q=, + ou %2B)' };
+        return { valid: false, reason: 'Contém termos ou parâmetros de busca genérica (/busca, /search, ?q=, etc.)' };
       }
 
-      // Check store-specific product page pattern
+      // Check store-specific product page pattern as a soft signal only (does not block)
       if (storeName) {
         const patternCheck = checkStoreProductPattern(storeName, rawUrl);
-        if (!patternCheck.valid) {
-          return { valid: false, reason: patternCheck.reason };
-        }
+        console.log(`[validateDirectProductUrl] ℹ️ Slogan de padrão de loja para "${storeName}": ${patternCheck.note}`);
       }
 
       try {
@@ -4985,9 +4978,41 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
           // Log explícito com a quantidade e valores de groundingChunks
           console.log(`[Google Grounding Chunks Encontrados: ${extractedGroundingChunks.length}]`);
-          extractedGroundingChunks.forEach((c, idx) => {
-            console.log(`  Chunk #${idx + 1}: [${c.title}] -> ${c.uri}`);
-          });
+          
+          // Auditoria detalhada para CADA groundingChunk recebido
+          console.log(`\n========================================`);
+          console.log(`🔎 AUDITORIA DE CADA GROUNDING CHUNK RECEBIDO (${extractedGroundingChunks.length}):`);
+          console.log(`========================================`);
+          for (let ci = 0; ci < extractedGroundingChunks.length; ci++) {
+            const ch = extractedGroundingChunks[ci];
+            const chUri = ch.uri;
+            const chLower = chUri.toLowerCase();
+
+            // Camada 1: Padrão de Busca
+            const hasSearchPattern = (
+              chLower.includes('/busca') ||
+              chLower.includes('/search') ||
+              chLower.includes('?q=') ||
+              chLower.includes('&q=') ||
+              chLower.includes('?query=') ||
+              chLower.includes('&query=') ||
+              chLower.includes('?k=') ||
+              chLower.includes('&k=')
+            );
+            const layer1Pass = !hasSearchPattern;
+            const layer1Reason = layer1Pass ? 'Aprovado (Não contém termo de busca)' : 'Reprovado (Contém /busca, /search ou ?q=)';
+
+            // Camada 2: Sinal de Padrão de Produto por Loja (Soft check)
+            const storeCheck = checkStoreProductPattern('', chUri);
+            const layer2Info = storeCheck.matchesPattern ? 'Passou no padrão de produto da loja' : 'Sem padrão estrito de slug de produto (mas válido se não for busca)';
+
+            console.log(`Chunk #${ci + 1}:`);
+            console.log(`  - URL: ${chUri}`);
+            console.log(`  - Título: ${ch.title}`);
+            console.log(`  - Camada 1 (Filtro Anti-Busca): ${layer1Pass ? '✅ APROVADO' : '❌ REPROVADO'} -> ${layer1Reason}`);
+            console.log(`  - Camada 2 (Padrão de Produto Loja): ℹ️ ${layer2Info}`);
+          }
+          console.log(`========================================\n`);
 
         } catch (groundingErr: any) {
           console.warn("[CHAMADA 1] Grounding search fallback:", groundingErr?.message?.slice(0, 150));
