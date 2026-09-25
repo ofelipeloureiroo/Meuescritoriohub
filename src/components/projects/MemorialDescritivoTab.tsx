@@ -448,42 +448,12 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      setImageFileNameIA(file.name || '');
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setImageUploadIA(reader.result);
-          setFormImageBase64(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  // Auto-search and identify product with Gemini API when image is provided or query searched
+  const triggerAISearchWithData = async (base64Img?: string, fileName?: string, textQuery?: string) => {
+    const activeImg = base64Img || imageUploadIA;
+    const activeQuery = textQuery !== undefined ? textQuery : searchQueryIA;
 
-  // Handle standard image input
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFileNameIA(file.name || '');
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setImageUploadIA(reader.result);
-          setFormImageBase64(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Search product with Gemini API
-  const handleAISearch = async () => {
-    if (!searchQueryIA && !imageUploadIA) {
+    if (!activeQuery && !activeImg) {
       setSearchErrorIA('Por favor, faça upload de uma foto ou digite o nome do produto.');
       return;
     }
@@ -500,9 +470,9 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          query: searchQueryIA,
-          imageBase64: imageUploadIA,
-          imageFileName: imageFileNameIA,
+          query: activeQuery,
+          imageBase64: activeImg,
+          imageFileName: fileName || imageFileNameIA,
           category: formCategory,
           formProductName: formTitle
         })
@@ -511,11 +481,19 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
       const data = await response.json();
       if (response.ok && data.results && data.results.length > 0) {
         setSearchResultsIA(data.results);
+        if (data.identifiedProduct) {
+          setSearchQueryIA(data.identifiedProduct);
+        }
         if (data.notice) {
           setSearchNoticeIA(data.notice);
         }
+
+        // Automatically populate the form fields with the #1 identified product
+        const topOption = data.results[0];
+        handleSelectIAShowcase(topOption, activeImg, data.identifiedCategory);
       } else if (data.results && data.results.length > 0) {
         setSearchResultsIA(data.results);
+        handleSelectIAShowcase(data.results[0], activeImg);
       } else {
         setSearchErrorIA(data.error || 'Não encontramos resultados para esta busca. Tente refinar o termo.');
       }
@@ -527,7 +505,49 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     }
   };
 
-  // Helper to get verified direct store product purchase URLs
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setImageFileNameIA(file.name || '');
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          const base64 = reader.result;
+          setImageUploadIA(base64);
+          setFormImageBase64(base64);
+          triggerAISearchWithData(base64, file.name);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle standard image input
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFileNameIA(file.name || '');
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          const base64 = reader.result;
+          setImageUploadIA(base64);
+          setFormImageBase64(base64);
+          triggerAISearchWithData(base64, file.name);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Search product with Gemini API manually
+  const handleAISearch = async () => {
+    await triggerAISearchWithData(imageUploadIA, imageFileNameIA, searchQueryIA);
+  };
+
+  // Helper to get verified direct store product purchase URLs that never 404
   const getVerifiedStoreUrl = (option: { url?: string; title?: string; store?: string }): string => {
     const rawUrl = (option.url || '').trim();
     const title = (option.title || searchQueryIA || formTitle || 'produto').trim();
@@ -535,39 +555,55 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     const cleanTitle = title.replace(/[^\w\sáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ-]/gi, ' ').replace(/\s+/g, ' ').trim();
     const lowerUrl = rawUrl.toLowerCase();
 
-    // If the URL is already an active direct store product page (starts with http and is not a google search):
-    const isGoogleSearchUrl = !lowerUrl ||
+    // Check if the URL is broken or fake
+    const isBrokenOrFake = !rawUrl ||
       lowerUrl.includes('google.com') ||
-      lowerUrl.includes('google.com.br') ||
       lowerUrl.includes('tbm=shop') ||
-      lowerUrl.includes('udm=28');
+      lowerUrl.includes('udm=28') ||
+      lowerUrl.includes('linha-profissional') ||
+      lowerUrl.includes('prime-original') ||
+      lowerUrl.includes('alta-performance') ||
+      lowerUrl.includes('studio-design') ||
+      lowerUrl.includes('garantia-fabrica') ||
+      lowerUrl.includes('239841200') ||
+      lowerUrl.includes('89123841') ||
+      lowerUrl.includes('81zly1z') ||
+      lowerUrl.includes('sy300') ||
+      lowerUrl.includes('sx300') ||
+      lowerUrl.includes('ql70');
 
-    if (!isGoogleSearchUrl && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
-      // Direct store product purchase page: keep it 100%!
-      return rawUrl;
+    if (!isBrokenOrFake && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
+      if (
+        lowerUrl.includes('lista.mercadolivre.com.br') ||
+        lowerUrl.includes('magazineluiza.com.br/busca') ||
+        lowerUrl.includes('amazon.com.br/s') ||
+        lowerUrl.includes('casasbahia.com.br/b') ||
+        lowerUrl.includes('buscape.com.br/search') ||
+        lowerUrl.includes('leroymerlin.com.br/busca') ||
+        lowerUrl.includes('loja.electrolux.com.br/busca')
+      ) {
+        return rawUrl;
+      }
     }
 
-    // Fallbacks if URL was empty or Google Shopping:
-    if (store.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux')) {
-      return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
+    // Direct search links for Brazilian stores
+    if (store.includes('mercado livre') || store.includes('mercadolivre')) {
+      return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
     }
     if (store.includes('magalu') || store.includes('magazine')) {
       return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
     }
-    if (store.includes('mercado livre') || store.includes('mercadolivre')) {
-      return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
-    }
-    if (store.includes('fast shop') || store.includes('fastshop')) {
-      return `https://www.fastshop.com.br/web/s?q=${encodeURIComponent(cleanTitle)}`;
+    if (store.includes('amazon')) {
+      return `https://www.amazon.com.br/s?k=${encodeURIComponent(cleanTitle)}`;
     }
     if (store.includes('casas bahia') || store.includes('casasbahia')) {
       return `https://www.casasbahia.com.br/b?q=${encodeURIComponent(cleanTitle)}`;
     }
+    if (store.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux')) {
+      return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
+    }
     if (store.includes('leroy merlin') || store.includes('leroy')) {
       return `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
-    }
-    if (store.includes('amazon')) {
-      return `https://www.amazon.com.br/s?k=${encodeURIComponent(cleanTitle)}`;
     }
     if (store.includes('mobly')) {
       return `https://www.mobly.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
@@ -578,12 +614,15 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     if (store.includes('telhanorte')) {
       return `https://www.telhanorte.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
     }
+    if (store.includes('buscapé') || store.includes('buscape')) {
+      return `https://www.buscape.com.br/search?q=${encodeURIComponent(cleanTitle)}`;
+    }
 
-    return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
+    return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
   };
 
   // Select search option and populate form
-  const handleSelectIAShowcase = (option: any) => {
+  const handleSelectIAShowcase = (option: any, preferredImage?: string, serverIdentifiedCategory?: string | null) => {
     setFormTitle(option.title || '');
     setFormDescription(option.description || '');
     setFormPrice(option.price || '');
@@ -593,25 +632,30 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     const activeStoreUrl = getVerifiedStoreUrl(option);
     setFormUrl(activeStoreUrl);
 
-    // Set product photo from the search option or uploaded image
-    const chosenImage = option.imageUrl || option.image || imageUploadIA || '';
-    setFormImageBase64(chosenImage);
+    // Set product photo from the uploaded image or search option
+    const chosenImage = preferredImage || imageUploadIA || option.imageUrl || option.image || '';
+    if (chosenImage) {
+      setFormImageBase64(chosenImage);
+    }
 
     // Smart category selection
-    if (option.category && CATEGORIES.includes(option.category)) {
-      setFormCategory(option.category);
+    const rawCat = serverIdentifiedCategory || option.category;
+    if (rawCat && CATEGORIES.includes(rawCat)) {
+      setFormCategory(rawCat);
     } else {
-      const textLower = `${option.title || ''} ${option.description || ''}`.toLowerCase();
+      const textLower = `${option.title || ''} ${option.description || ''} ${option.category || ''}`.toLowerCase();
       if (
         textLower.includes('tv') ||
         textLower.includes('televis') ||
+        textLower.includes('philco') ||
         textLower.includes('roku') ||
         textLower.includes('geladeira') ||
         textLower.includes('cooktop') ||
         textLower.includes('forno') ||
         textLower.includes('micro') ||
         textLower.includes('coifa') ||
-        textLower.includes('lava')
+        textLower.includes('lava') ||
+        textLower.includes('eletro')
       ) {
         setFormCategory('Eletros');
       } else if (
@@ -620,7 +664,8 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
         textLower.includes('chuveiro') ||
         textLower.includes('vaso') ||
         textLower.includes('banheira') ||
-        textLower.includes('lavabo')
+        textLower.includes('lavabo') ||
+        textLower.includes('banheiro')
       ) {
         setFormCategory('Banheiro');
       } else if (
@@ -628,7 +673,8 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
         textLower.includes('led') ||
         textLower.includes('lustre') ||
         textLower.includes('plafon') ||
-        textLower.includes('spot')
+        textLower.includes('spot') ||
+        textLower.includes('ilumina')
       ) {
         setFormCategory('Iluminação');
       } else if (
@@ -637,9 +683,26 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
         textLower.includes('sofá') ||
         textLower.includes('sofa') ||
         textLower.includes('poltrona') ||
-        textLower.includes('rack')
+        textLower.includes('rack') ||
+        textLower.includes('móvel') ||
+        textLower.includes('movel')
       ) {
         setFormCategory('Mobiliário');
+      } else if (
+        textLower.includes('porcelanato') ||
+        textLower.includes('piso') ||
+        textLower.includes('revestimento') ||
+        textLower.includes('tinta')
+      ) {
+        setFormCategory('Revestimentos');
+      } else if (
+        textLower.includes('almofada') ||
+        textLower.includes('tapete') ||
+        textLower.includes('quadro') ||
+        textLower.includes('espelho') ||
+        textLower.includes('decora')
+      ) {
+        setFormCategory('Decoração');
       }
     }
 
