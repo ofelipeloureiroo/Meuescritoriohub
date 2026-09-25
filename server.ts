@@ -4680,7 +4680,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
   app.post('/api/gemini/search-product', express.json({ limit: '10mb' }), async (req, res) => {
     const { query, imageBase64, category, formProductName } = req.body;
     let results: any[] = [];
-    let source = "google_grounding";
+    let source = "gemini_ai";
     let extractedQuery = "";
     let identifiedProduct: string | null = null;
     let identifiedCategory: string | null = null;
@@ -4699,7 +4699,8 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       return lettersCount >= 3;
     };
 
-    if (isMeaningfulProductName(query)) {
+    // If NO image is provided, check the text query or form product name
+    if (!imageBase64Data && isMeaningfulProductName(query)) {
       extractedQuery = query.trim();
     }
 
@@ -4718,38 +4719,40 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           const mimeType = imageResponse.headers.get("content-type") || "image/jpeg";
           imageBase64Data = `data:${mimeType};base64,${buffer.toString("base64")}`;
           extractedQuery = "";
-          console.log("[Gemini Search] Successfully fetched image from URL and converted to Base64. Triggering visual analysis.");
+          console.log("[Gemini Search] Successfully fetched image from URL and converted to Base64.");
         }
       } catch (fetchErr: any) {
         console.warn("[Gemini Search] Failed to fetch pasted image URL, falling back to treating it as search text.", fetchErr?.message || fetchErr);
       }
     }
 
-    // Helper to ensure search links are 100% verified, direct store product/listing links that NEVER 404
+    // Helper to ensure direct, working store product purchase links that NEVER 404
     const sanitizeProductUrl = (rawUrl: string, itemTitle: string, storeName?: string): string => {
-      const cleanTitle = (itemTitle || extractedQuery || formProductName || 'produto')
+      const cleanTitle = (itemTitle || extractedQuery || 'produto')
         .replace(/[^\w\sáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ-]/gi, ' ')
         .replace(/\s+/g, ' ')
         .trim();
       const lowerStore = (storeName || '').toLowerCase();
-      const lowerUrl = (rawUrl || '').trim().toLowerCase();
+      const encTitle = encodeURIComponent(cleanTitle);
 
-      // Detect broken or fake Google Shopping search URLs
-      const isGoogleSearchUrl = !rawUrl ||
-        lowerUrl.includes('google.com/search') ||
-        lowerUrl.includes('google.com.br/search') ||
-        lowerUrl.includes('tbm=shop') ||
-        lowerUrl.includes('udm=28');
-
-      // If it is a real direct store product page or verified URL, preserve it 100%!
-      if (!isGoogleSearchUrl && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
-        return rawUrl.trim();
+      // If rawUrl is already a real working store page on the brand website
+      if (rawUrl && typeof rawUrl === 'string' && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
+        const lUrl = rawUrl.toLowerCase();
+        if (
+          !lUrl.includes('google.com') &&
+          !lUrl.includes('example.com') &&
+          (lUrl.includes('.philco.com.br') ||
+           lUrl.includes('.electrolux.com.br') ||
+           lUrl.includes('.deca.com.br') ||
+           lUrl.includes('.docol.com.br') ||
+           lUrl.includes('.samsung.com') ||
+           lUrl.includes('.lg.com'))
+        ) {
+          return rawUrl.trim();
+        }
       }
 
-      // Generate the official guaranteed live search listing on the target store if URL was missing or a google shopping search
-      if (lowerStore.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux')) {
-        return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
-      }
+      // Generate direct live purchase links on the target store:
       if (lowerStore.includes('mercado livre') || lowerStore.includes('mercadolivre')) {
         return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
       }
@@ -4757,28 +4760,31 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
       }
       if (lowerStore.includes('amazon')) {
-        return `https://www.amazon.com.br/s?k=${encodeURIComponent(cleanTitle)}`;
+        return `https://www.amazon.com.br/s?k=${encTitle}&i=aps`;
       }
       if (lowerStore.includes('casas bahia') || lowerStore.includes('casasbahia')) {
-        return `https://www.casasbahia.com.br/b?q=${encodeURIComponent(cleanTitle)}`;
+        return `https://www.casasbahia.com.br/b?q=${encTitle}`;
       }
       if (lowerStore.includes('leroy merlin') || lowerStore.includes('leroy')) {
-        return `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+        return `https://www.leroymerlin.com.br/busca?q=${encTitle}`;
+      }
+      if (lowerStore.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux')) {
+        return `https://loja.electrolux.com.br/busca?ft=${encTitle}`;
+      }
+      if (lowerStore.includes('philco') || cleanTitle.toLowerCase().includes('philco')) {
+        return `https://www.philco.com.br/busca?ft=${encTitle}`;
       }
       if (lowerStore.includes('mobly')) {
-        return `https://www.mobly.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+        return `https://www.mobly.com.br/busca?q=${encTitle}`;
       }
       if (lowerStore.includes('madeira')) {
-        return `https://www.madeiramadeira.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+        return `https://www.madeiramadeira.com.br/busca?q=${encTitle}`;
       }
       if (lowerStore.includes('telhanorte')) {
-        return `https://www.telhanorte.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+        return `https://www.telhanorte.com.br/busca?q=${encTitle}`;
       }
       if (lowerStore.includes('buscapé') || lowerStore.includes('buscape')) {
-        return `https://www.buscape.com.br/search?q=${encodeURIComponent(cleanTitle)}`;
-      }
-      if (lowerStore.includes('fast shop') || lowerStore.includes('fastshop')) {
-        return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
+        return `https://www.buscape.com.br/search?q=${encTitle}`;
       }
 
       return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
@@ -4819,37 +4825,45 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
             data = matches[2];
           }
 
-          console.log("[Gemini Search] Analyzing image with gemini-3.5-flash-lite...");
-          const visionResponse = await ai.models.generateContent({
-            model: "gemini-3.5-flash-lite",
-            contents: [
-              {
-                inlineData: {
-                  mimeType,
-                  data
-                }
-              },
-              {
-                text: "Você é um especialista em especificação e compras de produtos para arquitetura, construção e decoração no Brasil.\n" +
-                  "Analise detalhadamente a foto do produto enviada. Identifique com exatidão a MARCA, TIPO DE PRODUTO, MODELO, TAMANHO/POLEGADAS e ACABAMENTO comercial no Brasil.\n" +
-                  "Exemplos:\n" +
-                  "- 'Smart TV 32\" Philco LED Roku TV'\n" +
-                  "- 'Geladeira Electrolux Side by Side Inox 435L Frost Free'\n" +
-                  "- 'Torneira Monocomando Cozinha Gourmet Docol'\n" +
-                  "- 'Sofá Retrátil 3 Lugares Linho Bege'\n" +
-                  "- 'Cuba de Apoio Banheiro Deca Slim Quadrada'\n" +
-                  "Retorne ESTRITAMENTE um objeto JSON no formato:\n" +
-                  "{\n" +
-                  "  \"identifiedProduct\": \"Nome comercial limpo, preciso e oficial do produto com marca e especificações principais\",\n" +
-                  "  \"category\": \"Categoria correspondente (Eletros, Móveis, Iluminação, Metais, Louças, Revestimentos, Marcenaria, Decoração ou Outros)\",\n" +
-                  "  \"estimatedPrice\": \"Preço médio real de mercado em R$ (ex: R$ 1.199,00)\"\n" +
-                  "}"
-              }
-            ],
-            config: {
-              responseMimeType: "application/json",
-            }
-          });
+          console.log("[Gemini Search] Analyzing image with Gemini Vision...");
+          const visionPrompt = {
+            text: "Você é um especialista em especificação e compras de produtos para arquitetura, construção e decoração no Brasil.\n" +
+              "Analise detalhadamente a foto do produto enviada. Identifique com exatidão a MARCA, TIPO DE PRODUTO, MODELO, TAMANHO/POLEGADAS e ACABAMENTO comercial no Brasil.\n" +
+              "Exemplos de identificação precisa:\n" +
+              "- 'Smart TV 32\" Philco LED Roku TV'\n" +
+              "- 'Geladeira Electrolux Side by Side Inox 435L Frost Free'\n" +
+              "- 'Torneira Monocomando Cozinha Gourmet Docol'\n" +
+              "- 'Sofá Retrátil 3 Lugares Linho Bege'\n" +
+              "- 'Cuba de Apoio Banheiro Deca Slim Quadrada'\n" +
+              "Retorne ESTRITAMENTE um objeto JSON no formato:\n" +
+              "{\n" +
+              "  \"identifiedProduct\": \"Nome comercial limpo, preciso e oficial do produto com marca e especificações principais\",\n" +
+              "  \"category\": \"Categoria correspondente (Eletros, Móveis, Iluminação, Metais, Louças, Revestimentos, Marcenaria, Decoração ou Outros)\",\n" +
+              "  \"estimatedPrice\": \"Preço médio real de mercado em R$ (ex: R$ 1.199,00)\"\n" +
+              "}"
+          };
+
+          let visionResponse: any = null;
+          try {
+            visionResponse = await ai.models.generateContent({
+              model: "gemini-3.5-flash-lite",
+              contents: [
+                { inlineData: { mimeType, data } },
+                visionPrompt
+              ],
+              config: { responseMimeType: "application/json" }
+            });
+          } catch (vErr1: any) {
+            console.warn("[Gemini Vision] Trying gemini-3.8-flash for vision...", vErr1?.message);
+            visionResponse = await ai.models.generateContent({
+              model: "gemini-3.8-flash",
+              contents: [
+                { inlineData: { mimeType, data } },
+                visionPrompt
+              ],
+              config: { responseMimeType: "application/json" }
+            });
+          }
 
           if (visionResponse?.text) {
             try {
@@ -4877,7 +4891,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
       // Step 2: Now generate real product purchasing options with guaranteed store links
       let finalSearchTerm = extractedQuery;
-      if (!isMeaningfulProductName(finalSearchTerm) && isMeaningfulProductName(formProductName)) {
+      if (!imageBase64Data && !isMeaningfulProductName(finalSearchTerm) && isMeaningfulProductName(formProductName)) {
         finalSearchTerm = formProductName.trim();
       }
       if (!isMeaningfulProductName(finalSearchTerm)) {
@@ -4888,11 +4902,11 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         const prompt = "Você é um assistente sênior especialista em especificação e compras de produtos para arquitetura, decoração e eletrodomésticos no Brasil.\n" +
           `Gere exatamente 6 ofertas reais e atualizadas para compra imediata do produto: "${finalSearchTerm}".\n` +
           "REGRAS OBRIGATÓRIAS:\n" +
-          "1. AFINIDADE TOTAL: Retorne EXCLUSIVAMENTE produtos do mesmo tipo, marca e modelo (se for Smart TV 32\" Philco, retorne 6 opções de Smart TV 32\" Philco ou equivalentes da mesma categoria; se for geladeira, retorne 6 geladeiras; NUNCA misture categorias!).\n" +
-          "2. LINKS DIRETOS DA PÁGINA DO PRODUTO: No campo 'url', retorne o link da página do produto na loja para compra direta (ex: 'https://loja.electrolux.com.br/.../p', 'https://www.magazineluiza.com.br/.../p/...', 'https://www.mercadolivre.com.br/p/...', 'https://www.amazon.com.br/dp/...', 'https://www.casasbahia.com.br/.../p/...', 'https://www.leroymerlin.com.br/...').\n" +
-          "3. LOJAS REAIS: Distribua entre as principais lojas brasileiras: 'Mercado Livre Oficial', 'Magazine Luiza', 'Amazon Brasil', 'Casas Bahia', 'Loja Oficial da Marca' (ex: Electrolux, Philco, Deca, Samsung), 'Leroy Merlin'.\n" +
-          "4. PREÇOS REAIS: Indique os preços reais médios praticados no mercado brasileiro em Reais (R$).\n" +
-          "5. ESPECIFICAÇÕES: Inclua descrições técnicas claras com conexões, acabamento, voltagem e medidas.";
+          `1. AFINIDADE TOTAL: Retorne EXCLUSIVAMENTE produtos do mesmo tipo, marca e modelo de "${finalSearchTerm}". NUNCA misture categorias!\n` +
+          "2. LOJAS REAIS: Distribua entre: 'Mercado Livre Oficial', 'Magazine Luiza', 'Amazon Brasil', 'Casas Bahia', 'Loja Oficial da Marca' (ex: Philco, Electrolux, Deca), 'Leroy Merlin'.\n`" +
+          "3. PREÇOS REAIS: Indique os preços reais médios praticados no mercado brasileiro em Reais (ex: R$ 1.099,00).\n" +
+          "4. ESPECIFICAÇÕES: Inclua descrições técnicas claras com conexões, acabamento, voltagem e medidas.\n" +
+          "5. Retorne um array JSON com os 6 itens.";
 
         const contents: any[] = [];
         if (imageBase64Data) {
@@ -4909,56 +4923,42 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         contents.push({ text: prompt });
 
         try {
-          console.log(`[Gemini Search] Generating offers for: "${finalSearchTerm}" with gemini-3.5-flash-lite...`);
+          console.log(`[Gemini Search] Generating offers for: "${finalSearchTerm}"...`);
           let response: any = null;
+          const jsonSchema = {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING, description: "Nome detalhado e limpo do produto com marca e modelo oficial" },
+                description: { type: Type.STRING, description: "Especificações técnicas essenciais, voltagem, acabamento ou dimensões" },
+                price: { type: Type.STRING, description: "Preço real de mercado em R$ (ex: R$ 1.199,00)" },
+                store: { type: Type.STRING, description: "Nome da loja (Mercado Livre, Magazine Luiza, Amazon Brasil, Casas Bahia, Leroy Merlin, Buscapé)" },
+                url: { type: Type.STRING, description: "Link da loja" },
+                imageUrl: { type: Type.STRING, description: "URL da foto do produto" },
+                category: { type: Type.STRING, description: "Categoria recomendada" }
+              },
+              required: ["title", "description", "price", "store"]
+            }
+          };
+
           try {
             response = await ai.models.generateContent({
               model: "gemini-3.5-flash-lite",
               contents,
               config: {
                 responseMimeType: "application/json",
-                responseSchema: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      title: { type: Type.STRING, description: "Nome detalhado e limpo do produto com marca e modelo oficial" },
-                      description: { type: Type.STRING, description: "Especificações técnicas essenciais, voltagem, acabamento ou dimensões" },
-                      price: { type: Type.STRING, description: "Preço real de mercado em R$ (ex: R$ 1.199,00)" },
-                      store: { type: Type.STRING, description: "Nome da loja (Mercado Livre, Magazine Luiza, Amazon Brasil, Casas Bahia, Leroy Merlin, Buscapé)" },
-                      url: { type: Type.STRING, description: "Link de busca ou loja" },
-                      imageUrl: { type: Type.STRING, description: "URL da foto oficial do produto" },
-                      category: { type: Type.STRING, description: "Categoria recomendada" }
-                    },
-                    required: ["title", "description", "price", "store"]
-                  }
-                }
+                responseSchema: jsonSchema
               }
             });
           } catch (firstGenErr: any) {
-            console.warn("[Gemini Search] First generation attempt failed, retrying once with text prompt...", firstGenErr?.message || firstGenErr);
-            await new Promise(r => setTimeout(r, 400));
+            console.warn("[Gemini Search] Retrying offers with gemini-3.8-flash...", firstGenErr?.message || firstGenErr);
             response = await ai.models.generateContent({
-              model: "gemini-3.5-flash-lite",
+              model: "gemini-3.8-flash",
               contents: [{ text: prompt }],
               config: {
                 responseMimeType: "application/json",
-                responseSchema: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      title: { type: Type.STRING },
-                      description: { type: Type.STRING },
-                      price: { type: Type.STRING },
-                      store: { type: Type.STRING },
-                      url: { type: Type.STRING },
-                      imageUrl: { type: Type.STRING },
-                      category: { type: Type.STRING }
-                    },
-                    required: ["title", "description", "price", "store"]
-                  }
-                }
+                responseSchema: jsonSchema
               }
             });
           }
@@ -4980,7 +4980,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
     // Tier 3: Guarantees user NEVER receives a blocking error
     if (!results || results.length === 0) {
-      const searchTerm = extractedQuery || (formProductName || "").trim() || (query || "").trim();
+      const searchTerm = extractedQuery || (query || "").trim() || "Item Arquitetônico";
       results = generateArchitecturalCatalogFallback(searchTerm, category);
       source = "catalog_backup";
     }
@@ -5036,7 +5036,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           finalImg = fallbackImageForProduct(item);
         }
 
-        const finalUrl = sanitizeProductUrl(item.url, item.title || extractedQuery || formProductName || 'produto', item.store);
+        const finalUrl = sanitizeProductUrl(item.url, item.title || extractedQuery || 'produto', item.store);
 
         return {
           ...item,

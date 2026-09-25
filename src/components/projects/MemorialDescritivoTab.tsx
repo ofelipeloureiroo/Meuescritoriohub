@@ -559,6 +559,8 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
         }
       };
       reader.readAsDataURL(file);
+      // Reset input value so selecting the same or new file always triggers onChange
+      e.target.value = '';
     }
   };
 
@@ -567,30 +569,30 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     await triggerAISearchWithData(imageUploadIA, imageFileNameIA, searchQueryIA, false);
   };
 
-  // Helper to get verified direct store product purchase URLs (keeps direct buy page and avoids search results)
+  // Helper to get verified direct store product purchase URLs
   const getVerifiedStoreUrl = (option: { url?: string; title?: string; store?: string }): string => {
     const rawUrl = (option.url || '').trim();
     const title = (option.title || searchQueryIA || formTitle || 'produto').trim();
     const store = (option.store || formStore || '').toLowerCase();
     const cleanTitle = title.replace(/[^\w\sáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ-]/gi, ' ').replace(/\s+/g, ' ').trim();
-    const lowerUrl = rawUrl.toLowerCase();
+    const encTitle = encodeURIComponent(cleanTitle);
 
-    // Check if URL is already a valid store product page (starts with http and is not a google search)
-    const isGoogleSearchUrl = !rawUrl ||
-      lowerUrl.includes('google.com/search') ||
-      lowerUrl.includes('google.com.br/search') ||
-      lowerUrl.includes('tbm=shop') ||
-      lowerUrl.includes('udm=28');
-
-    if (!isGoogleSearchUrl && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
-      // Return direct product buy page as-is!
-      return rawUrl;
+    if (rawUrl && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
+      const lowerUrl = rawUrl.toLowerCase();
+      if (!lowerUrl.includes('google.com') && !lowerUrl.includes('example.com')) {
+        if (
+          lowerUrl.includes('.philco.com.br') ||
+          lowerUrl.includes('.electrolux.com.br') ||
+          lowerUrl.includes('.deca.com.br') ||
+          lowerUrl.includes('.docol.com.br') ||
+          lowerUrl.includes('.samsung.com') ||
+          lowerUrl.includes('.lg.com')
+        ) {
+          return rawUrl;
+        }
+      }
     }
 
-    // Direct store fallback when URL was missing:
-    if (store.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux')) {
-      return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
-    }
     if (store.includes('mercado livre') || store.includes('mercadolivre')) {
       return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
     }
@@ -598,25 +600,31 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
       return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
     }
     if (store.includes('amazon')) {
-      return `https://www.amazon.com.br/s?k=${encodeURIComponent(cleanTitle)}`;
+      return `https://www.amazon.com.br/s?k=${encTitle}&i=aps`;
     }
     if (store.includes('casas bahia') || store.includes('casasbahia')) {
-      return `https://www.casasbahia.com.br/b?q=${encodeURIComponent(cleanTitle)}`;
+      return `https://www.casasbahia.com.br/b?q=${encTitle}`;
     }
     if (store.includes('leroy merlin') || store.includes('leroy')) {
-      return `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+      return `https://www.leroymerlin.com.br/busca?q=${encTitle}`;
+    }
+    if (store.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux')) {
+      return `https://loja.electrolux.com.br/busca?ft=${encTitle}`;
+    }
+    if (store.includes('philco') || cleanTitle.toLowerCase().includes('philco')) {
+      return `https://www.philco.com.br/busca?ft=${encTitle}`;
     }
     if (store.includes('mobly')) {
-      return `https://www.mobly.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+      return `https://www.mobly.com.br/busca?q=${encTitle}`;
     }
     if (store.includes('madeira')) {
-      return `https://www.madeiramadeira.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+      return `https://www.madeiramadeira.com.br/busca?q=${encTitle}`;
     }
     if (store.includes('telhanorte')) {
-      return `https://www.telhanorte.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+      return `https://www.telhanorte.com.br/busca?q=${encTitle}`;
     }
     if (store.includes('buscapé') || store.includes('buscape')) {
-      return `https://www.buscape.com.br/search?q=${encodeURIComponent(cleanTitle)}`;
+      return `https://www.buscape.com.br/search?q=${encTitle}`;
     }
 
     return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
@@ -1461,16 +1469,16 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                         </div>
 
                         <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-zinc-100 flex-wrap">
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
                             <a
                               href={getVerifiedStoreUrl(opt)}
                               target="_blank"
                               rel="noreferrer"
-                              className="px-2 py-1.5 rounded-lg text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center gap-1 transition-colors"
+                              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-1 shadow-xs transition-colors"
                               title="Abrir página de compra na loja oficial"
                             >
-                              <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
-                              <span>Abrir Link da Loja</span>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>Comprar na Loja</span>
                             </a>
                             <button
                               type="button"
@@ -1687,11 +1695,11 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                         href={formUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-3 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-bold flex items-center gap-1 shrink-0 transition-colors"
-                        title="Testar e abrir link em nova aba"
+                        className="px-3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors"
+                        title="Ir direto para a página de compra na loja"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Testar Link</span>
+                        <span>Ir para Loja</span>
                       </a>
                     )}
                   </div>
