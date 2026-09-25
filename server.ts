@@ -4736,10 +4736,13 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     }
 
     let extractedGroundingChunks: Array<{ uri: string; title: string }> = [];
+    let finalSearchTerm = "";
 
     // Helper to validate whether a URL is a real, live, direct product purchase page (and NOT a generic search page)
-    const validateDirectProductUrl = async (rawUrl?: string): Promise<boolean> => {
-      if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.startsWith('http')) return false;
+    const validateDirectProductUrl = async (rawUrl?: string): Promise<{ valid: boolean; status?: number; finalUrl?: string; reason?: string }> => {
+      if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.startsWith('http')) {
+        return { valid: false, reason: 'URL vazia ou inválida' };
+      }
       const lower = rawUrl.toLowerCase();
       
       // Exclude generic search pages
@@ -4754,7 +4757,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         lower.includes('google.com') ||
         lower.includes('example.com')
       ) {
-        return false;
+        return { valid: false, reason: 'Página genérica de busca ou listagem' };
       }
 
       try {
@@ -4771,21 +4774,24 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         });
         clearTimeout(timeoutId);
 
-        if (resp.status >= 200 && resp.status < 400) {
+        if (resp.status >= 200 && resp.status < 300) {
           const finalUrl = (resp.url || '').toLowerCase();
           if (
             finalUrl.includes('/busca') ||
             finalUrl.includes('/search') ||
             finalUrl.includes('?q=') ||
-            finalUrl.includes('lista.mercadolivre')
+            finalUrl.includes('lista.mercadolivre') ||
+            finalUrl.includes('/404') ||
+            finalUrl.includes('nao-encontrado') ||
+            finalUrl.includes('sku-nao-encontrado')
           ) {
-            return false;
+            return { valid: false, status: resp.status, finalUrl: resp.url, reason: 'Redirecionou para página de busca/404' };
           }
-          return true;
+          return { valid: true, status: resp.status, finalUrl: resp.url };
         }
-        return false;
+        return { valid: false, status: resp.status, finalUrl: resp.url, reason: `HTTP status ${resp.status}` };
       } catch (err: any) {
-        return false;
+        return { valid: false, reason: `Erro na conexão / timeout: ${err?.message || err}` };
       }
     };
 
@@ -4873,7 +4879,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       }
 
       // Step 2: Now generate real product purchasing options with Google Search Grounding Tool
-      let finalSearchTerm = extractedQuery;
+      finalSearchTerm = extractedQuery;
       if (!imageBase64Data && !isMeaningfulProductName(finalSearchTerm) && isMeaningfulProductName(formProductName)) {
         finalSearchTerm = formProductName.trim();
       }
@@ -4905,7 +4911,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         try {
           console.log(`[CHAMADA 1 - Google Search Grounding] Executando busca livre para: "${finalSearchTerm}"...`);
           const searchResponse = await ai.models.generateContent({
-            model: "gemini-3.8-flash",
+            model: "gemini-flash-latest",
             contents: [{ text: searchPrompt }],
             config: {
               tools: [{ googleSearch: {} }]
@@ -4940,7 +4946,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           console.warn("[CHAMADA 1] Grounding search fallback:", groundingErr?.message?.slice(0, 150));
           try {
             const fallbackSearch = await ai.models.generateContent({
-              model: "gemini-3.5-flash-lite",
+              model: "gemini-3.1-flash-lite",
               contents: [{ text: searchPrompt }]
             });
             step1RawText = fallbackSearch?.text || "";
@@ -5016,8 +5022,32 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       console.warn("[Gemini Search] General catch error:", generalErr?.message || generalErr);
     }
 
-    // Helper: Matching de Loja com Grounding Chunks feito em JavaScript
-    const matchStoreWithGroundingChunks = (storeName: string, chunks: Array<{ uri: string; title: string }>): string | null => {
+    // Helper: Extrair palavras-chave significativas do produto
+    const extractSignificantKeywords = (text: string): string[] => {
+      if (!text) return [];
+      const stopWords = new Set([
+        "de", "da", "do", "das", "dos", "com", "em", "para", "por", "sem", "ou",
+        "um", "uma", "uns", "umas", "no", "na", "nos", "nas", "ao", "aos", "que",
+        "sobre", "item", "produto", "oficial", "brasil", "loja", "compre", "online",
+        "frete", "gratis", "promocao", "oferta"
+      ]);
+      const normalized = text
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9\s-]/g, " ");
+      
+      const tokens = normalized.split(/[\s-]+/).filter(t => t.length >= 2 && !stopWords.has(t));
+      return Array.from(new Set(tokens));
+    };
+
+    // Helper: Matching de Loja com Grounding Chunks feito em JavaScript + Validação de Palavras-Chave do Produto
+    const matchStoreWithGroundingChunks = (
+      storeName: string, 
+      itemTitle: string, 
+      productContext: string, 
+      chunks: Array<{ uri: string; title: string }>
+    ): { uri: string; matchedKeywords: string[] } | null => {
       if (!storeName || !chunks || chunks.length === 0) return null;
 
       const normalize = (str: string) => str
@@ -5027,6 +5057,9 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         .replace(/[^a-z0-9]/g, "");
 
       const normStore = normalize(storeName);
+
+      // Palavras-chave do produto identificado para garantir que o link é do produto certo (e não de livros, acessórios avulsos, etc.)
+      const targetKeywords = extractSignificantKeywords(`${productContext} ${itemTitle}`);
 
       // Mapeamento de apelidos e palavras-chave de grandes lojas brasileiras
       const storeAliases: Record<string, string[]> = {
@@ -5051,55 +5084,112 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         "lg": ["lg.com", "lgcom", "lg"]
       };
 
-      // 1. Checar por palavras-chave mapeadas
-      for (const [key, aliases] of Object.entries(storeAliases)) {
-        const matchesStore = aliases.some(alias => normStore.includes(alias) || alias.includes(normStore));
-        if (matchesStore) {
-          for (const chunk of chunks) {
-            const normChunkTitle = normalize(chunk.title || "");
-            const normChunkUri = normalize(chunk.uri || "");
-            if (aliases.some(alias => normChunkTitle.includes(alias) || normChunkUri.includes(alias))) {
-              return chunk.uri;
-            }
-          }
-        }
-      }
-
-      // 2. Checar por substring genérica no título ou URL
       for (const chunk of chunks) {
         const normChunkTitle = normalize(chunk.title || "");
         const normChunkUri = normalize(chunk.uri || "");
-        if (
-          (normStore.length >= 3 && normChunkTitle.includes(normStore)) ||
-          (normChunkTitle.length >= 3 && normStore.includes(normChunkTitle)) ||
-          (normStore.length >= 3 && normChunkUri.includes(normStore))
-        ) {
-          return chunk.uri;
+
+        // 1. Verifica se o chunk pertence à loja
+        let storeMatch = false;
+        for (const [, aliases] of Object.entries(storeAliases)) {
+          const matchesStore = aliases.some(alias => normStore.includes(alias) || alias.includes(normStore));
+          if (matchesStore && aliases.some(alias => normChunkTitle.includes(alias) || normChunkUri.includes(alias))) {
+            storeMatch = true;
+            break;
+          }
+        }
+
+        if (!storeMatch) {
+          if (
+            (normStore.length >= 3 && normChunkTitle.includes(normStore)) ||
+            (normChunkTitle.length >= 3 && normStore.includes(normChunkTitle)) ||
+            (normStore.length >= 3 && normChunkUri.includes(normStore))
+          ) {
+            storeMatch = true;
+          }
+        }
+
+        if (!storeMatch) continue;
+
+        // 2. CRUCIAL: Verifica se o chunk contém pelo menos uma palavra-chave forte do produto
+        const chunkFullText = `${chunk.title} ${chunk.uri}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const matchedKw = targetKeywords.filter(kw => {
+          if (kw.length <= 2) return false;
+          return chunkFullText.includes(kw);
+        });
+
+        if (matchedKw.length > 0) {
+          console.log(`[JS Matching] Loja "${storeName}" casada com chunk [${chunk.title}] (Palavras-chave correspondentes: ${matchedKw.join(', ')})`);
+          return { uri: chunk.uri, matchedKeywords: matchedKw };
+        } else {
+          console.log(`[JS Matching Rejeitado] Chunk [${chunk.title}] pertence à loja "${storeName}", mas NÃO contém nenhuma palavra-chave do produto (${targetKeywords.slice(0, 5).join(', ')}...). Ignorado.`);
         }
       }
 
       return null;
     };
 
-    // Step 3: URL VALIDATION & JAVASCRIPT MATCHING - Validação e preenchimento determinístico
+    // Step 3: URL VALIDATION, STRICT EXACT MATCHING & LIVE HTTP 200 VERIFICATION
     let validatedResults: any[] = [];
+    const validGroundingUris = new Set(extractedGroundingChunks.map(c => c.uri));
+
     if (Array.isArray(results) && results.length > 0) {
-      validatedResults = await Promise.all(results.map(async (item) => {
-        // Foto do produto: sempre usa a foto enviada pelo usuário (sem fotos genéricas do Unsplash)
+      validatedResults = await Promise.all(results.map(async (item, idx) => {
+        // Foto do produto: sempre usa a foto enviada pelo usuário
         const finalImg = imageBase64Data || "";
 
-        let rawUrl = (item.url || "").trim();
+        let candidateUrl = (item.url || "").trim();
+        let discardReason = "";
 
-        // Se a URL estiver vazia, tenta o matching em JavaScript com os groundingChunks
-        if (!rawUrl && extractedGroundingChunks.length > 0) {
-          const matchedUrl = matchStoreWithGroundingChunks(item.store, extractedGroundingChunks);
-          if (matchedUrl) {
-            rawUrl = matchedUrl;
-            console.log(`[JS Matching] Loja "${item.store}" casada com URL real: ${matchedUrl}`);
+        // FILTRO 1: Validação de String Idêntica nos GroundingChunks
+        if (candidateUrl) {
+          const isExactGrounding = validGroundingUris.has(candidateUrl);
+          console.log(`[Item #${idx + 1} - ${item.store}] URL do modelo: "${candidateUrl}" -> É IDÊNTICA a groundingChunk real? ${isExactGrounding ? 'SIM (Aceita como candidata)' : 'NÃO (Descartada por não ser URI real do Google Grounding)'}`);
+          
+          if (!isExactGrounding) {
+            discardReason = "URL gerada não é idêntica a nenhum groundingChunk real da busca";
+            candidateUrl = "";
           }
         }
 
-        const isDirect = await validateDirectProductUrl(rawUrl);
+        // FILTRO 2: Se não houver URL idêntica do modelo, tenta matching seguro por Loja + Palavra-Chave do Produto
+        if (!candidateUrl && extractedGroundingChunks.length > 0) {
+          const match = matchStoreWithGroundingChunks(
+            item.store, 
+            item.title || "", 
+            finalSearchTerm || identifiedProduct || "", 
+            extractedGroundingChunks
+          );
+          if (match && validGroundingUris.has(match.uri)) {
+            candidateUrl = match.uri;
+            console.log(`[Item #${idx + 1} - ${item.store}] URL atribuída via matching seguro: ${candidateUrl}`);
+          } else {
+            if (!discardReason) {
+              discardReason = "Nenhum groundingChunk da busca bate com a loja E com o produto especificado";
+            }
+          }
+        }
+
+        // FILTRO 3: Validação HTTP GET em tempo real (Status 200 OK e não redireciona para 404/busca)
+        let isDirect = false;
+        let finalValidatedUrl = "";
+
+        if (candidateUrl) {
+          console.log(`[Item #${idx + 1} - ${item.store}] Testando URL candidata via HTTP GET: "${candidateUrl}"...`);
+          const httpCheck = await validateDirectProductUrl(candidateUrl);
+          
+          if (httpCheck.valid) {
+            isDirect = true;
+            finalValidatedUrl = candidateUrl;
+            console.log(`[Item #${idx + 1} - ${item.store}] -> URL ACEITA! Status HTTP ${httpCheck.status || 200} (link_direto: true)`);
+          } else {
+            isDirect = false;
+            finalValidatedUrl = "";
+            discardReason = `Falha na requisição HTTP: ${httpCheck.reason}`;
+            console.log(`[Item #${idx + 1} - ${item.store}] -> URL DESCARTADA! ${httpCheck.reason}`);
+          }
+        } else {
+          console.log(`[Item #${idx + 1} - ${item.store}] -> Sem URL válida. Motivo: ${discardReason || 'Sem link disponível'}`);
+        }
 
         return {
           title: item.title,
@@ -5108,7 +5198,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           store: item.store,
           category: item.category,
           link_direto: isDirect,
-          url: isDirect ? rawUrl : (rawUrl.startsWith('http') ? rawUrl : ""),
+          url: finalValidatedUrl,
           imageUrl: finalImg
         };
       }));
