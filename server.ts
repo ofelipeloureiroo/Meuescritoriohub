@@ -1249,13 +1249,25 @@ Retorne uma resposta JSON com o formato estrito:
 }
           `.trim();
 
-          const textResponse = await ai.models.generateContent({
-            model: 'gemini-3.8-flash',
-            contents: textPrompt,
-            config: {
-              responseMimeType: 'application/json',
-            },
-          });
+          let textResponse: any = null;
+          try {
+            textResponse = await ai.models.generateContent({
+              model: 'gemini-3.8-flash',
+              contents: textPrompt,
+              config: {
+                responseMimeType: 'application/json',
+              },
+            });
+          } catch (model38Err: any) {
+            console.warn("Gemini 3.8 flash busy, falling back to gemini-3.5-flash-lite:", model38Err?.message || model38Err);
+            textResponse = await ai.models.generateContent({
+              model: 'gemini-3.5-flash-lite',
+              contents: textPrompt,
+              config: {
+                responseMimeType: 'application/json',
+              },
+            });
+          }
 
           const rawText = textResponse.text?.trim() || '{}';
           const parsed = JSON.parse(rawText);
@@ -4762,11 +4774,11 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
             data = matches[2];
           }
 
-          console.log("[Gemini Search] Analyzing image with gemini-3.1-flash-lite...");
+          console.log("[Gemini Search] Analyzing image with gemini-3.5-flash-lite...");
           let visionResponse: any = null;
           try {
             visionResponse = await ai.models.generateContent({
-              model: "gemini-3.1-flash-lite",
+              model: "gemini-3.5-flash-lite",
               contents: [
                 {
                   inlineData: {
@@ -4785,7 +4797,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
             console.warn("[Gemini Search] First vision attempt failed, retrying once...", firstVisionErr?.message || firstVisionErr);
             await new Promise(r => setTimeout(r, 400));
             visionResponse = await ai.models.generateContent({
-              model: "gemini-3.1-flash-lite",
+              model: "gemini-3.5-flash-lite",
               contents: [
                 {
                   inlineData: {
@@ -4862,11 +4874,11 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         contents.push({ text: prompt });
 
         try {
-          console.log(`[Gemini Search] Generating offers for: "${finalSearchTerm}" with gemini-3.1-flash-lite...`);
+          console.log(`[Gemini Search] Generating offers for: "${finalSearchTerm}" with gemini-3.5-flash-lite...`);
           let response: any = null;
           try {
             response = await ai.models.generateContent({
-              model: "gemini-3.1-flash-lite",
+              model: "gemini-3.5-flash-lite",
               contents,
               config: {
                 responseMimeType: "application/json",
@@ -4892,7 +4904,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
             console.warn("[Gemini Search] First generation attempt failed, retrying once...", firstGenErr?.message || firstGenErr);
             await new Promise(r => setTimeout(r, 400));
             response = await ai.models.generateContent({
-              model: "gemini-3.1-flash-lite",
+              model: "gemini-3.5-flash-lite",
               contents: [{ text: prompt }],
               config: {
                 responseMimeType: "application/json",
