@@ -4737,6 +4737,40 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
     let extractedGroundingChunks: Array<{ uri: string; title: string }> = [];
     let finalSearchTerm = "";
+    let mlApiPromise: Promise<any> | null = null;
+
+    // Helper to query Mercado Libre Official Public Search API for guaranteed direct product link & pricing
+    const fetchMercadoLibreProduct = async (searchTerm: string) => {
+      try {
+        const url = `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(searchTerm)}&limit=3`;
+        console.log(`[Mercado Livre API] 🔍 Consultando API oficial do Mercado Livre para: "${searchTerm}"...`);
+        const resp = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        if (resp.ok) {
+          const data = await resp.json() as any;
+          if (data && Array.isArray(data.results) && data.results.length > 0) {
+            const item = data.results[0];
+            console.log(`[Mercado Livre API] ✅ Produto encontrado via API: "${item.title}" (${item.permalink}) - R$ ${item.price}`);
+            return {
+              title: item.title,
+              description: `Produto oficial verificado via API pública do Mercado Livre. Condição: ${item.condition === 'new' ? 'Novo' : item.condition}. Frete: ${item.shipping?.free_shipping ? 'Grátis' : 'Disponível'}.`,
+              price: `R$ ${Number(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+              store: "Mercado Livre",
+              category: identifiedCategory || "Eletros",
+              link_direto: true,
+              url: item.permalink,
+              imageUrl: item.thumbnail || ""
+            };
+          }
+        }
+      } catch (err: any) {
+        console.warn("[Mercado Livre API Error]:", err?.message || err);
+      }
+      return null;
+    };
 
     // Helper to check store-specific product page patterns (now SOFT / SIGNAL only, not hard blocking)
     const checkStoreProductPattern = (storeName: string, rawUrl: string): { matchesPattern: boolean; note?: string } => {
@@ -4933,6 +4967,9 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       }
 
       if (ai && finalSearchTerm) {
+        // Disparar chamada paralela à API pública oficial do Mercado Livre para garantir link direto 100% real
+        mlApiPromise = fetchMercadoLibreProduct(finalSearchTerm);
+
         // ==========================================
         // CHAMADA 1 (Busca/Grounding, SEM schema)
         // ==========================================
@@ -5276,6 +5313,23 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           _discardReason: discardReason // Para auditoria nos logs
         };
       }));
+
+      const mlApiResult = await mlApiPromise;
+      if (mlApiResult) {
+        validatedResults = validatedResults.filter(r => !r.store.toLowerCase().includes('mercado'));
+        validatedResults.unshift({
+          title: mlApiResult.title,
+          description: mlApiResult.description,
+          price: mlApiResult.price,
+          store: mlApiResult.store,
+          category: mlApiResult.category,
+          link_direto: true,
+          url: mlApiResult.url,
+          imageUrl: imageBase64Data || mlApiResult.imageUrl || "",
+          _discardReason: "Garantido via API oficial do Mercado Livre"
+        });
+        console.log(`[Mercado Livre API] 🚀 Produto oficial inserido com sucesso na 1ª posição do resultado com link direto garantido!`);
+      }
 
       const acceptedCount = validatedResults.filter(r => r.link_direto).length;
       const discardedItems = validatedResults.filter(r => !r.link_direto);

@@ -1510,7 +1510,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                                 title="Abrir página de compra direta do produto na loja"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
-                                <span>Comprar na Loja</span>
+                                <span>Ir direto para o produto</span>
                               </a>
                               <button
                                 type="button"
@@ -1526,9 +1526,23 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                               </button>
                             </div>
                           ) : (
-                            <span className="text-[10px] text-zinc-500 font-medium px-2 py-1 rounded-md bg-zinc-100 border border-zinc-200/60">
-                              Preço de Referência
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] text-amber-800 bg-amber-50 font-medium px-2 py-1 rounded-md border border-amber-200/60 flex items-center gap-1">
+                                Preço de Referência
+                              </span>
+                              {opt.url ? (
+                                <a
+                                  href={opt.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-zinc-700 bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 flex items-center gap-1 transition-colors"
+                                  title="Buscar na loja"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5 text-zinc-500" />
+                                  <span>Buscar na loja</span>
+                                </a>
+                              ) : null}
+                            </div>
                           )}
                           <button
                             type="button"
