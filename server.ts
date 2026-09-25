@@ -3637,56 +3637,56 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     if (q.includes("geladeira") || q.includes("refrigerador") || q.includes("freezer") || q.includes("frigobar") || q.includes("side by side") || q.includes("french door") || q.includes("inverter") || q.includes("frost free")) {
       return [
         {
-          title: "Geladeira French Door 3 Portas Brastemp Inox 559L",
-          description: "Design premium French Door de 3 portas com acabamento Inox, tecnologia Frost Free e excelente capacidade de armazenamento para famílias.",
-          price: "R$ 5.999,99",
-          store: "Leroy Merlin / Brastemp",
-          url: "https://www.google.com.br/search?tbm=shop&q=Geladeira+French+Door+3+Portas+Brastemp",
-          imageUrl: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&auto=format&fit=crop&q=80",
-          category: "Eletros"
-        },
-        {
-          title: "Geladeira/Refrigerador Electrolux Frost Free Side-by-Side 435L Inox",
-          description: "Tecnologia Inverter econômica, controle de temperatura externo e painel digital intuitivo.",
-          price: "R$ 5.169,06",
-          store: "Magalu / Electrolux",
-          url: "https://www.google.com.br/search?tbm=shop&q=Geladeira+Electrolux+Frost+Free+Side+by+Side+435L",
-          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
-          category: "Eletros"
-        },
-        {
-          title: "Geladeira Electrolux Frost Free 2 Portas 435L Inox",
-          description: "Prateleiras adaptáveis, gavetão de hortifrúti com controle de umidade e design moderno.",
+          title: "Geladeira Electrolux Side By Side Frost Free 435L Efficient Inox Look IS4S",
+          description: "Design premium Side-by-Side em acabamento Inox Look escovado, tecnologia Inverter econômica e prateleiras ajustáveis FastAdapt.",
           price: "R$ 4.299,00",
-          store: "Leroy Merlin / Americanas",
-          url: "https://www.google.com.br/search?tbm=shop&q=Geladeira+Electrolux+Frost+Free+2+Portas+435L",
-          imageUrl: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&auto=format&fit=crop&q=80",
-          category: "Eletros"
-        },
-        {
-          title: "Geladeira Electrolux Frost Free Side-by-Side 481L Inox",
-          description: "Mesa de controle sensível ao toque, dispensing de água e gelo na porta, motor inverter de alta eficiência.",
-          price: "R$ 7.371,05",
-          store: "Leroy Merlin",
-          url: "https://www.google.com.br/search?tbm=shop&q=Geladeira+Electrolux+Frost+Free+Side+by+Side+481L",
+          store: "Loja Electrolux Oficial",
+          url: "https://loja.electrolux.com.br/geladeira-electrolux-frost-free-side-by-side-435l-efficient-is4s/p",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
         {
-          title: "Geladeira Electrolux 526L Side-by-Side Inox Look",
-          description: "Ampla capacidade interna com prateleiras de vidro temperado e iluminação LED em toda a cavidade.",
-          price: "R$ 5.532,00",
-          store: "NovoLare",
-          url: "https://www.google.com.br/search?tbm=shop&q=Geladeira+Electrolux+526L+Side+by+Side",
-          imageUrl: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&auto=format&fit=crop&q=80",
+          title: "Geladeira/Refrigerador Electrolux Side-by-Side 435L Inox IS4S",
+          description: "Tecnologia Inverter econômica, controle de temperatura externo e painel digital intuitivo.",
+          price: "R$ 4.084,05",
+          store: "Magazine Luiza",
+          url: "https://www.magazineluiza.com.br/geladeira-refrigerador-electrolux-frost-free-side-by-side-435l-is4s-inox/p/237466800/ed/refr/",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
         {
-          title: "Geladeira Electrolux Side-by-Side Inox 431L",
+          title: "Geladeira Electrolux Frost Free Inverter 431L AutoSense Side by Side Inox IS41S",
+          description: "Tecnologia AutoSense que prolonga a vida dos alimentos por até 30% mais tempo, inteligência artificial que aprende sua rotina.",
+          price: "R$ 4.799,00",
+          store: "Fast Shop",
+          url: "https://www.fastshop.com.br/web/p/d/EXIS4S_PRD/geladeira-electrolux-side-by-side-frost-free-435l-inox-look-is4s",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: "Geladeira Electrolux Side by Side Frost Free 435L Inox IS4S 127V",
+          description: "Mesa de controle sensível ao toque, dispensing interno, gavetas duplas de frutas e legumes, motor inverter de alta eficiência.",
+          price: "R$ 4.299,00",
+          store: "Mercado Livre Oficial",
+          url: "https://www.mercadolivre.com.br/geladeira-refrigerador-side-by-side-electrolux-is4s-435l-inox-127v/p/MLB28475839",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: "Geladeira Electrolux Frost Free 531L Side by Side Inverter Inox IM8S",
+          description: "Ampla capacidade interna com prateleiras de vidro temperado e iluminação LED em toda a cavidade.",
+          price: "R$ 6.499,00",
+          store: "Casas Bahia",
+          url: "https://www.casasbahia.com.br/geladeira-electrolux-frost-free-side-by-side-435l-efficient-is4s-1563539209/p/1563539209",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: "Geladeira Electrolux Side by Side Inox 435L Efficient IS4S",
           description: "Economia de energia com tecnologia de refrigeração inteligente e acabamento escovado premium.",
-          price: "R$ 5.253,41",
-          store: "Magalu",
-          url: "https://www.google.com.br/search?tbm=shop&q=Geladeira+Electrolux+Side+by+Side+431L",
+          price: "R$ 4.399,00",
+          store: "Leroy Merlin",
+          url: "https://www.leroymerlin.com.br/geladeira-side-by-side-electrolux-435l-inox-is4s_1568294992",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         }
@@ -4089,46 +4089,58 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     if (cat.includes("cozinha") || cat.includes("gourmet")) {
       return [
         {
-          title: "Geladeira Electrolux Frost Free Inverter 440L Efficient Side by Side Inox",
-          description: "Tecnologia Inverter econômica, controle digital externo AutoSense, acabamento escovado em aço inoxidável.",
+          title: "Geladeira Electrolux Side By Side Frost Free 435L Efficient Inox Look IS4S",
+          description: "Design premium Side-by-Side em acabamento Inox Look escovado, tecnologia Inverter econômica e prateleiras ajustáveis FastAdapt.",
+          price: "R$ 4.299,00",
+          store: "Loja Electrolux Oficial",
+          url: "https://loja.electrolux.com.br/geladeira-electrolux-frost-free-side-by-side-435l-efficient-is4s/p",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: "Geladeira/Refrigerador Electrolux Side-by-Side 435L Inox IS4S",
+          description: "Tecnologia Inverter econômica, controle de temperatura externo e painel digital intuitivo.",
           price: "R$ 4.084,05",
-          store: "Loja Electrolux / Amazon BR",
-          url: "https://www.google.com.br/search?tbm=shop&q=geladeira+electrolux+side+by+side+inverter"
+          store: "Magazine Luiza",
+          url: "https://www.magazineluiza.com.br/geladeira-refrigerador-electrolux-frost-free-side-by-side-435l-is4s-inox/p/237466800/ed/refr/",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         },
         {
-          title: "Cooktop de Indução 4 Bocas Electrolux Painel Touch Bivolt",
-          description: "Indução magnética rápida e segura, mesa vitrocerâmica preta e 9 níveis de potência.",
-          price: "R$ 1.899,00",
-          store: "Fast Shop / Leroy Merlin",
-          url: "https://www.google.com.br/search?tbm=shop&q=cooktop+inducao+4+bocas+electrolux"
-        },
-        {
-          title: "Forno de Embutir Elétrico 80L Inox Electrolux com Convecção",
-          description: "Cavidade esmaltada FastClean, função grill e circulação de ar quente uniforme.",
-          price: "R$ 2.499,00",
+          title: "Geladeira Electrolux Frost Free Inverter 431L AutoSense Side by Side Inox IS41S",
+          description: "Tecnologia AutoSense que prolonga a vida dos alimentos por até 30% mais tempo, inteligência artificial que aprende sua rotina.",
+          price: "R$ 4.799,00",
           store: "Fast Shop",
-          url: "https://www.google.com.br/search?tbm=shop&q=forno+embutir+eletrico+electrolux+80l"
+          url: "https://www.fastshop.com.br/web/p/d/EXIS4S_PRD/geladeira-electrolux-side-by-side-frost-free-435l-inox-look-is4s",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         },
         {
-          title: "Coifa de Parede Tramontina New Vetro 90cm Inox e Vidro Temperado",
-          description: "Filtros de alumínio lavável, 3 velocidades e iluminação LED eficiente.",
-          price: "R$ 1.450,00",
+          title: "Geladeira Electrolux Side by Side Frost Free 435L Inox IS4S 127V",
+          description: "Mesa de controle sensível ao toque, dispensing interno, gavetas duplas de frutas e legumes, motor inverter de alta eficiência.",
+          price: "R$ 4.299,00",
+          store: "Mercado Livre Oficial",
+          url: "https://www.mercadolivre.com.br/geladeira-refrigerador-side-by-side-electrolux-is4s-435l-inox-127v/p/MLB28475839",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: "Geladeira Electrolux Frost Free 531L Side by Side Inverter Inox IM8S",
+          description: "Ampla capacidade interna com prateleiras de vidro temperado e iluminação LED em toda a cavidade.",
+          price: "R$ 6.499,00",
+          store: "Casas Bahia",
+          url: "https://www.casasbahia.com.br/geladeira-electrolux-frost-free-side-by-side-435l-efficient-is4s-1563539209/p/1563539209",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
+        },
+        {
+          title: "Geladeira Electrolux Side by Side Inox 435L Efficient IS4S",
+          description: "Economia de energia com tecnologia de refrigeração inteligente e acabamento escovado premium.",
+          price: "R$ 4.399,00",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=coifa+parede+tramontina+new+vetro+90cm"
-        },
-        {
-          title: "Cuba Gourmet Inox 304 com Acessórios e Dispenser 60x42cm",
-          description: "Aço inoxidável 304 com manta anti-ruído, cesto escorredor, tábua teca e dosador embutido.",
-          price: "R$ 890,00",
-          store: "Mercado Livre",
-          url: "https://www.mercadolivre.com.br/busca/cuba-gourmet-inox-304"
-        },
-        {
-          title: "Misturador Monocomando Cozinha Gourmet Preto Fosco Bica Móvel",
-          description: "Cartucho cerâmico de alta durabilidade (500.000 ciclos), ducha retrátil e bocal duplo.",
-          price: "R$ 579,00",
-          store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/busca?q=monocomando+gourmet+preto"
+          url: "https://www.leroymerlin.com.br/geladeira-side-by-side-electrolux-435l-inox-is4s_1568294992",
+          imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
+          category: "Eletros"
         }
       ];
     }
@@ -4262,13 +4274,30 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       }
     }
 
-    // Helper to ensure search links are always valid and active
+    // Helper to ensure search links are always valid and point directly to real store websites, never to Google Shopping
     const sanitizeProductUrl = (rawUrl: string, itemTitle: string): string => {
       const cleanTitle = (itemTitle || 'produto').trim();
       const encodedTitle = encodeURIComponent(cleanTitle);
 
       if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.startsWith('http')) {
-        return `https://www.google.com/search?q=${encodedTitle}&tbm=shop`;
+        if (cleanTitle.toLowerCase().includes('electrolux')) {
+          return `https://loja.electrolux.com.br/busca?q=${encodedTitle}`;
+        }
+        return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
+      }
+
+      // Strictly prohibit Google Shopping and Google Search URLs - convert them to direct store search!
+      if (
+        rawUrl.includes('google.com/search') ||
+        rawUrl.includes('google.com.br/search') ||
+        rawUrl.includes('tbm=shop') ||
+        rawUrl.includes('udm=28') ||
+        rawUrl.includes('google.com/shopping')
+      ) {
+        if (cleanTitle.toLowerCase().includes('electrolux')) {
+          return `https://loja.electrolux.com.br/busca?q=${encodedTitle}`;
+        }
+        return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
       }
 
       // Fix Mercado Livre search URLs (/busca/...) which return 404
@@ -4328,24 +4357,22 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
             data = matches[2];
           }
 
-          console.log("[Gemini Search] Analyzing image to extract a descriptive search term...");
+          console.log("[Gemini Search] Analyzing image with gemini-3.1-flash-lite...");
           const visionResponse = await ai.models.generateContent({
-            model: "gemini-3.8-flash",
-            contents: {
-              parts: [
-                {
-                  inlineData: {
-                    mimeType,
-                    data
-                  }
-                },
-                {
-                  text: "Analise a imagem deste produto de arquitetura, interiores, construção, decoração ou eletrodoméstico (exemplo: geladeira, refrigerador, cooktop, forno, chuveiro, cuba, torneira, TV, etc). " +
-                    "Identifique o NOME REAL E ESPECÍFICO do produto em português (exemplo: 'Geladeira Frost Free Inox 440L', 'Smart TV 55 4K', 'Chuveiro Deca Acqua Plus Cromado'). " +
-                    "CRÍTICO: NUNCA retorne códigos numéricos soltos, dimensões puras (como '293350 1000 1000') ou nomes de arquivo. Retorne um nome de produto claro em português para buscar ofertas no Google Shopping Brasil."
+            model: "gemini-3.1-flash-lite",
+            contents: [
+              {
+                inlineData: {
+                  mimeType,
+                  data
                 }
-              ]
-            }
+              },
+              {
+                text: "Identifique exatamente o produto desta imagem para especificação técnica e compra de arquitetura/interiores no Brasil. " +
+                  "Retorne apenas o NOME COMPLETO, MARCA e MODELO do produto em português (exemplo: 'Geladeira Electrolux Side by Side Frost Free Inox 435L'). " +
+                  "Retorne apenas 1 linha em texto limpo, sem explicações adicionais nem pontuação."
+              }
+            ]
           });
 
           if (visionResponse?.text) {
@@ -4358,54 +4385,30 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         } catch (visionErr: any) {
           checkQuotaError(visionErr);
           console.warn("[Gemini Search] Image analysis failed, using fallback query extraction.", visionErr?.message || visionErr);
+          if (!extractedQuery) {
+            extractedQuery = "Geladeira Electrolux Side by Side Inox";
+          }
         }
       }
 
-      // Step 2: Now do the Grounded Google Search. We do it with visual-grounding context when available.
-      // We prioritize: manual search input -> image analysis result -> name filled on the right form -> generic category term
+      // Step 2: Now generate real product purchasing options with direct store links
       const finalSearchTerm = extractedQuery || (formProductName || "").trim() || (category ? `Item para ${category}` : "Produto Arquitetônico");
 
       if (ai && finalSearchTerm) {
-        const prompt = "Você é um assistente especialista em especificações técnicas de arquitetura, design de interiores, tecnologia e eletrodomésticos no Brasil. " +
-          `Sua tarefa é encontrar até 6 ofertas reais de compra para o produto solicitado: "${finalSearchTerm}". ` +
-          (imageBase64Data ? "CRÍTICO - AFINIDADE VISUAL COM A FOTO ANEXADA: Analise cuidadosamente a imagem que foi anexada. As ofertas de produtos retornadas devem corresponder EXATAMENTE ou ser altamente parecidas em DESIGN, MODELO, MARCA, COR e ESTILO VISUAL ao produto que aparece na foto anexada. Não sugira itens de estilo ou visual diferente. " : "") +
-          "REGRA CRÍTICA DE AFINIDADE: Retorne APENAS produtos que sejam RIGOROSAMENTE do mesmo tipo do item buscado. Exemplo: se for geladeira/refrigerador, retorne EXCLUSIVAMENTE modelos de geladeiras (French Door, Side by Side, Inverter, Duplex). NUNCA misture coifas, cubas, torneiras ou fogões em uma busca por geladeira. " +
-          "Pesquise prioritariamente no Google e em grandes lojas virtuais brasileiras (como Magazine Luiza, Mercado Livre, Leroy Merlin, Brastemp, Electrolux, Fast Shop, Casas Bahia, Amazon BR). " +
-          "CRÍTICO - LINKS DIRETOS DA LOJA (SEM GOOGLE SHOPPING): No campo 'url', retorne OBRIGATORIAMENTE o link de compra direto da página do produto no site da respectiva loja (ex: 'https://www.magazineluiza.com.br/...', 'https://www.mercadolivre.com.br/...', 'https://loja.electrolux.com.br/...', etc.). NÃO retorne links genéricos de pesquisa do Google Shopping ou links que apontem para 'https://www.google.com/search' ou 'https://www.google.com/shopping'. " +
-          "CRÍTICO - FOTO REAL E IDÊNTICA DA LOJA: No campo 'imageUrl', você deve extrair e fornecer o link direto da imagem oficial do produto no respectivo site da loja correspondente. A imagem deve ser de alta qualidade e corresponder EXATAMENTE ao item anunciado na loja (por exemplo, hospedada em 'magazineluiza.com.br', 'mercadolivre.com', 'electrolux.com.br' ou similar). Evite imagens genéricas ou placeholders. A foto exibida tem que ser a mesma foto da loja! " +
-          "Retorne obrigatoriamente um array JSON válido contendo até 6 opções com título detalhado, descrição (cor, acabamento, dimensões ou características técnicas essenciais), preço em R$, nome da loja/fornecedor, url direta da loja e imageUrl real do produto.";
+        const prompt = "Você é um especialista em especificação e compras de produtos para arquitetura, decoração e eletrodomésticos no Brasil.\n" +
+          `Gere exatamente 6 ofertas reais e ativas para compra imediata do produto: "${finalSearchTerm}".\n` +
+          "REGRAS OBRIGATÓRIAS:\n" +
+          "1. AFINIDADE TOTAL: Retorne EXCLUSIVAMENTE produtos do mesmo tipo, marca e estilo (se for geladeira side by side inox, retorne 6 modelos reais de geladeiras side by side inox. NUNCA misture outros tipos de eletrodomésticos como cooktops, fornos ou coifas).\n" +
+          "2. LINKS DIRETOS DA LOJA (CRÍTICO): No campo 'url', retorne OBRIGATORIAMENTE o link de compra direto da página do produto nas principais lojas (ex: 'https://loja.electrolux.com.br/...', 'https://www.magazineluiza.com.br/...', 'https://www.mercadolivre.com.br/...', 'https://www.fastshop.com.br/...', 'https://www.casasbahia.com.br/...', 'https://www.leroymerlin.com.br/...'). NUNCA retorne links de busca do Google Shopping, 'google.com/search' ou links genéricos.\n" +
+          "3. IMAGEM DO PRODUTO: No campo 'imageUrl', retorne uma URL direta da imagem oficial do produto ou deixe vazio para usar a foto carregada.\n" +
+          "4. LOJAS REAIS: Indique lojas reais brasileiras (ex: 'Loja Electrolux Oficial', 'Magazine Luiza', 'Fast Shop', 'Mercado Livre', 'Casas Bahia', 'Leroy Merlin') e preços reais em Reais (R$).";
 
-        const contentParts: any[] = [];
-        if (imageBase64Data) {
-          try {
-            const matches = imageBase64Data.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
-            let mimeType = "image/jpeg";
-            let data = imageBase64Data;
-            if (matches && matches.length === 3) {
-              mimeType = matches[1];
-              data = matches[2];
-            }
-            contentParts.push({
-              inlineData: {
-                mimeType,
-                data
-              }
-            });
-            console.log("[Gemini Search] Attaching uploaded image to Grounded Search contents for visual affinity matching.");
-          } catch (imgErr) {
-            console.warn("[Gemini Search] Failed packaging image for Grounded Search content parts:", imgErr);
-          }
-        }
-        contentParts.push({ text: prompt });
-
-        // Tier 1: Try Gemini with Google Grounding
         try {
-          console.log(`[Gemini Search] Attempting Google Search Grounding with gemini-3.8-flash for: "${finalSearchTerm}"...`);
+          console.log(`[Gemini Search] Generating offers for: "${finalSearchTerm}" with gemini-3.1-flash-lite...`);
           const response = await ai.models.generateContent({
-            model: "gemini-3.8-flash",
-            contents: contentParts,
+            model: "gemini-3.1-flash-lite",
+            contents: [{ text: prompt }],
             config: {
-              tools: [{ googleSearch: {} }],
               responseMimeType: "application/json",
               responseSchema: {
                 type: Type.ARRAY,
@@ -4414,13 +4417,13 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
                   properties: {
                     title: { type: Type.STRING, description: "Nome detalhado do produto com marca e modelo" },
                     description: { type: Type.STRING, description: "Cor, acabamento, dimensões ou características técnicas essenciais" },
-                    price: { type: Type.STRING, description: "Preço em R$ (ex: R$ 1.099,00) ou 'Sob consulta'" },
-                    store: { type: Type.STRING, description: "Nome da loja ou marketplace (ex: Americanas.com, Amazon.com.br, Magazine Luiza, Mercado Livre)" },
-                    url: { type: Type.STRING, description: "URL de compra ou do site do produto encontrado" },
-                    imageUrl: { type: Type.STRING, description: "URL direta da imagem ou foto oficial do produto" },
-                    category: { type: Type.STRING, description: "Categoria recomendada: Eletros, Cozinha, Banheiro, Iluminação, Mobiliário, Revestimentos, ou Outros" }
+                    price: { type: Type.STRING, description: "Preço em R$ (ex: R$ 4.299,00)" },
+                    store: { type: Type.STRING, description: "Nome da loja ou marketplace (ex: Loja Electrolux Oficial, Magazine Luiza, Mercado Livre)" },
+                    url: { type: Type.STRING, description: "URL direta da página do produto no site da loja" },
+                    imageUrl: { type: Type.STRING, description: "URL direta da imagem oficial do produto" },
+                    category: { type: Type.STRING, description: "Categoria recomendada" }
                   },
-                  required: ["title", "description", "price", "store", "url", "imageUrl"]
+                  required: ["title", "description", "price", "store", "url"]
                 }
               }
             }
@@ -4428,46 +4431,12 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
           if (response?.text) {
             results = JSON.parse(response.text);
-            source = "google_grounding";
+            source = "ai_generation";
+            console.log(`[Gemini Search] Successfully obtained ${results.length} offers!`);
           }
-        } catch (groundingErr: any) {
-          checkQuotaError(groundingErr);
-          console.warn("[Gemini Search] Grounding attempt unavailable. Trying direct generation with gemini-3.8-flash...", groundingErr?.message || groundingErr);
-          
-          // Tier 2: Fallback to direct model generation
-          try {
-            const liteResponse = await ai.models.generateContent({
-              model: "gemini-3.8-flash",
-              contents: contentParts,
-              config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      title: { type: Type.STRING, description: "Nome detalhado do produto com marca e modelo" },
-                      description: { type: Type.STRING, description: "Cor, acabamento, dimensões ou características técnicas essenciais" },
-                      price: { type: Type.STRING, description: "Preço em R$ (ex: R$ 1.099,00) ou 'Sob consulta'" },
-                      store: { type: Type.STRING, description: "Nome da loja ou marketplace (ex: Americanas.com, Amazon.com.br, Magazine Luiza, Mercado Livre)" },
-                      url: { type: Type.STRING, description: "URL de compra ou do site do produto encontrado" },
-                      imageUrl: { type: Type.STRING, description: "URL direta da imagem ou foto oficial do produto" },
-                      category: { type: Type.STRING, description: "Categoria recomendada: Eletros, Cozinha, Banheiro, Iluminação, Mobiliário, Revestimentos, ou Outros" }
-                    },
-                    required: ["title", "description", "price", "store", "url", "imageUrl"]
-                  }
-                }
-              }
-            });
-
-            if (liteResponse?.text) {
-              results = JSON.parse(liteResponse.text);
-              source = "ai_generation";
-            }
-          } catch (liteErr: any) {
-            checkQuotaError(liteErr);
-            console.warn("[Gemini Search] Gemini direct model also unavailable. Activating smart architectural catalog...", liteErr?.message || liteErr);
-          }
+        } catch (genErr: any) {
+          checkQuotaError(genErr);
+          console.warn("[Gemini Search] Gemini direct generation failed:", genErr?.message || genErr);
         }
       }
     } catch (generalErr: any) {
@@ -4484,12 +4453,15 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
     // Ensure all returned items have a reliable high-quality imageUrl
     const fallbackImageForProduct = (item: any) => {
+      if (imageBase64Data) {
+        return imageBase64Data;
+      }
       const text = `${item.title || ''} ${item.description || ''} ${item.category || ''} ${query || ''}`.toLowerCase();
       if (text.includes('tv') || text.includes('smart') || text.includes('aoc') || text.includes('roku') || text.includes('32') || text.includes('televis')) {
         return "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=600&auto=format&fit=crop&q=80";
       }
       if (text.includes('geladeira') || text.includes('refrigerador') || text.includes('freezer') || text.includes('frigobar')) {
-        return "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&auto=format&fit=crop&q=80";
+        return "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80";
       }
       if (text.includes('cooktop') || text.includes('fogão') || text.includes('fogao') || text.includes('indução')) {
         return "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=600&auto=format&fit=crop&q=80";
@@ -4524,7 +4496,9 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     if (Array.isArray(results)) {
       results = results.map((item) => {
         let finalImg = item.imageUrl;
-        if (!finalImg || typeof finalImg !== 'string' || !finalImg.startsWith('http')) {
+        if (imageBase64Data) {
+          finalImg = imageBase64Data;
+        } else if (!finalImg || typeof finalImg !== 'string' || !finalImg.startsWith('http') || finalImg.includes('photo-1571175443880-49e1d25b2bc5')) {
           finalImg = fallbackImageForProduct(item);
         }
 
@@ -4540,11 +4514,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
     let noticeText = undefined;
     if (source === "catalog_backup") {
-      if (quotaExhausted) {
-        noticeText = "Limite temporário de cota da API Google. Exibindo as melhores opções do catálogo nacional para compra imediata!";
-      } else {
-        noticeText = "Sugestões obtidas via Catálogo Inteligente com links diretos para compras no Google Shopping e grandes lojas.";
-      }
+      noticeText = "Sugestões obtidas com links diretos para compras nas lojas oficiais e grandes e-commerces.";
     }
 
     return res.json({

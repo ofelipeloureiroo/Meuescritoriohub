@@ -536,8 +536,13 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
 
     // Ensure link is active and valid
     let finalUrl = option.url || '';
-    if (!finalUrl || finalUrl.includes('mercadolivre.com.br/busca/')) {
-      finalUrl = `https://www.google.com/search?q=${encodeURIComponent(option.title || searchQueryIA || 'produto')}&tbm=shop`;
+    if (!finalUrl || finalUrl.includes('google.com/search') || finalUrl.includes('tbm=shop') || finalUrl.includes('mercadolivre.com.br/busca/')) {
+      const cleanT = (option.title || searchQueryIA || 'produto').trim();
+      if (cleanT.toLowerCase().includes('electrolux')) {
+        finalUrl = `https://loja.electrolux.com.br/busca?q=${encodeURIComponent(cleanT)}`;
+      } else {
+        finalUrl = `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanT.replace(/\s+/g, '+'))}/`;
+      }
     }
     setFormUrl(finalUrl);
 
@@ -1323,24 +1328,24 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                         <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-zinc-100 flex-wrap">
                           <div className="flex items-center gap-1">
                             <a
-                              href={opt.url || `https://www.google.com/search?q=${encodeURIComponent(opt.title)}&tbm=shop`}
+                              href={opt.url || (opt.title?.toLowerCase().includes('electrolux') ? `https://loja.electrolux.com.br/busca?q=${encodeURIComponent(opt.title)}` : `https://www.magazineluiza.com.br/busca/${encodeURIComponent((opt.title || 'produto').replace(/\s+/g, '+'))}/`)}
                               target="_blank"
                               rel="noreferrer"
                               className="px-2 py-1.5 rounded-lg text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center gap-1 transition-colors"
-                              title="Abrir página de compra no Google Shopping"
+                              title="Abrir página de compra na loja oficial"
                             >
                               <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
-                              <span>Abrir Link</span>
+                              <span>Abrir Link da Loja</span>
                             </a>
                             <button
                               type="button"
                               onClick={() => {
-                                const targetUrl = opt.url || `https://www.google.com/search?q=${encodeURIComponent(opt.title)}&tbm=shop`;
+                                const targetUrl = opt.url || (opt.title?.toLowerCase().includes('electrolux') ? `https://loja.electrolux.com.br/busca?q=${encodeURIComponent(opt.title)}` : `https://www.magazineluiza.com.br/busca/${encodeURIComponent((opt.title || 'produto').replace(/\s+/g, '+'))}/`);
                                 navigator.clipboard.writeText(targetUrl);
-                                showToast("📋 Link de compra copiado!");
+                                showToast("📋 Link direto da loja copiado!");
                               }}
                               className="px-2 py-1.5 rounded-lg text-[11px] font-medium text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 transition-colors cursor-pointer"
-                              title="Copiar link do produto"
+                              title="Copiar link do produto na loja"
                             >
                               <Copy className="w-3.5 h-3.5 text-zinc-500" />
                               <span>Copiar</span>
@@ -1523,14 +1528,18 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                       <button
                         type="button"
                         onClick={() => {
-                          const shoppingUrl = `https://www.google.com/search?q=${encodeURIComponent(formTitle)}&tbm=shop`;
-                          setFormUrl(shoppingUrl);
-                          showToast("🔗 Link do Google Shopping gerado para o produto!");
+                          const cleanT = formTitle.trim();
+                          const isElx = cleanT.toLowerCase().includes('electrolux');
+                          const storeSearchUrl = isElx
+                            ? `https://loja.electrolux.com.br/busca?q=${encodeURIComponent(cleanT)}`
+                            : `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanT.replace(/\s+/g, '+'))}/`;
+                          setFormUrl(storeSearchUrl);
+                          showToast("🔗 Link da loja gerado para o produto!");
                         }}
                         className="text-[10px] text-[#8c7456] hover:underline font-bold cursor-pointer flex items-center gap-1"
                       >
                         <Search className="w-3 h-3" />
-                        <span>Gerar Link Google Shopping</span>
+                        <span>Gerar Link da Loja</span>
                       </button>
                     )}
                   </div>
@@ -1539,7 +1548,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                       type="url"
                       value={formUrl}
                       onChange={(e) => setFormUrl(e.target.value)}
-                      placeholder="Ex: https://www.google.com/search?q=Geladeira+Inox&tbm=shop"
+                      placeholder="Ex: https://loja.electrolux.com.br/... ou https://www.magazineluiza.com.br/..."
                       className="flex-1 px-3 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
                     />
                     {formUrl && (
