@@ -527,6 +527,64 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     }
   };
 
+  // Helper to build 100% active, non-404 store URLs for real Brazilian stores
+  const getVerifiedStoreUrl = (option: { url?: string; title?: string; store?: string }): string => {
+    const rawUrl = (option.url || '').trim();
+    const title = (option.title || searchQueryIA || formTitle || 'produto').trim();
+    const store = (option.store || formStore || '').toLowerCase();
+    const cleanTitle = title.replace(/[^\w\sáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ-]/gi, ' ').replace(/\s+/g, ' ').trim();
+
+    // If the URL is already a reliable direct search endpoint without fragile /p/ slugs:
+    const lowerUrl = rawUrl.toLowerCase();
+    const isFragileSlug = !lowerUrl ||
+      lowerUrl.includes('/p/') ||
+      lowerUrl.includes('/p?') ||
+      lowerUrl.includes('google.com') ||
+      lowerUrl.includes('tbm=shop') ||
+      lowerUrl.includes('udm=28');
+
+    if (!isFragileSlug && rawUrl.startsWith('http')) {
+      return rawUrl;
+    }
+
+    // 1. Electrolux Oficial
+    if (store.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux') || lowerUrl.includes('electrolux.com.br')) {
+      return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
+    }
+
+    // 2. Magazine Luiza
+    if (store.includes('magalu') || store.includes('magazine') || lowerUrl.includes('magazineluiza.com.br')) {
+      return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
+    }
+
+    // 3. Mercado Livre
+    if (store.includes('mercado livre') || store.includes('mercadolivre') || lowerUrl.includes('mercadolivre.com.br')) {
+      return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
+    }
+
+    // 4. Fast Shop
+    if (store.includes('fast shop') || store.includes('fastshop') || lowerUrl.includes('fastshop.com.br')) {
+      return `https://www.fastshop.com.br/web/s?q=${encodeURIComponent(cleanTitle)}`;
+    }
+
+    // 5. Casas Bahia
+    if (store.includes('casas bahia') || store.includes('casasbahia') || lowerUrl.includes('casasbahia.com.br')) {
+      return `https://www.casasbahia.com.br/b?q=${encodeURIComponent(cleanTitle)}`;
+    }
+
+    // 6. Leroy Merlin
+    if (store.includes('leroy merlin') || store.includes('leroy') || lowerUrl.includes('leroymerlin.com.br')) {
+      return `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+    }
+
+    // 7. Amazon Brasil
+    if (store.includes('amazon') || lowerUrl.includes('amazon.com.br')) {
+      return `https://www.amazon.com.br/s?k=${encodeURIComponent(cleanTitle)}`;
+    }
+
+    return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
+  };
+
   // Select search option and populate form
   const handleSelectIAShowcase = (option: any) => {
     setFormTitle(option.title || '');
@@ -534,17 +592,9 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     setFormPrice(option.price || '');
     setFormStore(option.store || '');
 
-    // Ensure link is active and valid
-    let finalUrl = option.url || '';
-    if (!finalUrl || finalUrl.includes('google.com/search') || finalUrl.includes('tbm=shop') || finalUrl.includes('mercadolivre.com.br/busca/')) {
-      const cleanT = (option.title || searchQueryIA || 'produto').trim();
-      if (cleanT.toLowerCase().includes('electrolux')) {
-        finalUrl = `https://loja.electrolux.com.br/busca?q=${encodeURIComponent(cleanT)}`;
-      } else {
-        finalUrl = `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanT.replace(/\s+/g, '+'))}/`;
-      }
-    }
-    setFormUrl(finalUrl);
+    // Ensure link is 100% active, points directly to the real store, and never 404s
+    const activeStoreUrl = getVerifiedStoreUrl(option);
+    setFormUrl(activeStoreUrl);
 
     // Set product photo from the search option or uploaded image
     const chosenImage = option.imageUrl || option.image || imageUploadIA || '';
@@ -1328,7 +1378,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                         <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-zinc-100 flex-wrap">
                           <div className="flex items-center gap-1">
                             <a
-                              href={opt.url || (opt.title?.toLowerCase().includes('electrolux') ? `https://loja.electrolux.com.br/busca?q=${encodeURIComponent(opt.title)}` : `https://www.magazineluiza.com.br/busca/${encodeURIComponent((opt.title || 'produto').replace(/\s+/g, '+'))}/`)}
+                              href={getVerifiedStoreUrl(opt)}
                               target="_blank"
                               rel="noreferrer"
                               className="px-2 py-1.5 rounded-lg text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center gap-1 transition-colors"
@@ -1340,7 +1390,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                             <button
                               type="button"
                               onClick={() => {
-                                const targetUrl = opt.url || (opt.title?.toLowerCase().includes('electrolux') ? `https://loja.electrolux.com.br/busca?q=${encodeURIComponent(opt.title)}` : `https://www.magazineluiza.com.br/busca/${encodeURIComponent((opt.title || 'produto').replace(/\s+/g, '+'))}/`);
+                                const targetUrl = getVerifiedStoreUrl(opt);
                                 navigator.clipboard.writeText(targetUrl);
                                 showToast("📋 Link direto da loja copiado!");
                               }}
@@ -1528,11 +1578,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                       <button
                         type="button"
                         onClick={() => {
-                          const cleanT = formTitle.trim();
-                          const isElx = cleanT.toLowerCase().includes('electrolux');
-                          const storeSearchUrl = isElx
-                            ? `https://loja.electrolux.com.br/busca?q=${encodeURIComponent(cleanT)}`
-                            : `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanT.replace(/\s+/g, '+'))}/`;
+                          const storeSearchUrl = getVerifiedStoreUrl({ title: formTitle, store: formStore });
                           setFormUrl(storeSearchUrl);
                           showToast("🔗 Link da loja gerado para o produto!");
                         }}

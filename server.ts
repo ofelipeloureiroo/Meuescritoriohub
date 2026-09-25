@@ -3641,7 +3641,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Design premium Side-by-Side em acabamento Inox Look escovado, tecnologia Inverter econômica e prateleiras ajustáveis FastAdapt.",
           price: "R$ 4.299,00",
           store: "Loja Electrolux Oficial",
-          url: "https://loja.electrolux.com.br/geladeira-electrolux-frost-free-side-by-side-435l-efficient-is4s/p",
+          url: "https://loja.electrolux.com.br/busca?ft=geladeira+electrolux+side+by+side+is4s",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
@@ -3650,7 +3650,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Tecnologia Inverter econômica, controle de temperatura externo e painel digital intuitivo.",
           price: "R$ 4.084,05",
           store: "Magazine Luiza",
-          url: "https://www.magazineluiza.com.br/geladeira-refrigerador-electrolux-frost-free-side-by-side-435l-is4s-inox/p/237466800/ed/refr/",
+          url: "https://www.magazineluiza.com.br/busca/geladeira+electrolux+side+by+side+is4s/",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
@@ -3659,7 +3659,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Tecnologia AutoSense que prolonga a vida dos alimentos por até 30% mais tempo, inteligência artificial que aprende sua rotina.",
           price: "R$ 4.799,00",
           store: "Fast Shop",
-          url: "https://www.fastshop.com.br/web/p/d/EXIS4S_PRD/geladeira-electrolux-side-by-side-frost-free-435l-inox-look-is4s",
+          url: "https://www.fastshop.com.br/web/s?q=geladeira+electrolux+side+by+side+is4s",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
@@ -3668,7 +3668,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Mesa de controle sensível ao toque, dispensing interno, gavetas duplas de frutas e legumes, motor inverter de alta eficiência.",
           price: "R$ 4.299,00",
           store: "Mercado Livre Oficial",
-          url: "https://www.mercadolivre.com.br/geladeira-refrigerador-side-by-side-electrolux-is4s-435l-inox-127v/p/MLB28475839",
+          url: "https://lista.mercadolivre.com.br/geladeira-electrolux-side-by-side-is4s",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
@@ -3677,7 +3677,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Ampla capacidade interna com prateleiras de vidro temperado e iluminação LED em toda a cavidade.",
           price: "R$ 6.499,00",
           store: "Casas Bahia",
-          url: "https://www.casasbahia.com.br/geladeira-electrolux-frost-free-side-by-side-435l-efficient-is4s-1563539209/p/1563539209",
+          url: "https://www.casasbahia.com.br/b?q=geladeira+electrolux+side+by+side+is4s",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         },
@@ -3686,7 +3686,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           description: "Economia de energia com tecnologia de refrigeração inteligente e acabamento escovado premium.",
           price: "R$ 4.399,00",
           store: "Leroy Merlin",
-          url: "https://www.leroymerlin.com.br/geladeira-side-by-side-electrolux-435l-inox-is4s_1568294992",
+          url: "https://www.leroymerlin.com.br/busca?q=geladeira+electrolux+side+by+side",
           imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80",
           category: "Eletros"
         }
@@ -4274,38 +4274,69 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       }
     }
 
-    // Helper to ensure search links are always valid and point directly to real store websites, never to Google Shopping
-    const sanitizeProductUrl = (rawUrl: string, itemTitle: string): string => {
-      const cleanTitle = (itemTitle || 'produto').trim();
-      const encodedTitle = encodeURIComponent(cleanTitle);
+    // Helper to ensure search links are always valid and point directly to real store websites, never to Google Shopping or 404 dead slugs
+    const sanitizeProductUrl = (rawUrl: string, itemTitle: string, storeName?: string): string => {
+      const cleanTitle = (itemTitle || 'produto')
+        .replace(/[^\w\sáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ-]/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const lowerStore = (storeName || '').toLowerCase();
+      const lowerTitle = cleanTitle.toLowerCase();
+      const lowerUrl = (rawUrl || '').toLowerCase();
 
-      if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.startsWith('http')) {
-        if (cleanTitle.toLowerCase().includes('electrolux')) {
-          return `https://loja.electrolux.com.br/busca?q=${encodedTitle}`;
-        }
+      // If it's a dead/fake product path (/p/, /p/237..., /p/MLB...) or Google search or missing:
+      const isFragileSlug = !lowerUrl ||
+        lowerUrl.includes('/p/') ||
+        lowerUrl.includes('/p?') ||
+        lowerUrl.includes('google.com') ||
+        lowerUrl.includes('tbm=shop') ||
+        lowerUrl.includes('udm=28');
+
+      // 1. Electrolux
+      if (lowerStore.includes('electrolux') || lowerUrl.includes('electrolux.com.br')) {
+        return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
+      }
+
+      // 2. Magazine Luiza
+      if (lowerStore.includes('magalu') || lowerStore.includes('magazine') || lowerUrl.includes('magazineluiza.com.br')) {
         return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
       }
 
-      // Strictly prohibit Google Shopping and Google Search URLs - convert them to direct store search!
-      if (
-        rawUrl.includes('google.com/search') ||
-        rawUrl.includes('google.com.br/search') ||
-        rawUrl.includes('tbm=shop') ||
-        rawUrl.includes('udm=28') ||
-        rawUrl.includes('google.com/shopping')
-      ) {
-        if (cleanTitle.toLowerCase().includes('electrolux')) {
-          return `https://loja.electrolux.com.br/busca?q=${encodedTitle}`;
-        }
-        return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
-      }
-
-      // Fix Mercado Livre search URLs (/busca/...) which return 404
-      if (rawUrl.includes('mercadolivre.com.br/busca/') || rawUrl.includes('mercadolivre.com.br/busca?')) {
+      // 3. Mercado Livre
+      if (lowerStore.includes('mercado livre') || lowerStore.includes('mercadolivre') || lowerUrl.includes('mercadolivre.com.br')) {
         return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
       }
 
-      return rawUrl;
+      // 4. Fast Shop
+      if (lowerStore.includes('fast shop') || lowerStore.includes('fastshop') || lowerUrl.includes('fastshop.com.br')) {
+        return `https://www.fastshop.com.br/web/s?q=${encodeURIComponent(cleanTitle)}`;
+      }
+
+      // 5. Casas Bahia
+      if (lowerStore.includes('casas bahia') || lowerStore.includes('casasbahia') || lowerUrl.includes('casasbahia.com.br')) {
+        return `https://www.casasbahia.com.br/b?q=${encodeURIComponent(cleanTitle)}`;
+      }
+
+      // 6. Leroy Merlin
+      if (lowerStore.includes('leroy merlin') || lowerStore.includes('leroy') || lowerUrl.includes('leroymerlin.com.br')) {
+        return `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+      }
+
+      // 7. Amazon Brasil
+      if (lowerStore.includes('amazon') || lowerUrl.includes('amazon.com.br')) {
+        return `https://www.amazon.com.br/s?k=${encodeURIComponent(cleanTitle)}`;
+      }
+
+      // If title specifically mentions Electrolux
+      if (lowerTitle.includes('electrolux')) {
+        return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
+      }
+
+      if (!isFragileSlug && rawUrl.startsWith('http')) {
+        return rawUrl;
+      }
+
+      return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
     };
 
     // If query is empty, try extracting a hint from the uploaded image's file name (e.g. geladeira-electrolux.jpg)
@@ -4502,7 +4533,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           finalImg = fallbackImageForProduct(item);
         }
 
-        const finalUrl = sanitizeProductUrl(item.url, item.title || extractedQuery || formProductName || 'produto');
+        const finalUrl = sanitizeProductUrl(item.url, item.title || extractedQuery || formProductName || 'produto', item.store);
 
         return {
           ...item,
