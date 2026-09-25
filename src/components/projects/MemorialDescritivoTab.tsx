@@ -449,9 +449,9 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
   };
 
   // Auto-search and identify product with Gemini API when image is provided or query searched
-  const triggerAISearchWithData = async (base64Img?: string, fileName?: string, textQuery?: string) => {
+  const triggerAISearchWithData = async (base64Img?: string, fileName?: string, textQuery?: string, isNewImageUpload?: boolean) => {
     const activeImg = base64Img || imageUploadIA;
-    const activeQuery = textQuery !== undefined ? textQuery : searchQueryIA;
+    const activeQuery = isNewImageUpload ? '' : (textQuery !== undefined ? textQuery : searchQueryIA);
 
     if (!activeQuery && !activeImg) {
       setSearchErrorIA('Por favor, faça upload de uma foto ou digite o nome do produto.');
@@ -470,11 +470,11 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          query: activeQuery,
+          query: isNewImageUpload ? '' : activeQuery,
           imageBase64: activeImg,
           imageFileName: fileName || imageFileNameIA,
-          category: formCategory,
-          formProductName: formTitle
+          category: isNewImageUpload ? '' : formCategory,
+          formProductName: isNewImageUpload ? '' : formTitle
         })
       });
 
@@ -511,13 +511,23 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
       setImageFileNameIA(file.name || '');
+      // Clear previous product data to avoid keeping old product name/specs!
+      setSearchQueryIA('');
+      setFormTitle('');
+      setFormDescription('');
+      setFormPrice('');
+      setFormStore('');
+      setFormUrl('');
+      setSearchResultsIA([]);
+      setSearchErrorIA('');
+      setSearchNoticeIA('');
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') {
           const base64 = reader.result;
           setImageUploadIA(base64);
           setFormImageBase64(base64);
-          triggerAISearchWithData(base64, file.name);
+          triggerAISearchWithData(base64, file.name, '', true);
         }
       };
       reader.readAsDataURL(file);
@@ -529,13 +539,23 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     const file = e.target.files?.[0];
     if (file) {
       setImageFileNameIA(file.name || '');
+      // Clear previous product data to avoid keeping old product name/specs!
+      setSearchQueryIA('');
+      setFormTitle('');
+      setFormDescription('');
+      setFormPrice('');
+      setFormStore('');
+      setFormUrl('');
+      setSearchResultsIA([]);
+      setSearchErrorIA('');
+      setSearchNoticeIA('');
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') {
           const base64 = reader.result;
           setImageUploadIA(base64);
           setFormImageBase64(base64);
-          triggerAISearchWithData(base64, file.name);
+          triggerAISearchWithData(base64, file.name, '', true);
         }
       };
       reader.readAsDataURL(file);
@@ -544,10 +564,10 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
 
   // Search product with Gemini API manually
   const handleAISearch = async () => {
-    await triggerAISearchWithData(imageUploadIA, imageFileNameIA, searchQueryIA);
+    await triggerAISearchWithData(imageUploadIA, imageFileNameIA, searchQueryIA, false);
   };
 
-  // Helper to get verified direct store product purchase URLs that never 404
+  // Helper to get verified direct store product purchase URLs (keeps direct buy page and avoids search results)
   const getVerifiedStoreUrl = (option: { url?: string; title?: string; store?: string }): string => {
     const rawUrl = (option.url || '').trim();
     const title = (option.title || searchQueryIA || formTitle || 'produto').trim();
@@ -555,38 +575,22 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     const cleanTitle = title.replace(/[^\w\sáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ-]/gi, ' ').replace(/\s+/g, ' ').trim();
     const lowerUrl = rawUrl.toLowerCase();
 
-    // Check if the URL is broken or fake
-    const isBrokenOrFake = !rawUrl ||
-      lowerUrl.includes('google.com') ||
+    // Check if URL is already a valid store product page (starts with http and is not a google search)
+    const isGoogleSearchUrl = !rawUrl ||
+      lowerUrl.includes('google.com/search') ||
+      lowerUrl.includes('google.com.br/search') ||
       lowerUrl.includes('tbm=shop') ||
-      lowerUrl.includes('udm=28') ||
-      lowerUrl.includes('linha-profissional') ||
-      lowerUrl.includes('prime-original') ||
-      lowerUrl.includes('alta-performance') ||
-      lowerUrl.includes('studio-design') ||
-      lowerUrl.includes('garantia-fabrica') ||
-      lowerUrl.includes('239841200') ||
-      lowerUrl.includes('89123841') ||
-      lowerUrl.includes('81zly1z') ||
-      lowerUrl.includes('sy300') ||
-      lowerUrl.includes('sx300') ||
-      lowerUrl.includes('ql70');
+      lowerUrl.includes('udm=28');
 
-    if (!isBrokenOrFake && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
-      if (
-        lowerUrl.includes('lista.mercadolivre.com.br') ||
-        lowerUrl.includes('magazineluiza.com.br/busca') ||
-        lowerUrl.includes('amazon.com.br/s') ||
-        lowerUrl.includes('casasbahia.com.br/b') ||
-        lowerUrl.includes('buscape.com.br/search') ||
-        lowerUrl.includes('leroymerlin.com.br/busca') ||
-        lowerUrl.includes('loja.electrolux.com.br/busca')
-      ) {
-        return rawUrl;
-      }
+    if (!isGoogleSearchUrl && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
+      // Return direct product buy page as-is!
+      return rawUrl;
     }
 
-    // Direct search links for Brazilian stores
+    // Direct store fallback when URL was missing:
+    if (store.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux')) {
+      return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
+    }
     if (store.includes('mercado livre') || store.includes('mercadolivre')) {
       return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
     }
@@ -598,9 +602,6 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     }
     if (store.includes('casas bahia') || store.includes('casasbahia')) {
       return `https://www.casasbahia.com.br/b?q=${encodeURIComponent(cleanTitle)}`;
-    }
-    if (store.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux')) {
-      return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
     }
     if (store.includes('leroy merlin') || store.includes('leroy')) {
       return `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
@@ -1301,11 +1302,11 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                  className={`border-2 border-dashed rounded-xl p-3 text-center transition-all ${
                     isDragging
                       ? 'border-[#8c7456] bg-[#faf7f2]'
                       : imageUploadIA
-                      ? 'border-emerald-300 bg-emerald-50/30'
+                      ? 'border-emerald-300 bg-emerald-50/20'
                       : 'border-zinc-300 bg-white hover:border-zinc-400'
                   }`}
                 >
@@ -1316,24 +1317,48 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                     onChange={handleImageChange}
                     className="hidden"
                   />
-                  <label htmlFor="product-photo-upload" className="cursor-pointer block space-y-2">
-                    {imageUploadIA ? (
-                      <div className="space-y-2">
+                  {imageUploadIA ? (
+                    <div className="space-y-2">
+                      <div className="relative inline-block">
                         <img
                           src={imageUploadIA}
                           alt="Produto carregado"
-                          className="max-h-24 mx-auto rounded-lg object-contain border border-zinc-200"
+                          className="max-h-24 mx-auto rounded-lg object-contain border border-zinc-200 bg-white shadow-xs"
                         />
-                        <span className="text-[11px] text-emerald-600 font-bold block">✓ Foto do produto carregada</span>
                       </div>
-                    ) : (
-                      <div className="space-y-1.5 py-1">
-                        <Upload className="w-6 h-6 text-zinc-400 mx-auto" />
-                        <span className="text-xs text-zinc-600 block font-semibold">Arraste a foto do produto ou clique</span>
-                        <span className="text-[10px] text-zinc-400 block">Formatos aceitos: JPG, PNG, WEBP</span>
+                      <div className="flex items-center justify-center gap-2">
+                        <label
+                          htmlFor="product-photo-upload"
+                          className="text-[11px] font-bold text-[#8c7456] hover:underline cursor-pointer"
+                        >
+                          Trocar Foto
+                        </label>
+                        <span className="text-zinc-300 text-xs">•</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImageUploadIA('');
+                            setImageFileNameIA('');
+                            setFormImageBase64('');
+                            setSearchQueryIA('');
+                            setSearchResultsIA([]);
+                            setSearchNoticeIA('');
+                            setSearchErrorIA('');
+                          }}
+                          className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer"
+                        >
+                          Remover
+                        </button>
                       </div>
-                    )}
-                  </label>
+                      <span className="text-[10px] text-emerald-700 font-bold block">✓ Imagem carregada e analisada</span>
+                    </div>
+                  ) : (
+                    <label htmlFor="product-photo-upload" className="cursor-pointer block space-y-1.5 py-1">
+                      <Upload className="w-6 h-6 text-zinc-400 mx-auto" />
+                      <span className="text-xs text-zinc-600 block font-semibold">Arraste a foto do produto ou clique</span>
+                      <span className="text-[10px] text-zinc-400 block">Identificação e busca automática de preços</span>
+                    </label>
+                  )}
                 </div>
 
                 {/* Search Text input */}

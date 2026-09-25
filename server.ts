@@ -4734,38 +4734,22 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       const lowerStore = (storeName || '').toLowerCase();
       const lowerUrl = (rawUrl || '').trim().toLowerCase();
 
-      // Detect broken or fake URL patterns that 404 on e-commerce stores
-      const isFakeOrBroken = !rawUrl ||
-        lowerUrl.includes('google.com') ||
+      // Detect broken or fake Google Shopping search URLs
+      const isGoogleSearchUrl = !rawUrl ||
+        lowerUrl.includes('google.com/search') ||
+        lowerUrl.includes('google.com.br/search') ||
         lowerUrl.includes('tbm=shop') ||
-        lowerUrl.includes('udm=28') ||
-        lowerUrl.includes('linha-profissional') ||
-        lowerUrl.includes('prime-original') ||
-        lowerUrl.includes('alta-performance') ||
-        lowerUrl.includes('studio-design') ||
-        lowerUrl.includes('garantia-fabrica') ||
-        lowerUrl.includes('239841200') ||
-        lowerUrl.includes('89123841') ||
-        lowerUrl.includes('81zly1z') ||
-        lowerUrl.includes('sy300') ||
-        lowerUrl.includes('sx300') ||
-        lowerUrl.includes('ql70');
+        lowerUrl.includes('udm=28');
 
-      if (!isFakeOrBroken && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
-        if (
-          lowerUrl.includes('lista.mercadolivre.com.br') ||
-          lowerUrl.includes('magazineluiza.com.br/busca') ||
-          lowerUrl.includes('amazon.com.br/s') ||
-          lowerUrl.includes('casasbahia.com.br/b') ||
-          lowerUrl.includes('buscape.com.br/search') ||
-          lowerUrl.includes('leroymerlin.com.br/busca') ||
-          lowerUrl.includes('loja.electrolux.com.br/busca')
-        ) {
-          return rawUrl.trim();
-        }
+      // If it is a real direct store product page or verified URL, preserve it 100%!
+      if (!isGoogleSearchUrl && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
+        return rawUrl.trim();
       }
 
-      // Generate the official guaranteed live search listing on the target store
+      // Generate the official guaranteed live search listing on the target store if URL was missing or a google shopping search
+      if (lowerStore.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux')) {
+        return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
+      }
       if (lowerStore.includes('mercado livre') || lowerStore.includes('mercadolivre')) {
         return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
       }
@@ -4777,9 +4761,6 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       }
       if (lowerStore.includes('casas bahia') || lowerStore.includes('casasbahia')) {
         return `https://www.casasbahia.com.br/b?q=${encodeURIComponent(cleanTitle)}`;
-      }
-      if (lowerStore.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux')) {
-        return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
       }
       if (lowerStore.includes('leroy merlin') || lowerStore.includes('leroy')) {
         return `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
@@ -4904,13 +4885,14 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       }
 
       if (ai && finalSearchTerm) {
-        const prompt = "Você é um especialista em especificação e compras de produtos para arquitetura, decoração e eletrodomésticos no Brasil.\n" +
+        const prompt = "Você é um assistente sênior especialista em especificação e compras de produtos para arquitetura, decoração e eletrodomésticos no Brasil.\n" +
           `Gere exatamente 6 ofertas reais e atualizadas para compra imediata do produto: "${finalSearchTerm}".\n` +
           "REGRAS OBRIGATÓRIAS:\n" +
-          "1. AFINIDADE TOTAL: Retorne EXCLUSIVAMENTE produtos do mesmo tipo, marca e estilo (se for Smart TV 32\" Philco, retorne 6 opções reais de Smart TV 32\" Philco ou equivalentes da mesma categoria; se for geladeira, retorne 6 geladeiras; NUNCA misture categorias!).\n" +
-          "2. LOJAS REAIS: Distribua entre as principais lojas brasileiras: 'Mercado Livre Oficial', 'Magazine Luiza', 'Amazon Brasil', 'Casas Bahia', 'Buscapé Comparador', 'Loja Oficial da Marca' / 'Leroy Merlin'.\n" +
-          "3. PREÇOS REAIS: Indique os preços reais médios praticados no mercado brasileiro em Reais (R$).\n" +
-          "4. ESPECIFICAÇÕES: Inclua descrições técnicas claras com conexões, acabamento, voltagem e medidas.";
+          "1. AFINIDADE TOTAL: Retorne EXCLUSIVAMENTE produtos do mesmo tipo, marca e modelo (se for Smart TV 32\" Philco, retorne 6 opções de Smart TV 32\" Philco ou equivalentes da mesma categoria; se for geladeira, retorne 6 geladeiras; NUNCA misture categorias!).\n" +
+          "2. LINKS DIRETOS DA PÁGINA DO PRODUTO: No campo 'url', retorne o link da página do produto na loja para compra direta (ex: 'https://loja.electrolux.com.br/.../p', 'https://www.magazineluiza.com.br/.../p/...', 'https://www.mercadolivre.com.br/p/...', 'https://www.amazon.com.br/dp/...', 'https://www.casasbahia.com.br/.../p/...', 'https://www.leroymerlin.com.br/...').\n" +
+          "3. LOJAS REAIS: Distribua entre as principais lojas brasileiras: 'Mercado Livre Oficial', 'Magazine Luiza', 'Amazon Brasil', 'Casas Bahia', 'Loja Oficial da Marca' (ex: Electrolux, Philco, Deca, Samsung), 'Leroy Merlin'.\n" +
+          "4. PREÇOS REAIS: Indique os preços reais médios praticados no mercado brasileiro em Reais (R$).\n" +
+          "5. ESPECIFICAÇÕES: Inclua descrições técnicas claras com conexões, acabamento, voltagem e medidas.";
 
         const contents: any[] = [];
         if (imageBase64Data) {
