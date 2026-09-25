@@ -4718,12 +4718,13 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       return null;
     };
 
-    // Helper to test if a string is a meaningful product name (and NOT an image hash like "81zLY1z0j4L AC SY300 SX300 QL70 ML2")
+    // Helper to test if a string is a meaningful product name (and NOT an image hash)
     const isMeaningfulProductName = (str?: string): boolean => {
       if (!str || typeof str !== 'string') return false;
       const trimmed = str.trim();
       if (trimmed.length < 3) return false;
       if (/^81z[a-zA-Z0-9_-]+/i.test(trimmed)) return false;
+      if (/item\s*arquitet|produto\s*arquitet/i.test(trimmed)) return false;
       if (/SY300|SX300|QL70|ML2|IMG_\d+|Screenshot|Captura de tela|whatsapp|download/i.test(trimmed)) return false;
       const lettersCount = (trimmed.match(/[a-zA-ZáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]/g) || []).length;
       return lettersCount >= 3;
@@ -4734,98 +4735,64 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       extractedQuery = query.trim();
     }
 
-    // Detect if the query is actually an image URL pasted by the user
-    if (extractedQuery && (extractedQuery.startsWith("http://") || extractedQuery.startsWith("https://"))) {
+    // Helper to validate whether a URL is a real, live, direct product purchase page (and NOT a generic search page)
+    const validateDirectProductUrl = async (rawUrl?: string): Promise<boolean> => {
+      if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.startsWith('http')) return false;
+      const lower = rawUrl.toLowerCase();
+      
+      // Exclude generic search pages
+      if (
+        lower.includes('/busca') ||
+        lower.includes('/search') ||
+        lower.includes('?q=') ||
+        lower.includes('&q=') ||
+        lower.includes('?k=') ||
+        lower.includes('&k=') ||
+        lower.includes('lista.mercadolivre') ||
+        lower.includes('google.com') ||
+        lower.includes('example.com')
+      ) {
+        return false;
+      }
+
       try {
-        console.log("[Gemini Search] User pasted an image URL. Attempting to fetch it directly:", extractedQuery);
-        const imageResponse = await fetch(extractedQuery, {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const resp = await fetch(rawUrl, {
+          method: 'GET',
           headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-          }
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          },
+          signal: controller.signal,
+          redirect: 'follow'
         });
-        if (imageResponse.ok) {
-          const arrayBuffer = await imageResponse.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          const mimeType = imageResponse.headers.get("content-type") || "image/jpeg";
-          imageBase64Data = `data:${mimeType};base64,${buffer.toString("base64")}`;
-          extractedQuery = "";
-          console.log("[Gemini Search] Successfully fetched image from URL and converted to Base64.");
+        clearTimeout(timeoutId);
+
+        if (resp.status >= 200 && resp.status < 400) {
+          const finalUrl = (resp.url || '').toLowerCase();
+          if (
+            finalUrl.includes('/busca') ||
+            finalUrl.includes('/search') ||
+            finalUrl.includes('?q=') ||
+            finalUrl.includes('lista.mercadolivre')
+          ) {
+            return false;
+          }
+          return true;
         }
-      } catch (fetchErr: any) {
-        console.warn("[Gemini Search] Failed to fetch pasted image URL, falling back to treating it as search text.", fetchErr?.message || fetchErr);
+        return false;
+      } catch (err: any) {
+        return false;
       }
-    }
-
-    // Helper to ensure direct, working store product purchase links that NEVER 404
-    const sanitizeProductUrl = (rawUrl: string, itemTitle: string, storeName?: string): string => {
-      const cleanTitle = (itemTitle || extractedQuery || 'produto')
-        .replace(/[^\w\sáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ-]/gi, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      const lowerStore = (storeName || '').toLowerCase();
-      const encTitle = encodeURIComponent(cleanTitle);
-
-      // If rawUrl is already a real working store page on the brand website
-      if (rawUrl && typeof rawUrl === 'string' && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
-        const lUrl = rawUrl.toLowerCase();
-        if (
-          !lUrl.includes('google.com') &&
-          !lUrl.includes('example.com') &&
-          (lUrl.includes('.philco.com.br') ||
-           lUrl.includes('.electrolux.com.br') ||
-           lUrl.includes('.deca.com.br') ||
-           lUrl.includes('.docol.com.br') ||
-           lUrl.includes('.samsung.com') ||
-           lUrl.includes('.lg.com'))
-        ) {
-          return rawUrl.trim();
-        }
-      }
-
-      // Generate direct live purchase links on the target store:
-      if (lowerStore.includes('mercado livre') || lowerStore.includes('mercadolivre')) {
-        return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
-      }
-      if (lowerStore.includes('magalu') || lowerStore.includes('magazine')) {
-        return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
-      }
-      if (lowerStore.includes('amazon')) {
-        return `https://www.amazon.com.br/s?k=${encTitle}&i=aps`;
-      }
-      if (lowerStore.includes('casas bahia') || lowerStore.includes('casasbahia')) {
-        return `https://www.casasbahia.com.br/b?q=${encTitle}`;
-      }
-      if (lowerStore.includes('leroy merlin') || lowerStore.includes('leroy')) {
-        return `https://www.leroymerlin.com.br/busca?q=${encTitle}`;
-      }
-      if (lowerStore.includes('electrolux') || cleanTitle.toLowerCase().includes('electrolux')) {
-        return `https://loja.electrolux.com.br/busca?ft=${encTitle}`;
-      }
-      if (lowerStore.includes('philco') || cleanTitle.toLowerCase().includes('philco')) {
-        return `https://www.philco.com.br/busca?ft=${encTitle}`;
-      }
-      if (lowerStore.includes('mobly')) {
-        return `https://www.mobly.com.br/busca?q=${encTitle}`;
-      }
-      if (lowerStore.includes('madeira')) {
-        return `https://www.madeiramadeira.com.br/busca?q=${encTitle}`;
-      }
-      if (lowerStore.includes('telhanorte')) {
-        return `https://www.telhanorte.com.br/busca?q=${encTitle}`;
-      }
-      if (lowerStore.includes('buscapé') || lowerStore.includes('buscape')) {
-        return `https://www.buscape.com.br/search?q=${encTitle}`;
-      }
-
-      return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
     };
 
     try {
       const ai = getGeminiClient();
 
-      // Step 1: ALWAYS run Gemini Vision when an image is present to identify the exact product in the picture!
+      // Step 1: ALWAYS run Gemini Vision when an image is present to identify the exact product in the picture
       if (ai && imageBase64Data) {
-        const matches = imageBase64Data.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
+        const matches = imageBase64Data.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/s);
         let mimeType = "image/jpeg";
         let data = imageBase64Data;
         if (matches && matches.length === 3) {
@@ -4833,10 +4800,11 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           data = matches[2].replace(/\s+/g, '');
         }
 
-        console.log("[Gemini Search] Analyzing image with Gemini Vision...");
+        console.log(`[Gemini Search] Analyzing image with Gemini Vision (MIME: ${mimeType}, Size: ${data.length} chars)...`);
         const visionPrompt = {
           text: "Você é um especialista em especificação e compras de produtos para arquitetura, construção e decoração no Brasil.\n" +
             "Analise detalhadamente a foto do produto enviada. Identifique com exatidão a MARCA, TIPO DE PRODUTO, MODELO, TAMANHO/POLEGADAS/LITROS e ACABAMENTO comercial no Brasil.\n" +
+            "NUNCA use termos genéricos como 'Item Arquitetônico' ou 'Produto Não Identificado'. Se não tiver certeza razoável do produto, retorne o campo 'erro_identificacao': true.\n" +
             "Exemplos de identificação:\n" +
             "- 'Geladeira Electrolux Side by Side Inox 435L Frost Free'\n" +
             "- 'Smart TV 32\" Philco LED Roku TV'\n" +
@@ -4845,9 +4813,10 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
             "- 'Cuba de Apoio Banheiro Deca Slim Quadrada'\n" +
             "Retorne ESTRITAMENTE um objeto JSON no formato:\n" +
             "{\n" +
-            "  \"identifiedProduct\": \"Nome comercial limpo, preciso e oficial do produto com marca e especificações principais\",\n" +
+            "  \"identifiedProduct\": \"Nome comercial limpo, preciso e oficial do produto com marca e especificações\",\n" +
             "  \"category\": \"Categoria correspondente (Eletros, Móveis, Iluminação, Metais, Louças, Revestimentos, Marcenaria, Decoração ou Outros)\",\n" +
-            "  \"estimatedPrice\": \"Preço médio real de mercado em R$ (ex: R$ 4.199,00)\"\n" +
+            "  \"estimatedPrice\": \"Preço médio real de mercado em R$ (ex: R$ 4.199,00)\",\n" +
+            "  \"erro_identificacao\": false\n" +
             "}"
         };
 
@@ -4867,9 +4836,12 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
                 config: { responseMimeType: "application/json" }
               });
 
+              // Explicit log of RAW vision output before parser as requested
+              console.log("[Gemini Vision Raw Output]:", visionResponse?.text);
+
               if (visionResponse?.text) {
                 const parsed = extractJsonFromText(visionResponse.text);
-                if (parsed && parsed.identifiedProduct && isMeaningfulProductName(parsed.identifiedProduct)) {
+                if (parsed && !parsed.erro_identificacao && parsed.identifiedProduct && isMeaningfulProductName(parsed.identifiedProduct)) {
                   identifiedProduct = parsed.identifiedProduct.trim();
                   identifiedCategory = parsed.category || null;
                   estimatedPrice = parsed.estimatedPrice || null;
@@ -4886,87 +4858,155 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           }
           if (visionSuccess) break;
         }
+
+        // If an image was provided but could NOT be identified with confidence, return explicit error instead of generic hallucination!
+        if (!identifiedProduct || !isMeaningfulProductName(identifiedProduct)) {
+          console.warn("[Gemini Vision] Could not identify product from image with high confidence. Returning explicit identification error.");
+          return res.status(200).json({
+            error: "Não foi possível identificar o produto na foto com clareza. Por favor, envie uma foto mais nítida ou digite o nome do produto no campo de busca.",
+            erro_identificacao: true,
+            results: []
+          });
+        }
       }
 
-      // Step 2: Now generate real product purchasing options with guaranteed store links
+      // Step 2: Now generate real product purchasing options with Google Search Grounding Tool
       let finalSearchTerm = extractedQuery;
       if (!imageBase64Data && !isMeaningfulProductName(finalSearchTerm) && isMeaningfulProductName(formProductName)) {
         finalSearchTerm = formProductName.trim();
       }
+
       if (!isMeaningfulProductName(finalSearchTerm)) {
-        if (category === "Eletros") finalSearchTerm = "Geladeira Refrigerador Frost Free Inox";
-        else if (category) finalSearchTerm = `Item para ${category}`;
-        else finalSearchTerm = "Geladeira Refrigerador Side by Side Inox";
+        return res.status(200).json({
+          error: "Por favor, digite o nome do produto ou faça upload de uma foto para pesquisar.",
+          erro_identificacao: true,
+          results: []
+        });
       }
 
       if (ai && finalSearchTerm) {
-        const prompt = "Você é um assistente sênior especialista em especificação e compras de produtos para arquitetura, decoração e eletrodomésticos no Brasil.\n" +
-          `Gere exatamente 6 ofertas reais e atualizadas para compra imediata do produto: "${finalSearchTerm}".\n` +
-          "REGRAS OBRIGATÓRIAS:\n" +
-          `1. AFINIDADE TOTAL: Retorne EXCLUSIVAMENTE produtos do mesmo tipo, marca e modelo de "${finalSearchTerm}". NUNCA misture categorias!\n` +
-          "2. LOJAS REAIS: Distribua entre: 'Mercado Livre Oficial', 'Magazine Luiza', 'Amazon Brasil', 'Casas Bahia', 'Loja Oficial da Marca' (ex: Philco, Electrolux, Brastemp, Deca), 'Leroy Merlin'.\n" +
-          "3. PREÇOS REAIS: Indique os preços reais médios praticados no mercado brasileiro em Reais (ex: R$ 3.899,00).\n" +
-          "4. ESPECIFICAÇÕES: Inclua descrições técnicas claras com conexões, acabamento, voltagem e medidas.\n" +
-          "5. Retorne um array JSON com os 6 itens.";
+        // ==========================================
+        // CHAMADA 1 (Busca/Grounding, SEM schema)
+        // ==========================================
+        const searchPrompt = "Você é um assistente sênior especialista em compras de produtos no Brasil.\n" +
+          `Pesquise no Google onde comprar no Brasil o produto: "${finalSearchTerm}".\n` +
+          "Encontre e liste até 6 opções reais (pode ser menos se não houver fontes suficientes) nas principais lojas do Brasil (Mercado Livre Oficial, Magazine Luiza, Amazon Brasil, Casas Bahia, Leroy Merlin, Loja Oficial da Marca).\n" +
+          "REGRAS:\n" +
+          "1. Para cada opção, indique: Nome oficial completo do produto, Especificações técnicas principais (voltagem, acabamento, medidas), Preço médio real em R$, Nome da loja e a URL exata do produto encontrada na busca.\n" +
+          "2. SÓ inclua uma URL se ela for real e vier da busca. NUNCA invente ou monte URLs manualmente.\n" +
+          "3. Retorne a resposta em texto claro e detalhado.";
 
-        const contents: any[] = [];
-        if (imageBase64Data) {
-          const matches = imageBase64Data.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
-          if (matches && matches.length === 3) {
-            contents.push({
-              inlineData: {
-                mimeType: matches[1],
-                data: matches[2].replace(/\s+/g, '')
+        let step1RawText = "";
+        let usedGrounding = false;
+        let extractedGroundingChunks: Array<{ uri: string; title: string }> = [];
+
+        try {
+          console.log(`[CHAMADA 1 - Google Search Grounding] Executando busca livre para: "${finalSearchTerm}"...`);
+          const searchResponse = await ai.models.generateContent({
+            model: "gemini-3.8-flash",
+            contents: [{ text: searchPrompt }],
+            config: {
+              tools: [{ googleSearch: {} }]
+              // SEM responseMimeType e SEM responseSchema conforme especificado
+            }
+          });
+
+          step1RawText = searchResponse?.text || "";
+          usedGrounding = true;
+          console.log("[CHAMADA 1 Raw Text Length]:", step1RawText.length);
+
+          // Extrair os links e domínios reais de groundingChunks
+          const rawChunks = searchResponse?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+          if (Array.isArray(rawChunks)) {
+            for (const chunk of rawChunks) {
+              if (chunk?.web?.uri) {
+                extractedGroundingChunks.push({
+                  uri: chunk.web.uri,
+                  title: chunk.web.title || ""
+                });
               }
+            }
+          }
+
+          // Log explícito com a quantidade e valores de groundingChunks
+          console.log(`[Google Grounding Chunks Encontrados: ${extractedGroundingChunks.length}]`);
+          extractedGroundingChunks.forEach((c, idx) => {
+            console.log(`  Chunk #${idx + 1}: [${c.title}] -> ${c.uri}`);
+          });
+
+        } catch (groundingErr: any) {
+          console.warn("[CHAMADA 1] Grounding search fallback:", groundingErr?.message?.slice(0, 150));
+          try {
+            const fallbackSearch = await ai.models.generateContent({
+              model: "gemini-3.5-flash-lite",
+              contents: [{ text: searchPrompt }]
             });
+            step1RawText = fallbackSearch?.text || "";
+          } catch (fErr: any) {
+            console.warn("[CHAMADA 1 Fallback Error]:", fErr?.message?.slice(0, 150));
           }
         }
-        contents.push({ text: prompt });
 
-        const jsonSchema = {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING, description: "Nome detalhado e limpo do produto com marca e modelo oficial" },
-              description: { type: Type.STRING, description: "Especificações técnicas essenciais, voltagem, acabamento ou dimensões" },
-              price: { type: Type.STRING, description: "Preço real de mercado em R$ (ex: R$ 1.199,00)" },
-              store: { type: Type.STRING, description: "Nome da loja (Mercado Livre, Magazine Luiza, Amazon Brasil, Casas Bahia, Leroy Merlin, Buscapé)" },
-              url: { type: Type.STRING, description: "Link da loja" },
-              imageUrl: { type: Type.STRING, description: "URL da foto do produto" },
-              category: { type: Type.STRING, description: "Categoria recomendada" }
-            },
-            required: ["title", "description", "price", "store"]
+        // ==========================================
+        // CHAMADA 2 (Estruturação, SEM busca)
+        // ==========================================
+        if (step1RawText && step1RawText.trim().length > 0) {
+          const jsonSchema = {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING, description: "Nome detalhado e limpo do produto com marca e modelo oficial" },
+                description: { type: Type.STRING, description: "Especificações técnicas essenciais, voltagem, acabamento ou dimensões" },
+                price: { type: Type.STRING, description: "Preço real de mercado em R$ (ex: R$ 1.199,00)" },
+                store: { type: Type.STRING, description: "Nome da loja (Mercado Livre, Magazine Luiza, Amazon Brasil, Casas Bahia, Leroy Merlin, etc.)" },
+                url: { type: Type.STRING, description: "Link direto do produto vindo literalmente da lista de fontes reais ou vazio" },
+                category: { type: Type.STRING, description: "Categoria recomendada" }
+              },
+              required: ["title", "description", "price", "store"]
+            }
+          };
+
+          let groundingSourcesPrompt = "";
+          if (extractedGroundingChunks.length > 0) {
+            groundingSourcesPrompt = "\n\nLISTA DE FONTES REAIS E OFICIAIS ENCONTRADAS NA BUSCA DO GOOGLE:\n" +
+              extractedGroundingChunks.map((c, i) => `${i + 1}. [${c.title}] ${c.uri}`).join("\n") +
+              "\n\nINSTRUÇÃO OBRIGATÓRIA DE LINKS:\n" +
+              "No campo 'url', use APENAS um dos links da lista de FONTES REAIS acima, copiado exatamente como está, sem alterar nenhum caractere.\n" +
+              "Nunca invente ou monte uma URL diferente. Se não houver fonte real correspondente a alguma loja, deixe o campo 'url' vazio (\"\").";
+          } else {
+            groundingSourcesPrompt = "\n\nINSTRUÇÃO OBRIGATÓRIA DE LINKS:\n" +
+              "Não invente ou monte URLs manuais. Se não houver URL real fornecida no texto, deixe o campo 'url': \"\".";
           }
-        };
 
-        const genModels = ["gemini-3.5-flash-lite", "gemini-3.8-flash"];
-        let genSuccess = false;
+          const structuringPrompt = "Organize as informações abaixo neste schema JSON exato, sem alterar nenhuma URL, preço ou nome de produto:\n\n" +
+            step1RawText +
+            groundingSourcesPrompt;
 
-        for (const gModel of genModels) {
           try {
-            console.log(`[Gemini Search] Generating offers for: "${finalSearchTerm}" with ${gModel}...`);
-            const response = await ai.models.generateContent({
-              model: gModel,
-              contents,
+            console.log(`[CHAMADA 2 - Estruturação JSON] Formatando informações em schema JSON com ${extractedGroundingChunks.length} fontes reais mapeadas...`);
+            const structuringResponse = await ai.models.generateContent({
+              model: "gemini-3.5-flash-lite",
+              contents: [{
+                text: structuringPrompt
+              }],
               config: {
                 responseMimeType: "application/json",
                 responseSchema: jsonSchema
+                // SEM tools / SEM googleSearch
               }
             });
 
-            if (response?.text) {
-              const parsed = extractJsonFromText(response.text);
+            if (structuringResponse?.text) {
+              const parsed = extractJsonFromText(structuringResponse.text);
               if (Array.isArray(parsed) && parsed.length > 0) {
                 results = parsed;
-                source = "ai_generation";
-                console.log(`[Gemini Search] Successfully obtained ${results.length} offers!`);
-                genSuccess = true;
-                break;
+                source = usedGrounding ? "google_grounding" : "ai_generation";
+                console.log(`[CHAMADA 2] Sucesso! ${results.length} ofertas estruturadas em JSON.`);
               }
             }
-          } catch (genErr: any) {
-            console.warn(`[Gemini Search] ${gModel} failed:`, genErr?.message?.slice(0, 150));
+          } catch (structErr: any) {
+            console.warn("[CHAMADA 2 Error]:", structErr?.message?.slice(0, 150));
           }
         }
       }
@@ -4974,86 +5014,111 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       console.warn("[Gemini Search] General catch error:", generalErr?.message || generalErr);
     }
 
-    // Tier 3: Guarantees user NEVER receives a blocking error
-    if (!results || results.length === 0) {
-      const searchTerm = extractedQuery || (query || "").trim() || "Item Arquitetônico";
-      results = generateArchitecturalCatalogFallback(searchTerm, category);
-      source = "catalog_backup";
-    }
+    // Helper: Matching de Loja com Grounding Chunks feito em JavaScript
+    const matchStoreWithGroundingChunks = (storeName: string, chunks: Array<{ uri: string; title: string }>): string | null => {
+      if (!storeName || !chunks || chunks.length === 0) return null;
 
-    // Ensure all returned items have a reliable high-quality imageUrl and a 100% verified working URL
-    const fallbackImageForProduct = (item: any) => {
-      if (imageBase64Data) {
-        return imageBase64Data;
+      const normalize = (str: string) => str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, "");
+
+      const normStore = normalize(storeName);
+
+      // Mapeamento de apelidos e palavras-chave de grandes lojas brasileiras
+      const storeAliases: Record<string, string[]> = {
+        "mercadolivre": ["mercadolivre", "mercadolibre", "produto.mercadolivre", "ml"],
+        "magazineluiza": ["magazineluiza", "magalu", "magazine"],
+        "amazon": ["amazon", "amazonbr"],
+        "casasbahia": ["casasbahia", "bahia"],
+        "electrolux": ["electrolux", "lojaelectrolux"],
+        "leroymerlin": ["leroymerlin", "leroy"],
+        "ponto": ["ponto", "pontofrio"],
+        "fastshop": ["fastshop", "fast"],
+        "americanas": ["americanas"],
+        "madeiramadeira": ["madeiramadeira", "madeira"],
+        "mobly": ["mobly"],
+        "telhanorte": ["telhanorte"],
+        "brastemp": ["brastemp", "lojabrastemp"],
+        "consul": ["consul", "lojaconsul"],
+        "samsung": ["samsung", "lojasamsung"],
+        "philco": ["philco", "lojaphilco"],
+        "deca": ["deca", "lojadeca"],
+        "docol": ["docol"],
+        "lg": ["lg.com", "lgcom", "lg"]
+      };
+
+      // 1. Checar por palavras-chave mapeadas
+      for (const [key, aliases] of Object.entries(storeAliases)) {
+        const matchesStore = aliases.some(alias => normStore.includes(alias) || alias.includes(normStore));
+        if (matchesStore) {
+          for (const chunk of chunks) {
+            const normChunkTitle = normalize(chunk.title || "");
+            const normChunkUri = normalize(chunk.uri || "");
+            if (aliases.some(alias => normChunkTitle.includes(alias) || normChunkUri.includes(alias))) {
+              return chunk.uri;
+            }
+          }
+        }
       }
-      const text = `${item.title || ''} ${item.description || ''} ${item.category || ''} ${extractedQuery || ''}`.toLowerCase();
-      if (text.includes('tv') || text.includes('smart') || text.includes('philco') || text.includes('aoc') || text.includes('roku') || text.includes('32') || text.includes('televis')) {
-        return "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=600&auto=format&fit=crop&q=80";
+
+      // 2. Checar por substring genérica no título ou URL
+      for (const chunk of chunks) {
+        const normChunkTitle = normalize(chunk.title || "");
+        const normChunkUri = normalize(chunk.uri || "");
+        if (
+          (normStore.length >= 3 && normChunkTitle.includes(normStore)) ||
+          (normChunkTitle.length >= 3 && normStore.includes(normChunkTitle)) ||
+          (normStore.length >= 3 && normChunkUri.includes(normStore))
+        ) {
+          return chunk.uri;
+        }
       }
-      if (text.includes('geladeira') || text.includes('refrigerador') || text.includes('freezer') || text.includes('frigobar')) {
-        return "https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80";
-      }
-      if (text.includes('cooktop') || text.includes('fogão') || text.includes('fogao') || text.includes('indução')) {
-        return "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=600&auto=format&fit=crop&q=80";
-      }
-      if (text.includes('forno') || text.includes('micro')) {
-        return "https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=600&auto=format&fit=crop&q=80";
-      }
-      if (text.includes('coifa') || text.includes('depurador')) {
-        return "https://images.unsplash.com/photo-1556912173-3bb406ef7e77?w=600&auto=format&fit=crop&q=80";
-      }
-      if (text.includes('chuveiro') || text.includes('ducha')) {
-        return "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80";
-      }
-      if (text.includes('cuba') || text.includes('pia')) {
-        return "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80";
-      }
-      if (text.includes('torneira') || text.includes('monocomando')) {
-        return "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80";
-      }
-      if (text.includes('cadeira') || text.includes('poltrona') || text.includes('banqueta') || text.includes('mesa') || text.includes('sofa') || text.includes('sofá')) {
-        return "https://images.unsplash.com/photo-1580481077195-c99df3d8540c?w=600&auto=format&fit=crop&q=80";
-      }
-      if (text.includes('pendente') || text.includes('lustre') || text.includes('led') || text.includes('ilumina')) {
-        return "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&auto=format&fit=crop&q=80";
-      }
-      if (text.includes('porcelanato') || text.includes('piso') || text.includes('revestimento')) {
-        return "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&auto=format&fit=crop&q=80";
-      }
-      return "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80";
+
+      return null;
     };
 
-    if (Array.isArray(results)) {
-      results = results.map((item) => {
-        let finalImg = item.imageUrl;
-        if (imageBase64Data) {
-          finalImg = imageBase64Data;
-        } else if (!finalImg || typeof finalImg !== 'string' || !finalImg.startsWith('http') || finalImg.includes('photo-1571175443880-49e1d25b2bc5')) {
-          finalImg = fallbackImageForProduct(item);
+    // Step 3: URL VALIDATION & JAVASCRIPT MATCHING - Validação e preenchimento determinístico
+    let validatedResults: any[] = [];
+    if (Array.isArray(results) && results.length > 0) {
+      validatedResults = await Promise.all(results.map(async (item) => {
+        // Foto do produto: sempre usa a foto enviada pelo usuário (sem fotos genéricas do Unsplash)
+        const finalImg = imageBase64Data || "";
+
+        let rawUrl = (item.url || "").trim();
+
+        // Se a URL estiver vazia, tenta o matching em JavaScript com os groundingChunks
+        if (!rawUrl && extractedGroundingChunks.length > 0) {
+          const matchedUrl = matchStoreWithGroundingChunks(item.store, extractedGroundingChunks);
+          if (matchedUrl) {
+            rawUrl = matchedUrl;
+            console.log(`[JS Matching] Loja "${item.store}" casada com URL real: ${matchedUrl}`);
+          }
         }
 
-        const finalUrl = sanitizeProductUrl(item.url, item.title || extractedQuery || 'produto', item.store);
+        const isDirect = await validateDirectProductUrl(rawUrl);
 
         return {
-          ...item,
-          url: finalUrl,
+          title: item.title,
+          description: item.description,
+          price: item.price,
+          store: item.store,
+          category: item.category,
+          link_direto: isDirect,
+          url: isDirect ? rawUrl : (rawUrl.startsWith('http') ? rawUrl : ""),
           imageUrl: finalImg
         };
-      });
-    }
-
-    let noticeText = undefined;
-    if (source === "catalog_backup") {
-      noticeText = "Sugestões obtidas com links diretos para compras nas lojas oficiais e grandes e-commerces.";
+      }));
     }
 
     return res.json({
-      results,
+      results: validatedResults,
       identifiedProduct,
       identifiedCategory,
       estimatedPrice,
       source,
-      notice: noticeText
+      erro_identificacao: false
     });
   });
 

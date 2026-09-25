@@ -479,6 +479,12 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
       });
 
       const data = await response.json();
+      if (data.erro_identificacao || (!response.ok && data.error)) {
+        setSearchErrorIA(data.error || 'Não foi possível identificar o produto na foto com clareza. Por favor, envie uma foto mais nítida ou digite o nome do produto.');
+        setSearchResultsIA([]);
+        return;
+      }
+
       if (response.ok && data.results && data.results.length > 0) {
         setSearchResultsIA(data.results);
         if (data.identifiedProduct) {
@@ -491,9 +497,6 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
         // Automatically populate the form fields with the #1 identified product
         const topOption = data.results[0];
         handleSelectIAShowcase(topOption, activeImg, data.identifiedCategory);
-      } else if (data.results && data.results.length > 0) {
-        setSearchResultsIA(data.results);
-        handleSelectIAShowcase(data.results[0], activeImg);
       } else {
         setSearchErrorIA(data.error || 'Não encontramos resultados para esta busca. Tente refinar o termo.');
       }
@@ -637,8 +640,8 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     setFormPrice(option.price || '');
     setFormStore(option.store || '');
 
-    // Ensure link is 100% active, points directly to the real store, and never 404s
-    const activeStoreUrl = getVerifiedStoreUrl(option);
+    // Set product purchase URL if a valid direct link was found and validated
+    const activeStoreUrl = (option.link_direto && option.url) ? option.url : (option.url || '');
     setFormUrl(activeStoreUrl);
 
     // Set product photo from the uploaded image or search option
@@ -1429,10 +1432,10 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                         className="bg-white rounded-2xl p-3 border border-zinc-200 hover:border-[#8c7456] transition-all flex flex-col gap-2.5 shadow-xs"
                       >
                         <div className="flex items-start gap-3">
-                          {/* Thumbnail */}
-                          {opt.imageUrl ? (
+                          {/* Thumbnail: usa a foto enviada pelo usuário */}
+                          {(opt.imageUrl || imageUploadIA || formImageBase64) ? (
                             <img
-                              src={opt.imageUrl}
+                              src={opt.imageUrl || imageUploadIA || formImageBase64}
                               alt={opt.title}
                               className="w-16 h-16 rounded-xl object-cover bg-zinc-50 border border-zinc-200 shrink-0"
                               referrerPolicy="no-referrer"
@@ -1469,35 +1472,40 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                         </div>
 
                         <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-zinc-100 flex-wrap">
-                          <div className="flex items-center gap-1.5">
-                            <a
-                              href={getVerifiedStoreUrl(opt)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-1 shadow-xs transition-colors"
-                              title="Abrir página de compra na loja oficial"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                              <span>Comprar na Loja</span>
-                            </a>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const targetUrl = getVerifiedStoreUrl(opt);
-                                navigator.clipboard.writeText(targetUrl);
-                                showToast("📋 Link direto da loja copiado!");
-                              }}
-                              className="px-2 py-1.5 rounded-lg text-[11px] font-medium text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 transition-colors cursor-pointer"
-                              title="Copiar link do produto na loja"
-                            >
-                              <Copy className="w-3.5 h-3.5 text-zinc-500" />
-                              <span>Copiar</span>
-                            </button>
-                          </div>
+                          {opt.link_direto && opt.url ? (
+                            <div className="flex items-center gap-1.5">
+                              <a
+                                href={opt.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-1 shadow-xs transition-colors"
+                                title="Abrir página de compra direta do produto na loja"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span>Comprar na Loja</span>
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(opt.url);
+                                  showToast("📋 Link direto da loja copiado!");
+                                }}
+                                className="px-2 py-1.5 rounded-lg text-[11px] font-medium text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Copiar link do produto na loja"
+                              >
+                                <Copy className="w-3.5 h-3.5 text-zinc-500" />
+                                <span>Copiar</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-zinc-500 font-medium px-2 py-1 rounded-md bg-zinc-100 border border-zinc-200/60">
+                              Preço de Referência
+                            </span>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleSelectIAShowcase(opt)}
-                            className="py-1.5 px-3 rounded-xl text-[11px] font-bold bg-[#faf7f2] border border-[#e2d2bd] text-zinc-900 hover:bg-[#8c7456] hover:text-white transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                            className="py-1.5 px-3 rounded-xl text-[11px] font-bold bg-[#faf7f2] border border-[#e2d2bd] text-zinc-900 hover:bg-[#8c7456] hover:text-white transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs ml-auto"
                           >
                             <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
                             <span>Selecionar Produto</span>
