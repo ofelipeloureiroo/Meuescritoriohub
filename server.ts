@@ -4735,6 +4735,8 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       extractedQuery = query.trim();
     }
 
+    let extractedGroundingChunks: Array<{ uri: string; title: string }> = [];
+
     // Helper to validate whether a URL is a real, live, direct product purchase page (and NOT a generic search page)
     const validateDirectProductUrl = async (rawUrl?: string): Promise<boolean> => {
       if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.startsWith('http')) return false;
@@ -4898,7 +4900,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
         let step1RawText = "";
         let usedGrounding = false;
-        let extractedGroundingChunks: Array<{ uri: string; title: string }> = [];
+        extractedGroundingChunks = [];
 
         try {
           console.log(`[CHAMADA 1 - Google Search Grounding] Executando busca livre para: "${finalSearchTerm}"...`);

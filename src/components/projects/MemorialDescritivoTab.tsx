@@ -450,11 +450,19 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
 
   // Auto-search and identify product with Gemini API when image is provided or query searched
   const triggerAISearchWithData = async (base64Img?: string, fileName?: string, textQuery?: string, isNewImageUpload?: boolean) => {
-    const activeImg = base64Img || imageUploadIA;
-    const activeQuery = isNewImageUpload ? '' : (textQuery !== undefined ? textQuery : searchQueryIA);
+    // Recognizes either:
+    // (a) a newly uploaded file / base64 string
+    // (b) an existing image/base64 already loaded in component state or editingItem
+    const activeImg = (base64Img || imageUploadIA || formImageBase64 || editingItem?.imageUrl || '').trim();
+    const activeQuery = isNewImageUpload 
+      ? '' 
+      : (textQuery !== undefined && textQuery !== null && textQuery.trim() !== '' 
+          ? textQuery.trim() 
+          : (searchQueryIA || formTitle || '').trim());
 
+    // Validation condition: accepts if EITHER an image exists (new or previously loaded) OR a search term/title exists
     if (!activeQuery && !activeImg) {
-      setSearchErrorIA('Por favor, faça upload de uma foto ou digite o nome do produto.');
+      setSearchErrorIA('Por favor, digite o nome do produto ou faça upload de uma foto para pesquisar.');
       return;
     }
 
@@ -474,7 +482,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
           imageBase64: activeImg,
           imageFileName: fileName || imageFileNameIA,
           category: isNewImageUpload ? '' : formCategory,
-          formProductName: isNewImageUpload ? '' : formTitle
+          formProductName: isNewImageUpload ? '' : (formTitle || activeQuery)
         })
       });
 
@@ -567,9 +575,17 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     }
   };
 
-  // Search product with Gemini API manually
+  // Search product with Gemini API manually - accepts new upload or existing image/query
   const handleAISearch = async () => {
-    await triggerAISearchWithData(imageUploadIA, imageFileNameIA, searchQueryIA, false);
+    console.log('[DEBUG] imageUploadIA:', imageUploadIA);
+    console.log('[DEBUG] formImageBase64:', formImageBase64);
+    console.log('[DEBUG] editingItem?.imageUrl:', editingItem?.imageUrl?.slice(0, 50));
+    console.log('[DEBUG] searchQueryIA:', searchQueryIA);
+    console.log('[DEBUG] formTitle:', formTitle);
+
+    const effectiveImg = (imageUploadIA || formImageBase64 || editingItem?.imageUrl || '').trim();
+    const effectiveQuery = (searchQueryIA || formTitle || '').trim();
+    await triggerAISearchWithData(effectiveImg, imageFileNameIA, effectiveQuery, false);
   };
 
   // Helper to get verified direct store product purchase URLs
@@ -758,7 +774,14 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     setFormUrl(item.url || '');
     setFormQuantity(item.quantity);
     setFormNotes(item.notes || '');
-    setFormImageBase64(item.imageUrl || '');
+    const currentImg = item.imageUrl || '';
+    setFormImageBase64(currentImg);
+    setImageUploadIA(currentImg);
+    setSearchQueryIA(item.title || '');
+    setImageFileNameIA('');
+    setSearchResultsIA([]);
+    setSearchErrorIA('');
+    setSearchNoticeIA('');
     setIsModalOpen(true);
   };
 
@@ -1309,68 +1332,73 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                 </div>
 
                 {/* Upload Section with Drag & Drop */}
-                <div
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-xl p-3 text-center transition-all ${
-                    isDragging
-                      ? 'border-[#8c7456] bg-[#faf7f2]'
-                      : imageUploadIA
-                      ? 'border-emerald-300 bg-emerald-50/20'
-                      : 'border-zinc-300 bg-white hover:border-zinc-400'
-                  }`}
-                >
-                  <input
-                    type="file"
-                    id="product-photo-upload"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                  {imageUploadIA ? (
-                    <div className="space-y-2">
-                      <div className="relative inline-block">
-                        <img
-                          src={imageUploadIA}
-                          alt="Produto carregado"
-                          className="max-h-24 mx-auto rounded-lg object-contain border border-zinc-200 bg-white shadow-xs"
-                        />
-                      </div>
-                      <div className="flex items-center justify-center gap-2">
-                        <label
-                          htmlFor="product-photo-upload"
-                          className="text-[11px] font-bold text-[#8c7456] hover:underline cursor-pointer"
-                        >
-                          Trocar Foto
+                {(() => {
+                  const displayImg = imageUploadIA || formImageBase64 || '';
+                  return (
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`border-2 border-dashed rounded-xl p-3 text-center transition-all ${
+                        isDragging
+                          ? 'border-[#8c7456] bg-[#faf7f2]'
+                          : displayImg
+                          ? 'border-emerald-300 bg-emerald-50/20'
+                          : 'border-zinc-300 bg-white hover:border-zinc-400'
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        id="product-photo-upload"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="hidden"
+                      />
+                      {displayImg ? (
+                        <div className="space-y-2">
+                          <div className="relative inline-block">
+                            <img
+                              src={displayImg}
+                              alt="Produto carregado"
+                              className="max-h-24 mx-auto rounded-lg object-contain border border-zinc-200 bg-white shadow-xs"
+                            />
+                          </div>
+                          <div className="flex items-center justify-center gap-2">
+                            <label
+                              htmlFor="product-photo-upload"
+                              className="text-[11px] font-bold text-[#8c7456] hover:underline cursor-pointer"
+                            >
+                              Trocar Foto
+                            </label>
+                            <span className="text-zinc-300 text-xs">•</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setImageUploadIA('');
+                                setImageFileNameIA('');
+                                setFormImageBase64('');
+                                setSearchQueryIA('');
+                                setSearchResultsIA([]);
+                                setSearchNoticeIA('');
+                                setSearchErrorIA('');
+                              }}
+                              className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer"
+                            >
+                              Remover
+                            </button>
+                          </div>
+                          <span className="text-[10px] text-emerald-700 font-bold block">✓ Imagem carregada e analisada</span>
+                        </div>
+                      ) : (
+                        <label htmlFor="product-photo-upload" className="cursor-pointer block space-y-1.5 py-1">
+                          <Upload className="w-6 h-6 text-zinc-400 mx-auto" />
+                          <span className="text-xs text-zinc-600 block font-semibold">Arraste a foto do produto ou clique</span>
+                          <span className="text-[10px] text-zinc-400 block">Identificação e busca automática de preços</span>
                         </label>
-                        <span className="text-zinc-300 text-xs">•</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setImageUploadIA('');
-                            setImageFileNameIA('');
-                            setFormImageBase64('');
-                            setSearchQueryIA('');
-                            setSearchResultsIA([]);
-                            setSearchNoticeIA('');
-                            setSearchErrorIA('');
-                          }}
-                          className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer"
-                        >
-                          Remover
-                        </button>
-                      </div>
-                      <span className="text-[10px] text-emerald-700 font-bold block">✓ Imagem carregada e analisada</span>
+                      )}
                     </div>
-                  ) : (
-                    <label htmlFor="product-photo-upload" className="cursor-pointer block space-y-1.5 py-1">
-                      <Upload className="w-6 h-6 text-zinc-400 mx-auto" />
-                      <span className="text-xs text-zinc-600 block font-semibold">Arraste a foto do produto ou clique</span>
-                      <span className="text-[10px] text-zinc-400 block">Identificação e busca automática de preços</span>
-                    </label>
-                  )}
-                </div>
+                  );
+                })()}
 
                 {/* Search Text input */}
                 <div>
