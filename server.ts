@@ -4361,23 +4361,49 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         }
       }
 
-      // Step 2: Now do the Grounded Google Search. We do it using text-only query.
+      // Step 2: Now do the Grounded Google Search. We do it with visual-grounding context when available.
       // We prioritize: manual search input -> image analysis result -> name filled on the right form -> generic category term
       const finalSearchTerm = extractedQuery || (formProductName || "").trim() || (category ? `Item para ${category}` : "Produto Arquitetônico");
 
       if (ai && finalSearchTerm) {
         const prompt = "Você é um assistente especialista em especificações técnicas de arquitetura, design de interiores, tecnologia e eletrodomésticos no Brasil. " +
-          `Sua tarefa é encontrar até 6 ofertas reais de compra do produto solicitado: "${finalSearchTerm}". ` +
+          `Sua tarefa é encontrar até 6 ofertas reais de compra para o produto solicitado: "${finalSearchTerm}". ` +
+          (imageBase64Data ? "CRÍTICO - AFINIDADE VISUAL COM A FOTO ANEXADA: Analise cuidadosamente a imagem que foi anexada. As ofertas de produtos retornadas devem corresponder EXATAMENTE ou ser altamente parecidas em DESIGN, MODELO, MARCA, COR e ESTILO VISUAL ao produto que aparece na foto anexada. Não sugira itens de estilo ou visual diferente. " : "") +
           "REGRA CRÍTICA DE AFINIDADE: Retorne APENAS produtos que sejam RIGOROSAMENTE do mesmo tipo do item buscado. Exemplo: se for geladeira/refrigerador, retorne EXCLUSIVAMENTE modelos de geladeiras (French Door, Side by Side, Inverter, Duplex). NUNCA misture coifas, cubas, torneiras ou fogões em uma busca por geladeira. " +
-          "Pesquise prioritariamente no Google Shopping Brasil e em grandes lojas virtuais (Magalu, Leroy Merlin, Brastemp, Electrolux, Mercado Livre, Fast Shop, Amazon BR). " +
-          "Retorne obrigatoriamente um array JSON válido contendo até 6 opções com título detalhado, preço em R$, nome da loja/fornecedor, especificações e URL direta de compra ou busca do Google Shopping (ex: https://www.google.com/search?q=NOME_DO_PRODUTO&tbm=shop).";
+          "Pesquise prioritariamente no Google e em grandes lojas virtuais brasileiras (como Magazine Luiza, Mercado Livre, Leroy Merlin, Brastemp, Electrolux, Fast Shop, Casas Bahia, Amazon BR). " +
+          "CRÍTICO - LINKS DIRETOS DA LOJA (SEM GOOGLE SHOPPING): No campo 'url', retorne OBRIGATORIAMENTE o link de compra direto da página do produto no site da respectiva loja (ex: 'https://www.magazineluiza.com.br/...', 'https://www.mercadolivre.com.br/...', 'https://loja.electrolux.com.br/...', etc.). NÃO retorne links genéricos de pesquisa do Google Shopping ou links que apontem para 'https://www.google.com/search' ou 'https://www.google.com/shopping'. " +
+          "CRÍTICO - FOTO REAL E IDÊNTICA DA LOJA: No campo 'imageUrl', você deve extrair e fornecer o link direto da imagem oficial do produto no respectivo site da loja correspondente. A imagem deve ser de alta qualidade e corresponder EXATAMENTE ao item anunciado na loja (por exemplo, hospedada em 'magazineluiza.com.br', 'mercadolivre.com', 'electrolux.com.br' ou similar). Evite imagens genéricas ou placeholders. A foto exibida tem que ser a mesma foto da loja! " +
+          "Retorne obrigatoriamente um array JSON válido contendo até 6 opções com título detalhado, descrição (cor, acabamento, dimensões ou características técnicas essenciais), preço em R$, nome da loja/fornecedor, url direta da loja e imageUrl real do produto.";
+
+        const contentParts: any[] = [];
+        if (imageBase64Data) {
+          try {
+            const matches = imageBase64Data.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
+            let mimeType = "image/jpeg";
+            let data = imageBase64Data;
+            if (matches && matches.length === 3) {
+              mimeType = matches[1];
+              data = matches[2];
+            }
+            contentParts.push({
+              inlineData: {
+                mimeType,
+                data
+              }
+            });
+            console.log("[Gemini Search] Attaching uploaded image to Grounded Search contents for visual affinity matching.");
+          } catch (imgErr) {
+            console.warn("[Gemini Search] Failed packaging image for Grounded Search content parts:", imgErr);
+          }
+        }
+        contentParts.push({ text: prompt });
 
         // Tier 1: Try Gemini with Google Grounding
         try {
           console.log(`[Gemini Search] Attempting Google Search Grounding with gemini-3.8-flash for: "${finalSearchTerm}"...`);
           const response = await ai.models.generateContent({
             model: "gemini-3.8-flash",
-            contents: [{ text: prompt }],
+            contents: contentParts,
             config: {
               tools: [{ googleSearch: {} }],
               responseMimeType: "application/json",
@@ -4394,7 +4420,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
                     imageUrl: { type: Type.STRING, description: "URL direta da imagem ou foto oficial do produto" },
                     category: { type: Type.STRING, description: "Categoria recomendada: Eletros, Cozinha, Banheiro, Iluminação, Mobiliário, Revestimentos, ou Outros" }
                   },
-                  required: ["title", "description", "price", "store", "url"]
+                  required: ["title", "description", "price", "store", "url", "imageUrl"]
                 }
               }
             }
@@ -4412,7 +4438,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           try {
             const liteResponse = await ai.models.generateContent({
               model: "gemini-3.8-flash",
-              contents: [{ text: prompt }],
+              contents: contentParts,
               config: {
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -4428,7 +4454,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
                       imageUrl: { type: Type.STRING, description: "URL direta da imagem ou foto oficial do produto" },
                       category: { type: Type.STRING, description: "Categoria recomendada: Eletros, Cozinha, Banheiro, Iluminação, Mobiliário, Revestimentos, ou Outros" }
                     },
-                    required: ["title", "description", "price", "store", "url"]
+                    required: ["title", "description", "price", "store", "url", "imageUrl"]
                   }
                 }
               }
