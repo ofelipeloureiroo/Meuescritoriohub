@@ -23,6 +23,7 @@ import {
   ProjectMilestone
 } from '../types';
 import { DEFAULT_PROJECT_STAGES } from '../data/defaultProjectStages';
+import { safeJson } from '../lib/apiHelper';
 
 export const generateProvisionalPassword = (): string => {
   const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -234,11 +235,9 @@ export function subscribeToOfficePortals(
     try {
       const url = '/api/portals' + (officeUid ? `?officeUid=${encodeURIComponent(officeUid)}` : '');
       const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.portals) && isSubscribed) {
-          emitIfChanged(data.portals);
-        }
+      const data = await safeJson(res);
+      if (data && data.success && Array.isArray(data.portals) && isSubscribed) {
+        emitIfChanged(data.portals);
       }
     } catch {}
   };
@@ -316,11 +315,9 @@ export function subscribeToClientPortal(
       if (extraParams?.clientId) qs.set('id', extraParams.clientId);
       if (extraParams?.clientEmail) qs.set('email', extraParams.clientEmail);
       const res = await fetch(`/api/portals/lookup?${qs.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.portal && isSubscribed) {
-          emitIfChanged(data.portal);
-        }
+      const data = await safeJson(res);
+      if (data && data.success && data.portal && isSubscribed) {
+        emitIfChanged(data.portal);
       }
     } catch {}
   };
@@ -367,11 +364,9 @@ export async function fetchPortalMessages(params: {
     if (params.clientId) qs.set('clientId', params.clientId);
     if (params.clientEmail) qs.set('clientEmail', params.clientEmail);
     const res = await fetch(`/api/portals/messages?${qs.toString()}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success && Array.isArray(data.messages)) {
-        return data.messages;
-      }
+    const data = await safeJson(res);
+    if (data && data.success && Array.isArray(data.messages)) {
+      return data.messages;
     }
   } catch (e) {
     console.warn('Error fetching portal messages from server:', e);
@@ -445,8 +440,8 @@ export async function loginClient(
     // 0. FAST SERVER API LOOKUP (/api/portals/lookup) - Universal sync across all browsers & devices
     try {
       const serverRes = await fetch(`/api/portals/lookup?email=${encodeURIComponent(rawEmail)}&code=${encodeURIComponent(cleanCode)}`);
-      if (serverRes.ok) {
-        const json = await serverRes.json();
+      const json = await safeJson(serverRes);
+      if (json) {
         if (json.success && json.portal) {
           savePortalLocally(json.portal);
           sessionStorage.setItem('client_portal_session', JSON.stringify(json.portal));
@@ -454,11 +449,6 @@ export async function loginClient(
           return { success: true, portal: json.portal };
         }
         if (json.codeMismatch) {
-          return { success: false, error: json.error || 'Código de acesso ou senha incorreta para este e-mail.' };
-        }
-      } else {
-        const json = await serverRes.json().catch(() => null);
-        if (json && json.codeMismatch) {
           return { success: false, error: json.error || 'Código de acesso ou senha incorreta para este e-mail.' };
         }
       }

@@ -3565,6 +3565,108 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     }
   });
 
+  // Helper: Remove alucinações de códigos de modelos e SKUs não comprováveis visualmente (ex: "PH32R86DAG")
+  function cleanModelCodesAndNoise(text: string): string {
+    if (!text) return "";
+    return text
+      .split(/\s+/)
+      .filter(word => {
+        // Se tiver 4 ou mais caracteres contendo letras e dígitos misturados
+        if (word.length >= 4 && /[a-zA-Z]/.test(word) && /\d/.test(word)) {
+          // Preservar unidades e medidas comuns: 4k, 8k, 435l, 110v, 220v, 32pol, 20x120cm
+          if (/^(4k|8k|\d+l|\d+w|\d+v|\d+pol|\d+cm|\d+m)$/i.test(word)) return true;
+          if (/^\d+x\d+(cm|mm|m)?$/i.test(word)) return true;
+          return false; // descarta códigos alfanuméricos como PH32R86DAG, UN50CU7700, etc.
+        }
+        return true;
+      })
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Helper: Extrair termo de busca CURTO e genérico sem códigos de modelo (ex: "Smart TV 32 Philco")
+  function getShortGenericSearchTerm(title: string): string {
+    if (!title) return 'produto';
+
+    // 1. Limpeza básica de caracteres especiais e parênteses
+    let clean = title
+      .replace(/\(.*?\)/g, ' ')
+      .replace(/\[.*?\]/g, ' ')
+      .replace(/["'”’]/g, ' ')
+      .replace(/[^\w\sáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ-]/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // 2. Remoção de códigos de modelo, SKUs alfanuméricos inventados (ex: PH32R86DAG)
+    clean = cleanModelCodesAndNoise(clean);
+
+    // 3. Remover palavras técnicas ou promocionais ruidosas que atrapalham os buscadores de e-commerce
+    const noiseWords = new Set([
+      'bivolt', '110v', '220v', '220', '110', '127v', '127', 'com', 'sem', 'para',
+      'original', 'novo', 'nova', 'garantia', 'nf', 'pronta', 'entrega', 'frete', 'gratis',
+      'promocao', 'oferta', 'oficial', 'loja', 'brasil', 'hdmi', 'usb', 'bluetooth',
+      'wifi', 'wi-fi', 'hdr', 'hdr10', 'dolby', 'audio', 'sistema', 'smartv', 'tecnologia'
+    ]);
+
+    const words = clean.split(/\s+/).filter(w => !noiseWords.has(w.toLowerCase()));
+
+    // 4. Retornar os 3 a 4 termos principais mais significativos (ex: "Smart TV 32 Philco")
+    const danglingWords = new Set(["de", "da", "do", "das", "dos", "com", "em", "por", "by", "para", "sem", "e", "a", "o"]);
+    let shortList = words.slice(0, 4);
+    if (shortList.length === 4 && danglingWords.has(shortList[3].toLowerCase()) && words[4]) {
+      shortList = words.slice(0, 5);
+    }
+    return shortList.join(' ').trim() || words.slice(0, 3).join(' ') || clean.split(/\s+/).slice(0, 3).join(' ') || 'produto';
+  }
+
+  // Helper to generate 100% verified, working store links that never 404
+  function getStoreListingUrl(itemTitle: string, storeName?: string): string {
+    const cleanTitle = getShortGenericSearchTerm(itemTitle || 'produto');
+    const lowerStore = (storeName || '').toLowerCase();
+
+    if (lowerStore.includes('mercado livre') || lowerStore.includes('mercadolivre')) {
+      return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
+    }
+    if (lowerStore.includes('magalu') || lowerStore.includes('magazine')) {
+      return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
+    }
+    if (lowerStore.includes('amazon')) {
+      return `https://www.amazon.com.br/s?k=${encodeURIComponent(cleanTitle)}`;
+    }
+    if (lowerStore.includes('casas bahia') || lowerStore.includes('casasbahia')) {
+      const slug = cleanTitle
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      return `https://www.casasbahia.com.br/${slug}/b`;
+    }
+    if (lowerStore.includes('electrolux')) {
+      return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
+    }
+    if (lowerStore.includes('philco')) {
+      return `https://www.philco.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
+    }
+    if (lowerStore.includes('leroy')) {
+      return `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+    }
+    if (lowerStore.includes('mobly')) {
+      return `https://www.mobly.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+    }
+    if (lowerStore.includes('madeira')) {
+      return `https://www.madeiramadeira.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+    }
+    if (lowerStore.includes('telhanorte')) {
+      return `https://www.telhanorte.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
+    }
+    if (lowerStore.includes('buscapé') || lowerStore.includes('buscape')) {
+      return `https://www.buscape.com.br/search?q=${encodeURIComponent(cleanTitle)}`;
+    }
+    return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
+  }
+
   // Fallback catalog of realistic architectural and interior design products in Brazil
   function generateArchitecturalCatalogFallback(query: string = "", category: string = ""): any[] {
     const q = (query || "").toLowerCase();
@@ -4573,47 +4675,6 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       ];
     }
 
-    // Helper to generate 100% verified, working store links that never 404
-    const getStoreListingUrl = (itemTitle: string, storeName?: string): string => {
-      const cleanTitle = (itemTitle || 'produto')
-        .replace(/[^\w\sáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ-]/gi, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      const lowerStore = (storeName || '').toLowerCase();
-
-      if (lowerStore.includes('mercado livre') || lowerStore.includes('mercadolivre')) {
-        return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
-      }
-      if (lowerStore.includes('magalu') || lowerStore.includes('magazine')) {
-        return `https://www.magazineluiza.com.br/busca/${encodeURIComponent(cleanTitle.replace(/\s+/g, '+'))}/`;
-      }
-      if (lowerStore.includes('amazon')) {
-        return `https://www.amazon.com.br/s?k=${encodeURIComponent(cleanTitle)}`;
-      }
-      if (lowerStore.includes('casas bahia') || lowerStore.includes('casasbahia')) {
-        return `https://www.casasbahia.com.br/b?q=${encodeURIComponent(cleanTitle)}`;
-      }
-      if (lowerStore.includes('electrolux')) {
-        return `https://loja.electrolux.com.br/busca?ft=${encodeURIComponent(cleanTitle)}`;
-      }
-      if (lowerStore.includes('leroy')) {
-        return `https://www.leroymerlin.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
-      }
-      if (lowerStore.includes('mobly')) {
-        return `https://www.mobly.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
-      }
-      if (lowerStore.includes('madeira')) {
-        return `https://www.madeiramadeira.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
-      }
-      if (lowerStore.includes('telhanorte')) {
-        return `https://www.telhanorte.com.br/busca?q=${encodeURIComponent(cleanTitle)}`;
-      }
-      if (lowerStore.includes('buscapé') || lowerStore.includes('buscape')) {
-        return `https://www.buscape.com.br/search?q=${encodeURIComponent(cleanTitle)}`;
-      }
-      return `https://lista.mercadolivre.com.br/${encodeURIComponent(cleanTitle.replace(/\s+/g, '-'))}`;
-    };
-
     // -- STAGE 4: Generic Fallback --
     let term = (query || "").trim();
     if (!term || term.toLowerCase().includes("item arquitet") || term.toLowerCase().includes("produto arquitet")) {
@@ -4685,9 +4746,335 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     ];
   }
 
+  // Helper: SSRF protection to block local/private network ranges
+  function isBlockedHostOrIp(hostname: string): boolean {
+    const host = hostname.toLowerCase().trim();
+    if (
+      host === 'localhost' ||
+      host === '0.0.0.0' ||
+      host === '::1' ||
+      host.endsWith('.local') ||
+      host.endsWith('.internal') ||
+      host.endsWith('.lan')
+    ) {
+      return true;
+    }
+    const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    const match = host.match(ipv4Regex);
+    if (match) {
+      const oct1 = parseInt(match[1], 10);
+      const oct2 = parseInt(match[2], 10);
+      if (oct1 === 127) return true; // 127.0.0.0/8
+      if (oct1 === 10) return true;  // 10.0.0.0/8
+      if (oct1 === 192 && oct2 === 168) return true; // 192.168.0.0/16
+      if (oct1 === 172 && oct2 >= 16 && oct2 <= 31) return true; // 172.16.0.0/12
+      if (oct1 === 169 && oct2 === 254) return true; // 169.254.0.0/16 Link-local / metadata
+      if (oct1 === 0) return true;
+    }
+    return false;
+  }
+
+  // Helper: Identify store name from domain
+  function getStoreNameFromDomain(hostname: string): string {
+    const host = hostname.toLowerCase();
+    if (host.includes('mercadolivre') || host.includes('mercadolibre')) return 'Mercado Livre';
+    if (host.includes('magazineluiza') || host.includes('magalu')) return 'Magazine Luiza';
+    if (host.includes('casasbahia')) return 'Casas Bahia';
+    if (host.includes('amazon')) return 'Amazon';
+    if (host.includes('leroymerlin')) return 'Leroy Merlin';
+    if (host.includes('madeiramadeira')) return 'MadeiraMadeira';
+    if (host.includes('mobly')) return 'Mobly';
+    if (host.includes('electrolux')) return 'Electrolux';
+    if (host.includes('philco')) return 'Philco';
+    if (host.includes('samsung')) return 'Samsung';
+    if (host.includes('lg.com')) return 'LG';
+    if (host.includes('fastshop')) return 'Fast Shop';
+    if (host.includes('telhanorte')) return 'Telhanorte';
+    if (host.includes('pontofrio') || host.includes('ponto.')) return 'Ponto';
+    if (host.includes('extra.com')) return 'Extra';
+    if (host.includes('americanas')) return 'Americanas';
+    if (host.includes('submarino')) return 'Submarino';
+    if (host.includes('shoptime')) return 'Shoptime';
+    if (host.includes('shopee')) return 'Shopee';
+    if (host.includes('aliexpress')) return 'AliExpress';
+    if (host.includes('cec.com')) return 'C&C';
+    if (host.includes('tokstok')) return 'Tok&Stok';
+    if (host.includes('camicado')) return 'Camicado';
+    if (host.includes('etna')) return 'Etna';
+    if (host.includes('deca.com')) return 'Deca';
+    if (host.includes('docol.com')) return 'Docol';
+    
+    const parts = host.replace(/^www\./, '').split('.');
+    if (parts.length > 0 && parts[0]) {
+      return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+    }
+    return 'Loja Online';
+  }
+
+  // Helper: Format price to BRL
+  function formatPriceToBRL(rawPrice: any): string {
+    if (rawPrice === null || rawPrice === undefined || rawPrice === '') return '';
+    if (typeof rawPrice === 'number') {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(rawPrice);
+    }
+    const str = String(rawPrice).trim();
+    if (/^R\$\s*[\d.,]+/i.test(str)) return str;
+    const cleanNum = str.replace(/[^\d.,]/g, '').replace(',', '.');
+    const num = parseFloat(cleanNum);
+    if (!isNaN(num) && num > 0) {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
+    }
+    return str;
+  }
+
+  // Helper: Extract Product info from HTML via JSON-LD and OpenGraph
+  function parseProductDataFromHtml(html: string): {
+    title: string;
+    imageUrl: string;
+    price: string;
+    description: string;
+    extractionMethod: 'JSON-LD' | 'Open Graph' | 'Nenhum';
+  } {
+    let title = '';
+    let imageUrl = '';
+    let price = '';
+    let description = '';
+    let extractionMethod: 'JSON-LD' | 'Open Graph' | 'Nenhum' = 'Nenhum';
+
+    // 1. Tentar extrair de blocos JSON-LD (<script type="application/ld+json">)
+    const jsonLdRegex = /<script\s+[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let jsonMatch: RegExpExecArray | null;
+
+    while ((jsonMatch = jsonLdRegex.exec(html)) !== null) {
+      try {
+        const rawJson = jsonMatch[1].trim();
+        const parsed = JSON.parse(rawJson);
+        
+        const findProductObject = (obj: any): any => {
+          if (!obj || typeof obj !== 'object') return null;
+          if (obj['@type'] === 'Product' || (Array.isArray(obj['@type']) && obj['@type'].includes('Product'))) {
+            return obj;
+          }
+          if (Array.isArray(obj)) {
+            for (const item of obj) {
+              const found = findProductObject(item);
+              if (found) return found;
+            }
+          }
+          if (Array.isArray(obj['@graph'])) {
+            for (const item of obj['@graph']) {
+              const found = findProductObject(item);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+
+        const product = findProductObject(parsed);
+        if (product) {
+          if (product.name && typeof product.name === 'string') {
+            title = product.name.trim();
+          }
+          if (product.image) {
+            if (typeof product.image === 'string') {
+              imageUrl = product.image;
+            } else if (Array.isArray(product.image) && product.image.length > 0) {
+              imageUrl = typeof product.image[0] === 'string' ? product.image[0] : (product.image[0]?.url || '');
+            } else if (product.image.url) {
+              imageUrl = product.image.url;
+            }
+          }
+          if (product.description && typeof product.description === 'string') {
+            description = product.description.trim().replace(/<[^>]*>/g, '').slice(0, 300);
+          }
+          if (product.offers) {
+            const offers = Array.isArray(product.offers) ? product.offers[0] : product.offers;
+            const rawOffersPrice = offers?.price || offers?.lowPrice || offers?.highPrice;
+            if (rawOffersPrice) {
+              price = formatPriceToBRL(rawOffersPrice);
+            }
+          }
+
+          if (title) {
+            extractionMethod = 'JSON-LD';
+            break;
+          }
+        }
+      } catch (e) {
+        // Ignora erro de parse de um bloco individual
+      }
+    }
+
+    // 2. Se JSON-LD não tiver todos os campos ou falhar, complementar via Open Graph e Meta tags
+    if (!title) {
+      const ogTitleMatch = html.match(/<meta\s+[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
+        html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i) ||
+        html.match(/<meta\s+[^>]*name=["']twitter:title["'][^>]*content=["']([^"']+)["']/i);
+      
+      if (ogTitleMatch && ogTitleMatch[1]) {
+        title = ogTitleMatch[1].trim();
+        extractionMethod = 'Open Graph';
+      } else {
+        const titleTagMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        if (titleTagMatch && titleTagMatch[1]) {
+          title = titleTagMatch[1].trim();
+          extractionMethod = 'Open Graph';
+        }
+      }
+    }
+
+    if (!imageUrl) {
+      const ogImageMatch = html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+        html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i) ||
+        html.match(/<meta\s+[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i) ||
+        html.match(/<link\s+[^>]*rel=["']image_src["'][^>]*href=["']([^"']+)["']/i);
+      if (ogImageMatch && ogImageMatch[1]) {
+        imageUrl = ogImageMatch[1].trim();
+      }
+    }
+
+    if (!price) {
+      const ogPriceMatch = html.match(/<meta\s+[^>]*property=["']product:price:amount["'][^>]*content=["']([^"']+)["']/i) ||
+        html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']product:price:amount["']/i) ||
+        html.match(/<meta\s+[^>]*property=["']og:price:amount["'][^>]*content=["']([^"']+)["']/i) ||
+        html.match(/<meta\s+[^>]*itemprop=["']price["'][^>]*content=["']([^"']+)["']/i);
+      if (ogPriceMatch && ogPriceMatch[1]) {
+        price = formatPriceToBRL(ogPriceMatch[1]);
+      }
+    }
+
+    if (!description) {
+      const ogDescMatch = html.match(/<meta\s+[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i) ||
+        html.match(/<meta\s+[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i);
+      if (ogDescMatch && ogDescMatch[1]) {
+        description = ogDescMatch[1].trim().slice(0, 300);
+      }
+    }
+
+    // Normalizar title removendo sufixos da loja
+    if (title) {
+      title = title
+        .replace(/\s*\|\s*(Mercado Livre|Magazine Luiza|Magalu|Casas Bahia|Amazon|Leroy Merlin|Americanas|Ponto|Extra).*$/i, '')
+        .replace(/\s*-\s*(Mercado Livre|Magazine Luiza|Magalu|Casas Bahia|Amazon|Leroy Merlin|Americanas|Ponto|Extra).*$/i, '')
+        .replace(/&amp;/g, '&')
+        .replace(/&#39;/g, "'")
+        .replace(/&quot;/g, '"')
+        .trim();
+    }
+
+    return { title, imageUrl, price, description, extractionMethod };
+  }
+
+  // Novo endpoint: Preencher dados a partir do link do produto informado pelo usuário
+  app.post('/api/product-from-url', express.json({ limit: '1mb' }), async (req, res) => {
+    const rawUrl = (req.body?.url || '').trim();
+    console.log(`\n================================================================`);
+    console.log(`📥 [POST /api/product-from-url] Recebida URL: "${rawUrl}"`);
+
+    if (!rawUrl || (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://'))) {
+      console.log(`❌ [POST /api/product-from-url] URL inválida (protocolo não permitido): "${rawUrl}"`);
+      return res.status(400).json({
+        success: false,
+        error: "URL inválida. Por favor, forneça um link iniciando com http:// ou https://"
+      });
+    }
+
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(rawUrl);
+    } catch (err: any) {
+      console.log(`❌ [POST /api/product-from-url] Falha ao analisar URL: "${rawUrl}"`);
+      return res.status(400).json({
+        success: false,
+        error: "Formato de URL inválido. Verifique o link informado."
+      });
+    }
+
+    // Bloqueio de SSRF (localhost, IPs privados, metadata)
+    if (isBlockedHostOrIp(parsedUrl.hostname)) {
+      console.warn(`🛡️ [POST /api/product-from-url] Bloqueio SSRF acionado para host: "${parsedUrl.hostname}"`);
+      return res.status(403).json({
+        success: false,
+        error: "Acesso a endereços locais ou redes privadas não é permitido."
+      });
+    }
+
+    const storeName = getStoreNameFromDomain(parsedUrl.hostname);
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const fetchResponse = await fetch(rawUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7'
+        },
+        signal: controller.signal,
+        redirect: 'follow'
+      });
+      clearTimeout(timeoutId);
+
+      const finalUrl = fetchResponse.url || rawUrl;
+      const statusCode = fetchResponse.status;
+
+      if (!fetchResponse.ok) {
+        console.warn(`⚠️ [POST /api/product-from-url] Loja respondeu com status HTTP ${statusCode} para URL: "${finalUrl}"`);
+        return res.status(200).json({
+          success: false,
+          error: `A loja (${storeName}) não permitiu a leitura automática do link (HTTP ${statusCode}). Você pode preencher os dados manualmente no formulário.`,
+          store: storeName,
+          url: finalUrl
+        });
+      }
+
+      const html = await fetchResponse.text();
+      const extracted = parseProductDataFromHtml(html);
+
+      console.log(`📊 [POST /api/product-from-url] Resultado da Extração:`);
+      console.log(`   - URL Final: "${finalUrl}"`);
+      console.log(`   - Loja: "${storeName}"`);
+      console.log(`   - Método Usado: ${extracted.extractionMethod}`);
+      console.log(`   - Título: "${extracted.title || '(não encontrado)'}"`);
+      console.log(`   - Preço: "${extracted.price || '(não encontrado)'}"`);
+      console.log(`   - Imagem: "${extracted.imageUrl ? extracted.imageUrl.slice(0, 60) + '...' : '(não encontrada)'}"`);
+      console.log(`================================================================\n`);
+
+      if (!extracted.title) {
+        return res.status(200).json({
+          success: false,
+          error: `Não foi possível extrair os dados do produto automaticamente nesta loja (${storeName}). Você pode preencher os dados manualmente.`,
+          store: storeName,
+          url: finalUrl
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        title: extracted.title,
+        imageUrl: extracted.imageUrl,
+        price: extracted.price,
+        description: extracted.description,
+        store: storeName,
+        url: finalUrl,
+        extractionMethod: extracted.extractionMethod
+      });
+    } catch (error: any) {
+      console.warn(`💥 [POST /api/product-from-url] Erro na requisição para "${rawUrl}":`, error?.message || error);
+      return res.status(200).json({
+        success: false,
+        error: `A loja (${storeName}) não permitiu a leitura automática do link (tempo limite ou bloqueio). Você pode preencher os dados manualmente.`,
+        store: storeName,
+        url: rawUrl
+      });
+    }
+  });
+
   // Search product with Google Grounded Search with graceful multi-tier fallback
   app.post('/api/gemini/search-product', express.json({ limit: '10mb' }), async (req, res) => {
-    const { query, imageBase64, category, formProductName } = req.body;
+    const { query, imageBase64, category, formProductName, imageFileName } = req.body;
     let results: any[] = [];
     let source = "gemini_ai";
     let extractedQuery = "";
@@ -4885,30 +5272,39 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
         console.log(`[Gemini Search] Analyzing image with Gemini Vision (MIME: ${mimeType}, Size: ${data.length} chars)...`);
         const visionPrompt = {
           text: "Você é um especialista em especificação e compras de produtos para arquitetura, construção e decoração no Brasil.\n" +
-            "Analise detalhadamente a foto do produto enviada. Identifique com exatidão a MARCA, TIPO DE PRODUTO, MODELO, TAMANHO/POLEGADAS/LITROS e ACABAMENTO comercial no Brasil.\n" +
-            "NUNCA use termos genéricos como 'Item Arquitetônico' ou 'Produto Não Identificado'. Se não tiver certeza razoável do produto, retorne o campo 'erro_identificacao': true.\n" +
-            "Exemplos de identificação:\n" +
+            "Analise detalhadamente a foto do produto enviada. Identifique o que for visualmente reconhecível na imagem: TIPO DE PRODUTO (ex: Smart TV, Geladeira, Torneira, Sofá, Cuba), MARCA (se legível/visível), TAMANHO ou POLEGADAS/LITROS (se visível ou perceptível), COR e ACABAMENTO.\n\n" +
+            "DIRETRIZES DE RECONHECIMENTO OBRIGATÓRIAS:\n" +
+            "1. NÃO RECUSE a identificação quando o tipo de produto, marca e/ou tamanho forem reconhecíveis. Exemplo: 'Smart TV 32 Philco LED' ou 'TV 32 Polegadas Philco' é uma identificação 100% VÁLIDA, SUFICIENTE e ACEITA. Nesses casos, defina 'erro_identificacao': false.\n" +
+            "2. SÓ defina 'erro_identificacao': true se a imagem for totalmente irreconhecível, corrompida, preta/branca ou se for absolutamente impossível determinar até mesmo o tipo de produto.\n" +
+            "3. NUNCA invente, presuma ou deduza códigos alfanuméricos complexos, SKUs ou números de série inexistentes (ex: NUNCA crie códigos como 'PH32R86DAG', 'UN50AU7700', 'DF56S', etc.). Se um código alfanumérico não estiver explicitamente e nitidamente impresso na foto, use apenas a descrição comercial clara (ex: 'Smart TV 32 Philco LED', 'Geladeira Side by Side Inox Electrolux', 'Torneira Monocomando Gourmet Docol').\n" +
+            "4. O campo 'identifiedProduct' deve ser um nome comercial limpo, direto e visualmente fundamentado para busca em lojas brasileiras.\n\n" +
+            "Exemplos de identificação válida:\n" +
+            "- 'Smart TV 32 Philco LED'\n" +
             "- 'Geladeira Electrolux Side by Side Inox 435L Frost Free'\n" +
-            "- 'Smart TV 32\" Philco LED Roku TV'\n" +
             "- 'Torneira Monocomando Cozinha Gourmet Docol'\n" +
             "- 'Sofá Retrátil 3 Lugares Linho Bege'\n" +
-            "- 'Cuba de Apoio Banheiro Deca Slim Quadrada'\n" +
+            "- 'Cuba de Apoio Banheiro Deca Slim Quadrada'\n\n" +
             "Retorne ESTRITAMENTE um objeto JSON no formato:\n" +
             "{\n" +
-            "  \"identifiedProduct\": \"Nome comercial limpo, preciso e oficial do produto com marca e especificações\",\n" +
+            "  \"identifiedProduct\": \"Nome comercial limpo contendo apenas o que é visualmente verificável (marca, tipo, tamanho, cor, acabamento), sem códigos inventados\",\n" +
             "  \"category\": \"Categoria correspondente (Eletros, Móveis, Iluminação, Metais, Louças, Revestimentos, Marcenaria, Decoração ou Outros)\",\n" +
-            "  \"estimatedPrice\": \"Preço médio real de mercado em R$ (ex: R$ 4.199,00)\",\n" +
+            "  \"estimatedPrice\": \"Preço médio real de mercado em R$ (ex: R$ 1.199,00)\",\n" +
             "  \"erro_identificacao\": false\n" +
             "}"
         };
 
-        const visionModels = ["gemini-3.5-flash-lite", "gemini-3.8-flash"];
+        const visionModels = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite"];
         let visionSuccess = false;
+        let lastRawVisionText = "";
+        let lastCleanedProduct = "";
+        let visionDecisionReason = "";
+        const visionApiErrors: string[] = [];
+        let explicitVisionErrorReturned = false;
 
         for (const vModel of visionModels) {
           for (let attempt = 1; attempt <= 2; attempt++) {
             try {
-              console.log(`[Gemini Vision] Attempting ${vModel} (try ${attempt})...`);
+              console.log(`[Gemini Vision] Attempting model ${vModel} (try ${attempt})...`);
               const visionResponse = await ai.models.generateContent({
                 model: vModel,
                 contents: [
@@ -4918,44 +5314,105 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
                 config: { responseMimeType: "application/json" }
               });
 
-              // Explicit log of RAW vision output before parser as requested
-              console.log("[Gemini Vision Raw Output]:", visionResponse?.text);
+              lastRawVisionText = visionResponse?.text || "";
+              console.log(`[Gemini Vision Raw Output (${vModel})]:`, lastRawVisionText);
 
-              if (visionResponse?.text) {
-                const parsed = extractJsonFromText(visionResponse.text);
-                if (parsed && !parsed.erro_identificacao && parsed.identifiedProduct && isMeaningfulProductName(parsed.identifiedProduct)) {
-                  identifiedProduct = parsed.identifiedProduct.trim();
-                  identifiedCategory = parsed.category || null;
-                  estimatedPrice = parsed.estimatedPrice || null;
-                  extractedQuery = identifiedProduct;
-                  console.log("[Gemini Search] Successfully identified product from image:", identifiedProduct);
-                  visionSuccess = true;
-                  break;
+              if (lastRawVisionText) {
+                const parsed = extractJsonFromText(lastRawVisionText);
+                if (parsed) {
+                  if (parsed.erro_identificacao) {
+                    explicitVisionErrorReturned = true;
+                    visionDecisionReason = `O modelo de visão (${vModel}) analisou a foto e sinalizou expressamente 'erro_identificacao: true'`;
+                    console.log(`[Gemini Vision Cleaned]: (Nenhum - modelo sinalizou erro_identificacao: true)`);
+                    console.log(`[Gemini Vision Decision Reason]: ❌ ${visionDecisionReason}`);
+                    break;
+                  }
+
+                  if (parsed.identifiedProduct) {
+                    lastCleanedProduct = cleanModelCodesAndNoise(parsed.identifiedProduct.trim());
+                    console.log(`[Gemini Vision Cleaned]: "${lastCleanedProduct}"`);
+
+                    if (isMeaningfulProductName(lastCleanedProduct)) {
+                      identifiedProduct = lastCleanedProduct;
+                      identifiedCategory = parsed.category || null;
+                      estimatedPrice = parsed.estimatedPrice || null;
+                      extractedQuery = identifiedProduct;
+                      visionDecisionReason = `Produto identificado com sucesso pela imagem: "${identifiedProduct}" (Categoria: ${identifiedCategory || 'N/A'}, Preço Est.: ${estimatedPrice || 'N/A'})`;
+                      console.log(`[Gemini Vision Decision Reason]: ✅ ${visionDecisionReason}`);
+                      visionSuccess = true;
+                      break;
+                    } else {
+                      visionDecisionReason = `O texto limpo "${lastCleanedProduct}" não possui caracteres suficientes para um nome de produto válido`;
+                      console.log(`[Gemini Vision Decision Reason]: ⚠️ ${visionDecisionReason}`);
+                    }
+                  } else {
+                    visionDecisionReason = `JSON retornado não continha o campo 'identifiedProduct'`;
+                    console.log(`[Gemini Vision Decision Reason]: ⚠️ ${visionDecisionReason}`);
+                  }
+                } else {
+                  visionDecisionReason = `Falha ao fazer parse do JSON retornado pelo modelo: ${lastRawVisionText.slice(0, 100)}`;
+                  console.log(`[Gemini Vision Decision Reason]: ⚠️ ${visionDecisionReason}`);
                 }
               }
             } catch (vErr: any) {
-              console.warn(`[Gemini Vision] ${vModel} attempt ${attempt} error:`, vErr?.message?.slice(0, 150));
-              await new Promise(r => setTimeout(r, 300));
+              const errMsg = `${vModel} (tentativa ${attempt}): ${vErr?.message || vErr}`;
+              visionApiErrors.push(errMsg);
+              console.warn(`[Gemini Vision Exception] ${errMsg.slice(0, 180)}`);
+              
+              // Se for 503 (demanda alta) ou 429 (cota), pular imediatamente para o próximo modelo da lista
+              if (errMsg.includes('503') || errMsg.includes('429') || errMsg.includes('UNAVAILABLE') || errMsg.includes('RESOURCE_EXHAUSTED')) {
+                console.log(`[Gemini Vision] Modelo ${vModel} temporariamente indisponível. Alternando para próximo modelo...`);
+                break;
+              }
+              await new Promise(r => setTimeout(r, 200));
             }
           }
-          if (visionSuccess) break;
+          if (visionSuccess || explicitVisionErrorReturned) break;
         }
 
-        // If an image was provided but could NOT be identified with confidence, return explicit error instead of generic hallucination!
-        if (!identifiedProduct || !isMeaningfulProductName(identifiedProduct)) {
-          console.warn("[Gemini Vision] Could not identify product from image with high confidence. Returning explicit identification error.");
-          return res.status(200).json({
-            error: "Não foi possível identificar o produto na foto com clareza. Por favor, envie uma foto mais nítida ou digite o nome do produto no campo de busca.",
-            erro_identificacao: true,
-            results: []
-          });
+        // Separação estrita de casos:
+        // Caso A: O modelo de visão de fato respondeu e recusou ou não identificou o produto
+        // Caso B: Todas as chamadas de API geraram exceção/erro de rede ou cota
+        if (!visionSuccess) {
+          if (lastRawVisionText && (explicitVisionErrorReturned || !identifiedProduct)) {
+            console.warn(`[Gemini Vision] ❌ DECISÃO: Recusa pelo modelo de visão. Motivo: ${visionDecisionReason}`);
+            return res.status(200).json({
+              error: "Não foi possível identificar o produto na foto com clareza. Por favor, envie uma foto mais nítida ou digite o nome do produto no campo de busca.",
+              error_code: "VISION_NOT_IDENTIFIED",
+              erro_identificacao: true,
+              raw_vision_output: lastRawVisionText,
+              cleaned_product: lastCleanedProduct,
+              decision_reason: visionDecisionReason,
+              results: []
+            });
+          }
+
+          // Verificar se temos um nome no formulário ou query para salvar a busca do usuário
+          const fallbackHint = (formProductName || query || "").trim();
+          if (isMeaningfulProductName(fallbackHint)) {
+            identifiedProduct = cleanModelCodesAndNoise(fallbackHint);
+            extractedQuery = identifiedProduct;
+            console.log(`[Gemini Vision] Recuperação graciosa via nome informado pelo usuário: "${identifiedProduct}"`);
+          } else {
+            const serverErrMsg = visionApiErrors.length > 0 
+              ? visionApiErrors[visionApiErrors.length - 1] 
+              : "Falha na conexão com os modelos de visão de IA";
+            console.error(`[Gemini Vision] 💥 DECISÃO: Exceção de Servidor / Erro de API. Motivo: ${serverErrMsg}`);
+            return res.status(200).json({
+              error: `Instabilidade temporária nos servidores da IA (503/Demanda alta). Por favor, digite o nome do produto ou tente novamente em instantes.`,
+              error_code: "SERVER_VISION_API_EXCEPTION",
+              erro_identificacao: false,
+              decision_reason: `Exceção de servidor: ${serverErrMsg}`,
+              results: []
+            });
+          }
         }
       }
 
       // Step 2: Now generate real product purchasing options with Google Search Grounding Tool
-      finalSearchTerm = extractedQuery;
+      finalSearchTerm = cleanModelCodesAndNoise(extractedQuery);
       if (!imageBase64Data && !isMeaningfulProductName(finalSearchTerm) && isMeaningfulProductName(formProductName)) {
-        finalSearchTerm = formProductName.trim();
+        finalSearchTerm = cleanModelCodesAndNoise(formProductName.trim());
       }
 
       if (!isMeaningfulProductName(finalSearchTerm)) {
@@ -4967,8 +5424,9 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       }
 
       if (ai && finalSearchTerm) {
-        // Disparar chamada paralela à API pública oficial do Mercado Livre para garantir link direto 100% real
-        mlApiPromise = fetchMercadoLibreProduct(finalSearchTerm);
+        // Disparar chamada paralela à API pública oficial do Mercado Livre para garantir link direto 100% real com termo curto e genérico
+        const shortMlQuery = getShortGenericSearchTerm(finalSearchTerm);
+        mlApiPromise = fetchMercadoLibreProduct(shortMlQuery);
 
         // ==========================================
         // CHAMADA 1 (Busca/Grounding, SEM schema)
@@ -4987,29 +5445,38 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
         try {
           console.log(`[CHAMADA 1 - Google Search Grounding] Executando busca livre para: "${finalSearchTerm}"...`);
-          const searchResponse = await ai.models.generateContent({
-            model: "gemini-flash-latest",
-            contents: [{ text: searchPrompt }],
-            config: {
-              tools: [{ googleSearch: {} }]
-              // SEM responseMimeType e SEM responseSchema conforme especificado
-            }
-          });
+          const searchModels = ["gemini-flash-latest", "gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.1-flash-lite"];
+          
+          for (const sModel of searchModels) {
+            try {
+              const searchResponse = await ai.models.generateContent({
+                model: sModel,
+                contents: [{ text: searchPrompt }],
+                config: {
+                  tools: [{ googleSearch: {} }]
+                  // SEM responseMimeType e SEM responseSchema conforme especificado
+                }
+              });
 
-          step1RawText = searchResponse?.text || "";
-          usedGrounding = true;
-          console.log("[CHAMADA 1 Raw Text Length]:", step1RawText.length);
+              step1RawText = searchResponse?.text || "";
+              usedGrounding = true;
+              console.log(`[CHAMADA 1] Sucesso com modelo ${sModel}. Raw Text Length: ${step1RawText.length}`);
 
-          // Extrair os links e domínios reais de groundingChunks
-          const rawChunks = searchResponse?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-          if (Array.isArray(rawChunks)) {
-            for (const chunk of rawChunks) {
-              if (chunk?.web?.uri) {
-                extractedGroundingChunks.push({
-                  uri: chunk.web.uri,
-                  title: chunk.web.title || ""
-                });
+              // Extrair os links e domínios reais de groundingChunks
+              const rawChunks = searchResponse?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+              if (Array.isArray(rawChunks)) {
+                for (const chunk of rawChunks) {
+                  if (chunk?.web?.uri) {
+                    extractedGroundingChunks.push({
+                      uri: chunk.web.uri,
+                      title: chunk.web.title || ""
+                    });
+                  }
+                }
               }
+              if (step1RawText) break;
+            } catch (mErr: any) {
+              console.warn(`[CHAMADA 1] Modelo ${sModel} falhou:`, mErr?.message?.slice(0, 100));
             }
           }
 
@@ -5053,15 +5520,6 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
         } catch (groundingErr: any) {
           console.warn("[CHAMADA 1] Grounding search fallback:", groundingErr?.message?.slice(0, 150));
-          try {
-            const fallbackSearch = await ai.models.generateContent({
-              model: "gemini-3.1-flash-lite",
-              contents: [{ text: searchPrompt }]
-            });
-            step1RawText = fallbackSearch?.text || "";
-          } catch (fErr: any) {
-            console.warn("[CHAMADA 1 Fallback Error]:", fErr?.message?.slice(0, 150));
-          }
         }
 
         // ==========================================
@@ -5100,30 +5558,34 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
             step1RawText +
             groundingSourcesPrompt;
 
-          try {
-            console.log(`[CHAMADA 2 - Estruturação JSON] Formatando informações em schema JSON com ${extractedGroundingChunks.length} fontes reais mapeadas...`);
-            const structuringResponse = await ai.models.generateContent({
-              model: "gemini-3.5-flash-lite",
-              contents: [{
-                text: structuringPrompt
-              }],
-              config: {
-                responseMimeType: "application/json",
-                responseSchema: jsonSchema
-                // SEM tools / SEM googleSearch
-              }
-            });
+          const structModels = ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.8-flash", "gemini-3.1-flash-lite"];
+          for (const sModel of structModels) {
+            try {
+              console.log(`[CHAMADA 2 - Estruturação JSON] Tentando modelo ${sModel} com ${extractedGroundingChunks.length} fontes reais mapeadas...`);
+              const structuringResponse = await ai.models.generateContent({
+                model: sModel,
+                contents: [{
+                  text: structuringPrompt
+                }],
+                config: {
+                  responseMimeType: "application/json",
+                  responseSchema: jsonSchema
+                  // SEM tools / SEM googleSearch
+                }
+              });
 
-            if (structuringResponse?.text) {
-              const parsed = extractJsonFromText(structuringResponse.text);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                results = parsed;
-                source = usedGrounding ? "google_grounding" : "ai_generation";
-                console.log(`[CHAMADA 2] Sucesso! ${results.length} ofertas estruturadas em JSON.`);
+              if (structuringResponse?.text) {
+                const parsed = extractJsonFromText(structuringResponse.text);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  results = parsed;
+                  source = usedGrounding ? "google_grounding" : "ai_generation";
+                  console.log(`[CHAMADA 2] Sucesso com ${sModel}! ${results.length} ofertas estruturadas em JSON.`);
+                  break;
+                }
               }
+            } catch (structErr: any) {
+              console.warn(`[CHAMADA 2] Modelo ${sModel} falhou:`, structErr?.message?.slice(0, 100));
             }
-          } catch (structErr: any) {
-            console.warn("[CHAMADA 2 Error]:", structErr?.message?.slice(0, 150));
           }
         }
       }
@@ -5308,7 +5770,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
           store: item.store,
           category: item.category,
           link_direto: isDirect,
-          url: finalValidatedUrl,
+          url: finalValidatedUrl || getStoreListingUrl(item.title, item.store),
           imageUrl: finalImg,
           _discardReason: discardReason // Para auditoria nos logs
         };
@@ -5353,6 +5815,15 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
     });
   });
 
+  // Explicit 404 JSON handler for any unhandled /api/* endpoint
+  // This guarantees that API calls never fall through to Vite / SPA HTML fallback!
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({
+      success: false,
+      error: `Endpoint de API não encontrado: ${req.method} ${req.path}`,
+    });
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -5370,6 +5841,12 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
 
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
+      if (req.path.startsWith('/api')) {
+        return res.status(404).json({
+          success: false,
+          error: `Endpoint de API não encontrado: ${req.method} ${req.path}`,
+        });
+      }
       const indexPath = path.join(distPath, 'index.html');
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);

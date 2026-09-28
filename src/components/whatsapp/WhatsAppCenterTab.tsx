@@ -40,6 +40,7 @@ import {
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db, sanitizeFirestoreData } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
+import { safeJson } from '../../lib/apiHelper';
 
 export interface WhatsAppMessage {
   id: string;
@@ -227,8 +228,8 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
           userId: currentUserKey,
         }),
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await safeJson<any>(res, { success: false, error: 'Resposta inválida do servidor' });
+      if (res.ok && data?.success) {
         if (data.chats && data.chats.length > 0) {
           setChats(data.chats);
           localStorage.setItem(userChatsKey, JSON.stringify(data.chats));
@@ -293,8 +294,8 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
         }),
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await safeJson<any>(res, { success: false, error: 'Resposta inválida do servidor' });
+      if (res.ok && data?.success) {
         setZapiTestResult({
           success: true,
           message: `✅ Conexão Z-API OK! Mensagem de teste enviada para o número (${targetPhone}).`,
@@ -448,8 +449,8 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
       // 2. Fetch from backend server persistent store for this user
       try {
         const srvRes = await fetch(`/api/whatsapp/chats?userId=${encodeURIComponent(currentUserKey)}`);
-        const srvData = await srvRes.json();
-        if (srvData.success && Array.isArray(srvData.chats) && srvData.chats.length > 0) {
+        const srvData = await safeJson(srvRes);
+        if (srvData && srvData.success && Array.isArray(srvData.chats) && srvData.chats.length > 0) {
           setChats(srvData.chats);
           localStorage.setItem(userChatsKey, JSON.stringify(srvData.chats));
           if (!activeChatId) {
@@ -489,8 +490,8 @@ export const WhatsAppCenterTab: React.FC<WhatsAppCenterTabProps> = ({ onNavigate
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch(`/api/whatsapp/chats?userId=${encodeURIComponent(currentUserKey)}`);
-        const data = await res.json();
-        if (data.success && Array.isArray(data.chats)) {
+        const data = await safeJson(res);
+        if (data && data.success && Array.isArray(data.chats)) {
           setChats(prev => {
             const prevStr = JSON.stringify(prev);
             const nextStr = JSON.stringify(data.chats);

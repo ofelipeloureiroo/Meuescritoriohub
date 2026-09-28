@@ -450,6 +450,19 @@ export interface MemorialItem {
   notes?: string;
 }
 
+export interface ProductLibraryItem {
+  id: string;
+  name: string;
+  category: string;
+  specifications?: string;
+  price?: string;
+  store?: string;
+  url?: string;
+  imageUrl?: string;
+  capturedAt: string; // ISO date string da captura do preço
+  updatedAt?: string;
+}
+
 export interface WorldCountry {
   code: string; // e.g. 'BR', 'US', 'PT', 'IT'
   name: string; // 'Brasil', 'Estados Unidos', 'Portugal'

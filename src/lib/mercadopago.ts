@@ -1,5 +1,6 @@
 // Mercado Pago Frontend Integration Helper
 // Official Mercado Pago SDK v2
+import { safeJson } from './apiHelper';
 
 declare global {
   interface Window {
@@ -89,8 +90,8 @@ export async function fetchMercadoPagoStatus(): Promise<{
 }> {
   try {
     const res = await fetch('/api/mercadopago/status');
-    if (!res.ok) throw new Error('Falha ao consultar status do Mercado Pago');
-    const data = await res.json();
+    const data = await safeJson(res);
+    if (!res.ok || !data) throw new Error('Falha ao consultar status do Mercado Pago');
     if (data.publicKey) {
       setRuntimePublicKey(data.publicKey);
     }
@@ -140,9 +141,9 @@ export async function createCheckoutPreference(
     }),
   });
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || 'Erro ao gerar preferência de pagamento no Mercado Pago.');
+  const data = await safeJson(res);
+  if (!res.ok || !data) {
+    throw new Error(data?.error || 'Erro ao gerar preferência de pagamento no Mercado Pago.');
   }
 
   return data;
@@ -191,8 +192,9 @@ export interface PaymentMethodsResponse {
 export async function fetchPaymentMethods(): Promise<PaymentMethodsResponse> {
   try {
     const res = await fetch('/api/mercadopago/payment-methods');
-    if (!res.ok) throw new Error('Falha ao obter meios de pagamento');
-    return await res.json();
+    const data = await safeJson<PaymentMethodsResponse>(res);
+    if (!res.ok || !data) throw new Error('Falha ao obter meios de pagamento');
+    return data;
   } catch (err: any) {
     console.warn('Erro ao carregar meios de pagamento:', err);
     return {
@@ -228,9 +230,9 @@ export async function saveMercadoPagoConfig(credentials: {
     body: JSON.stringify(credentials),
   });
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || 'Erro ao salvar credenciais do Mercado Pago');
+  const data = await safeJson(res);
+  if (!res.ok || !data) {
+    throw new Error(data?.error || 'Erro ao salvar credenciais do Mercado Pago');
   }
 
   if (credentials.publicKey) {
@@ -282,9 +284,9 @@ export async function processTransparentPayment(
     body: JSON.stringify(params),
   });
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || 'Erro ao processar pagamento com cartão.');
+  const data = await safeJson(res);
+  if (!res.ok || !data) {
+    throw new Error(data?.error || 'Erro ao processar pagamento com cartão.');
   }
 
   return data;
@@ -366,9 +368,9 @@ export async function createMercadoPagoPix(
     body: JSON.stringify(params),
   });
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || 'Erro ao gerar PIX no Mercado Pago.');
+  const data = await safeJson(res);
+  if (!res.ok || !data) {
+    throw new Error(data?.error || 'Erro ao gerar PIX no Mercado Pago.');
   }
 
   return data;
@@ -422,9 +424,9 @@ export async function createMercadoPagoBoleto(
     body: JSON.stringify(params),
   });
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || 'Erro ao gerar boleto no Mercado Pago.');
+  const data = await safeJson(res);
+  if (!res.ok || !data) {
+    throw new Error(data?.error || 'Erro ao gerar boleto no Mercado Pago.');
   }
 
   return data;

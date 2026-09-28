@@ -49,6 +49,7 @@ import {
   TemplateStage,
   TemplateTask,
   TimeEntry,
+  ProductLibraryItem,
 } from '../types';
 import { applyThemeToDocument, NICHES, THEMES } from '../utils/theme';
 import { getNicheSampleProjects } from '../utils/nicheSampleData';
@@ -177,6 +178,13 @@ interface FinanceContextType {
   addAppAction: (action: Omit<AppAction, 'id' | 'createdAt'>) => void;
   updateAppAction: (id: string, action: Partial<AppAction>) => void;
   deleteAppAction: (id: string) => void;
+
+  // Actions - Product Library (Catálogo Pessoal de Produtos)
+  productLibrary: ProductLibraryItem[];
+  addProductToLibrary: (product: Omit<ProductLibraryItem, 'id' | 'capturedAt'> & { capturedAt?: string }) => ProductLibraryItem;
+  updateProductInLibrary: (id: string, product: Partial<ProductLibraryItem>) => void;
+  deleteProductFromLibrary: (id: string) => void;
+  refreshProductPriceInLibrary: (id: string) => Promise<{ success: boolean; error?: string }>;
 
   // Computed Financial & Project Metrics
   totalNetWorth: number;
@@ -750,6 +758,38 @@ export function recoverClientsForUser(targetUid?: string, userEmail?: string): C
   return result;
 }
 
+function recoverProductLibraryForUser(targetUid?: string): ProductLibraryItem[] {
+  const recoveredMap = new Map<string, ProductLibraryItem>();
+  if (targetUid) {
+    const primaryKey = `office_v2_${targetUid}_product_library`;
+    const saved = localStorage.getItem(primaryKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((item) => {
+            if (item && item.id && item.name) recoveredMap.set(item.id, item);
+          });
+        }
+      } catch {}
+    }
+  }
+  const fallback = localStorage.getItem('office_product_library');
+  if (fallback) {
+    try {
+      const parsed = JSON.parse(fallback);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((item) => {
+          if (item && item.id && item.name && !recoveredMap.has(item.id)) {
+            recoveredMap.set(item.id, item);
+          }
+        });
+      }
+    } catch {}
+  }
+  return Array.from(recoveredMap.values());
+}
+
 const INITIAL_OFFICE_SETTINGS: OfficeSettings = {
   financialCategories: {
     receitas: [
@@ -1237,6 +1277,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return [];
   });
 
+  const [productLibrary, setProductLibrary] = useState<ProductLibraryItem[]>(() => {
+    return recoverProductLibraryForUser(targetUid);
+  });
+
   const updateOfficeSettings = (updated: Partial<OfficeSettings>) => {
     recordLocalMutation();
     setOfficeSettings((prev) => {
@@ -1441,6 +1485,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     safeSetItem('time_entries', timeEntries);
   }, [timeEntries]);
 
+  useEffect(() => {
+    safeSetItem('product_library', productLibrary);
+    try { localStorage.setItem('office_product_library', JSON.stringify(productLibrary)); } catch {}
+  }, [productLibrary]);
+
   // Load and synchronize states from local storage whenever targetUid changes
   useEffect(() => {
     if (!targetUid) return;
@@ -1610,6 +1659,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setTimeEntries([]);
       }
     }
+    
+    // Load Product Library
+    const savedProductLibrary = recoverProductLibraryForUser(targetUid);
+    setProductLibrary(savedProductLibrary);
     
     loadedUidRef.current = targetUid;
     setIsLocalLoaded(true);
@@ -1869,6 +1922,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (Array.isArray(data.actions)) {
             setActions(data.actions.filter((a: any) => !a.id?.startsWith('act-demo-')));
           }
+          if (Array.isArray(data.productLibrary)) {
+            setProductLibrary((prev) => {
+              const map = new Map<string, ProductLibraryItem>();
+              const local = recoverProductLibraryForUser(targetUid);
+              [...prev, ...local].forEach((p) => { if (p?.id) map.set(p.id, p); });
+              data.productLibrary.forEach((p: any) => {
+                if (p?.id) {
+                  const existing = map.get(p.id);
+                  map.set(p.id, existing ? { ...existing, ...p } : p);
+                }
+              });
+              const merged = Array.from(map.values());
+              safeSetItem('product_library', merged);
+              try { localStorage.setItem('office_product_library', JSON.stringify(merged)); } catch {}
+              return merged;
+            });
+          }
 
           isCloudLoadedRef.current = true;
           setTimeout(() => {
@@ -1894,6 +1964,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
               categoryBudgets,
               officeSettings: INITIAL_OFFICE_SETTINGS,
               actions,
+              productLibrary,
               updatedAt: new Date().toISOString(),
             };
             await setDoc(workspaceDocRef, JSON.parse(JSON.stringify(payload)), { merge: true });
@@ -1943,6 +2014,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         categoryBudgets,
         officeSettings,
         actions,
+        productLibrary,
         updatedAt: new Date().toISOString(),
       };
 
@@ -1997,6 +2069,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           categoryBudgets,
           officeSettings,
           actions,
+          productLibrary,
           updatedAt: new Date().toISOString(),
         };
         const sanitized = JSON.parse(JSON.stringify(payload));
@@ -2034,6 +2107,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     categoryBudgets,
     officeSettings,
     actions,
+    productLibrary,
   ]);
 
   // Auto-sync client portals to Firestore clientPortals collection & local storage
@@ -3778,6 +3852,84 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setTimeEntries((prev) => prev.filter((entry) => entry.id !== id));
   };
 
+  // Actions - Product Library (Catálogo Pessoal de Produtos)
+  const addProductToLibrary = (product: Omit<ProductLibraryItem, 'id' | 'capturedAt'> & { capturedAt?: string }): ProductLibraryItem => {
+    recordLocalMutation();
+    const newItem: ProductLibraryItem = {
+      ...product,
+      id: `prod-lib-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      capturedAt: product.capturedAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setProductLibrary((prev) => {
+      const updated = [newItem, ...prev.filter(p => p.id !== newItem.id)];
+      safeSetItem('product_library', updated);
+      try { localStorage.setItem('office_product_library', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    return newItem;
+  };
+
+  const updateProductInLibrary = (id: string, product: Partial<ProductLibraryItem>) => {
+    recordLocalMutation();
+    setProductLibrary((prev) => {
+      const updated = prev.map(p => p.id === id ? { ...p, ...product, updatedAt: new Date().toISOString() } : p);
+      safeSetItem('product_library', updated);
+      try { localStorage.setItem('office_product_library', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+  };
+
+  const deleteProductFromLibrary = (id: string) => {
+    recordLocalMutation();
+    setProductLibrary((prev) => {
+      const updated = prev.filter(p => p.id !== id);
+      safeSetItem('product_library', updated);
+      try { localStorage.setItem('office_product_library', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+  };
+
+  const refreshProductPriceInLibrary = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    const item = productLibrary.find(p => p.id === id);
+    if (!item || !item.url) {
+      return { success: false, error: 'O item não possui um link cadastrado.' };
+    }
+    try {
+      const resp = await fetch('/api/product-from-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: item.url })
+      });
+      const data = await resp.json();
+      if (!data || !data.success) {
+        return { success: false, error: data?.error || 'A loja não permitiu a leitura automática do link.' };
+      }
+      recordLocalMutation();
+      setProductLibrary((prev) => {
+        const updated = prev.map(p => {
+          if (p.id === id) {
+            return {
+              ...p,
+              price: data.price || p.price,
+              store: data.store || p.store,
+              imageUrl: data.imageUrl || p.imageUrl,
+              capturedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return p;
+        });
+        safeSetItem('product_library', updated);
+        try { localStorage.setItem('office_product_library', JSON.stringify(updated)); } catch {}
+        return updated;
+      });
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: 'Não foi possível conectar ao servidor para atualizar o preço.' };
+    }
+  };
+
   // Computations
   const computedBankAccounts = useMemo(() => {
     return bankAccounts.map((acc) => {
@@ -4382,6 +4534,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addAppAction,
         updateAppAction,
         deleteAppAction,
+        productLibrary,
+        addProductToLibrary,
+        updateProductInLibrary,
+        deleteProductFromLibrary,
+        refreshProductPriceInLibrary,
       }}
     >
       {children}

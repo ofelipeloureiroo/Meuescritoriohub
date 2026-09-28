@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Plus,
   Search,
@@ -21,10 +21,16 @@ import {
   ChevronDown,
   Sparkles,
   Eye,
-  Download
+  Download,
+  Bookmark,
+  BookmarkPlus,
+  BookOpen,
+  RefreshCw,
+  Clock
 } from 'lucide-react';
-import { ArchitectureProject, MemorialItem } from '../../types';
+import { ArchitectureProject, MemorialItem, ProductLibraryItem } from '../../types';
 import { useFinance } from '../../context/FinanceContext';
+import { safeJson } from '../../lib/apiHelper';
 
 interface MemorialDescritivoTabProps {
   project: ArchitectureProject;
@@ -43,6 +49,96 @@ const CATEGORIES = [
   'Área Gourmet',
   'Outros'
 ];
+
+// Helper: Remove alucinações de códigos de modelos e SKUs não comprováveis visualmente (ex: "PH32R86DAG")
+export function cleanModelCodesAndNoise(text: string): string {
+  if (!text) return "";
+  return text
+    .split(/\s+/)
+    .filter(word => {
+      if (word.length >= 4 && /[a-zA-Z]/.test(word) && /\d/.test(word)) {
+        if (/^(4k|8k|\d+l|\d+w|\d+v|\d+pol|\d+cm|\d+m)$/i.test(word)) return true;
+        if (/^\d+x\d+(cm|mm|m)?$/i.test(word)) return true;
+        return false;
+      }
+      return true;
+    })
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Helper: Extrair termo de busca CURTO e genérico sem códigos de modelo (ex: "Smart TV 32 Philco")
+export function getShortGenericSearchTerm(title: string): string {
+  if (!title) return 'produto';
+
+  let clean = title
+    .replace(/\(.*?\)/g, ' ')
+    .replace(/\[.*?\]/g, ' ')
+    .replace(/["'”’]/g, ' ')
+    .replace(/[^\w\sáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ-]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  clean = cleanModelCodesAndNoise(clean);
+
+  const noiseWords = new Set([
+    'bivolt', '110v', '220v', '220', '110', '127v', '127', 'com', 'sem', 'para',
+    'original', 'novo', 'nova', 'garantia', 'nf', 'pronta', 'entrega', 'frete', 'gratis',
+    'promocao', 'oferta', 'oficial', 'loja', 'brasil', 'hdmi', 'usb', 'bluetooth',
+    'wifi', 'wi-fi', 'hdr', 'hdr10', 'dolby', 'audio', 'sistema', 'smartv', 'tecnologia'
+  ]);
+
+  const words = clean.split(/\s+/).filter(w => !noiseWords.has(w.toLowerCase()));
+  const danglingWords = new Set(["de", "da", "do", "das", "dos", "com", "em", "por", "by", "para", "sem", "e", "a", "o"]);
+  let shortList = words.slice(0, 4);
+  if (shortList.length === 4 && danglingWords.has(shortList[3].toLowerCase()) && words[4]) {
+    shortList = words.slice(0, 5);
+  }
+  return shortList.join(' ').trim() || words.slice(0, 3).join(' ') || clean.split(/\s+/).slice(0, 3).join(' ') || 'produto';
+}
+
+// Helper: Identifica se uma URL é comprovadamente uma página de produto validada ou busca/referência
+export function isProductPageUrl(url?: string): boolean {
+  if (!url) return false;
+  const lower = url.trim().toLowerCase();
+
+  // Padrões explícitos de busca/listagem - NUNCA são páginas diretas de produto
+  if (
+    lower.includes('/busca') ||
+    lower.includes('/search') ||
+    lower.includes('?q=') ||
+    lower.includes('&q=') ||
+    lower.includes('?query=') ||
+    lower.includes('&query=') ||
+    lower.includes('?k=') ||
+    lower.includes('&k=') ||
+    lower.includes('lista.mercadolivre.com.br') ||
+    lower.endsWith('/b') ||
+    lower.includes('/b?') ||
+    lower.includes('/b/') ||
+    lower.includes('s?k=') ||
+    lower.includes('busca?') ||
+    lower.includes('search?')
+  ) {
+    return false;
+  }
+
+  // Padrões consolidados de páginas de produto direto
+  if (
+    lower.includes('produto.mercadolivre.com.br/mlb-') ||
+    lower.includes('mercadolivre.com.br/p/') ||
+    lower.includes('/p/') ||
+    lower.includes('/dp/') ||
+    lower.includes('/produto/') ||
+    lower.includes('_891') ||
+    /\/(p|dp|pd|product)\/[a-z0-9]+/i.test(lower)
+  ) {
+    return true;
+  }
+
+  return false;
+}
 
 // Helper to generate a clean, self-contained, printable A4 HTML document
 function generateMemorialPrintHtml(
@@ -94,7 +190,7 @@ function generateMemorialPrintHtml(
             </td>
             <td style="padding: 10px 8px; font-size: 11px; color: #374151;">
               <span style="display: block; font-weight: 600;">${item.store || 'A definir'}</span>
-              ${item.url ? `<a href="${item.url}" target="_blank" style="color: #8c7456; font-size: 10px; text-decoration: underline; word-break: break-all; display: block; margin-top: 3px;">Ver na Loja &rarr;</a>` : ''}
+              ${item.url ? `<a href="${item.url}" target="_blank" style="color: #8c7456; font-size: 10px; text-decoration: underline; word-break: break-all; display: block; margin-top: 3px;">${isProductPageUrl(item.url) ? 'Ir para o produto' : 'Buscar na loja'} &rarr;</a>` : ''}
             </td>
             <td style="padding: 10px 8px; font-size: 11px; text-align: center; font-weight: 700; color: #111827;">${item.quantity || 1}</td>
             <td style="padding: 10px 8px; font-size: 12px; text-align: right; font-weight: 800; color: #8c7456; white-space: nowrap;">${item.price || 'Sob consulta'}</td>
@@ -337,8 +433,61 @@ function generateMemorialPrintHtml(
 }
 
 export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ project }) => {
-  const { updateArchitectureProject, architectProfile } = useFinance();
+  const {
+    updateArchitectureProject,
+    architectProfile,
+    productLibrary,
+    addProductToLibrary,
+    updateProductInLibrary,
+    deleteProductFromLibrary,
+    refreshProductPriceInLibrary
+  } = useFinance();
   const officeName = architectProfile?.ownerName || architectProfile?.name || 'Escritório de Arquitetura';
+
+  // Modal Tabs & Library States
+  const [modalTab, setModalTab] = useState<'ai' | 'library' | 'bookmarklet'>('ai');
+  const [librarySearchQuery, setLibrarySearchQuery] = useState<string>('');
+  const [libraryCategoryFilter, setLibraryCategoryFilter] = useState<string>('Todos');
+  const [updatingPriceId, setUpdatingPriceId] = useState<string | null>(null);
+
+  const bookmarkletHref = `javascript:(function(){try{let title='';let imageUrl='';let price='';const ld=document.querySelector('script[type="application/ld+json"]');if(ld){try{const json=JSON.parse(ld.innerText);const findP=(o)=>{if(!o)return null;if(o['@type']==='Product')return o;if(Array.isArray(o))for(let x of o){let f=findP(x);if(f)return f;}if(o['@graph'])for(let x of o['@graph']){let f=findP(x);if(f)return f;}return null;};const p=findP(json);if(p){if(p.name)title=p.name;if(p.image)imageUrl=typeof p.image==='string'?p.image:(p.image[0]||p.image.url||'');if(p.offers){const off=Array.isArray(p.offers)?p.offers[0]:p.offers;if(off&&(off.price||off.lowPrice))price=String(off.price||off.lowPrice);}}}catch(e){}}if(!title){const ogt=document.querySelector('meta[property="og:title"]');if(ogt)title=ogt.getAttribute('content')||'';}if(!title)title=document.title||'';if(!imageUrl){const ogi=document.querySelector('meta[property="og:image"]');if(ogi)imageUrl=ogi.getAttribute('content')||'';}if(!price){const ogp=document.querySelector('meta[property="product:price:amount"]');if(ogp)price=ogp.getAttribute('content')||'';}title=title.replace(/\\s*[:\\|\\-]\\s*(Amazon\\.com\\.br|Magazine Luiza|Casas Bahia|Mercado Livre|Magalu).*$/gi,'').trim();const data={title,imageUrl,price,store:location.hostname,url:location.href};const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(data))));const targetUrl='${window.location.origin}${window.location.pathname}#capture='+encoded;window.open(targetUrl,'_blank')||(location.href=targetUrl);}catch(e){alert('Erro ao capturar produto: '+e.message);}})();`;
+
+  // Hash Capture Listener for Bookmarklet
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#capture=')) {
+      try {
+        const encoded = hash.replace('#capture=', '');
+        const jsonStr = decodeURIComponent(escape(atob(encoded)));
+        const data = JSON.parse(jsonStr);
+        if (data && data.title) {
+          resetForm();
+          setFormTitle(data.title || '');
+          if (data.price) setFormPrice(data.price);
+          if (data.store) setFormStore(data.store);
+          if (data.url && typeof data.url === 'string') {
+            const trimmedUrl = data.url.trim();
+            if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+              setFormUrl(trimmedUrl);
+              setUrlVerifiedDirect(true);
+            }
+          }
+          if (data.imageUrl && typeof data.imageUrl === 'string') {
+            const trimmedImg = data.imageUrl.trim();
+            if (trimmedImg.startsWith('http://') || trimmedImg.startsWith('https://')) {
+              setFormImageBase64(trimmedImg);
+              setImageUploadIA(trimmedImg);
+            }
+          }
+          setIsModalOpen(true);
+          showToast(`✨ Produto capturado da loja (${data.store || 'Web'}) com sucesso!`);
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+      } catch (e) {
+        console.error("Erro ao decodificar dados de captura:", e);
+      }
+    }
+  }, []);
 
   // Memorial Items local state (synced with project) with auto-repair for URLs in title
   const items = useMemo(() => {
@@ -408,6 +557,10 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
   const [searchResultsIA, setSearchResultsIA] = useState<any[]>([]);
   const [searchErrorIA, setSearchErrorIA] = useState<string>('');
   const [searchNoticeIA, setSearchNoticeIA] = useState<string>('');
+
+  // Link Autofill State
+  const [isLoadingUrlData, setIsLoadingUrlData] = useState(false);
+  const [urlVerifiedDirect, setUrlVerifiedDirect] = useState(false);
 
   // Drag and Drop State
   const [isDragging, setIsDragging] = useState(false);
@@ -486,9 +639,13 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
         })
       });
 
-      const data = await response.json();
-      if (data.erro_identificacao || (!response.ok && data.error)) {
-        setSearchErrorIA(data.error || 'Não foi possível identificar o produto na foto com clareza. Por favor, envie uma foto mais nítida ou digite o nome do produto.');
+      const data = await safeJson(response);
+      if (!data || data.erro_identificacao || (!response.ok && data.error) || data.error_code) {
+        if (data?.error_code === 'SERVER_VISION_API_EXCEPTION') {
+          setSearchErrorIA(`⚠️ ${data.error || 'Instabilidade temporária na comunicação com a IA. Tente novamente em instantes.'}`);
+        } else {
+          setSearchErrorIA(data?.error || 'Não foi possível identificar o produto na foto com clareza. Por favor, envie uma foto mais nítida ou digite o nome do produto.');
+        }
         setSearchResultsIA([]);
         return;
       }
@@ -593,7 +750,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     const rawUrl = (option.url || '').trim();
     const title = (option.title || searchQueryIA || formTitle || 'produto').trim();
     const store = (option.store || formStore || '').toLowerCase();
-    const cleanTitle = title.replace(/[^\w\sáéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ-]/gi, ' ').replace(/\s+/g, ' ').trim();
+    const cleanTitle = getShortGenericSearchTerm(title);
     const encTitle = encodeURIComponent(cleanTitle);
 
     if (rawUrl && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
@@ -622,7 +779,13 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
       return `https://www.amazon.com.br/s?k=${encTitle}&i=aps`;
     }
     if (store.includes('casas bahia') || store.includes('casasbahia')) {
-      return `https://www.casasbahia.com.br/b?q=${encTitle}`;
+      const slug = cleanTitle
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      return `https://www.casasbahia.com.br/${slug}/b`;
     }
     if (store.includes('leroy merlin') || store.includes('leroy')) {
       return `https://www.leroymerlin.com.br/busca?q=${encTitle}`;
@@ -737,6 +900,62 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     showToast(`✓ "${option.title}" selecionado com foto!`);
   };
 
+  // Helper to autofill form from product URL
+  const handleFillFromProductUrl = async () => {
+    const raw = formUrl.trim();
+    if (!raw || (!raw.startsWith('http://') && !raw.startsWith('https://'))) {
+      showToast("⚠️ Digite ou cole um link válido (http:// ou https://) no campo de link primeiro.");
+      return;
+    }
+
+    setIsLoadingUrlData(true);
+    try {
+      const resp = await fetch('/api/product-from-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: raw })
+      });
+      const data = await safeJson(resp);
+
+      if (!data || !data.success) {
+        showToast(data?.error || "Esta loja bloqueia leitura automática. Use o botão 'Capturar produto' na página da loja.");
+        return;
+      }
+
+      // Check if user already typed fields before overwriting
+      const hasExistingData = (formTitle.trim() && formTitle !== data.title) || 
+                              (formPrice.trim() && formPrice !== data.price) || 
+                              (formImageBase64.trim() && formImageBase64 !== data.imageUrl);
+
+      const applyData = () => {
+        if (data.title) setFormTitle(data.title);
+        if (data.price) setFormPrice(data.price);
+        if (data.store) setFormStore(data.store);
+        if (data.imageUrl) {
+          setFormImageBase64(data.imageUrl);
+          setImageUploadIA(data.imageUrl);
+        }
+        if (data.description && !formDescription.trim()) setFormDescription(data.description);
+        if (data.url) setFormUrl(data.url);
+        setUrlVerifiedDirect(true);
+        showToast(`✨ Dados do produto preenchidos com sucesso (${data.store})!`);
+      };
+
+      if (hasExistingData) {
+        if (window.confirm("Você já possui informações preenchidas neste formulário. Deseja substituir os campos pelos dados extraídos automaticamente do link?")) {
+          applyData();
+        }
+      } else {
+        applyData();
+      }
+    } catch (err: any) {
+      console.error("Erro ao preencher a partir do link:", err);
+      showToast("Não foi possível conectar ao servidor para ler o link.");
+    } finally {
+      setIsLoadingUrlData(false);
+    }
+  };
+
   // Reset form
   const resetForm = () => {
     setEditingItem(null);
@@ -755,6 +974,8 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     setSearchResultsIA([]);
     setSearchErrorIA('');
     setSearchNoticeIA('');
+    setIsLoadingUrlData(false);
+    setUrlVerifiedDirect(false);
   };
 
   // Open modal for new item
@@ -782,6 +1003,8 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
     setSearchResultsIA([]);
     setSearchErrorIA('');
     setSearchNoticeIA('');
+    setIsLoadingUrlData(false);
+    setUrlVerifiedDirect(isProductPageUrl(item.url));
     setIsModalOpen(true);
   };
 
@@ -1263,11 +1486,32 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-1.5 rounded-lg bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors border border-zinc-200 cursor-pointer"
-                          title="Ir para loja"
+                          title={isProductPageUrl(item.url) ? "Ir para o produto" : "Buscar na loja"}
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                         </a>
                       )}
+
+                      {/* Save to library */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          addProductToLibrary({
+                            name: item.title,
+                            category: item.category,
+                            specifications: item.description,
+                            price: item.price,
+                            store: item.store,
+                            url: item.url,
+                            imageUrl: item.imageUrl
+                          });
+                          showToast(`✓ "${item.title}" salvo na biblioteca!`);
+                        }}
+                        className="p-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors cursor-pointer"
+                        title="Salvar na biblioteca de produtos"
+                      >
+                        <BookmarkPlus className="w-3.5 h-3.5" />
+                      </button>
 
                       {/* Edit */}
                       <button
@@ -1316,11 +1560,230 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
               </button>
             </div>
 
-            {/* Modal Body: Left search/AI results, Right item details */}
+            {/* Modal Tabs Navigation */}
+            <div className="flex items-center gap-2 px-6 py-3 bg-zinc-50 border-b border-zinc-200 shrink-0 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setModalTab('ai')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  modalTab === 'ai'
+                    ? 'bg-[#4a4038] text-white shadow-xs'
+                    : 'bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>IA & Busca Web</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab('library')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  modalTab === 'library'
+                    ? 'bg-[#4a4038] text-white shadow-xs'
+                    : 'bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Minha Biblioteca ({productLibrary.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab('bookmarklet')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  modalTab === 'bookmarklet'
+                    ? 'bg-[#4a4038] text-white shadow-xs'
+                    : 'bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200'
+                }`}
+              >
+                <Bookmark className="w-3.5 h-3.5" />
+                <span>📌 Capturar Direto da Loja</span>
+              </button>
+            </div>
+
+            {/* Modal Body: Left search/AI results or Library or Bookmarklet, Right item details */}
             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
               
-              {/* Left Column: AI Google Search Assistant */}
-              <div className="lg:col-span-5 bg-zinc-50/80 rounded-2xl p-4 border border-zinc-200 space-y-4">
+              {modalTab === 'library' ? (
+                <div className="lg:col-span-12 space-y-4">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-zinc-50 p-4 rounded-2xl border border-zinc-200">
+                    <div>
+                      <h4 className="font-extrabold text-sm text-zinc-900">Catálogo Pessoal (Biblioteca de Produtos)</h4>
+                      <p className="text-xs text-zinc-500">Seus produtos salvos de projetos anteriores ou favoritos. Clique em 'Usar este produto' para preencher o formulário.</p>
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <div className="relative flex-1 sm:w-64">
+                        <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-zinc-400" />
+                        <input
+                          type="text"
+                          value={librarySearchQuery}
+                          onChange={(e) => setLibrarySearchQuery(e.target.value)}
+                          placeholder="Buscar produto salvo..."
+                          className="w-full pl-9 pr-3 py-2 rounded-xl border border-zinc-200 text-xs bg-white text-zinc-900 focus:outline-hidden"
+                        />
+                      </div>
+                      <select
+                        value={libraryCategoryFilter}
+                        onChange={(e) => setLibraryCategoryFilter(e.target.value)}
+                        className="px-3 py-2 rounded-xl border border-zinc-200 text-xs bg-white text-zinc-900 focus:outline-hidden"
+                      >
+                        <option value="Todos">Todas Categorias</option>
+                        {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Library Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto p-1">
+                    {productLibrary
+                      .filter(item => {
+                        const matchesSearch = !librarySearchQuery || item.name.toLowerCase().includes(librarySearchQuery.toLowerCase()) || (item.store && item.store.toLowerCase().includes(librarySearchQuery.toLowerCase()));
+                        const matchesCat = libraryCategoryFilter === 'Todos' || item.category === libraryCategoryFilter;
+                        return matchesSearch && matchesCat;
+                      })
+                      .map(libItem => {
+                        const daysOld = Math.floor((Date.now() - new Date(libItem.capturedAt).getTime()) / (1000 * 60 * 60 * 24));
+                        const isOutdated = daysOld > 30;
+
+                        return (
+                          <div key={libItem.id} className="bg-white rounded-2xl p-4 border border-zinc-200 hover:border-[#8c7456] transition-all flex flex-col justify-between shadow-xs space-y-3">
+                            <div className="flex gap-3">
+                              {libItem.imageUrl ? (
+                                <img src={libItem.imageUrl} alt={libItem.name} className="w-16 h-16 rounded-xl object-cover border border-zinc-200 shrink-0" referrerPolicy="no-referrer" />
+                              ) : (
+                                <div className="w-16 h-16 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 font-bold uppercase text-xs shrink-0">
+                                  {libItem.category.substring(0,2)}
+                                </div>
+                              )}
+                              <div className="space-y-1 min-w-0 flex-1">
+                                <span className="text-[10px] font-bold text-[#8c7456] uppercase tracking-wider block">{libItem.category}</span>
+                                <h5 className="font-bold text-xs text-zinc-900 line-clamp-2" title={libItem.name}>{libItem.name}</h5>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-extrabold text-xs text-zinc-900">{libItem.price || 'Preço sob consulta'}</span>
+                                  {libItem.store && <span className="text-[10px] text-zinc-400">• {libItem.store}</span>}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2 pt-2 border-t border-zinc-100">
+                              <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  Capturado em: {new Date(libItem.capturedAt).toLocaleDateString('pt-BR')}
+                                </span>
+                                {isOutdated && (
+                                  <span className="text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200" title="Preço capturado há mais de 30 dias">
+                                    ⚠️ Preço pode ter mudado
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1.5 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFormTitle(libItem.name);
+                                    setFormCategory(libItem.category);
+                                    setFormDescription(libItem.specifications || '');
+                                    setFormPrice(libItem.price || '');
+                                    setFormStore(libItem.store || '');
+                                    setFormUrl(libItem.url || '');
+                                    if (libItem.imageUrl) {
+                                      setFormImageBase64(libItem.imageUrl);
+                                      setImageUploadIA(libItem.imageUrl);
+                                    }
+                                    setUrlVerifiedDirect(isProductPageUrl(libItem.url));
+                                    setModalTab('ai');
+                                    showToast(`✓ Produto "${libItem.name}" carregado no formulário!`);
+                                  }}
+                                  className="flex-1 py-1.5 rounded-xl bg-[#4a4038] text-white hover:bg-[#3d342f] text-xs font-bold transition-colors cursor-pointer text-center shadow-xs"
+                                >
+                                  Usar este produto
+                                </button>
+
+                                {libItem.url && (
+                                  <button
+                                    type="button"
+                                    disabled={updatingPriceId === libItem.id}
+                                    onClick={async () => {
+                                      setUpdatingPriceId(libItem.id);
+                                      const res = await refreshProductPriceInLibrary(libItem.id);
+                                      setUpdatingPriceId(null);
+                                      if (res.success) {
+                                        showToast("✨ Preço atualizado com sucesso!");
+                                      } else {
+                                        showToast(res.error || "Não foi possível atualizar o preço.");
+                                      }
+                                    }}
+                                    className="p-1.5 rounded-xl bg-zinc-100 text-zinc-700 hover:bg-zinc-200 transition-colors border border-zinc-200 cursor-pointer"
+                                    title="Atualizar preço via link"
+                                  >
+                                    <RefreshCw className={`w-3.5 h-3.5 ${updatingPriceId === libItem.id ? 'animate-spin' : ''}`} />
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (window.confirm(`Deseja excluir "${libItem.name}" da biblioteca?`)) {
+                                      deleteProductFromLibrary(libItem.id);
+                                      showToast("Produto excluído da biblioteca.");
+                                    }
+                                  }}
+                                  className="p-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors border border-rose-200 cursor-pointer"
+                                  title="Excluir da biblioteca"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                    {productLibrary.length === 0 && (
+                      <div className="col-span-full py-12 text-center space-y-2 bg-white rounded-2xl border border-zinc-200">
+                        <BookOpen className="w-8 h-8 text-zinc-300 mx-auto" />
+                        <h5 className="font-bold text-xs text-zinc-700">Sua biblioteca está vazia</h5>
+                        <p className="text-[11px] text-zinc-400">Salve produtos de seus memoriais de projeto clicando no ícone de marcador (bookmark) em cada item.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : modalTab === 'bookmarklet' ? (
+                <div className="lg:col-span-12 bg-zinc-50 p-6 rounded-2xl border border-zinc-200 space-y-4">
+                  <div className="space-y-1">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200/50">
+                      CAPTURA DIRETA DA LOJA (ANTIBLOQUEIO)
+                    </span>
+                    <h4 className="font-extrabold text-sm text-zinc-900">Como usar o botão de captura por Favorito (Bookmarklet)</h4>
+                    <p className="text-xs text-zinc-600">
+                      Como grandes lojas (Mercado Livre, Magalu, Casas Bahia, Amazon) bloqueiam leituras automáticas diretas pelo servidor, criamos um capturador que roda direto no seu navegador.
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-xl border border-zinc-200 space-y-3">
+                    <ol className="list-decimal list-inside text-xs text-zinc-700 space-y-1.5">
+                      <li>Exiba a barra de favoritos do seu navegador (<kbd className="px-1.5 py-0.5 bg-zinc-100 rounded border">Ctrl+Shift+B</kbd> ou <kbd className="px-1.5 py-0.5 bg-zinc-100 rounded border">Cmd+Shift+B</kbd>).</li>
+                      <li>Arraste o botão abaixo para a sua barra de favoritos.</li>
+                      <li>Na página de qualquer produto em qualquer loja, clique no favorito criado para trazer os dados instantaneamente para o seu escritório.</li>
+                    </ol>
+
+                    <div className="pt-2">
+                      <a
+                        href={bookmarkletHref}
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md cursor-grab active:cursor-grabbing select-none"
+                        title="Arraste para a barra de favoritos"
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        📌 Capturar produto
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Left Column: AI Google Search Assistant */}
+                  <div className="lg:col-span-5 bg-zinc-50/80 rounded-2xl p-4 border border-zinc-200 space-y-4">
                 <div className="space-y-1">
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200/50">
                     ASSISTENTE DE COMPRA INTELIGENTE
@@ -1507,10 +1970,10 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                                 target="_blank"
                                 rel="noreferrer"
                                 className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-1 shadow-xs transition-colors"
-                                title="Abrir página de compra direta do produto na loja"
+                                title="Ir para o produto na loja"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
-                                <span>Ir direto para o produto</span>
+                                <span>Ir para o produto</span>
                               </a>
                               <button
                                 type="button"
@@ -1732,24 +2195,54 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                       </button>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                     <input
                       type="url"
                       value={formUrl}
-                      onChange={(e) => setFormUrl(e.target.value)}
+                      onChange={(e) => {
+                        setFormUrl(e.target.value);
+                        setUrlVerifiedDirect(false);
+                      }}
                       placeholder="Ex: https://loja.electrolux.com.br/... ou https://www.magazineluiza.com.br/..."
-                      className="flex-1 px-3 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
+                      className="flex-1 min-w-[200px] px-3 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-white focus:outline-hidden"
                     />
+                    <button
+                      type="button"
+                      onClick={handleFillFromProductUrl}
+                      disabled={isLoadingUrlData || !formUrl.trim()}
+                      className={`px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors cursor-pointer ${
+                        formUrl.trim()
+                          ? "bg-amber-600 hover:bg-amber-700 text-white"
+                          : "bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200"
+                      }`}
+                      title="Ler link e preencher automaticamente nome, preço, loja e foto"
+                    >
+                      {isLoadingUrlData ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Lendo link...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Preencher com este link</span>
+                        </>
+                      )}
+                    </button>
                     {formUrl && (
                       <a
                         href={formUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors"
-                        title="Ir direto para a página de compra na loja"
+                        className={`px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors ${
+                          isProductPageUrl(formUrl) || urlVerifiedDirect
+                            ? "bg-blue-600 hover:bg-blue-700 text-white"
+                            : "bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-300"
+                        }`}
+                        title={(isProductPageUrl(formUrl) || urlVerifiedDirect) ? "Ir para o produto" : "Buscar na loja"}
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Ir para Loja</span>
+                        <span>{(isProductPageUrl(formUrl) || urlVerifiedDirect) ? "Ir para o produto" : "Buscar na loja"}</span>
                       </a>
                     )}
                   </div>
@@ -1798,6 +2291,8 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                   </div>
                 </div>
               </form>
+                </>
+              )}
 
             </div>
           </div>
@@ -2045,7 +2540,7 @@ export const MemorialDescritivoTab: React.FC<MemorialDescritivoTabProps> = ({ pr
                                   rel="noopener noreferrer"
                                   className="text-[10px] text-[#8c7456] underline hover:text-[#786044] inline-flex items-center gap-1 mt-1 font-medium"
                                 >
-                                  Ver na Loja <ExternalLink className="w-2.5 h-2.5" />
+                                  {isProductPageUrl(item.url) ? "Ir para o produto" : "Buscar na loja"} <ExternalLink className="w-2.5 h-2.5" />
                                 </a>
                               )}
                             </td>

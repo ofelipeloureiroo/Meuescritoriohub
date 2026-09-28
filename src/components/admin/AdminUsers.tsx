@@ -3,6 +3,7 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc, getDoc, getD
 import { db, auth, sanitizeFirestoreData } from '../../lib/firebase';
 import { UserProfile, useAuth } from '../../context/AuthContext';
 import { SupportTicket } from '../../types';
+import { safeJson } from '../../lib/apiHelper';
 import {
   Loader2,
   CheckCircle2,
@@ -398,7 +399,7 @@ export const AdminUsers: React.FC = () => {
     // 3. Load from server backend canonical subscribers API (/api/subscribers)
     try {
       const serverRes = await fetchWithTimeout(
-        fetch('/api/subscribers').then(r => r.json()),
+        fetch('/api/subscribers').then(r => safeJson(r)).catch(() => null),
         2000,
         null
       );

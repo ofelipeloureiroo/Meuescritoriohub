@@ -3,6 +3,7 @@ import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, getDocs } fr
 import { db, sanitizeFirestoreData } from '../../lib/firebase';
 import { SupportTicket, SupportMessage } from '../../types';
 import { UserProfile, useAuth } from '../../context/AuthContext';
+import { safeJson } from '../../lib/apiHelper';
 import {
   MessageSquare,
   Search,
@@ -123,18 +124,16 @@ export const AdminSupportTab: React.FC<AdminSupportTabProps> = ({ users = [] }) 
     const fetchFromServer = async () => {
       try {
         const res = await fetch('/api/support/tickets');
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && Array.isArray(json.tickets)) {
-            const currentMap = loadLocal();
-            mergeTicketsIntoMap(json.tickets, currentMap);
-            applyList(currentMap);
+        const json = await safeJson(res);
+        if (json && json.success && Array.isArray(json.tickets)) {
+          const currentMap = loadLocal();
+          mergeTicketsIntoMap(json.tickets, currentMap);
+          applyList(currentMap);
 
-            // Persist to local storage
-            try {
-              localStorage.setItem('meu_escritorio_global_support_tickets', JSON.stringify(json.tickets));
-            } catch {}
-          }
+          // Persist to local storage
+          try {
+            localStorage.setItem('meu_escritorio_global_support_tickets', JSON.stringify(json.tickets));
+          } catch {}
         }
       } catch (err) {
         // Fallback

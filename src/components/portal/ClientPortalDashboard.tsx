@@ -50,6 +50,7 @@ import {
   isPortalEqual,
   SAMPLE_CLIENT_PORTAL 
 } from '../../services/clientPortalService';
+import { safeJson } from '../../lib/apiHelper';
 import { OfficeClientPortalManagerModal } from './OfficeClientPortalManagerModal';
 
 export const ClientPortalDashboard: React.FC = () => {
@@ -158,13 +159,12 @@ export const ClientPortalDashboard: React.FC = () => {
         if (pEmail) qs.set('email', pEmail);
 
         const res = await fetch(`/api/portals/lookup?${qs.toString()}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.portal) {
-            setPortal((prev) => {
-              if (isPortalEqual(prev, data.portal)) {
-                return prev;
-              }
+        const data = await safeJson(res);
+        if (data && data.success && data.portal) {
+          setPortal((prev) => {
+            if (isPortalEqual(prev, data.portal)) {
+              return prev;
+            }
               const mergedMessages = (data.portal.messages && data.portal.messages.length > 0)
                 ? data.portal.messages
                 : prev.messages;
@@ -181,10 +181,9 @@ export const ClientPortalDashboard: React.FC = () => {
               return updated;
             });
           }
+        } catch (err) {
+          console.warn('Notice fetching initial portal from server:', err);
         }
-      } catch (err) {
-        console.warn('Notice fetching initial portal from server:', err);
-      }
     };
 
     fetchPortalFromUrlOrServer();

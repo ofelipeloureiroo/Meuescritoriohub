@@ -34,6 +34,7 @@ import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
 import { doc, setDoc, getDocs, collection, onSnapshot } from 'firebase/firestore';
+import { safeJson } from '../lib/apiHelper';
 
 interface TopBarProps {
   activeTab: string;
@@ -261,7 +262,8 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         // Fetch from /api/subscribers
         try {
-          const res = await fetch('/api/subscribers').then(r => r.json());
+          const fetchRes = await fetch('/api/subscribers');
+          const res = await safeJson(fetchRes);
           if (res && Array.isArray(res.subscribers)) {
             res.subscribers.forEach((s: any) => {
               if (s && !list.some(u => (s.uid && u.uid === s.uid) || (s.email && u.email === s.email))) {

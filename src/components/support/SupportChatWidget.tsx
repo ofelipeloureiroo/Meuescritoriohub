@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db, sanitizeFirestoreData } from '../../lib/firebase';
 import { SupportTicket, SupportMessage } from '../../types';
+import { safeJson } from '../../lib/apiHelper';
 
 export const SupportChatWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -74,14 +75,12 @@ export const SupportChatWidget: React.FC = () => {
     const fetchFromServer = async () => {
       try {
         const res = await fetch(`/api/support/tickets/${ticketId}`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.ticket) {
-            setTicketData(json.ticket);
-            try {
-              localStorage.setItem(`meu_escritorio_user_support_ticket_${ticketId}`, JSON.stringify(json.ticket));
-            } catch {}
-          }
+        const json = await safeJson(res);
+        if (json && json.success && json.ticket) {
+          setTicketData(json.ticket);
+          try {
+            localStorage.setItem(`meu_escritorio_user_support_ticket_${ticketId}`, JSON.stringify(json.ticket));
+          } catch {}
         }
       } catch (e) {
         // Fallback to local / firestore
@@ -162,7 +161,7 @@ export const SupportChatWidget: React.FC = () => {
           subscriberUid: userUid,
           initialOnly: true
         })
-      }).then(res => res.json()).then(data => {
+      }).then(res => safeJson(res)).then(data => {
         if (data?.success && data?.ticket && !ticketData) {
           setTicketData(data.ticket);
         }
