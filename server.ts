@@ -8,6 +8,14 @@ import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { GoogleGenAI, Type } from "@google/genai";
 
+// Prevent unhandled errors from crashing process
+process.on('uncaughtException', (err) => {
+  console.error('[CRITICAL - Uncaught Exception]:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRITICAL - Unhandled Rejection]:', reason);
+});
+
 // Lazy initialize Mercado Pago client & persistent credentials
 const MP_CREDENTIALS_FILE = path.join(process.cwd(), '.mp_credentials.json');
 const DEFAULT_MP_ACCESS_TOKEN = 'APP_USR-3573349139215622-091408-39d733a8863ebb870c694cd79c7a1d7d-44930358';
@@ -398,8 +406,8 @@ Acesse o painel administrativo: ${baseUrl}/admin
   }
 
   // Standard JSON middleware for other routes with high limit for images
-  app.use(express.json({ limit: '30mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '30mb' }));
+  app.use(express.json({ limit: '100mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
   // -------------------------------------------------------------
   // CLIENT PORTAL & WORKSPACE SERVER-SIDE DURABLE STORAGE
@@ -5073,7 +5081,7 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
   });
 
   // Search product with Google Grounded Search with graceful multi-tier fallback
-  app.post('/api/gemini/search-product', express.json({ limit: '10mb' }), async (req, res) => {
+  app.post('/api/gemini/search-product', express.json({ limit: '100mb' }), async (req, res) => {
     const { query, imageBase64, category, formProductName, imageFileName } = req.body;
     let results: any[] = [];
     let source = "gemini_ai";
@@ -5846,6 +5854,26 @@ Mensagem enviada por ${sender} através do Meu Escritório Online.
       estimatedPrice,
       source,
       erro_identificacao: false
+    });
+  });
+
+  // Global Express Error Handler Middleware (Catches PayloadTooLargeError, 503, and unhandled middleware errors)
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('[Express Global Error Handler]:', err);
+    if (res.headersSent) {
+      return next(err);
+    }
+    if (err?.type === 'entity.too.large' || err?.status === 413) {
+      return res.status(200).json({
+        error: 'A imagem enviada é muito grande. Por favor, utilize uma imagem menor ou digite o nome do produto.',
+        erro_identificacao: true,
+        results: []
+      });
+    }
+    return res.status(200).json({
+      error: 'Ocorreu um erro temporário no servidor. Por favor, tente novamente.',
+      erro_identificacao: true,
+      results: []
     });
   });
 
