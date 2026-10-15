@@ -839,6 +839,18 @@ export const AdminUsers: React.FC = () => {
     const updatedList = users.filter(u => u.uid !== uid && (u.email || '').toLowerCase().trim() !== email);
     setUsers(updatedList);
     await persistSubscribersAcrossAllLayers(updatedList);
+
+    // Call server delete endpoint
+    try {
+      if (email) {
+        fetch('/api/subscribers/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        }).catch(() => {});
+      }
+    } catch {}
+
     setUserToDelete(null);
     setRefreshSuccessMessage(`Usuário ${email} foi removido com sucesso.`);
     setTimeout(() => setRefreshSuccessMessage(null), 5000);
