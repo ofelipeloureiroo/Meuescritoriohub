@@ -1,5 +1,15 @@
 [
   {
+    "uid": "ovHr7vFddufd0KiDAQWRc4yVFHy1",
+    "email": "master_escritorio@meuescritorio.app",
+    "name": "LF Quadros & Decoração",
+    "role": "admin",
+    "status": "active",
+    "createdAt": "2026-10-15T15:32:02.122Z",
+    "inviteCode": "MASTER",
+    "notes": "Administrador / Gestor"
+  },
+  {
     "uid": "YupDlOpWe3d8cC0waWJGPfdCsgz2",
     "email": "lfquadrosdecorativos@gmail.com",
     "name": "Carlos Felipe Carvalho",
@@ -15,19 +25,21 @@
     "name": "Laíne Paula Loureiro (LP Arquitetura)",
     "role": "user",
     "status": "active",
-    "subscriptionDueDate": "2027-09-21T00:00:00.000Z",
+    "subscriptionDueDate": "2027-10-21T00:00:00.000Z",
     "createdAt": "2026-01-15T10:00:00.000Z",
     "inviteCode": "LAINEP",
     "notes": "Arquiteta Titular / Assinante Oficial da Plataforma"
   },
   {
-    "uid": "sub_carlos_felipe",
-    "email": "carlos.felipe.123@hotmail.com",
-    "name": "Carlos Felipe",
+    "uid": "sub_1792079228733",
+    "email": "teste.assinante@exemplo.com",
+    "name": "Arquiteto Teste",
+    "phone": "21999998888",
     "role": "user",
-    "status": "active",
-    "subscriptionDueDate": "2027-09-16T14:02:35.731Z",
-    "createdAt": "2026-09-16T14:02:35.731Z",
-    "notes": "Assinante Ativo / Usuário da Plataforma"
+    "status": "pending",
+    "lastPaymentMethod": "pix",
+    "lastPaymentDate": "2026-10-15T15:47:08.733Z",
+    "notes": "Comprovante enviado pelo PIX",
+    "updatedAt": "2026-10-15T15:47:08.733Z"
   }
 ]

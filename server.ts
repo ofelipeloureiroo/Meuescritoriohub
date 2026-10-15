@@ -199,30 +199,40 @@ async function startServer() {
   async function sendNewSubscriberNotification({
     subscriberEmail,
     subscriberName,
+    subscriberPhone,
     planLabel,
     planAmount,
     paymentMethod,
     subscriberUid,
     appUrl,
+    requiresApproval = false,
+    notes,
   }: {
     subscriberEmail: string;
     subscriberName?: string;
+    subscriberPhone?: string;
     planLabel: string;
     planAmount: number | string;
     paymentMethod: string;
     subscriberUid?: string;
     appUrl?: string;
+    requiresApproval?: boolean;
+    notes?: string;
   }) {
     const adminEmail = process.env.ADMIN_EMAIL || "lfquadrosdecorativos@gmail.com";
     const baseUrl = appUrl || process.env.APP_URL || `http://localhost:${PORT}`;
     const nowString = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
     const formattedAmount = typeof planAmount === "number" ? planAmount.toFixed(2) : planAmount;
+    const isManualApproval = requiresApproval || paymentMethod === 'pix' || paymentMethod === 'transfer';
     const paymentMethodFormatted = 
-      paymentMethod === 'pix' ? 'PIX Instantâneo' :
-      paymentMethod === 'credit_card' ? 'Cartão de Crédito' :
-      paymentMethod === 'stripe' ? 'Cartão (Stripe Online)' : paymentMethod;
+      paymentMethod === 'pix' ? 'PIX Instantâneo (Informado pelo assinante)' :
+      paymentMethod === 'credit_card' ? 'Cartão de Crédito (Aprovado Online)' :
+      paymentMethod === 'stripe' ? 'Cartão (Stripe Online)' :
+      paymentMethod === 'mercadopago_card' ? 'Cartão de Crédito Mercado Pago' : paymentMethod;
 
-    const subject = `🔔 Nova Assinatura: Plano ${planLabel} (R$ ${formattedAmount}) - ${subscriberName || subscriberEmail}`;
+    const subject = isManualApproval
+      ? `⚠️ AVISO: Novo Assinante Aguarda Liberação de Acesso - ${subscriberName || subscriberEmail} (Plano ${planLabel})`
+      : `🎉 ACESSO LIBERADO: Novo Assinante via Cartão de Crédito - ${subscriberName || subscriberEmail} (Plano ${planLabel})`;
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -237,11 +247,11 @@ async function startServer() {
     <!-- Header -->
     <tr>
       <td style="background-color: #14110f; padding: 32px; text-align: center; border-bottom: 1px solid #2d2520;">
-        <div style="font-size: 11px; font-weight: 700; color: #c58a4b; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px;">
-          MEU ESCRITÓRIO ONLINE • ALERTA DE ASSINATURA
+        <div style="font-size: 11px; font-weight: 700; color: ${isManualApproval ? '#f59e0b' : '#34d399'}; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px;">
+          MEU ESCRITÓRIO ONLINE • ${isManualApproval ? '⚠️ AÇÃO NECESSÁRIA • AGUARDA LIBERAÇÃO' : '✅ ACESSO LIBERADO AUTOMATICAMENTE'}
         </div>
         <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #fcf8f5; line-height: 1.3;">
-          🎉 Nova Assinatura Confirmada!
+          ${isManualApproval ? '🔔 Novo Assinante Aguarda Sua Liberação!' : '🎉 Nova Assinatura Liberada no Cartão!'}
         </h1>
       </td>
     </tr>
@@ -249,8 +259,30 @@ async function startServer() {
     <!-- Body -->
     <tr>
       <td style="padding: 32px;">
+        ${isManualApproval ? `
+        <div style="background-color: rgba(245, 158, 11, 0.12); border: 1px solid #f59e0b; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;">
+          <div style="font-size: 14px; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">
+            ⚠️ ATENÇÃO ADMINISTRADOR: Acesso Pendente
+          </div>
+          <div style="font-size: 13px; color: #fef3c7; line-height: 1.5;">
+            O assinante concluiu o cadastro e <strong>informou que já realizou o pagamento via PIX/Transferência</strong>. O acesso dele está <strong>BLOQUEADO</strong> até que você confira o recebimento no seu banco e libere o acesso no Painel Admin.
+          </div>
+        </div>
+        ` : `
+        <div style="background-color: rgba(16, 185, 129, 0.12); border: 1px solid #10b981; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;">
+          <div style="font-size: 14px; font-weight: 700; color: #34d399; margin-bottom: 4px;">
+            ✅ Pagamento no Cartão Aprovado
+          </div>
+          <div style="font-size: 13px; color: #d1fae5; line-height: 1.5;">
+            O assinante efetuou o pagamento no cartão de crédito. O pagamento foi aprovado com sucesso e o <strong>acesso foi liberado automaticamente</strong> pelo sistema.
+          </div>
+        </div>
+        `}
+
         <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #ded5cc;">
-          Olá, Administrador! Uma nova assinatura acaba de ser realizada na plataforma. Seguem os detalhes:
+          ${isManualApproval 
+            ? 'Confira os dados do assinante para validar o comprovante e liberar a conta:'
+            : 'Confira os detalhes da nova assinatura ativa:'}
         </p>
 
         <!-- Subscription Details Card -->
@@ -258,17 +290,20 @@ async function startServer() {
           <tr>
             <td style="background-color: #221c18; padding: 12px 18px; border-bottom: 1px solid #3d342f;">
               <span style="font-size: 11px; font-weight: 700; color: #c58a4b; text-transform: uppercase; letter-spacing: 1px;">
-                📋 Resumo da Assinatura
+                📋 Dados do Assinante e Assinatura
               </span>
             </td>
           </tr>
           <tr>
             <td style="padding: 18px; font-size: 14px; color: #ded5cc; line-height: 1.8;">
-              <div><strong>• Assinante / Nome:</strong> <span style="color: #fcf8f5; font-weight: 600;">${subscriberName || 'Cliente'}</span></div>
+              <div><strong>• Assinante:</strong> <span style="color: #fcf8f5; font-weight: 600;">${subscriberName || 'Cliente'}</span></div>
               <div><strong>• E-mail:</strong> <span style="color: #c58a4b; font-weight: 600;">${subscriberEmail}</span></div>
-              <div><strong>• Plano:</strong> <span style="color: #34d399; font-weight: 700;">Plano ${planLabel} (R$ ${formattedAmount})</span></div>
+              ${subscriberPhone ? `<div><strong>• WhatsApp / Telefone:</strong> <a href="https://wa.me/${subscriberPhone.replace(/\\D/g, '')}" target="_blank" style="color: #34d399; text-decoration: none; font-weight: 600;">${subscriberPhone} ↗ (Conversar)</a></div>` : ''}
+              <div><strong>• Plano Escolhido:</strong> <span style="color: #34d399; font-weight: 700;">Plano ${planLabel} (R$ ${formattedAmount})</span></div>
               <div><strong>• Forma de Pagamento:</strong> ${paymentMethodFormatted}</div>
+              <div><strong>• Status de Acesso:</strong> <span style="font-weight: 700; color: ${isManualApproval ? '#f59e0b' : '#34d399'};">${isManualApproval ? '⏳ Pendente (Aguardando Você Liberar)' : '✅ Ativo (Liberado Automaticamente)'}</span></div>
               <div><strong>• Data e Hora:</strong> ${nowString}</div>
+              ${notes ? `<div style="margin-top: 6px; padding: 8px 12px; background-color: #1f1a17; border-radius: 8px; font-size: 12px;"><strong>• Observação/Comprovante:</strong> ${notes}</div>` : ''}
               ${subscriberUid ? `<div style="font-size: 12px; color: #8c827a; margin-top: 4px;"><strong>• ID do Usuário:</strong> ${subscriberUid}</div>` : ''}
             </td>
           </tr>
@@ -276,8 +311,8 @@ async function startServer() {
 
         <!-- Action Button -->
         <div style="text-align: center; margin: 30px 0 16px 0;">
-          <a href="${baseUrl}/admin" target="_blank" style="background-color: #c58a4b; color: #12100e; text-decoration: none; font-size: 14px; font-weight: 700; padding: 14px 32px; border-radius: 50px; display: inline-block; letter-spacing: 0.3px;">
-            Acessar Painel Admin →
+          <a href="${baseUrl}/admin" target="_blank" style="background-color: ${isManualApproval ? '#f59e0b' : '#c58a4b'}; color: #12100e; text-decoration: none; font-size: 14px; font-weight: 700; padding: 14px 32px; border-radius: 50px; display: inline-block; letter-spacing: 0.3px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            ${isManualApproval ? '👉 Acessar Painel Admin e Liberar Assinante →' : 'Acessar Painel Admin →'}
           </a>
         </div>
       </td>
@@ -295,17 +330,35 @@ async function startServer() {
 </html>
     `;
 
-    const textContent = `
-NOVA ASSINATURA REALIZADA - MEU ESCRITÓRIO ONLINE
+    const textContent = isManualApproval ? `
+⚠️ AÇÃO NECESSÁRIA: NOVO ASSINANTE AGUARDA LIBERAÇÃO - MEU ESCRITÓRIO ONLINE
+
+O assinante abaixo concluiu o cadastro e informou que realizou o pagamento via PIX/Transferência.
+O ACESSO ESTÁ BLOQUEADO até que você confirme o recebimento e faça a liberação manual no painel.
 
 - Assinante: ${subscriberName || 'Cliente'}
 - E-mail: ${subscriberEmail}
-- Plano: Plano ${planLabel} (R$ ${formattedAmount})
+${subscriberPhone ? `- WhatsApp/Telefone: ${subscriberPhone}\n` : ''}- Plano: Plano ${planLabel} (R$ ${formattedAmount})
 - Forma de Pagamento: ${paymentMethodFormatted}
+- Status: AGUARDANDO LIBERAÇÃO DO ADMINISTRADOR
+- Data / Hora: ${nowString}
+${notes ? `- Obs/Comprovante: ${notes}\n` : ''}- ID do Usuário: ${subscriberUid || 'N/A'}
+
+👉 Acesse o painel para conferir e liberar o acesso: ${baseUrl}/admin
+    `.trim() : `
+🎉 NOVA ASSINATURA LIBERADA NO CARTÃO - MEU ESCRITÓRIO ONLINE
+
+O assinante efetuou o pagamento no cartão de crédito. O pagamento foi aprovado e o ACESSO FOI LIBERADO AUTOMATICAMENTE.
+
+- Assinante: ${subscriberName || 'Cliente'}
+- E-mail: ${subscriberEmail}
+${subscriberPhone ? `- WhatsApp/Telefone: ${subscriberPhone}\n` : ''}- Plano: Plano ${planLabel} (R$ ${formattedAmount})
+- Forma de Pagamento: ${paymentMethodFormatted}
+- Status: ATIVO (Liberado Automaticamente)
 - Data / Hora: ${nowString}
 - ID do Usuário: ${subscriberUid || 'N/A'}
 
-Acesse o painel administrativo: ${baseUrl}/admin
+👉 Acesse o painel administrativo: ${baseUrl}/admin
     `.trim();
 
     let sentViaSmtp = false;
@@ -348,14 +401,18 @@ Acesse o painel administrativo: ${baseUrl}/admin
       try {
         const db = getFirestore();
         await db.collection("admin_notifications").add({
-          type: "new_subscription",
+          type: isManualApproval ? "pending_approval" : "new_subscription",
+          requiresApproval: isManualApproval,
+          status: isManualApproval ? "pending" : "active",
           adminEmail,
           subscriberEmail,
           subscriberName: subscriberName || "",
+          subscriberPhone: subscriberPhone || "",
           planLabel,
           planAmount: formattedAmount,
           paymentMethod,
           subscriberUid: subscriberUid || "",
+          notes: notes || "",
           sentViaSmtp,
           createdAt: new Date().toISOString(),
         });
@@ -364,20 +421,75 @@ Acesse o painel administrativo: ${baseUrl}/admin
       }
     }
 
+    // Canonical persistent subscribers update in server storage
+    try {
+      const subscribersList = loadSubscribersFromFile();
+      const cleanEmail = subscriberEmail.toLowerCase().trim();
+      const existingIdx = subscribersList.findIndex(u => u.email?.toLowerCase().trim() === cleanEmail);
+      
+      const dueDate = new Date();
+      if (planLabel.toLowerCase().includes('anual')) {
+        dueDate.setFullYear(dueDate.getFullYear() + 1);
+      } else {
+        dueDate.setMonth(dueDate.getMonth() + 1);
+      }
+
+      const subscriberData = {
+        uid: subscriberUid || (existingIdx >= 0 ? subscribersList[existingIdx].uid : `sub_${Date.now()}`),
+        email: cleanEmail,
+        name: subscriberName || (existingIdx >= 0 ? subscribersList[existingIdx].name : cleanEmail.split('@')[0]),
+        phone: subscriberPhone || (existingIdx >= 0 ? subscribersList[existingIdx].phone : ''),
+        role: 'user',
+        status: isManualApproval ? 'pending' : 'active',
+        subscriptionDueDate: isManualApproval ? undefined : dueDate.toISOString(),
+        lastPaymentMethod: paymentMethod,
+        lastPaymentDate: new Date().toISOString(),
+        notes: isManualApproval ? (notes || 'Aguardando liberação de acesso (PIX informado)') : 'Assinante Ativo (Cartão de Crédito)',
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (existingIdx >= 0) {
+        // Do not downgrade already active user unless explicitly pending request
+        subscribersList[existingIdx] = {
+          ...subscribersList[existingIdx],
+          ...subscriberData,
+          status: isManualApproval ? 'pending' : 'active',
+        };
+      } else {
+        subscribersList.push(subscriberData);
+      }
+
+      saveSubscribersToFile(subscribersList);
+    } catch (saveErr) {
+      console.warn("Notice updating subscribers file on notification:", saveErr);
+    }
+
     // Optional WhatsApp Notification to Administrator (e.g. 21998213069)
     let sentViaWhatsApp = false;
     const adminPhone = process.env.ADMIN_PHONE || "5521998213069"; // Default user WhatsApp
     const whatsappApiUrl = process.env.WHATSAPP_API_URL; // Optional custom gateway (e.g. Z-API, Evolution API, CallMeBot)
     const whatsappApiKey = process.env.WHATSAPP_API_KEY;
 
-    const whatsappMessage = 
-      `🔔 *NOVA ASSINATURA CONFIRMADA!* - Meu Escritório Online\n\n` +
-      `👤 *Cliente:* ${subscriberName || 'Cliente'}\n` +
-      `📧 *E-mail:* ${subscriberEmail}\n` +
-      `💎 *Plano:* ${planLabel} (R$ ${formattedAmount})\n` +
-      `💳 *Pagamento:* ${paymentMethodFormatted}\n` +
-      `🕒 *Data:* ${nowString}\n\n` +
-      `👉 Acesse o painel admin para gerenciar: ${baseUrl}/admin`;
+    const whatsappMessage = isManualApproval
+      ? `⚠️ *NOVO ASSINANTE AGUARDANDO SUA LIBERAÇÃO!* - Meu Escritório Online\n\n` +
+        `👤 *Assinante:* ${subscriberName || 'Cliente'}\n` +
+        `📧 *E-mail:* ${subscriberEmail}\n` +
+        (subscriberPhone ? `📱 *WhatsApp/Tel:* ${subscriberPhone}\n` : '') +
+        `💎 *Plano:* ${planLabel} (R$ ${formattedAmount})\n` +
+        `💳 *Pagamento:* ${paymentMethodFormatted} (Informado)\n` +
+        `⏳ *Status:* PENDENTE (Acesso bloqueado)\n` +
+        `🕒 *Data:* ${nowString}\n` +
+        (notes ? `📝 *Obs/Comprovante:* ${notes}\n` : '') +
+        `\n👉 Acesse o painel admin para conferir e liberar: ${baseUrl}/admin`
+      : `🎉 *NOVA ASSINATURA LIBERADA NO CARTÃO!* - Meu Escritório Online\n\n` +
+        `👤 *Assinante:* ${subscriberName || 'Cliente'}\n` +
+        `📧 *E-mail:* ${subscriberEmail}\n` +
+        (subscriberPhone ? `📱 *WhatsApp/Tel:* ${subscriberPhone}\n` : '') +
+        `💎 *Plano:* ${planLabel} (R$ ${formattedAmount})\n` +
+        `💳 *Pagamento:* Cartão de Crédito (Aprovado)\n` +
+        `✅ *Status:* ACESSO LIBERADO AUTOMATICAMENTE!\n` +
+        `🕒 *Data:* ${nowString}\n\n` +
+        `👉 Acesse o painel admin para gerenciar: ${baseUrl}/admin`;
 
     if (whatsappApiUrl && whatsappApiKey) {
       try {
@@ -398,7 +510,7 @@ Acesse o painel administrativo: ${baseUrl}/admin
       }
     } else {
       // Fallback: log for integration or simulated dispatch
-      console.log(`[WhatsApp Alerta Admin - ${adminPhone}]: ${whatsappMessage}`);
+      console.log(`[WhatsApp Alerta Admin - ${adminPhone}]:\n${whatsappMessage}`);
       sentViaWhatsApp = true; // Recorded in system logs
     }
 
@@ -1436,10 +1548,13 @@ Retorne uma resposta JSON com o formato estrito:
       const {
         subscriberEmail,
         subscriberName,
+        subscriberPhone,
         planLabel,
         planAmount,
         paymentMethod,
         subscriberUid,
+        requiresApproval,
+        notes,
       } = req.body;
 
       if (!subscriberEmail) {
@@ -1449,10 +1564,13 @@ Retorne uma resposta JSON com o formato estrito:
       const result = await sendNewSubscriberNotification({
         subscriberEmail,
         subscriberName,
+        subscriberPhone,
         planLabel: planLabel || "Mensal",
         planAmount: planAmount || "110,00",
         paymentMethod: paymentMethod || "pix",
         subscriberUid,
+        requiresApproval: requiresApproval ?? (paymentMethod === 'pix'),
+        notes,
         appUrl: process.env.APP_URL || `http://localhost:${PORT}`,
       });
 
@@ -1617,6 +1735,127 @@ Retorne uma resposta JSON com o formato estrito:
       saveSubscribersToFile(currentList);
       return res.json({ success: true, subscribers: currentList });
     } catch (e: any) {
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Endpoint for Admin to approve / liberate subscriber access (+1 Mês, +1 Ano, or custom)
+  app.post('/api/subscribers/approve', express.json(), async (req, res) => {
+    try {
+      const { email, uid, durationType = '1month', customDueDate } = req.body;
+      if (!email && !uid) {
+        return res.status(400).json({ error: "E-mail ou UID do assinante é obrigatório." });
+      }
+
+      const cleanEmail = (email || '').toLowerCase().trim();
+      let currentList = loadSubscribersFromFile();
+      let targetUser = currentList.find(u => 
+        (cleanEmail && u.email?.toLowerCase().trim() === cleanEmail) || 
+        (uid && u.uid === uid)
+      );
+
+      let baseDate = new Date();
+      if (targetUser?.subscriptionDueDate && targetUser.status === 'active') {
+        const curDue = new Date(targetUser.subscriptionDueDate);
+        if (!isNaN(curDue.getTime()) && curDue.getTime() > baseDate.getTime()) {
+          baseDate = curDue;
+        }
+      }
+
+      let dueDate = new Date(baseDate);
+      if (durationType === '1year') {
+        dueDate.setDate(dueDate.getDate() + 365);
+      } else if (durationType === '1month') {
+        dueDate.setDate(dueDate.getDate() + 30);
+      } else if (customDueDate) {
+        dueDate = new Date(customDueDate + (customDueDate.includes('T') ? '' : 'T23:59:59'));
+      } else {
+        dueDate.setDate(dueDate.getDate() + 30);
+      }
+
+      const dueDateISO = dueDate.toISOString();
+
+      const updatedData = {
+        ...(targetUser || {}),
+        uid: uid || targetUser?.uid || `sub_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+        email: cleanEmail || targetUser?.email || '',
+        name: targetUser?.name || (cleanEmail ? cleanEmail.split('@')[0] : 'Assinante'),
+        role: targetUser?.role || 'user',
+        status: 'active',
+        subscriptionDueDate: dueDateISO,
+        notes: (targetUser?.notes ? targetUser.notes + ' | ' : '') + `Acesso liberado pelo administrador em ${new Date().toLocaleDateString('pt-BR')}`,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const existingIdx = currentList.findIndex(u => 
+        (cleanEmail && u.email?.toLowerCase().trim() === cleanEmail) || 
+        (uid && u.uid === uid)
+      );
+
+      if (existingIdx >= 0) {
+        currentList[existingIdx] = updatedData;
+      } else {
+        currentList.push(updatedData);
+      }
+
+      saveSubscribersToFile(currentList);
+
+      // Also sync to Firestore users and notifications if Firestore Admin is initialized
+      if (getApps().length > 0) {
+        try {
+          const db = getFirestore();
+          if (uid) {
+            await db.collection('users').doc(uid).set({
+              status: 'active',
+              subscriptionDueDate: dueDateISO,
+              updatedAt: new Date().toISOString(),
+            }, { merge: true }).catch(() => {});
+          }
+
+          if (cleanEmail) {
+            const userDocs = await db.collection('users').where('email', '==', cleanEmail).get().catch(() => null);
+            if (userDocs && !userDocs.empty) {
+              for (const docSnap of userDocs.docs) {
+                await docSnap.ref.set({
+                  status: 'active',
+                  subscriptionDueDate: dueDateISO,
+                  updatedAt: new Date().toISOString(),
+                }, { merge: true }).catch(() => {});
+              }
+            }
+
+            // Mark notifications as approved
+            const notifDocs = await db.collection('admin_notifications').where('subscriberEmail', '==', cleanEmail).get().catch(() => null);
+            if (notifDocs && !notifDocs.empty) {
+              for (const nDoc of notifDocs.docs) {
+                await nDoc.ref.update({
+                  status: 'approved',
+                  resolved: true,
+                  approvedAt: new Date().toISOString(),
+                }).catch(() => {});
+              }
+            }
+          }
+
+          // Sync to system_integrations doc
+          await db.collection('system_integrations').doc('authorized_subscribers').set({
+            subscribers: currentList,
+            updatedAt: new Date().toISOString(),
+          }, { merge: true }).catch(() => {});
+        } catch (fsErr) {
+          console.warn("Firestore sync error on /api/subscribers/approve:", fsErr);
+        }
+      }
+
+      console.log(`[Admin Liberação] Assinante ${cleanEmail || uid} liberado com sucesso até ${dueDate.toLocaleDateString('pt-BR')}!`);
+
+      return res.json({
+        success: true,
+        message: `Acesso liberado com sucesso até ${dueDate.toLocaleDateString('pt-BR')}`,
+        subscriber: updatedData,
+      });
+    } catch (e: any) {
+      console.error("Error approving subscriber:", e);
       return res.status(500).json({ error: e.message });
     }
   });

@@ -331,6 +331,9 @@ export const AdminUsers: React.FC = () => {
           setDoc(doc(db, 'users', u.uid), sanitizeFirestoreData(u), { merge: true }).catch(() => {});
         }
       }
+
+      window.dispatchEvent(new Event('subscribers_updated'));
+      window.dispatchEvent(new Event('storage'));
     } catch (e) {
       console.warn("Notice persisting subscribers across all layers:", e);
     }
@@ -469,9 +472,6 @@ export const AdminUsers: React.FC = () => {
     });
 
     const finalList = Array.from(usersMap.values()).filter(isPlatformSubscriber);
-    // Background persist to server API, Firestore & LocalStorage
-    persistSubscribersAcrossAllLayers(finalList);
-
     return finalList;
   };
 
@@ -590,14 +590,41 @@ export const AdminUsers: React.FC = () => {
     setUsers(finalList);
     persistSubscribersAcrossAllLayers(finalList);
 
-    // 2. Safely persist to Firestore users document using setDoc with merge (NEVER updateDoc which throws if document does not exist)
+    // 2. Call server canonical approve API
     try {
-      if (uid && !uid.startsWith('sub_') && !uid.startsWith('team_') && !uid.startsWith('portal_')) {
+      fetch('/api/subscribers/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: targetEmail,
+          uid,
+          durationType,
+          customDueDate: customDateVal
+        })
+      }).catch(err => console.warn("Notice calling /api/subscribers/approve:", err));
+    } catch (apiErr) {
+      console.warn("API approve notice:", apiErr);
+    }
+
+    // 3. Safely persist to Firestore users document using setDoc with merge
+    try {
+      if (uid) {
         setDoc(doc(db, 'users', uid), {
           status: 'active',
           subscriptionDueDate: newDueDateISO,
           updatedAt: new Date().toISOString()
-        }, { merge: true }).catch(err => console.warn("Notice updating Firestore user doc:", err));
+        }, { merge: true }).catch(err => console.warn("Notice updating Firestore user doc by uid:", err));
+      }
+      if (targetEmail) {
+        getDocs(query(collection(db, 'users'), where('email', '==', targetEmail))).then(qSnap => {
+          qSnap.docs.forEach(d => {
+            setDoc(doc(db, 'users', d.id), {
+              status: 'active',
+              subscriptionDueDate: newDueDateISO,
+              updatedAt: new Date().toISOString()
+            }, { merge: true }).catch(() => {});
+          });
+        }).catch(() => {});
       }
     } catch (e) {
       console.warn("Notice updating Firestore user on approveWithDuration:", e);

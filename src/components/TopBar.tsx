@@ -33,7 +33,7 @@ import {
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
-import { doc, setDoc, getDocs, collection, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, getDocs, collection, onSnapshot, query, where } from 'firebase/firestore';
 import { safeJson } from '../lib/apiHelper';
 
 interface TopBarProps {
@@ -329,6 +329,25 @@ export const TopBar: React.FC<TopBarProps> = ({
           updatedAt: new Date().toISOString()
         }, { merge: true }).catch(() => {});
       }
+
+      if (sub.email) {
+        getDocs(query(collection(db, 'users'), where('email', '==', sub.email.toLowerCase().trim()))).then(qSnap => {
+          qSnap.docs.forEach(d => {
+            setDoc(doc(db, 'users', d.id), {
+              status: 'active',
+              subscriptionDueDate: dueDateISO,
+              updatedAt: new Date().toISOString()
+            }, { merge: true }).catch(() => {});
+          });
+        }).catch(() => {});
+      }
+
+      // Call canonical server approval API
+      fetch('/api/subscribers/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: sub.email, uid: sub.uid, durationType: '1month' })
+      }).catch(() => {});
 
       // Update authorized_subscribers local & firestore
       const raw = localStorage.getItem('meu_escritorio_assinantes_autorizados_v1');

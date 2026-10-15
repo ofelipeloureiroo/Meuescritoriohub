@@ -103,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         uid: activeUid,
         email: email || 'lfquadrosdecorativos@gmail.com',
         role: isOwnerAccount ? 'admin' : 'user',
-        status: 'active',
+        status: isOwnerAccount ? 'active' : 'pending',
         subscriptionDueDate: undefined,
         createdAt: new Date().toISOString(),
         inviteCode: 'MASTER',
@@ -160,7 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 ...data,
                 joinedOwnerUid: undefined,
                 role: isMaster ? 'admin' : data.role || 'user',
-                status: 'active',
+                status: isMaster ? 'active' : (data.status || 'pending'),
               }));
             }
           }
@@ -198,14 +198,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           
           getDoc(userDocRef).then((snap) => {
+            const rawStored = localStorage.getItem('meu_escritorio_assinantes_autorizados_v1');
+            let isAuthorized = false;
+            if (rawStored) {
+              try {
+                const list = JSON.parse(rawStored);
+                if (Array.isArray(list)) {
+                  const found = list.find((u: any) => u.email?.toLowerCase().trim() === userEmail);
+                  if (found && found.status === 'active') isAuthorized = true;
+                }
+              } catch {}
+            }
+
             if (!snap.exists()) {
               setDoc(userDocRef, sanitizeFirestoreData({
                 uid: firebaseUser.uid,
                 email: userEmail,
                 name: firebaseUser.displayName || (userEmail ? userEmail.split('@')[0] : 'Usuário'),
                 role: isMaster ? 'admin' : 'user',
-                status: 'active',
-                subscriptionDueDate: isMaster ? undefined : new Date(Date.now() + 365 * 86400000).toISOString(),
+                status: isMaster ? 'active' : (isAuthorized ? 'active' : 'pending'),
+                subscriptionDueDate: isMaster ? undefined : (isAuthorized ? new Date(Date.now() + 365 * 86400000).toISOString() : undefined),
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
               }), { merge: true }).catch(console.warn);
@@ -213,7 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setDoc(userDocRef, sanitizeFirestoreData({
                 email: userEmail || snap.data()?.email,
                 role: isMaster ? 'admin' : (snap.data()?.role || 'user'),
-                status: isMaster ? 'active' : (snap.data()?.status || 'active'),
+                status: isMaster ? 'active' : (snap.data()?.status || (isAuthorized ? 'active' : 'pending')),
                 ...(isMaster ? { joinedOwnerUid: null } : {}),
                 updatedAt: new Date().toISOString()
               }), { merge: true }).catch(console.warn);

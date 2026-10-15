@@ -306,6 +306,19 @@ export const CheckoutPage: React.FC = () => {
       console.warn('Notice syncing subscriber during activation:', syncErr);
     }
 
+    // Sync to backend canonical subscribers
+    try {
+      await fetch('/api/subscribers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscriber: userData }),
+      });
+    } catch {}
+
+    // Dispatch real-time update events
+    window.dispatchEvent(new Event('subscribers_updated'));
+    window.dispatchEvent(new Event('storage'));
+
     // Notify Administrator by email about the new subscription
     try {
       await fetch('/api/subscription/notify-new-subscriber', {
@@ -314,10 +327,13 @@ export const CheckoutPage: React.FC = () => {
         body: JSON.stringify({
           subscriberEmail: userEmail,
           subscriberName: name || user?.displayName || userEmail.split('@')[0],
+          subscriberPhone: phone || '',
           planLabel: isAnnualPlan ? 'Anual' : 'Mensal',
           planAmount: planAmount,
           paymentMethod: method,
           subscriberUid: uid,
+          requiresApproval: false,
+          status: 'active',
         }),
       });
     } catch (notifyErr) {
@@ -498,12 +514,45 @@ export const CheckoutPage: React.FC = () => {
         console.warn('Notice syncing subscriber on PIX request:', syncErr);
       }
 
+      // Sync to backend canonical subscribers storage
+      try {
+        await fetch('/api/subscribers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscriber: userData }),
+        });
+      } catch (serverErr) {
+        console.warn('Notice syncing to /api/subscribers:', serverErr);
+      }
+
       // Dispatch real-time events for admin alert across all tabs
       window.dispatchEvent(new Event('subscribers_updated'));
       window.dispatchEvent(new Event('storage'));
 
+      // URGENT: Notify Administrator immediately by email, WhatsApp & system alert
+      try {
+        await fetch('/api/subscription/notify-new-subscriber', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subscriberEmail: cleanEmail,
+            subscriberName: name || user?.displayName || cleanEmail.split('@')[0],
+            subscriberPhone: phone || '',
+            planLabel: isAnnualPlan ? 'Anual' : 'Mensal',
+            planAmount: planAmount,
+            paymentMethod: 'pix',
+            subscriberUid: authUser.uid,
+            requiresApproval: true,
+            notes: pixProofNotes || 'Assinante informou que já efetuou o pagamento via PIX',
+            status: 'pending',
+          }),
+        });
+      } catch (notifyErr) {
+        console.warn('Could not dispatch admin notification:', notifyErr);
+      }
+
       setPixConfirmed(true);
-      setSuccessMessage('Solicitação enviada ao administrador com sucesso! Seu acesso será liberado em instantes no painel.');
+      setSuccessMessage('Solicitação enviada com sucesso! O administrador recebeu um aviso e irá conferir e liberar o seu acesso.');
     } catch (err: any) {
       console.error(err);
       setError('Erro ao enviar solicitação de pagamento. Verifique seus dados e tente novamente.');
@@ -1796,22 +1845,58 @@ export const CheckoutPage: React.FC = () => {
 
                   {/* Confirmation Button or Success Box */}
                   {pixConfirmed ? (
-                    <div className="p-6 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 text-center space-y-3 animate-fade-in shadow-xl">
-                      <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/30">
+                    <div className="p-6 rounded-2xl bg-amber-950/40 border border-amber-500/50 text-center space-y-4 animate-fade-in shadow-xl">
+                      <div className="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/30">
                         <CheckCircle2 className="w-6 h-6" />
                       </div>
-                      <h4 className="text-base font-bold text-emerald-300">Aviso de Pagamento Enviado com Sucesso!</h4>
-                      <p className="text-xs text-emerald-200/90 leading-relaxed max-w-sm mx-auto">
-                        Sua solicitação de liberação para <strong className="text-white">{email}</strong> foi registrada. O administrador (<strong className="text-white">lfquadrosdecorativos@gmail.com</strong>) recebeu o aviso em tempo real para liberar seu acesso.
+                      <div className="space-y-1">
+                        <span className="inline-block px-3 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-bold uppercase tracking-wider border border-amber-500/30">
+                          ⏳ Aguardando Liberação do Administrador
+                        </span>
+                        <h4 className="text-base font-bold text-amber-200">Aviso de Pagamento Registrado!</h4>
+                      </div>
+                      <p className="text-xs text-amber-100/90 leading-relaxed max-w-md mx-auto">
+                        Sua notificação de pagamento para <strong className="text-white">{email}</strong> foi registrada. O administrador (<strong className="text-white">Carlos Felipe Carvalho</strong>) recebeu um aviso por e-mail (<strong className="text-white">lfquadrosdecorativos@gmail.com</strong>) para conferir o extrato e liberar o seu acesso.
                       </p>
+
+                      <div className="p-3 bg-[#171310] border border-[#3d342f] rounded-xl text-left text-xs text-[#a89c93] space-y-1.5">
+                        <div className="text-[11px] font-bold text-[#c58a4b] uppercase tracking-wider">Como funciona agora:</div>
+                        <div>1. O administrador confere o pagamento no extrato bancário.</div>
+                        <div>2. Ao aprovar, seu acesso é liberado e você já pode usar todo o sistema.</div>
+                        <div>3. Envie o comprovante no WhatsApp para agilizar a liberação!</div>
+                      </div>
+
                       <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
                         <a
-                          href="/app"
-                          className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-all shadow-md flex items-center justify-center gap-1.5"
+                          href={`https://wa.me/5521998213069?text=${encodeURIComponent(`Olá Carlos Felipe! Realizei meu cadastro no Meu Escritório Online com o e-mail ${email} e informei o pagamento via PIX (Plano ${planLabel} R$ ${planAmount},00). Segue meu comprovante para liberação do acesso!`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
                         >
-                          <span>Acessar Painel do Escritório</span>
-                          <ArrowRight className="w-4 h-4" />
+                          <Smartphone className="w-4 h-4" />
+                          <span>Enviar Comprovante no WhatsApp</span>
                         </a>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            window.location.href = '/app';
+                          }}
+                          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#28221e] hover:bg-[#342c27] text-[#fcf8f5] border border-[#3d342f] font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <span>Verificar Liberação de Acesso</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod('mercadopago')}
+                          className="text-[11px] text-[#c58a4b] hover:underline font-semibold"
+                        >
+                          Deseja liberação imediata? Pague com Cartão de Crédito →
+                        </button>
                       </div>
                     </div>
                   ) : (
