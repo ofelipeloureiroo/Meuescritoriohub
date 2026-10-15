@@ -533,61 +533,98 @@ export const AdminUsers: React.FC = () => {
     };
   }, [profile?.email, profile?.uid]);
 
-  const approveWithDuration = async (uid: string, durationType: '1month' | '1year' | 'custom', customDateVal?: string) => {
-    let dueDate = new Date();
+  const approveWithDuration = async (userOrUid: UserProfile | string, durationType: '1month' | '1year' | 'custom', customDateVal?: string) => {
+    const uid = typeof userOrUid === 'string' ? userOrUid : userOrUid.uid;
+    const initialTargetUser = typeof userOrUid === 'string' 
+      ? users.find(u => u.uid === uid || (u.email && u.email.toLowerCase().trim() === uid.toLowerCase().trim()))
+      : userOrUid;
+    
+    // Also re-check against current state
+    const targetUser = users.find(u => 
+      u.uid === uid || (initialTargetUser?.email && u.email?.toLowerCase().trim() === initialTargetUser.email.toLowerCase().trim())
+    ) || initialTargetUser;
+
+    const targetEmail = (targetUser?.email || '').toLowerCase().trim();
+    if (targetEmail) {
+      removeEmailFromBlacklist(targetEmail);
+    }
+
+    // Determine base date: if the user already has an active subscription in the future, extend FROM that date!
+    let baseDate = new Date();
+    if (targetUser?.subscriptionDueDate && targetUser.status === 'active') {
+      const curDue = new Date(targetUser.subscriptionDueDate);
+      if (!isNaN(curDue.getTime()) && curDue.getTime() > baseDate.getTime()) {
+        baseDate = curDue;
+      }
+    }
+
+    let dueDate = new Date(baseDate);
     if (durationType === '1month') {
       dueDate.setDate(dueDate.getDate() + 30);
     } else if (durationType === '1year') {
       dueDate.setDate(dueDate.getDate() + 365);
     } else if (durationType === 'custom' && customDateVal) {
-      dueDate = new Date(customDateVal);
+      dueDate = new Date(customDateVal + (customDateVal.includes('T') ? '' : 'T23:59:59'));
     }
 
     const newDueDateISO = dueDate.toISOString();
 
+    // 1. Optimistic UI update across state immediately
+    const updatedUser: UserProfile = {
+      ...(targetUser || { uid, email: targetEmail || '' }),
+      status: 'active' as const,
+      subscriptionDueDate: newDueDateISO,
+      notes: targetUser?.notes || 'Assinante Ativo'
+    };
+
+    const updatedList = users.map(u => {
+      if (u.uid === uid || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
+        return updatedUser;
+      }
+      return u;
+    });
+
+    const exists = updatedList.some(u => u.uid === uid || (targetEmail && u.email?.toLowerCase().trim() === targetEmail));
+    const finalList = exists ? updatedList : [...updatedList, updatedUser];
+
+    setUsers(finalList);
+    persistSubscribersAcrossAllLayers(finalList);
+
+    // 2. Safely persist to Firestore users document using setDoc with merge (NEVER updateDoc which throws if document does not exist)
     try {
-      const targetUser = users.find(u => u.uid === uid);
-      if (targetUser?.email) {
-        removeEmailFromBlacklist(targetUser.email);
+      if (uid && !uid.startsWith('sub_') && !uid.startsWith('team_') && !uid.startsWith('portal_')) {
+        setDoc(doc(db, 'users', uid), {
+          status: 'active',
+          subscriptionDueDate: newDueDateISO,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(err => console.warn("Notice updating Firestore user doc:", err));
       }
-
-      await updateDoc(doc(db, 'users', uid), {
-        status: 'active',
-        subscriptionDueDate: newDueDateISO,
-      });
-
-      const updatedList = users.map(u => u.uid === uid ? {
-        ...u,
-        status: 'active' as const,
-        subscriptionDueDate: newDueDateISO,
-      } : u);
-
-      setUsers(updatedList);
-      persistSubscribersAcrossAllLayers(updatedList);
-
-      if (targetUser?.email) {
-        const amount = durationType === '1year' ? 990.00 : 97.00;
-        const newDocId = `pay_${Date.now()}`;
-        const newPayment = {
-          id: newDocId,
-          subscriberEmail: targetUser.email.toLowerCase().trim(),
-          subscriberName: targetUser.name || targetUser.email.split('@')[0],
-          description: durationType === '1year' ? 'Assinatura Anual Plataforma' : 'Assinatura Mensal Plataforma',
-          plan: durationType,
-          amount,
-          date: new Date().toISOString().split('T')[0],
-          paymentMethod: 'PIX',
-          createdAt: new Date().toISOString()
-        };
-        setDoc(doc(db, 'platform_payments', newDocId), newPayment).catch(console.warn);
-      }
-
-      alert(`Acesso liberado com sucesso! Vencimento definido para ${dueDate.toLocaleDateString('pt-BR')}.`);
-      setSelectedUserForModal(null);
-    } catch (error: any) {
-      console.error("Error approving user:", error);
-      alert(`Erro ao liberar acesso: ${error.message}`);
+    } catch (e) {
+      console.warn("Notice updating Firestore user on approveWithDuration:", e);
     }
+
+    // 3. Register payment if applicable
+    if (targetEmail) {
+      const amount = durationType === '1year' ? 990.00 : 97.00;
+      const newDocId = `pay_${Date.now()}`;
+      const newPayment = {
+        id: newDocId,
+        subscriberEmail: targetEmail,
+        subscriberName: targetUser?.name || targetEmail.split('@')[0],
+        description: durationType === '1year' ? 'Renovação Anual Plataforma' : 'Renovação Mensal Plataforma',
+        plan: durationType,
+        amount,
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: 'PIX',
+        createdAt: new Date().toISOString()
+      };
+      setDoc(doc(db, 'platform_payments', newDocId), newPayment).catch(console.warn);
+    }
+
+    const durationLabel = durationType === '1year' ? '+1 Ano' : durationType === '1month' ? '+1 Mês' : 'Data personalizada';
+    setRefreshSuccessMessage(`Assinatura de ${targetUser?.name || targetEmail || 'usuário'} atualizada com sucesso (${durationLabel})! Novo vencimento: ${dueDate.toLocaleDateString('pt-BR')}`);
+    setTimeout(() => setRefreshSuccessMessage(null), 5000);
+    setSelectedUserForModal(null);
   };
 
   const handleManualApproveByEmail = async (e: React.FormEvent) => {
@@ -1029,8 +1066,8 @@ export const AdminUsers: React.FC = () => {
                       <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Selecione o Tempo da Assinatura:</div>
                       <div className="grid grid-cols-3 gap-1.5">
                         <button
-                          onClick={() => approveWithDuration(pUser.uid, '1month')}
-                          className="py-2 px-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-2xs cursor-pointer"
+                          onClick={() => approveWithDuration(pUser, '1month')}
+                          className="py-2 px-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-2xs cursor-pointer active:scale-95"
                           title="Liberar Acesso por 1 Mês (30 Dias)"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -1038,8 +1075,8 @@ export const AdminUsers: React.FC = () => {
                         </button>
     
                         <button
-                          onClick={() => approveWithDuration(pUser.uid, '1year')}
-                          className="py-2 px-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-2xs cursor-pointer"
+                          onClick={() => approveWithDuration(pUser, '1year')}
+                          className="py-2 px-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 transition-all shadow-2xs cursor-pointer active:scale-95"
                           title="Liberar Acesso por 1 Ano (365 Dias)"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
@@ -1280,36 +1317,40 @@ export const AdminUsers: React.FC = () => {
                             {u.status === 'active' && (
                               <>
                                 <button
-                                  onClick={() => approveWithDuration(u.uid, '1month')}
-                                  className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-bold rounded-xl transition-all shadow-2xs cursor-pointer"
+                                  type="button"
+                                  onClick={() => approveWithDuration(u, '1month')}
+                                  className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-bold rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                                   title="Adicionar ou Renovar +1 Mês (30 Dias)"
                                 >
                                   +1 Mês
                                 </button>
 
                                 <button
-                                  onClick={() => approveWithDuration(u.uid, '1year')}
-                                  className="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 text-[11px] font-bold rounded-xl transition-all shadow-2xs cursor-pointer"
+                                  type="button"
+                                  onClick={() => approveWithDuration(u, '1year')}
+                                  className="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 text-[11px] font-bold rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                                   title="Adicionar ou Renovar +1 Ano (365 Dias)"
                                 >
                                   +1 Ano
                                 </button>
 
                                 <button
+                                  type="button"
                                   onClick={() => {
                                     setSelectedUserForModal(u);
                                     const curDate = u.subscriptionDueDate ? new Date(u.subscriptionDueDate) : new Date();
                                     setCustomDateInput(curDate.toISOString().split('T')[0]);
                                   }}
-                                  className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl transition-all cursor-pointer shadow-2xs"
+                                  className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
                                   title="Definir Data de Vencimento Personalizada"
                                 >
                                   <Calendar className="w-3.5 h-3.5" />
                                 </button>
 
                                 <button
+                                  type="button"
                                   onClick={() => handleUnsubscribeUser(u)}
-                                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer flex items-center gap-1.5 active:scale-95"
                                   title="Cancelar assinatura e desativar acesso deste usuário"
                                 >
                                   <UserX className="w-3.5 h-3.5 text-rose-600" />
@@ -1322,8 +1363,9 @@ export const AdminUsers: React.FC = () => {
                             {u.status === 'inactive' && (
                               <>
                                 <button
+                                  type="button"
                                   onClick={() => handleReactivateUser(u, '1month')}
-                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95"
                                   title="Reativar assinatura e liberar acesso por 30 dias"
                                 >
                                   <CheckCircle2 className="w-3.5 h-3.5" />
@@ -1331,8 +1373,9 @@ export const AdminUsers: React.FC = () => {
                                 </button>
 
                                 <button
+                                  type="button"
                                   onClick={() => handleReactivateUser(u, '1year')}
-                                  className="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 text-[11px] font-bold rounded-xl transition-all shadow-2xs cursor-pointer"
+                                  className="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 text-[11px] font-bold rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                                   title="Reativar assinatura por 1 Ano"
                                 >
                                   +1 Ano
@@ -1344,14 +1387,16 @@ export const AdminUsers: React.FC = () => {
                             {u.status === 'pending' && (
                               <>
                                 <button
-                                  onClick={() => approveWithDuration(u.uid, '1month')}
-                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                                  type="button"
+                                  onClick={() => approveWithDuration(u, '1month')}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
                                 >
                                   Aprovar (+1 Mês)
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => handleUnsubscribeUser(u)}
-                                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer"
+                                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                                 >
                                   Recusar
                                 </button>
@@ -1477,8 +1522,8 @@ export const AdminUsers: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => approveWithDuration(selectedUserForModal.uid, 'custom', customDateInput)}
-                className="py-2 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                onClick={() => approveWithDuration(selectedUserForModal, 'custom', customDateInput)}
+                className="py-2 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Confirmar e Salvar Acesso</span>
